@@ -51,7 +51,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-036** — gate scripts `scripts/check-commit-refs` (every commit on an item branch
       references the item ID) and `scripts/check-verify-freshness` (DoD D10: verification
       postdates the last commit).
-- [ ] **META-035** — `scripts/check` — repo self-gate running all of the above + render determinism.
+- [x] **META-035** — `scripts/check` — repo self-gate running all of the above + render determinism.
 
 ## Phase 4 — adapters
 

@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""The gate this repository must pass. Run: scripts/check
+
+Steps, in order:
+  1. scripts/lib/selftest.py                 — the parsing layer everything else stands on
+  2. scripts/lint-skills                     — the methodology against spec/skill-contract.md
+  3. must-fail fixture                       — validate-workspace over fixtures/broken-workspace,
+                                               asserting the emitted finding codes equal
+                                               EXPECTED-CODES.txt exactly
+  4. rendered adapter output is current      — re-render and compare with the committed dist
+  5. must-pass workspace                     — validate-workspace over examples/toy-project
+
+Steps 4 and 5 report **SKIP** with a reason when their inputs do not exist yet, and a skip is
+printed as loudly as a failure. A gate that quietly checks nothing is the thing this file exists
+to prevent.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPTS = os.path.join(ROOT, "scripts")
+
+
+class Runner:
+    def __init__(self) -> None:
+        self.failures = []
+        self.skips = []
+
+    def run(self, label: str, argv: list, expect_zero: bool = True) -> subprocess.CompletedProcess:
+        result = subprocess.run(argv, capture_output=True, text=True, cwd=ROOT)
+        ok = (result.returncode == 0) if expect_zero else (result.returncode != 0)
+        self.emit(label, ok, result)
+        return result
+
+    def emit(self, label, ok, result=None, detail="") -> None:
+        print(f"{'PASS' if ok else 'FAIL'}  {label}")
+        if not ok:
+            self.failures.append(label)
+            if result is not None:
+                for stream in (result.stdout, result.stderr):
+                    for line in (stream or "").rstrip().split("\n"):
+                        if line:
+                            print(f"      {line}")
+            if detail:
+                for line in detail.rstrip().split("\n"):
+                    print(f"      {line}")
+
+    def skip(self, label: str, reason: str) -> None:
+        print(f"SKIP  {label}")
+        print(f"      {reason}")
+        self.skips.append(label)
+
+
+def codes_from(output: str) -> set:
+    found = set()
+    for line in output.split("\n"):
+        for level in ("ERROR [", "WARNING ["):
+            index = line.find(level)
+            if index != -1:
+                start = index + len(level)
+                end = line.find("]", start)
+                if end != -1:
+                    found.add(line[start:end])
+    return found
+
+
+def check_fixture(runner: Runner) -> None:
+    fixture = os.path.join(ROOT, "fixtures", "broken-workspace")
+    expected_path = os.path.join(fixture, "EXPECTED-CODES.txt")
+    if not os.path.isfile(expected_path):
+        runner.skip("must-fail fixture", f"{expected_path} does not exist")
+        return
+    result = subprocess.run([sys.executable, os.path.join(SCRIPTS, "validate-workspace"),
+                             fixture], capture_output=True, text=True, cwd=ROOT)
+    if result.returncode == 0:
+        runner.emit("must-fail fixture", False, result,
+                    detail="the deliberately broken fixture validated clean")
+        return
+    with open(expected_path, "r", encoding="utf-8") as handle:
+        expected = {line.strip() for line in handle if line.strip()}
+    actual = codes_from(result.stdout + result.stderr)
+    missing = sorted(expected - actual)
+    extra = sorted(actual - expected)
+    if missing or extra:
+        detail = []
+        if missing:
+            detail.append("rules that stopped firing (present in EXPECTED-CODES.txt, not "
+                          "emitted):")
+            detail += [f"  - {code}" for code in missing]
+        if extra:
+            detail.append("codes emitted that EXPECTED-CODES.txt does not list:")
+            detail += [f"  + {code}" for code in extra]
+        detail.append("if this change is intended, update EXPECTED-CODES.txt in the same "
+                      "commit and say why")
+        runner.emit("must-fail fixture", False, detail="\n".join(detail))
+    else:
+        runner.emit(f"must-fail fixture ({len(expected)} codes)", True)
+
+
+def check_render(runner: Runner) -> None:
+    renderer = os.path.join(ROOT, "adapters", "claude-code", "render.py")
+    if not os.path.isfile(renderer):
+        runner.skip("rendered output is current", "the adapter renderer does not exist yet")
+        return
+    runner.run("rendered output is current",
+               [sys.executable, renderer, "--check"])
+
+
+def check_example(runner: Runner) -> None:
+    example = os.path.join(ROOT, "examples", "toy-project")
+    if not os.path.isdir(os.path.join(example, "tracker")):
+        runner.skip("must-pass workspace", "examples/toy-project has no workspace yet")
+        return
+    runner.run("must-pass workspace",
+               [sys.executable, os.path.join(SCRIPTS, "validate-workspace"), example])
+
+
+def main() -> int:
+    runner = Runner()
+    runner.run("library self-test", [sys.executable, os.path.join(SCRIPTS, "lib", "selftest.py")])
+    runner.run("lint-skills", [sys.executable, os.path.join(SCRIPTS, "lint-skills")])
+    check_fixture(runner)
+    check_render(runner)
+    check_example(runner)
+
+    print()
+    if runner.failures:
+        print(f"check: FAILED — {len(runner.failures)} step(s): "
+              f"{', '.join(runner.failures)}")
+    else:
+        print("check: all steps passed")
+    if runner.skips:
+        print(f"check: {len(runner.skips)} step(s) SKIPPED — {', '.join(runner.skips)}")
+        print("       a skipped step checks nothing; it is not a pass")
+    return 1 if runner.failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

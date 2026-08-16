@@ -787,3 +787,33 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `scripts/check-commit-refs`, `scripts/check-verify-freshness`; edits
   to `spec/workspace-layout.md` and `methodology/skills/verify/process.md`.
 - **Result:** META-036 done. Next: META-035 (`scripts/check`).
+
+---
+
+## 2026-08-16 — META-035 — `scripts/check`, and a standing instruction from the human
+
+- **Unit:** META-035
+- **Instruction received from the human mid-unit (recorded per PROMPT rule 3):**
+  > "Add remote git@github.com:SigorMatt/agile-skills.git as origin, push everything now, and
+  > push after every commit from here on."
+
+  Actioned: `origin` added and the full history pushed. **From this point every unit ends with
+  `git push`, not merely `git commit`.** This is now part of the unit cycle and is written into
+  `meta/CHECKPOINT.md` so a fresh session after an interruption inherits it — the instruction
+  would otherwise live only in conversation history, which this project's own rules say is not
+  a durable place to keep state.
+- **Inputs read:** `seed/03-ACCEPTANCE.md` §E, the existing scripts.
+- **Decisions:**
+  - `scripts/check` prints **SKIP as loudly as FAIL**, names the reason, and repeats the skipped
+    steps in the summary with "a skipped step checks nothing; it is not a pass". Steps 4 and 5
+    have nothing to check yet; without that noise a green run would quietly overstate coverage.
+  - The must-fail fixture step compares the **set of finding codes** with
+    `EXPECTED-CODES.txt` in both directions, and its failure output distinguishes "rules that
+    stopped firing" from "codes not listed", telling the reader to update the file in the same
+    commit if the change was intended. A validator silently losing a rule is invisible to any
+    check that only asserts "the fixture fails".
+- **Commands run:** `./scripts/check` → 3 PASS, 2 SKIP, exit 0; the fixture step reports
+  `44 codes`.
+- **Gates:** `scripts/check` is the repository's own gate; it passes.
+- **Artifacts produced:** `scripts/check`; `origin` remote configured.
+- **Result:** META-035 done. Phase 3 complete. Next: META-040 (`adapters/README.md`).
