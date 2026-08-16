@@ -155,3 +155,28 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet; `scripts/validate-workspace` (META-032) is written against this page.
 - **Artifacts produced:** `spec/work-item.md`.
 - **Result:** META-011 done. Next: META-012.
+
+---
+
+## 2026-08-16 — META-012 — `spec/journal-and-history.md`
+
+- **Unit:** META-012
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R4, `spec/ids-and-statuses.md` §4.
+- **Decisions:**
+  - Two files, not one: `history.md` is a six-column table (the timeline a manager scans),
+    `journal.md` is prose-with-required-labels (the detail a reviewer reads when a line in that
+    timeline looks wrong). Merging them would force every reader to pay for the detail.
+  - `history.md` gets a `resume-to` column so `awaiting-answer`/`blocked` carry their return
+    status in the timeline itself (ADR-0003), rather than only inside a question artifact.
+  - `actor` is a **skill name**, never a person or a model. It is what localises a fault to a
+    contract when a run goes wrong, which is the debugging loop the vision asks for.
+  - A gate declared in a contract MUST appear in the journal even when skipped, with the reason.
+    The failure this format exists to prevent is an execution reporting success while silently
+    never running a check.
+  - `**Decisions:**` must carry rationale, not just the choice — an auditor needs to judge
+    whether the reasoning was sound, not only what happened.
+  - Chaining rule (`row n.from == row n-1.to`, last row's `to` == `item.md` status) makes a
+    hand-edited status mechanically detectable as `history.gap`.
+- **Gates:** none yet; `scripts/validate-workspace` implements §1's validation rules.
+- **Artifacts produced:** `spec/journal-and-history.md`.
+- **Result:** META-012 done. Next: META-013.
