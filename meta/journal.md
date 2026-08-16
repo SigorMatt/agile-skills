@@ -555,3 +555,35 @@ pipeline's paper trail should feel like.
 - **Gates:** miniyaml/PyYAML agreement on `answer-questions/skill.yaml`.
 - **Artifacts produced:** `methodology/skills/answer-questions/{skill.yaml,process.md}`.
 - **Result:** META-027 done. Next: META-028 (`next`, the orchestrator).
+
+---
+
+## 2026-08-16 — META-028 — skill `next` (orchestrator)
+
+- **Unit:** META-028
+- **Inputs read:** `methodology/pipeline.yaml` `orchestrator`, `seed/02-ARCHITECTURE.md` §4,
+  `seed/00-VISION.md` principle 4.
+- **Decisions:**
+  - `next` writes **no journal entry on an item** — it performed no work on one, and a per-
+    dispatch entry would double every item journal with its least informative content. Its record
+    is `tracker/board.md`, regenerated every run, whose generation timestamp says how current the
+    picture is.
+  - Human-addressed questions are printed **in full**, not as a pointer: the returning human
+    should be able to answer without opening a file.
+  - Required a `because:` line naming why each candidate was rejected. That is what makes a
+    scheduling decision reviewable, and it is the first thing to read when the pipeline picks
+    something surprising.
+  - A "What you must never do" section states the invariants directly (never change a status,
+    never skip an item, never dispatch two skills, never invent a status-to-skill mapping).
+  - Named the two failure modes: **being helpful** (a nudge is engineering judgement with no
+    journal, no persona and no gate — the one decision nobody can audit) and **batching** (two
+    skills running before state is written leaves an unreconstructable workspace after an
+    interruption).
+  - A status with no owner that is not terminal is reported as a *pipeline defect*, never
+    resolved by guessing a plausible skill.
+- **Commands run:** `python3 scripts/lib/selftest.py` → `120 passed, 0 failed`, cross-check over
+  41 inputs (all eight `skill.yaml` files now included).
+- **Gates:** miniyaml/PyYAML agreement across all eight contracts.
+- **Artifacts produced:** `methodology/skills/next/{skill.yaml,process.md}`.
+- **Result:** META-028 done. Phase 2 complete — all 8 skills exist. Next: META-031
+  (`scripts/lint-skills`), which turns the conventions these eight follow into a gate.

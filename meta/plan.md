@@ -35,7 +35,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-025** — skill `verify`.
 - [x] **META-026** — skill `review-close`.
 - [x] **META-027** — skill `answer-questions`.
-- [ ] **META-028** — skill `next` (orchestrator).
+- [x] **META-028** — skill `next` (orchestrator).
 
 ## Phase 3 — `scripts/`
 
