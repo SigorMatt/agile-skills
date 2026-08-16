@@ -1,0 +1,741 @@
+#!/usr/bin/env python3
+"""Validate a workspace against spec/. This is the gate every skill runs.
+
+Usage: scripts/validate-workspace [workspace-root] [--pipeline path/to/pipeline.yaml]
+
+Exit 0 when there are no errors. Warnings do not fail the run but are always printed.
+
+It is deliberately unforgiving about the record: a status with no history row, a journal entry
+missing its gate list, a question marked answered whose consequences name no file. Those are
+the failures that make a paper trail look complete while being useless, and they are invisible
+to any check softer than this one.
+
+Standard library only (ADR-0002), so it runs in a consumer project with nothing installed.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+
+import board as board_lib  # noqa: E402
+import miniyaml  # noqa: E402
+from report import Report  # noqa: E402
+from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
+                       Workspace, id_kind)
+
+ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
+ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "depends-on", "blocks",
+                        "relates-to"]
+OUTCOMES = {"delivered", "dropped", "duplicate"}
+
+QUESTION_FIELDS_REQUIRED = ["id", "item", "from-skill", "addressed-to", "blocking", "status",
+                            "created"]
+QUESTION_FIELDS_OPTIONAL = ["answered-at", "answered-by"]
+ADDRESSED_TO = {"architect", "human"}
+QUESTION_STATUS = {"open", "answered"}
+
+DOC_FIELDS_REQUIRED = ["title", "version", "status", "updated", "updated-by", "updated-for"]
+DOC_FIELDS_OPTIONAL = ["supersedes", "superseded-by"]
+DOC_STATUS = {"current", "superseded", "draft"}
+
+BODY_SECTIONS = {
+    "epic": ["## Goal", "## Why now", "## Success measures", "## Scope", "## Out of scope"],
+    "work-item": ["## Story", "## Acceptance criteria", "## Out of scope"],
+    "bug": ["## Summary", "## Steps to reproduce", "## Expected behaviour",
+            "## Actual behaviour", "## Acceptance criteria"],
+}
+
+JOURNAL_BULLETS = ["Item", "Trigger", "Inputs read", "Decisions", "Questions raised",
+                   "Commands", "Gates", "Artifacts", "Status", "Result"]
+
+# status reached -> artifact that must exist by then
+ARTIFACT_BY_STATUS = [
+    ("ready", "refinement-qa.md", {"work-item"}),
+    ("planned", "plan.md", {"work-item", "bug"}),
+    ("verifying", "impl-report.md", {"work-item", "bug"}),
+    ("in-review", "verify-report.md", {"work-item", "bug"}),
+]
+
+ADR_SECTIONS = ["## Context", "## Options considered", "## Decision", "## Consequences",
+                "## Change log"]
+
+
+def find_pipeline(explicit=None):
+    """Resolve pipeline.yaml. The adapter's installer places a copy beside the scripts."""
+    if explicit:
+        return explicit
+    here = os.path.dirname(os.path.abspath(__file__))
+    for candidate in (
+        os.path.join(here, "pipeline.yaml"),
+        os.path.join(here, "..", "methodology", "pipeline.yaml"),
+    ):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return None
+
+
+class Validator:
+    def __init__(self, root: str, pipeline_path) -> None:
+        self.workspace = Workspace(root).load()
+        self.report = Report("validate-workspace", self.workspace.root)
+        self.pipeline_path = pipeline_path
+        self.pipeline = None
+        self.statuses = {}
+        self.priorities = set()
+        self.skills = set()
+        self.transitions = []
+
+    # ---- setup ---------------------------------------------------------------------
+
+    def load_pipeline(self) -> bool:
+        if not self.pipeline_path or not os.path.isfile(self.pipeline_path):
+            self.report.error(self.pipeline_path or "pipeline.yaml", 0, "pipeline.missing",
+                              "cannot find pipeline.yaml",
+                              hint="pass --pipeline, or install a copy beside the scripts")
+            return False
+        try:
+            self.pipeline = miniyaml.load_file(self.pipeline_path)
+        except miniyaml.YamlError as exc:
+            self.report.error(self.pipeline_path, exc.line, "pipeline.unparsable", exc.message)
+            return False
+        for entry in self.pipeline.get("statuses") or []:
+            self.statuses[entry["name"]] = entry
+        self.priorities = {entry["name"] for entry in self.pipeline.get("priorities") or []}
+        self.skills = set(self.pipeline.get("skills") or [])
+        self.transitions = self.pipeline.get("transitions") or []
+        return True
+
+    def statuses_for(self, item_type: str) -> set:
+        return {name for name, entry in self.statuses.items()
+                if item_type in (entry.get("applies_to") or [])}
+
+    def is_terminal(self, status: str) -> bool:
+        return bool((self.statuses.get(status) or {}).get("terminal"))
+
+    # ---- helpers -------------------------------------------------------------------
+
+    def check_timestamp(self, path, line, code, value, label):
+        if not isinstance(value, str) or not TIMESTAMP_RE.match(value):
+            self.report.error(path, line, code,
+                              f"{label} is {value!r}; expected UTC ISO-8601 like "
+                              f"2026-08-16T21:04:33Z")
+            return False
+        return True
+
+    def check_fields(self, path, fields, required, optional, prefix):
+        for name in required:
+            if name not in fields:
+                self.report.error(path, 0, f"{prefix}.field.missing",
+                                  f"required field {name!r} is missing")
+        allowed = set(required) | set(optional)
+        for name in fields:
+            if name not in allowed:
+                self.report.error(path, 0, f"{prefix}.field.unknown",
+                                  f"unknown field {name!r}",
+                                  hint="a misspelled field that validated clean would leave "
+                                       "the board silently wrong")
+
+    # ---- items ---------------------------------------------------------------------
+
+    def check_items(self) -> None:
+        for identifier, item in sorted(self.workspace.items.items()):
+            self.check_item(identifier, item)
+
+    def check_item(self, identifier, item) -> None:
+        path = item.path
+        expected_type = id_kind(identifier)
+        if expected_type is None:
+            self.report.error(item.root, 0, "item.id.format",
+                              f"directory name {identifier!r} is not a valid item ID")
+            return
+        if not item.fields:
+            return
+
+        self.check_fields(path, item.fields, ITEM_FIELDS_REQUIRED, ITEM_FIELDS_OPTIONAL, "item")
+
+        if item.fields.get("id") != identifier:
+            self.report.error(path, 0, "item.id.mismatch",
+                              f"id is {item.fields.get('id')!r} but the directory is "
+                              f"{identifier!r}")
+        if item.type != expected_type:
+            self.report.error(path, 0, "item.type.mismatch",
+                              f"type is {item.type!r} but the ID prefix means "
+                              f"{expected_type!r}")
+
+        title = item.fields.get("title")
+        if isinstance(title, str):
+            if len(title) > 80:
+                self.report.error(path, 0, "item.title.length",
+                                  f"title is {len(title)} characters; the limit is 80")
+            if title.endswith("."):
+                self.report.warn(path, 0, "item.title.period",
+                                 "title should not end with a period")
+
+        legal = self.statuses_for(expected_type)
+        if item.status not in legal:
+            self.report.error(path, 0, "item.status.unknown",
+                              f"status {item.status!r} is not legal for a {expected_type}; "
+                              f"expected one of {sorted(legal)}")
+        if item.priority not in self.priorities:
+            self.report.error(path, 0, "item.priority",
+                              f"priority {item.priority!r} is not one of "
+                              f"{sorted(self.priorities)}")
+
+        self.check_timestamp(path, 0, "item.created", item.fields.get("created"), "created")
+        self.check_timestamp(path, 0, "item.updated", item.fields.get("updated"), "updated")
+        created, updated = item.fields.get("created"), item.fields.get("updated")
+        if isinstance(created, str) and isinstance(updated, str) and updated < created:
+            self.report.error(path, 0, "item.updated.before-created",
+                              f"updated ({updated}) is earlier than created ({created})")
+        if item.history and isinstance(updated, str):
+            last = item.history[-1].when
+            if TIMESTAMP_RE.match(last) and updated < last:
+                self.report.error(path, 0, "item.updated.stale",
+                                  f"updated ({updated}) is earlier than the last history row "
+                                  f"({last}); a skill wrote history without touching the item")
+
+        self.check_item_relations(path, identifier, item, expected_type)
+        self.check_item_body(path, item, expected_type)
+        self.check_history(item, expected_type)
+        self.check_journal(item)
+        self.check_questions(item)
+        self.check_item_artifacts(item, expected_type)
+
+    def check_item_relations(self, path, identifier, item, expected_type) -> None:
+        epic = item.fields.get("epic")
+        if expected_type == "epic":
+            if epic is not None:
+                self.report.error(path, 0, "item.epic.on-epic",
+                                  "an epic must not declare an epic field")
+        else:
+            if not epic:
+                self.report.error(path, 0, "item.epic.missing",
+                                  f"a {expected_type} must name its epic")
+            elif epic not in self.workspace.items:
+                self.report.error(path, 0, "item.epic.dangling",
+                                  f"epic {epic!r} does not exist")
+            elif self.workspace.items[epic].type != "epic":
+                self.report.error(path, 0, "item.epic.not-an-epic",
+                                  f"{epic!r} is not an epic")
+
+        for field in ("depends-on", "blocks", "relates-to"):
+            values = item.fields.get(field)
+            if values is None:
+                continue
+            if not isinstance(values, list):
+                self.report.error(path, 0, "item.relation.shape",
+                                  f"{field} must be a list of item IDs")
+                continue
+            for other in values:
+                if other == identifier:
+                    self.report.error(path, 0, "item.relation.self",
+                                      f"{field} references the item itself")
+                elif other not in self.workspace.items:
+                    self.report.error(path, 0, "item.relation.dangling",
+                                      f"{field} references {other!r}, which does not exist")
+
+        found_in = item.fields.get("found-in")
+        if found_in is not None:
+            if expected_type != "bug":
+                self.report.error(path, 0, "item.found-in.not-a-bug",
+                                  "found-in is only meaningful on a bug")
+            elif found_in not in self.workspace.items:
+                self.report.error(path, 0, "item.found-in.dangling",
+                                  f"found-in references {found_in!r}, which does not exist")
+
+        outcome = item.fields.get("outcome")
+        if item.status == "done" and outcome not in OUTCOMES:
+            self.report.error(path, 0, "item.outcome.missing",
+                              f"a done item must record an outcome, one of {sorted(OUTCOMES)}")
+        if item.status != "done" and outcome is not None:
+            self.report.error(path, 0, "item.outcome.premature",
+                              f"outcome is set to {outcome!r} but the item is not done")
+
+        if expected_type != "epic":
+            reached = item.statuses_reached()
+            needs_branch = bool(reached & {"in-progress", "verifying", "in-review"})
+            if needs_branch and not item.fields.get("branch"):
+                self.report.error(path, 0, "item.branch.missing",
+                                  "the item has been in progress but records no branch",
+                                  hint="git log --grep is only reconstructible if the branch "
+                                       "is named here")
+
+    def check_item_body(self, path, item, expected_type) -> None:
+        for section in BODY_SECTIONS[expected_type]:
+            if section not in item.sections:
+                level = self.report.error if section != "## Out of scope" else self.report.warn
+                level(path, item.body_line, "item.section.missing",
+                      f"required section {section!r} is missing")
+            elif not item.sections[section]["text"].strip():
+                self.report.warn(path, item.sections[section]["line"], "item.section.empty",
+                                 f"section {section!r} is empty")
+
+        if expected_type == "epic":
+            return
+        criteria = item.acceptance_criteria()
+        if not criteria:
+            self.report.error(path, item.body_line, "item.criteria.none",
+                              "no acceptance criteria found",
+                              hint="each must be a checkbox labelled AC<n>, per "
+                                   "spec/work-item.md")
+            return
+        for index, criterion in enumerate(criteria, start=1):
+            if criterion["label"] != f"AC{index}":
+                self.report.error(path, criterion["line"], "item.criteria.numbering",
+                                  f"criterion {criterion['label']!r} breaks the sequence; "
+                                  f"expected AC{index}")
+            if not criterion["text"]:
+                self.report.error(path, criterion["line"], "item.criteria.empty",
+                                  f"{criterion['label']} has no text")
+        if item.status == "done" and item.fields.get("outcome") == "delivered":
+            unticked = [c["label"] for c in criteria if not c["checked"]]
+            if unticked:
+                self.report.error(path, item.body_line, "item.criteria.unticked",
+                                  f"item is done and delivered but {', '.join(unticked)} "
+                                  f"remain unticked",
+                                  hint="Definition of Done D1")
+
+    # ---- history -------------------------------------------------------------------
+
+    def transition_is_legal(self, from_status, to_status, actor, suspended_from) -> bool:
+        for rule in self.transitions:
+            rule_from, rule_to = rule.get("from"), rule.get("to")
+            rule_actor = rule.get("actor")
+
+            if rule_from is None:
+                if from_status is not None:
+                    continue
+            elif rule_from == "any-non-terminal":
+                if from_status is None or self.is_terminal(from_status):
+                    continue
+            elif rule_from != from_status:
+                continue
+
+            if rule_to == "resume-to":
+                if suspended_from is None or to_status != suspended_from:
+                    continue
+            elif rule_to != to_status:
+                continue
+
+            if rule_actor != "any" and rule_actor != actor:
+                continue
+            return True
+        return False
+
+    def check_history(self, item, expected_type) -> None:
+        path = os.path.join(item.root, "history.md")
+        if not item.history:
+            if os.path.isfile(path):
+                self.report.error(path, 0, "history.empty",
+                                  "history.md has no rows; every item is created by a skill "
+                                  "and that creation is a row")
+            return
+
+        legal_statuses = self.statuses_for(expected_type)
+        previous_to = None
+        previous_when = ""
+        suspended_from = None
+        for index, row in enumerate(item.history):
+            from_status = row.normalised(row.from_status)
+            to_status = row.normalised(row.to_status)
+            resume_to = row.normalised(row.resume_to)
+
+            if not self.check_timestamp(path, row.line, "history.timestamp", row.when, "when"):
+                continue
+            if row.when < previous_when:
+                self.report.error(path, row.line, "history.order",
+                                  f"timestamp {row.when} is earlier than the previous row "
+                                  f"({previous_when})")
+            previous_when = row.when
+
+            if index == 0:
+                if from_status is not None:
+                    self.report.error(path, row.line, "history.first-row",
+                                      f"the first row's from must be '—', found "
+                                      f"{from_status!r}")
+            elif from_status != previous_to:
+                self.report.error(path, row.line, "history.gap",
+                                  f"from is {from_status!r} but the previous row ended at "
+                                  f"{previous_to!r}",
+                                  hint="a break in the chain means a status changed without "
+                                       "going through a skill")
+
+            if to_status not in legal_statuses:
+                self.report.error(path, row.line, "history.status",
+                                  f"to is {to_status!r}, which is not legal for a "
+                                  f"{expected_type}")
+            if row.actor not in self.skills:
+                self.report.error(path, row.line, "history.actor",
+                                  f"actor {row.actor!r} is not a skill in pipeline.yaml",
+                                  hint="the actor column names a skill, never a person")
+            if not row.reason.strip():
+                self.report.error(path, row.line, "history.reason",
+                                  "reason is empty; it must say what caused the change")
+
+            suspending = to_status in ("awaiting-answer", "blocked")
+            if suspending and resume_to is None:
+                self.report.error(path, row.line, "history.resume-to.missing",
+                                  f"a transition to {to_status!r} must record resume-to",
+                                  hint="otherwise the item cannot be returned to the status "
+                                       "it suspended (ADR-0003)")
+            if not suspending and resume_to is not None:
+                self.report.error(path, row.line, "history.resume-to.unexpected",
+                                  f"resume-to is {resume_to!r} but this transition does not "
+                                  f"suspend the item")
+            if suspending and resume_to is not None and resume_to not in legal_statuses:
+                self.report.error(path, row.line, "history.resume-to.status",
+                                  f"resume-to is {resume_to!r}, which is not legal for a "
+                                  f"{expected_type}")
+
+            if not self.transition_is_legal(from_status, to_status, row.actor, suspended_from):
+                self.report.error(path, row.line, "history.transition.illegal",
+                                  f"{from_status} → {to_status} by {row.actor!r} is not a "
+                                  f"transition in pipeline.yaml")
+
+            if previous_to == "done":
+                self.report.error(path, row.line, "history.after-done",
+                                  "a row follows a transition to done; done is terminal")
+
+            suspended_from = resume_to if suspending else suspended_from
+            previous_to = to_status
+
+        if previous_to != item.status:
+            self.report.error(item.path, 0, "history.tail-mismatch",
+                              f"item.md says status {item.status!r} but the last history row "
+                              f"ends at {previous_to!r}")
+
+    # ---- journal -------------------------------------------------------------------
+
+    def check_journal(self, item) -> None:
+        path = os.path.join(item.root, "journal.md")
+        if not os.path.isfile(path):
+            return
+        previous_when = ""
+        for entry in item.journal:
+            if self.check_timestamp(path, entry.line, "journal.timestamp", entry.when, "entry timestamp"):
+                if entry.when < previous_when:
+                    self.report.error(path, entry.line, "journal.order",
+                                      f"entry timestamp {entry.when} is earlier than the "
+                                      f"previous entry ({previous_when})")
+                previous_when = entry.when
+            if entry.skill not in self.skills:
+                self.report.error(path, entry.line, "journal.skill",
+                                  f"{entry.skill!r} is not a skill in pipeline.yaml")
+            for label in JOURNAL_BULLETS:
+                if label not in entry.bullets:
+                    self.report.error(path, entry.line, "journal.bullet.missing",
+                                      f"entry is missing the '**{label}:**' bullet",
+                                      hint="a declared gate that is silently omitted is the "
+                                           "failure this format exists to prevent")
+            if entry.bullets.get("Item") and entry.bullets["Item"].strip() != item.identifier:
+                self.report.error(path, entry.line, "journal.item",
+                                  f"entry names item {entry.bullets['Item']!r} but is filed "
+                                  f"under {item.identifier}")
+
+        # Every row, including creation: intake's creation of an item is a skill execution and
+        # journals like any other.
+        acting = {row.actor for row in item.history}
+        journalled = {entry.skill for entry in item.journal}
+        for skill in sorted(acting - journalled):
+            self.report.error(path, 0, "journal.execution.missing",
+                              f"{skill!r} appears as an actor in history.md but wrote no "
+                              f"journal entry",
+                              hint="an execution with no entry is indistinguishable from one "
+                                   "that never happened")
+
+    # ---- questions -----------------------------------------------------------------
+
+    def check_questions(self, item) -> None:
+        seen_blocking_open = False
+        for question in item.questions:
+            path = question.path
+            if not QUESTION_ID_RE.match(question.identifier):
+                self.report.error(path, 0, "question.filename",
+                                  f"filename {question.identifier!r} must be Q-### ")
+            self.check_fields(path, question.fields, QUESTION_FIELDS_REQUIRED,
+                              QUESTION_FIELDS_OPTIONAL, "question")
+            if question.fields.get("id") != question.identifier:
+                self.report.error(path, 0, "question.id.mismatch",
+                                  f"id is {question.fields.get('id')!r} but the filename is "
+                                  f"{question.identifier!r}")
+            if question.fields.get("item") != item.identifier:
+                self.report.error(path, 0, "question.item.mismatch",
+                                  f"item is {question.fields.get('item')!r} but the question "
+                                  f"lives under {item.identifier}")
+            if question.fields.get("from-skill") not in self.skills:
+                self.report.error(path, 0, "question.from-skill",
+                                  f"from-skill {question.fields.get('from-skill')!r} is not a "
+                                  f"skill in pipeline.yaml")
+            if question.fields.get("addressed-to") not in ADDRESSED_TO:
+                self.report.error(path, 0, "question.addressed-to",
+                                  f"addressed-to must be one of {sorted(ADDRESSED_TO)}")
+            if not isinstance(question.fields.get("blocking"), bool):
+                self.report.error(path, 0, "question.blocking",
+                                  "blocking must be true or false")
+            status = question.fields.get("status")
+            if status not in QUESTION_STATUS:
+                self.report.error(path, 0, "question.status",
+                                  f"status must be one of {sorted(QUESTION_STATUS)}")
+            self.check_timestamp(path, 0, "question.created", question.fields.get("created"),
+                                 "created")
+
+            for section in ("## Context", "## Question"):
+                text = question.sections.get(section, {}).get("text", "")
+                if not text.strip():
+                    self.report.error(path, question.body_line, "question.section.empty",
+                                      f"{section} is empty")
+
+            if status == "answered":
+                for field in ("answered-at", "answered-by"):
+                    if not question.fields.get(field):
+                        self.report.error(path, 0, "question.answered.field",
+                                          f"an answered question must record {field}")
+                for section in ("## Answer", "## Consequences"):
+                    text = question.sections.get(section, {}).get("text", "")
+                    stripped = "\n".join(line for line in text.split("\n")
+                                         if not line.strip().startswith("<!--"))
+                    if not stripped.strip():
+                        self.report.error(path, question.body_line, "question.answered.section",
+                                          f"{section} is empty on an answered question")
+                consequences = question.sections.get("## Consequences", {}).get("text", "")
+                if consequences.strip() and "`" not in consequences and "/" not in consequences:
+                    self.report.error(path, question.body_line, "question.consequences.files",
+                                      "## Consequences names no file",
+                                      hint="an answer that reaches no artifact has not been "
+                                           "propagated (spec/question.md rule 5)")
+            if status == "open" and question.is_blocking:
+                seen_blocking_open = True
+
+        if seen_blocking_open and item.status not in ("awaiting-answer", "blocked"):
+            self.report.error(item.path, 0, "question.blocking.not-suspended",
+                              f"an open blocking question exists but the item is "
+                              f"{item.status!r}",
+                              hint="a blocking question suspends the item "
+                                   "(spec/question.md rule 1)")
+        if item.status == "awaiting-answer" and not seen_blocking_open:
+            self.report.error(item.path, 0, "question.awaiting.none-open",
+                              "the item is awaiting-answer but no open blocking question "
+                              "exists")
+
+    # ---- artifacts -----------------------------------------------------------------
+
+    def check_item_artifacts(self, item, expected_type) -> None:
+        if expected_type == "epic":
+            return
+        reached = item.statuses_reached()
+        for status, artifact, types in ARTIFACT_BY_STATUS:
+            if expected_type in types and status in reached and not item.has_artifact(artifact):
+                self.report.error(item.root, 0, "artifact.missing",
+                                  f"the item reached {status!r} but artifacts/{artifact} does "
+                                  f"not exist")
+        if item.status == "done" and item.fields.get("outcome") == "delivered" \
+                and not item.has_artifact("review.md"):
+            self.report.error(item.root, 0, "artifact.missing",
+                              "a delivered item must carry artifacts/review.md")
+
+    # ---- epics ---------------------------------------------------------------------
+
+    def check_epics(self) -> None:
+        for epic in self.workspace.epics():
+            children = self.workspace.children_of(epic.identifier)
+            if not children:
+                self.report.warn(epic.path, 0, "epic.childless",
+                                 "the epic has no child items")
+            if epic.status == "done":
+                open_children = [child.identifier for child in children
+                                 if child.status != "done"]
+                if open_children:
+                    self.report.error(epic.path, 0, "epic.closed-with-open-children",
+                                      f"the epic is done but {', '.join(sorted(open_children))} "
+                                      f"are not",
+                                      hint="Definition of Done DE1")
+
+    # ---- project.yaml and board ----------------------------------------------------
+
+    def check_project(self) -> None:
+        project = self.workspace.project
+        if project is None:
+            return
+        path = self.workspace.project_path
+        block = project.get("project")
+        if not isinstance(block, dict):
+            self.report.error(path, 0, "project.block", "the project block is missing")
+        else:
+            for field in ("name", "trunk-branch", "description"):
+                if field not in block:
+                    self.report.error(path, 0, "project.field.missing",
+                                      f"project.{field} is missing")
+            if not block.get("name"):
+                self.report.error(path, 0, "project.name", "project.name is empty")
+            if not block.get("trunk-branch"):
+                self.report.error(path, 0, "project.trunk", "project.trunk-branch is empty")
+            if not block.get("description"):
+                self.report.warn(path, 0, "project.description",
+                                 "project.description is empty",
+                                 hint="workspace-init leaves it null; intake fills it in")
+
+        commands = project.get("commands")
+        if not isinstance(commands, dict):
+            self.report.error(path, 0, "project.commands", "the commands block is missing")
+        else:
+            for field in ("test", "lint", "build"):
+                if field not in commands:
+                    self.report.error(path, 0, "project.commands.field",
+                                      f"commands.{field} is missing; use null if the project "
+                                      f"has none")
+            if commands.get("test") is None:
+                self.report.warn(path, 0, "project.commands.test-null",
+                                 "commands.test is null, so the tests-pass gate will be "
+                                 "recorded as skipped",
+                                 hint="plan must set it or record an ADR saying why the "
+                                      "project has no tests")
+
+        conventions = project.get("conventions")
+        if not isinstance(conventions, dict):
+            self.report.error(path, 0, "project.conventions",
+                              "the conventions block is missing")
+            return
+        if not conventions.get("branch-prefix"):
+            self.report.error(path, 0, "project.conventions.branch-prefix",
+                              "conventions.branch-prefix is missing")
+        subject = conventions.get("commit-subject")
+        if not subject:
+            self.report.error(path, 0, "project.conventions.commit-subject",
+                              "conventions.commit-subject is missing")
+        elif "<ITEM-ID>" not in str(subject):
+            self.report.error(path, 0, "project.conventions.commit-subject",
+                              "commit-subject must contain <ITEM-ID>",
+                              hint="that placeholder is what makes Definition of Done D8 "
+                                   "mechanically checkable")
+
+    def check_board(self) -> None:
+        path = board_lib.board_path(self.workspace)
+        if not self.workspace.items:
+            return
+        if not os.path.isfile(path):
+            self.report.error(path, 0, "board.missing",
+                              "tracker/board.md does not exist but items do",
+                              hint="run scripts/board-gen")
+            return
+        with open(path, "r", encoding="utf-8") as handle:
+            existing = handle.read()
+        if BOARD_MARKER not in existing:
+            self.report.error(path, 1, "board.marker",
+                              "the generated-file marker is missing; the board may have been "
+                              "hand-edited")
+        rendered = board_lib.render(self.workspace, "unused")
+        if board_lib.differs(rendered, existing):
+            self.report.error(path, 0, "board.stale",
+                              "the board does not match tracker state",
+                              hint="run scripts/board-gen")
+
+    # ---- docs ----------------------------------------------------------------------
+
+    def check_docs(self) -> None:
+        for doc in self.workspace.docs:
+            path = doc.path
+            self.check_fields(path, doc.fields, DOC_FIELDS_REQUIRED, DOC_FIELDS_OPTIONAL, "doc")
+            version = doc.fields.get("version")
+            if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+                self.report.error(path, 0, "doc.version",
+                                  f"version must be an integer of at least 1, found "
+                                  f"{version!r}")
+            if doc.fields.get("status") not in DOC_STATUS:
+                self.report.error(path, 0, "doc.status",
+                                  f"status must be one of {sorted(DOC_STATUS)}")
+            self.check_timestamp(path, 0, "doc.updated", doc.fields.get("updated"), "updated")
+            if doc.fields.get("status") == "superseded" and not doc.fields.get("superseded-by"):
+                self.report.error(path, 0, "doc.superseded-by",
+                                  "a superseded document must name what replaced it")
+
+            if "## Change log" not in doc.sections:
+                self.report.error(path, doc.body_line, "doc.changelog.missing",
+                                  "every document ends with a '## Change log' section")
+            elif not doc.changelog:
+                self.report.error(path, doc.sections["## Change log"]["line"],
+                                  "doc.changelog.empty", "the change log has no rows")
+            else:
+                top = doc.changelog[0][0]
+                if str(version) != top[0].strip():
+                    self.report.error(path, doc.changelog[0][1], "doc.changelog.version",
+                                      f"the top change-log row is version {top[0].strip()!r} "
+                                      f"but the frontmatter says {version!r}")
+                numbers = []
+                for cells, line in doc.changelog:
+                    try:
+                        numbers.append((int(cells[0].strip()), line))
+                    except (ValueError, IndexError):
+                        self.report.error(path, line, "doc.changelog.row",
+                                          f"change-log row does not start with a version "
+                                          f"number: {cells[:1]}")
+                for (earlier, _), (later, line) in zip(numbers, numbers[1:]):
+                    if later >= earlier:
+                        self.report.error(path, line, "doc.changelog.order",
+                                          "change-log rows must be newest first")
+
+            if os.path.basename(os.path.dirname(path)) == "adr":
+                self.check_adr(doc)
+
+    def check_adr(self, doc) -> None:
+        name = os.path.basename(doc.path)
+        if not ADR_FILE_RE.match(name):
+            self.report.error(doc.path, 0, "adr.filename",
+                              f"{name!r} must be ADR-####-<lowercase-slug>.md")
+        for section in ADR_SECTIONS:
+            if section not in doc.sections:
+                self.report.error(doc.path, doc.body_line, "adr.section.missing",
+                                  f"required section {section!r} is missing")
+        options = doc.sections.get("## Options considered", {}).get("text", "")
+        bullets = [line for line in options.split("\n") if line.strip().startswith(("-", "*"))]
+        if len(bullets) < 2 and "forced" not in options.lower():
+            self.report.error(doc.path, doc.sections.get("## Options considered", {})
+                              .get("line", doc.body_line), "adr.options",
+                              "an ADR must list at least two options, or say the decision was "
+                              "forced",
+                              hint="otherwise it records a conclusion, and a later reader "
+                                   "cannot tell whether alternatives were considered")
+        consequences = doc.sections.get("## Consequences", {}).get("text", "").lower()
+        if consequences and "revers" not in consequences:
+            self.report.warn(doc.path, doc.sections.get("## Consequences", {})
+                             .get("line", doc.body_line), "adr.reversibility",
+                             "## Consequences does not mention reversibility",
+                             hint="plan's escalation rule turns on that property")
+
+    # ---- driver --------------------------------------------------------------------
+
+    def run(self) -> int:
+        for path, line, code, message, hint in self.workspace.load_errors:
+            self.report.error(path, line, code, message, hint)
+        if not self.load_pipeline():
+            return self.report.emit()
+        self.check_project()
+        self.check_items()
+        self.check_epics()
+        self.check_docs()
+        self.check_board()
+        self.report.note(f"checked {len(self.workspace.items)} item(s), "
+                         f"{len(self.workspace.docs)} document(s)")
+        return self.report.emit()
+
+
+def main(argv: list) -> int:
+    pipeline = None
+    positional = []
+    index = 1
+    while index < len(argv):
+        if argv[index] == "--pipeline":
+            pipeline = argv[index + 1]
+            index += 2
+            continue
+        positional.append(argv[index])
+        index += 1
+    root = positional[0] if positional else "."
+    return Validator(root, find_pipeline(pipeline)).run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

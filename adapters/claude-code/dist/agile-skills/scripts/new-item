@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""Create a tracked item directory with the files and headers the schemas require.
+
+Usage:
+  scripts/new-item --id WI-0001 --type work-item --title "..." --epic EP-001 \\
+                   --priority high --status draft --actor intake --reason "..." \\
+                   [--root .] [--found-in WI-0007]
+  scripts/new-item --next-id work-item [--root .]
+
+Why this exists rather than leaving skills to write the files: an item's journal.md and
+history.md must exist with their headers from the moment the item is created, so that "empty"
+and "lost" stay distinguishable (spec/workspace-layout.md section 1.1). Hand-writing a six-column
+table header correctly, every time, under interruption, is exactly the kind of thing to automate.
+
+The body it writes is a **skeleton with the required headings** and placeholder prompts. The
+creating skill fills it in. It is not a substitute for thinking; it is a substitute for
+remembering the format.
+"""
+
+from __future__ import annotations
+
+import datetime
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+
+import miniyaml  # noqa: E402
+from workspace import ID_PATTERNS, id_kind  # noqa: E402
+
+BODY = {
+    "epic": """
+## Goal
+
+<one paragraph: the outcome for the user, not the implementation>
+
+## Why now
+
+<the problem this solves and the cost of not solving it>
+
+## Success measures
+
+- <observable signal that the goal was met>
+
+## Scope
+
+- <the shape of the work>
+
+## Out of scope
+
+- <deliberate exclusions>
+""",
+    "work-item": """
+## Story
+
+As a <role>, I want <capability>, so that <outcome>.
+
+## Acceptance criteria
+
+- [ ] AC1 — <observable, testable statement>
+
+## Out of scope
+
+- <what a reader might reasonably assume is included, and is not>
+
+## Notes
+
+<optional context; constraints discovered during refinement>
+""",
+    "bug": """
+## Summary
+
+<one paragraph: what is wrong, observed where>
+
+## Steps to reproduce
+
+1. <exact command or action>
+
+## Expected behaviour
+
+<what the acceptance criteria, docs, or an ADR say should happen>
+
+## Actual behaviour
+
+<verbatim output, error text, exit code>
+
+## Acceptance criteria
+
+- [ ] AC1 — the steps above produce the expected behaviour
+- [ ] AC2 — a regression test covers this case and fails without the fix
+
+## Notes
+""",
+}
+
+HISTORY_HEADER = """# History — {identifier}
+
+| when | from | to | actor | resume-to | reason |
+|------|------|----|-------|-----------|--------|
+"""
+
+JOURNAL_HEADER = """# Journal — {identifier}
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+"""
+
+
+def now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def parse_args(argv: list) -> dict:
+    options = {"root": "."}
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if not token.startswith("--"):
+            raise SystemExit(f"new-item: unexpected argument {token!r}")
+        key = token[2:]
+        if index + 1 >= len(argv):
+            raise SystemExit(f"new-item: {token} needs a value")
+        options[key] = argv[index + 1]
+        index += 2
+    return options
+
+
+def highest_existing(items_dir: str, kind: str) -> int:
+    pattern = ID_PATTERNS[kind]
+    highest = 0
+    if not os.path.isdir(items_dir):
+        return highest
+    for name in os.listdir(items_dir):
+        if pattern.match(name):
+            highest = max(highest, int(name.split("-")[1]))
+    return highest
+
+
+def next_id(items_dir: str, kind: str) -> str:
+    prefix = {"epic": "EP", "work-item": "WI", "bug": "BUG"}[kind]
+    width = 3 if kind == "epic" else 4
+    return f"{prefix}-{highest_existing(items_dir, kind) + 1:0{width}d}"
+
+
+def main(argv: list) -> int:
+    options = parse_args(argv)
+    root = os.path.abspath(options["root"])
+    items_dir = os.path.join(root, "tracker", "items")
+
+    if "next-id" in options:
+        kind = options["next-id"]
+        if kind not in ID_PATTERNS:
+            print(f"new-item: unknown type {kind!r}", file=sys.stderr)
+            return 1
+        print(next_id(items_dir, kind))
+        return 0
+
+    for required in ("id", "type", "title", "status", "actor", "reason"):
+        if required not in options:
+            print(f"new-item: --{required} is required", file=sys.stderr)
+            return 1
+
+    identifier = options["id"]
+    kind = options["type"]
+    if kind not in BODY:
+        print(f"new-item: unknown type {kind!r}", file=sys.stderr)
+        return 1
+    if id_kind(identifier) != kind:
+        print(f"new-item: id {identifier!r} does not match type {kind!r}", file=sys.stderr)
+        return 1
+
+    directory = os.path.join(items_dir, identifier)
+    if os.path.exists(directory):
+        print(f"new-item: {identifier} already exists; refusing to overwrite", file=sys.stderr)
+        return 1
+    if kind != "epic" and "epic" not in options:
+        print("new-item: --epic is required for work items and bugs", file=sys.stderr)
+        return 1
+
+    timestamp = now()
+    fields = {
+        "id": identifier,
+        "type": kind,
+        "title": options["title"],
+        "status": options["status"],
+        "priority": options.get("priority", "medium"),
+    }
+    if kind != "epic":
+        fields["epic"] = options["epic"]
+    fields["created"] = timestamp
+    fields["updated"] = timestamp
+    if "found-in" in options:
+        fields["found-in"] = options["found-in"]
+
+    os.makedirs(os.path.join(directory, "questions"))
+    os.makedirs(os.path.join(directory, "artifacts"))
+
+    write(os.path.join(directory, "item.md"),
+          "---\n" + miniyaml.dump_frontmatter(fields) + "---\n" + BODY[kind])
+    write(os.path.join(directory, "journal.md"), JOURNAL_HEADER.format(identifier=identifier))
+    write(os.path.join(directory, "history.md"),
+          HISTORY_HEADER.format(identifier=identifier)
+          + f"| {timestamp} | — | {options['status']} | {options['actor']} | — | "
+            f"{options['reason']} |\n")
+
+    print(f"new-item: created {identifier} at status {options['status']}")
+    print(f"  {os.path.relpath(directory, root)}/")
+    print("  fill in the body headings before transitioning it")
+    return 0
+
+
+def write(path: str, text: str) -> None:
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

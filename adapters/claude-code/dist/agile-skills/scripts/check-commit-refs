@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Gate: every commit on an item's branch names the item.
+
+Usage: scripts/check-commit-refs <ITEM-ID> <branch> [--root .] [--trunk main]
+
+Exit 0 when every commit on <branch> that is not already on the trunk has <ITEM-ID> in its
+subject line. This is what makes `git log --grep <ITEM-ID>` reconstruct an item's whole code
+history, which Definition of Done D8 requires and which no amount of good intention delivers
+reliably.
+
+If the branch does not exist, the gate **fails** rather than passing vacuously: a gate that
+reports success when it could not look is worse than no gate.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+
+import miniyaml  # noqa: E402
+
+
+def git(args, root):
+    return subprocess.run(["git", "-C", root] + args, capture_output=True, text=True)
+
+
+def trunk_from_project(root: str) -> str:
+    path = os.path.join(root, "tracker", "project.yaml")
+    try:
+        project = miniyaml.load_file(path)
+        return (project.get("project") or {}).get("trunk-branch") or "main"
+    except (OSError, miniyaml.YamlError):
+        return "main"
+
+
+def main(argv: list) -> int:
+    positional, options = [], {}
+    index = 1
+    while index < len(argv):
+        if argv[index].startswith("--"):
+            options[argv[index][2:]] = argv[index + 1]
+            index += 2
+        else:
+            positional.append(argv[index])
+            index += 1
+    if len(positional) < 2:
+        print("usage: check-commit-refs <ITEM-ID> <branch> [--root .] [--trunk main]",
+              file=sys.stderr)
+        return 2
+
+    item_id, branch = positional[0], positional[1]
+    root = os.path.abspath(options.get("root", "."))
+    trunk = options.get("trunk") or trunk_from_project(root)
+
+    if git(["rev-parse", "--git-dir"], root).returncode != 0:
+        print(f"check-commit-refs: {root} is not a git repository", file=sys.stderr)
+        return 1
+    if git(["rev-parse", "--verify", branch], root).returncode != 0:
+        print(f"check-commit-refs: branch {branch!r} does not exist", file=sys.stderr)
+        return 1
+
+    if git(["rev-parse", "--verify", trunk], root).returncode == 0:
+        rev_range = f"{trunk}..{branch}"
+    else:
+        # A repository whose first work happens on a branch has no trunk yet; check the whole
+        # branch rather than silently checking nothing.
+        rev_range = branch
+
+    result = git(["log", "--format=%H%x1f%s", rev_range], root)
+    if result.returncode != 0:
+        print(f"check-commit-refs: git log failed: {result.stderr.strip()}", file=sys.stderr)
+        return 1
+
+    offenders = []
+    total = 0
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        total += 1
+        sha, _, subject = line.partition("\x1f")
+        if item_id not in subject:
+            offenders.append((sha[:8], subject))
+
+    if total == 0:
+        print(f"check-commit-refs: no commits on {rev_range}; nothing was delivered",
+              file=sys.stderr)
+        return 1
+
+    if offenders:
+        print(f"check-commit-refs: {len(offenders)} of {total} commit(s) on {rev_range} do not "
+              f"name {item_id}:", file=sys.stderr)
+        for sha, subject in offenders:
+            print(f"  {sha}  {subject}", file=sys.stderr)
+        print("  fix with: git rebase -i --exec 'git commit --amend' "
+              f"{trunk}   (or amend the offending commits individually)", file=sys.stderr)
+        return 1
+
+    print(f"check-commit-refs: all {total} commit(s) on {rev_range} name {item_id}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

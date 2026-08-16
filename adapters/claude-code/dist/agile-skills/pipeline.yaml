@@ -1,0 +1,235 @@
+# pipeline.yaml — the status graph and the dispatch rules.
+#
+# This file is the orchestrator's entire world model. `next` reads it and the tracker, and
+# knows nothing else: no engineering, no heuristics, no special cases per skill.
+#
+# Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
+# it, and scripts/lint-skills fails the build when the two disagree.
+
+version: 0.1.0
+
+item_types:
+  - epic
+  - work-item
+  - bug
+
+# Registry of the skills this pipeline is made of. lint-skills checks that this list and
+# methodology/skills/*/ agree exactly, in both directions.
+skills:
+  - next
+  - intake
+  - refine
+  - plan
+  - implement
+  - verify
+  - review-close
+  - answer-questions
+
+priorities:
+  - name: critical
+    rank: 1
+  - name: high
+    rank: 2
+  - name: medium
+    rank: 3
+  - name: low
+    rank: 4
+
+# Every status. `owner` is the single skill the orchestrator dispatches for an item in this
+# status; `null` means no skill advances it and the orchestrator reports it instead.
+statuses:
+  - name: draft
+    applies_to: [work-item, bug]
+    owner: refine
+    terminal: false
+    description: Created, not yet proven to meet the Definition of Ready.
+
+  - name: ready
+    applies_to: [work-item, bug]
+    owner: plan
+    terminal: false
+    description: Meets the Definition of Ready. Needs a design and a plan.
+
+  - name: planned
+    applies_to: [work-item, bug]
+    owner: implement
+    terminal: false
+    description: A plan exists. No branch or code yet, so restarting is free.
+
+  - name: in-progress
+    applies_to: [work-item, bug]
+    owner: implement
+    terminal: false
+    description: A branch exists with partial work. Resuming must reconcile with it.
+
+  - name: verifying
+    applies_to: [work-item, bug]
+    owner: verify
+    terminal: false
+    description: Implementation reports itself complete. Needs independent validation.
+
+  - name: in-review
+    applies_to: [work-item, bug]
+    owner: review-close
+    terminal: false
+    description: Verified. Needs Definition of Done review, merge, and closing.
+
+  - name: awaiting-answer
+    applies_to: [work-item, bug, epic]
+    owner: answer-questions
+    terminal: false
+    description: A blocking question is open. No engineering may proceed.
+
+  - name: blocked
+    applies_to: [work-item, bug, epic]
+    owner: null
+    terminal: true
+    description: A documented impasse. Only a human can move it.
+
+  - name: open
+    applies_to: [epic]
+    owner: null
+    terminal: true
+    description: An epic with children not yet all done. Advances only through its children.
+
+  - name: done
+    applies_to: [work-item, bug, epic]
+    owner: null
+    terminal: true
+    description: Closed, with an outcome recorded.
+
+# Every legal transition. `from: null` means item creation. `resume_to` records whether the
+# transition must carry the status it suspends (see spec/ids-and-statuses.md §4).
+transitions:
+  - from: null
+    to: draft
+    actor: intake
+    resume_to: forbidden
+    condition: Item created from a refined idea under an epic.
+
+  - from: null
+    to: ready
+    actor: verify
+    resume_to: forbidden
+    condition: A bug filed with reproduction steps already satisfies the bug Definition of Ready.
+
+  - from: null
+    to: open
+    actor: intake
+    resume_to: forbidden
+    condition: Epic created from the raw idea.
+
+  - from: draft
+    to: ready
+    actor: refine
+    resume_to: forbidden
+    condition: Definition of Ready passes, or the human explicitly overrides.
+
+  - from: ready
+    to: planned
+    actor: plan
+    resume_to: forbidden
+    condition: Design recorded and plan.md written.
+
+  - from: planned
+    to: in-progress
+    actor: implement
+    resume_to: forbidden
+    condition: Branch created and work started.
+
+  - from: in-progress
+    to: verifying
+    actor: implement
+    resume_to: forbidden
+    condition: Hard gates pass and impl-report.md is written.
+
+  - from: verifying
+    to: in-review
+    actor: verify
+    resume_to: forbidden
+    condition: Every acceptance criterion is confirmed with evidence.
+
+  - from: verifying
+    to: in-progress
+    actor: verify
+    resume_to: forbidden
+    condition: Verification fails against this item's own acceptance criteria.
+
+  - from: in-review
+    to: done
+    actor: review-close
+    resume_to: forbidden
+    condition: Definition of Done passes and the branch is merged into the trunk.
+
+  - from: in-review
+    to: in-progress
+    actor: review-close
+    resume_to: forbidden
+    condition: Review rejects the change, with the reasons recorded in review.md.
+
+  - from: open
+    to: done
+    actor: review-close
+    resume_to: forbidden
+    condition: Epic only. Every child item is done and the epic Definition of Done passes.
+
+  - from: any-non-terminal
+    to: awaiting-answer
+    actor: any
+    resume_to: required
+    condition: A blocking question was filed against the item.
+
+  - from: awaiting-answer
+    to: resume-to
+    actor: answer-questions
+    resume_to: forbidden
+    condition: The blocking question is answered and its consequences are propagated into artifacts.
+
+  - from: any-non-terminal
+    to: blocked
+    actor: any
+    resume_to: required
+    condition: A documented impasse that no skill can resolve.
+
+  - from: blocked
+    to: resume-to
+    actor: any
+    resume_to: forbidden
+    condition: A human recorded a resolution in the item.
+
+# The orchestrator's algorithm, in order. `next` executes exactly these steps and stops at the
+# first one that produces an action. Nothing here requires engineering judgement, by design.
+orchestrator:
+  steps:
+    - id: 1
+      action: validate
+      description: Run the workspace validator. If it fails, report and stop; a broken workspace makes every later step unsound.
+    - id: 2
+      action: surface-human-questions
+      description: If any question with addressed-to human and status open exists, surface it with its item and stop.
+    - id: 3
+      action: dispatch-answer-questions
+      description: Else if any question addressed to architect is open, dispatch answer-questions on the oldest such question's item.
+    - id: 4
+      action: dispatch-owner
+      description: Else pick the runnable item with the best selection key and dispatch its status owner.
+    - id: 5
+      action: report-and-stop
+      description: Else regenerate the board, report it with any blocked items and open non-blocking questions, and stop.
+
+  # An item is runnable when all of these hold.
+  runnable:
+    - Its status has a non-null owner.
+    - It has no open blocking question.
+    - Every id in its depends-on is at status done.
+
+  # Deterministic and total: two runs over the same workspace pick the same item.
+  selection_key:
+    - priority-rank ascending
+    - created ascending
+    - id ascending
+
+  stop_conditions:
+    - The workspace validator failed.
+    - A question addressed to the human is open.
+    - No item is runnable.

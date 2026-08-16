@@ -850,3 +850,42 @@ pipeline's paper trail should feel like.
 - **Gates:** repository gate green.
 - **Artifacts produced:** `adapters/README.md`.
 - **Result:** META-040 done. Next: META-041 (`adapters/claude-code/render.py`).
+
+---
+
+## 2026-08-16 — META-041 — `adapters/claude-code/render.py`
+
+- **Unit:** META-041
+- **Inputs read:** `adapters/README.md` (the contract this implements), `meta/adr/ADR-0001`
+  (format facts + URLs), every `skill.yaml` and `process.md`, `methodology/pipeline.yaml`.
+- **Decisions:**
+  - **No per-skill branches.** Every difference between rendered skills comes from a declared
+    field: `human_interaction` decides whether the question-the-human capability is removed,
+    `dispatch.on_status` fills the at-a-glance line, `quality_gates[].enforcement` picks out the
+    hard gates. The module docstring names the tell (`if name == "implement"`) and the remedy
+    (add a field to the spec), so conformance item A2 stays true under later edits.
+  - Frontmatter emits only portable Agent-Skills fields by default; `disallowed-tools:
+    AskUserQuestion` is added **only** for skills whose contract forbids asking a person. That
+    is capability C2 as enforcement rather than instruction, and the manifest names which skills
+    are consequently runtime-only.
+  - Chose **not** to emit `allowed-tools`. Pre-approving `Bash` for skills that run arbitrary
+    project commands is a broad grant the consumer should make deliberately in their own
+    settings; `USAGE.md` will document it. A convenience that silently widens permissions is not
+    the adapter's call to make.
+  - Shared material installs to `.claude/agile-skills/` and is referenced by **project-relative**
+    path, not by a path relative to the skill directory — unambiguous however the runtime
+    resolves a skill's own location. Gate commands beginning `scripts/` are rewritten to that
+    prefix by `gate_command()`, which is the adapter's one mapping and is stated in one place.
+  - The renderer **fails the build** rather than truncating: over the 1536-character description
+    cap, or over the 500-line SKILL.md guidance. A skill that silently stops triggering because
+    its description was cut is the failure mode ADR-0001 §4 warns about.
+  - `--check` renders to a temp directory and reports **which paths differ**, not a boolean, so
+    a stale `dist/` tells you what to look at.
+  - A script listed for shipping but missing prints a WARNING rather than being silently
+    skipped (`run-gate` arrives in META-042).
+- **Commands run:** rendered 8 skills; `--check` → "dist/ is current" (determinism holds);
+  rendered descriptions measured at 469–531 characters, all well under the cap; SKILL.md bodies
+  180–205 lines, all under 500.
+- **Gates:** `./scripts/check` → 4 PASS, 1 SKIP (the render step is now live and green).
+- **Artifacts produced:** `adapters/claude-code/render.py`, `adapters/claude-code/dist/**`.
+- **Result:** META-041 done. Next: META-042 (gate runner, hooks, installer).

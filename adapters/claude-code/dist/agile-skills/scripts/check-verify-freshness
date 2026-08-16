@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Gate: the verification ran against the code that is actually there.
+
+Usage: scripts/check-verify-freshness <ITEM-ID> <branch> [--root .]
+
+Definition of Done D10. `verify` records the commit it verified in its report as a line
+
+    Verified-commit: <full sha>
+
+and this gate compares that sha with the branch head. If code changed after verification ran,
+the verification does not apply to what is about to be merged, and `review-close` must return
+the item to `verifying` rather than closing over it.
+
+D10 is the criterion most often waved through with "it was only a small fix". A comparison
+costs nothing and does not have an opinion about how small the fix looked.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import sys
+
+VERIFIED_RE = re.compile(r"^Verified-commit:\s*([0-9a-f]{7,40})\s*$", re.MULTILINE)
+
+
+def git(args, root):
+    return subprocess.run(["git", "-C", root] + args, capture_output=True, text=True)
+
+
+def main(argv: list) -> int:
+    positional, options = [], {}
+    index = 1
+    while index < len(argv):
+        if argv[index].startswith("--"):
+            options[argv[index][2:]] = argv[index + 1]
+            index += 2
+        else:
+            positional.append(argv[index])
+            index += 1
+    if len(positional) < 2:
+        print("usage: check-verify-freshness <ITEM-ID> <branch> [--root .]", file=sys.stderr)
+        return 2
+
+    item_id, branch = positional[0], positional[1]
+    root = os.path.abspath(options.get("root", "."))
+    report = os.path.join(root, "tracker", "items", item_id, "artifacts", "verify-report.md")
+
+    if not os.path.isfile(report):
+        print(f"check-verify-freshness: {item_id} has no verify-report.md", file=sys.stderr)
+        return 1
+    with open(report, "r", encoding="utf-8") as handle:
+        text = handle.read()
+
+    match = VERIFIED_RE.search(text)
+    if not match:
+        print("check-verify-freshness: verify-report.md has no 'Verified-commit: <sha>' line",
+              file=sys.stderr)
+        print("  a verification that does not say what it verified cannot be shown to be "
+              "current", file=sys.stderr)
+        return 1
+    verified = match.group(1)
+
+    head = git(["rev-parse", branch], root)
+    if head.returncode != 0:
+        print(f"check-verify-freshness: branch {branch!r} does not exist", file=sys.stderr)
+        return 1
+    head_sha = head.stdout.strip()
+
+    if not head_sha.startswith(verified) and not verified.startswith(head_sha[:len(verified)]):
+        newer = git(["log", "--format=%h %s", f"{verified}..{branch}"], root)
+        print(f"check-verify-freshness: {item_id} was verified at {verified} but {branch} is "
+              f"now at {head_sha[:8]}", file=sys.stderr)
+        if newer.returncode == 0 and newer.stdout.strip():
+            print("  commits added after verification:", file=sys.stderr)
+            for line in newer.stdout.strip().split("\n"):
+                print(f"    {line}", file=sys.stderr)
+        print("  the verification does not apply to what would be merged; return the item to "
+              "verifying", file=sys.stderr)
+        return 1
+
+    print(f"check-verify-freshness: {item_id} verified at {head_sha[:8]}, which is the head of "
+          f"{branch}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
