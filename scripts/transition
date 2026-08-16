@@ -368,6 +368,14 @@ def main(argv: list) -> int:
     fields["updated"] = timestamp
     if options.get("outcome"):
         fields["outcome"] = options["outcome"]
+    elif from_status == "done" and to_status != "done" and "outcome" in fields:
+        # An item leaving `done` no longer has an outcome — `spec/work-item.md` §1 requires the
+        # field to be present if and only if the status is `done`. Without this, reopening an
+        # epic left a stale `outcome: delivered` behind and the only way to remove it was to
+        # hand-edit item.md, which is exactly the kind of manual repair this script exists to
+        # make unnecessary. Reported twice by real runs before being fixed.
+        del fields["outcome"]
+        print(f"transition: cleared outcome (the item is no longer done)")
     if options.get("branch"):
         fields["branch"] = options["branch"]
     row = (f"| {timestamp} | {from_status} | {to_status} | {actor} "

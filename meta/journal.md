@@ -1497,3 +1497,26 @@ reviewer's call.
   build, and it argues for a specific next iteration — a check that resolves every sha and
   cross-document claim mechanically, because judgement gates did not.
 - **Result:** META-069 done. `AUDIT.md` committed.
+
+---
+
+## 2026-08-17 — META-070a — a tooling gap reported twice, now fixed
+
+- **Unit:** META-070a
+- **What was reported:** two separate runs hit the same thing — `scripts/transition` could not
+  **clear** `outcome:` when an epic left `done`, so a reopened epic kept `outcome: delivered`,
+  the validator correctly refused it with `item.outcome.premature`, and the only way out was to
+  hand-edit `item.md`. The first run cleared it by hand and journalled the reversal; the second
+  hit it again and reported it as a toolkit limitation rather than treating a hand-edit as
+  normal.
+- **The fix:** `transition` now clears `outcome` automatically when an item moves off `done`,
+  and says so. `spec/work-item.md` §1 already required the field to be present *if and only if*
+  the status is `done`, so the script was simply failing to maintain an invariant the spec
+  states.
+- **Why it is worth recording rather than just fixing:** the same defect surfacing twice, in two
+  independent runs, is the signal that it was a tooling gap and not a worker mistake. The first
+  report could have been read either way; the second could not. Both runs did the right thing by
+  journalling the manual repair rather than performing it silently — which is the only reason
+  the pattern was visible at all.
+- **Commands run:** `./scripts/check` → all steps passed; re-rendered and re-installed.
+- **Result:** fixed.
