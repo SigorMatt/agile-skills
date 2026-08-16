@@ -716,3 +716,42 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `scripts/lib/board.py`, `scripts/board-gen`; edits to
   `spec/workspace-layout.md` §4.
 - **Result:** META-033 done. Next: META-032 (`scripts/validate-workspace`).
+
+---
+
+## 2026-08-16 — META-032 — `scripts/validate-workspace` + the broken-workspace fixture
+
+- **Unit:** META-032
+- **Inputs read:** every file in `spec/`, `methodology/pipeline.yaml`, `scripts/lib/workspace.py`.
+- **Decisions:**
+  - The validator resolves `pipeline.yaml` by searching `--pipeline`, then beside the scripts,
+    then `../methodology/`. The adapter's installer drops a copy beside the installed scripts,
+    so a consumer project needs no `methodology/` tree while `methodology/` stays the single
+    source.
+  - Transition legality is evaluated against `pipeline.yaml`'s rules, including the pseudo
+    states `any-non-terminal` and `resume-to`; the `resume-to` case is checked against the
+    actual `resume-to` recorded on the row that suspended the item, so returning an item to the
+    wrong status is caught rather than assumed correct.
+  - **Every** history row, including creation, requires a journal entry from its actor. An
+    item created by `new-item` therefore fails validation until the creating skill journals —
+    which is right, and was confirmed by running it.
+  - `question.consequences.files` fires when a `## Consequences` section names no file: the
+    mechanical form of "an answer that reaches no artifact has not been propagated".
+  - Warnings, not errors, for judgement-adjacent things (`project.description` empty, a null
+    test command, a missing `## Out of scope`, an ADR that never mentions reversibility) so a
+    freshly initialised workspace is not unusable while still being told what is thin.
+  - Added `fixtures/broken-workspace/` — a tree where every file is wrong on purpose — plus
+    `EXPECTED-CODES.txt`. `scripts/check` will assert the emitted code set equals it exactly, so
+    **a rule that silently stops firing fails the build**. That is the failure mode a validator
+    is most prone to and least likely to notice, and no amount of "the validator passes" catches
+    it.
+- **Commands run:**
+  - `./scripts/validate-workspace fixtures/broken-workspace` → 59 errors, 3 warnings across
+    **44 distinct codes**, each pointing at a real line.
+  - `./scripts/validate-workspace <clean temp workspace>` → exactly the two expected errors
+    (`journal.execution.missing` for `intake` on both items), which is the rule above working.
+  - `scripts/lib/selftest.py` and `scripts/lint-skills` both still clean.
+- **Gates:** validator exercised in both directions (must-fail fixture, must-pass workspace).
+- **Artifacts produced:** `scripts/validate-workspace`, `fixtures/broken-workspace/**`.
+- **Result:** META-032 done. Next: META-036 (git-backed gate scripts), then META-035
+  (`scripts/check`).

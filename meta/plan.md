@@ -44,7 +44,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
       checks `process.md` structure, and enforces "no runtime names under `methodology/` or `spec/`".
 - [x] **META-037** — `scripts/lib/workspace.py` — one loader/model shared by every script that
       reads a workspace, so the validator and the board can never disagree about a file.
-- [ ] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
+- [x] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
 - [x] **META-033** — `scripts/board-gen` — regenerates `tracker/board.md`.
 - [x] **META-034** — `scripts/workspace-init` + `scripts/new-item` — schema-correct skeletons
       for a workspace and for an item, including derive-next-ID.

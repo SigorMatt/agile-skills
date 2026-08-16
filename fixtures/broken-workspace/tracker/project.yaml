@@ -1,0 +1,13 @@
+project:
+  name: broken
+  trunk-branch: main
+  description: A workspace whose every file is wrong on purpose.
+
+commands:
+  test: python3 -m pytest -q
+  lint: null
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary>"
