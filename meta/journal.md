@@ -228,3 +228,29 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet.
 - **Artifacts produced:** `spec/doc-header.md`.
 - **Result:** META-014 done. Next: META-015.
+
+---
+
+## 2026-08-16 — META-015 — `spec/dor-dod.md`
+
+- **Unit:** META-015
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R2 (override is journaled), `spec/work-item.md`.
+- **Decisions:**
+  - Every criterion is tagged **[auto]** (a script decides it) or **[skill]** (the skill decides
+    and must record evidence). Without the tag, "executable gates over vibes" collapses into a
+    checklist an agent can wave at.
+  - Results are recorded criterion by criterion. A bare "DoR passed" hides which criterion was
+    the weak one, which is exactly what a reviewer needs.
+  - The DoR override is designed to be *loud*: named unmet criteria in `refinement-qa.md`, a
+    history reason that must start with `DoR overridden:`, and the risk copied into the item's
+    `## Notes` so `plan` and `implement` inherit it visibly. Overriding is legitimate; doing it
+    quietly is not.
+  - D10 ("verify ran after the last code change") is machine-checkable by comparing the verify
+    report timestamp to the last commit on the branch, and `review-close` must actually compare
+    rather than assume. D3 and D10 are called out as the two that get skipped, with the shared
+    failure mode named: something is re-touched after the check and the check is not re-run.
+  - DE3 stops the pipeline mistaking "all tickets closed" for "goal achieved": an unmet success
+    measure may still close the epic, but saying so is mandatory.
+- **Gates:** none yet.
+- **Artifacts produced:** `spec/dor-dod.md`.
+- **Result:** META-015 done. Next: META-016 (skill contract — the schema `lint-skills` enforces).
