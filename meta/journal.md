@@ -254,3 +254,36 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet.
 - **Artifacts produced:** `spec/dor-dod.md`.
 - **Result:** META-015 done. Next: META-016 (skill contract — the schema `lint-skills` enforces).
+
+---
+
+## 2026-08-16 — META-016 — `spec/skill-contract.md`
+
+- **Unit:** META-016
+- **Inputs read:** `seed/02-ARCHITECTURE.md` §2/§6, `seed/00-VISION.md` principle 4,
+  `spec/ids-and-statuses.md`.
+- **Decisions:**
+  - `dispatch.on_status` is a **list of statuses**, replacing the seed's example expression
+    `item.status == "planned"`. An expression language would need an evaluator in every adapter
+    and would let engineering judgement leak into the scheduler, which VISION principle 4
+    forbids. `lint-skills` cross-checks the list against `pipeline.yaml` in both directions: an
+    unclaimed status is a stall, a doubly-claimed status is a race.
+  - A gate has exactly one of `command` or `manual_check`. Allowing both invites reporting the
+    manual check when the command fails.
+  - `enforcement: hard|advisory` is declared in the methodology, but *which* gates a runtime
+    actually blocks on is documented per adapter — the methodology cannot honestly claim
+    enforcement it does not implement (R5).
+  - Placeholders are `{{...}}`, resolved by the adapter. `{{commands.test}}` resolving to null
+    makes the gate **skipped**, never passed; unknown placeholders are a lint error so a typo
+    cannot degrade into an empty string that makes a gate trivially pass.
+  - Introduced `tracker/project.yaml` as the machine-readable home for project commands and the
+    trunk branch name, and made `plan` responsible for filling it (or writing an ADR saying the
+    project has no such command). Gates otherwise have no honest way to name a test command
+    that is unknown when the methodology is written.
+  - `process.md` must transition **after** journaling: an interruption then costs a repeated run
+    rather than a status that advanced with no record.
+  - `## Self-check` must name ≥2 specific failure modes for that role. It is where lessons from
+    a bad run are recorded, so the iterate-and-deepen loop has somewhere to land.
+- **Gates:** none yet; `scripts/lint-skills` (META-031) implements this page.
+- **Artifacts produced:** `spec/skill-contract.md`.
+- **Result:** META-016 done. Next: META-017 (`spec/workspace-layout.md`, incl. `project.yaml`).
