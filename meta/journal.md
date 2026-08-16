@@ -315,3 +315,33 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet; `scripts/validate-workspace` and `scripts/workspace-init` implement this.
 - **Artifacts produced:** `spec/workspace-layout.md`.
 - **Result:** META-017 done. Phase 1 (`spec/`) complete. Next: META-020 (`pipeline.yaml`).
+
+---
+
+## 2026-08-16 — META-020 — `methodology/pipeline.yaml`
+
+- **Unit:** META-020
+- **Inputs read:** `spec/ids-and-statuses.md`, `spec/skill-contract.md` §1.2,
+  `seed/02-ARCHITECTURE.md` §4.
+- **Decisions:**
+  - `pipeline.yaml` is the orchestrator's *entire* world model — statuses with owners,
+    transitions, priority ranks, and the five-step algorithm. Everything an adapter or `next`
+    needs is data here rather than logic there.
+  - Transitions that apply from many states are expressed with the pseudo-states
+    `any-non-terminal` and `resume-to` rather than being enumerated per source status. Fifty
+    rows of enumeration would have to be regenerated whenever a status is added, and the
+    generated rows would be the first thing to drift from the prose spec.
+  - Added a `skills:` registry so `lint-skills` can check the pipeline and
+    `methodology/skills/*/` agree in both directions — a skill directory nobody dispatches is as
+    much a defect as a dispatch target with no skill.
+  - `orchestrator.runnable` and `orchestrator.selection_key` are data, so determinism is a
+    property of the file rather than of an implementation's habits.
+  - Corrected `spec/ids-and-statuses.md` §3.2 in the same unit: epics can hold a blocking
+    question about their own scope, so `awaiting-answer` applies to epics too. Found by writing
+    the machine-readable form of the prose — which is the reason to keep both.
+- **Commands run:** parsed `pipeline.yaml` with `miniyaml` (10 statuses, 16 transitions);
+  `python3 scripts/lib/selftest.py` → `111 passed, 0 failed`, cross-checked against PyYAML on
+  32 inputs (the new file is now one of them).
+- **Gates:** miniyaml/PyYAML agreement on `pipeline.yaml`.
+- **Artifacts produced:** `methodology/pipeline.yaml`; edit to `spec/ids-and-statuses.md`.
+- **Result:** META-020 done. Next: META-021 (`intake`).

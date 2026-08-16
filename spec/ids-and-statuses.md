@@ -74,6 +74,7 @@ whose delivered behaviour it contradicts, via `found-in`.
 | Status | Meaning | Owning skill | Terminal |
 |--------|---------|--------------|----------|
 | `open` | Has child items that are not all `done`. | none — epics advance through their children | yes* |
+| `awaiting-answer` | A blocking question about the epic's own scope is open. | `answer-questions` | no |
 | `blocked` | Every child is blocked or awaiting a human. | none — a human must act | yes |
 | `done` | Every child item is `done`, and the epic has been closed with an outcome. | none | yes |
 
