@@ -5,6 +5,7 @@ Usage:
   scripts/transition <ITEM-ID> --to <status> --actor <skill> --reason "..." \\
                      [--resume-to <status>] [--outcome delivered] [--branch wi/WI-0001] \\
                      [--root .] [--dry-run] [--force]
+  scripts/transition <ITEM-ID> --restamp-last <UTC-timestamp> --reason "..." [--root .]
 
 What it does, in order:
   1. checks the transition is legal from the item's current status, for this actor, against
@@ -27,6 +28,14 @@ which is why the adapter's hook denies exactly that.
 `--force` skips step 2 and records `[gates forced]` in the reason, so an override is visible in
 the record forever rather than being indistinguishable from a clean pass.
 
+`--restamp-last` is the **only** sanctioned repair of an already-written history row, and it
+changes exactly one thing: the `when` of the last row. It exists for one situation — an earlier
+row was stamped with a wrong clock, so the last row is legitimately "earlier than the previous
+row" and the item can never move again. Appending cannot fix that; only the pair can. The new
+value must be greater than or equal to the previous row's `when`, the change is printed old to
+new, and the caller MUST journal it as a correction. Nothing else about the row may be touched,
+and no other row may be touched at all.
+
 Standard library only (ADR-0002).
 """
 
@@ -34,6 +43,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import re
 import subprocess
 import sys
 
@@ -165,6 +175,63 @@ def current_status(history_text: str):
     return latest
 
 
+def restamp_last(options: dict, item_id: str) -> int:
+    """Repair the `when` of the last history row. See the module docstring."""
+    if "reason" not in options:
+        print("transition: --restamp-last requires --reason", file=sys.stderr)
+        return 2
+    new_when = options["restamp-last"]
+    if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", new_when):
+        print(f"transition: {new_when!r} is not a UTC timestamp like 2026-08-17T01:30:01Z",
+              file=sys.stderr)
+        return 2
+
+    root = os.path.abspath(options["root"])
+    history_path = os.path.join(root, "tracker", "items", item_id, "history.md")
+    if not os.path.isfile(history_path):
+        print(f"transition: {history_path} does not exist", file=sys.stderr)
+        return 1
+    with open(history_path, "r", encoding="utf-8") as handle:
+        lines = handle.read().split("\n")
+
+    rows = []
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) != 6 or cells[0] == "when":
+            continue
+        if all(set(cell) <= set("-: ") and cell for cell in cells):
+            continue
+        rows.append((index, cells))
+    if not rows:
+        print(f"transition: {item_id} has no history rows to restamp", file=sys.stderr)
+        return 1
+    if len(rows) < 2:
+        print("transition: the first row has no previous row to be out of order with; "
+              "restamping it would repair nothing", file=sys.stderr)
+        return 1
+
+    index, cells = rows[-1]
+    previous_when = rows[-2][1][0]
+    if new_when < previous_when:
+        print(f"transition: {new_when} is still earlier than the previous row "
+              f"({previous_when}); the repair must leave the record orderable", file=sys.stderr)
+        return 1
+
+    old_when = cells[0]
+    cells[0] = new_when
+    lines[index] = "| " + " | ".join(cells) + " |"
+    with open(history_path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines))
+
+    print(f"transition: {item_id} last history row restamped {old_when} -> {new_when}")
+    print(f"  reason: {options['reason']}")
+    print("  journal this as a correction: what the value was, what it is now, and why.")
+    return 0
+
+
 def main(argv: list) -> int:
     if len(argv) < 2 or argv[1].startswith("--"):
         print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
@@ -184,6 +251,9 @@ def main(argv: list) -> int:
             return 2
         options[token[2:]] = argv[index + 1]
         index += 2
+
+    if "restamp-last" in options:
+        return restamp_last(options, item_id)
 
     for required in ("to", "actor", "reason"):
         if required not in options:

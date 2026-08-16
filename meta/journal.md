@@ -1343,3 +1343,36 @@ reviewer's call.
 - **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP after re-render; re-installed into the
   toy project.
 - **Result:** tooling fixed. Sending the run back to answer BUG-0001/Q-001 and continue.
+
+---
+
+## 2026-08-17 — META-066b — `--restamp-last`, the one sanctioned repair
+
+- **Unit:** META-066b (unplanned)
+- **Two findings from the run, both correct:**
+  1. **The subagent caught me half-doing something.** I said I had added the monotonicity rule to
+     `spec/journal-and-history.md` §1, and I had — but I re-rendered and re-installed *before*
+     making the edit, so the copy the subagent read did not contain it. It read the installed
+     spec, found the sentence absent, and said so rather than assuming I was right. That is the
+     behaviour the whole design is trying to produce, applied to the builder. Re-rendered and
+     re-installed.
+  2. **One history row cannot be repaired by appending.** After the clamp, exactly one finding
+     remained: row 6 of `BUG-0001/history.md` is true UTC, row 5 is the filer's skewed value, and
+     the pair is unorderable. The clamp only affects rows being appended; a later row cannot fix
+     an earlier pair; neither row may be edited. The item was permanently frozen, and the
+     subagent refused every route around it — no `git revert`, no restore from an earlier commit,
+     no patching the clock, and no `--force`, correctly noting that `[gates forced]` would libel
+     rows whose engineering gates genuinely pass.
+- **The fix:** `scripts/transition --restamp-last <UTC> --reason "..."`. It changes exactly one
+  thing — the `when` of the **last** row — refuses a value earlier than the previous row, refuses
+  to touch a first row (which cannot be out of order with anything), prints old → new, and tells
+  the caller to journal it as a correction.
+- **Why an exception to append-only is right here, and why it is exactly one:** the rule exists
+  so that evidence is never destroyed. Here nothing is being hidden — both rows' stories are
+  already in the journals — and the alternative is an item that can never move, which is not a
+  more honest record, only a stuck one. The spec states the exception, its single permitted
+  scope, and the closing rule: "If you find yourself wanting a second exception, you want a
+  journal entry instead."
+- **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP; re-rendered; re-installed and confirmed
+  both the spec sentence and the new flag are present in the installed copies.
+- **Result:** the run can proceed. Sending it back to repair the row and continue.

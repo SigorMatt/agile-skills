@@ -11,6 +11,14 @@ Both are **append-only**. Never reorder, never rewrite, never tidy. A wrong entr
 by a later entry that says what was wrong; a rewritten entry destroys the only evidence that
 anything went wrong at all.
 
+There is exactly **one** sanctioned exception, and it exists because appending genuinely cannot
+fix the situation it addresses: when an earlier row was stamped with a wrong clock, the last row
+is legitimately earlier than the one before it, the item can never move again, and no later row
+can repair the pair. The tool that owns the file may restamp that single `when`, to a value not
+earlier than the previous row, and the caller MUST journal it as a correction naming the old
+value, the new value, and the reason. Nothing else in a row may be changed, and no other row may
+be touched. If you find yourself wanting a second exception, you want a journal entry instead.
+
 ---
 
 ## 1. `history.md`
