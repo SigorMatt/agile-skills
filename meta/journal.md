@@ -73,3 +73,28 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `meta/adr/ADR-0002-scripting-and-dependencies.md`,
   `scripts/lib/miniyaml.py`, `scripts/lib/selftest.py`.
 - **Result:** META-003 done. Next: META-030.
+
+---
+
+## 2026-08-16 — META-030 — frontmatter and findings helpers
+
+- **Unit:** META-030
+- **Inputs read:** `seed/02-ARCHITECTURE.md` §3 (every artifact is markdown + YAML frontmatter),
+  `meta/adr/ADR-0002`.
+- **Decisions:**
+  - A missing frontmatter fence is an **error**, not an empty mapping. An unlabelled file that
+    validated clean would be the easiest way for the paper trail to silently rot.
+  - YAML errors inside a frontmatter block are re-raised with the line number shifted to the
+    position in the whole file, so a finding points at the line a human would open.
+  - `Report` sorts findings before printing and strips the repo root from paths. Both exist for
+    one reason: byte-identical output across runs and machines, which is what lets
+    `scripts/check` compare a fresh render against the committed one.
+- **Commands run:** `python3 scripts/lib/selftest.py` → `110 passed, 0 failed`.
+- **Discovery:** the first `render()` swallowed the blank line after the closing fence, so
+  `render(split(x)) != x`. Fixed by defining the body as "everything after the closing fence
+  *line*" and emitting that newline in `render`. Caught by the round-trip case, which is the
+  reason to write inverse-pair tests rather than one-direction ones.
+- **Gates:** `scripts/lib/selftest.py` exit 0.
+- **Artifacts produced:** `scripts/lib/frontmatter.py`, `scripts/lib/report.py`, 17 new cases in
+  `scripts/lib/selftest.py`.
+- **Result:** META-030 done. Next: META-010 (spec index + IDs and statuses).

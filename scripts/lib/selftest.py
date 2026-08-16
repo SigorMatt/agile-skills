@@ -16,7 +16,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
+import report as report_lib  # noqa: E402
 from miniyaml import YamlError  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -160,6 +162,64 @@ def run_dump(results: Results) -> None:
         results.fail("dump/multiline", "multi-line scalar should be refused")
 
 
+def run_frontmatter(results: Results) -> None:
+    text = "---\nid: WI-0001\nstatus: draft\n---\n\n# Title\n\nBody line.\n"
+    fields, body, body_line = frontmatter.split(text, name="item.md")
+    results.check("frontmatter/fields", fields, {"id": "WI-0001", "status": "draft"})
+    results.check("frontmatter/body", body, "\n# Title\n\nBody line.\n")
+    results.check("frontmatter/body_line", body_line, 5)
+
+    empty_fields, _, _ = frontmatter.split("---\n---\nbody\n", name="empty.md")
+    results.check("frontmatter/empty-block", empty_fields, {})
+
+    for label, bad, line in [
+        ("no fence", "# Title\n", 1),
+        ("unclosed fence", "---\nid: WI-0001\n", 1),
+        ("not a mapping", "---\n- a\n- b\n---\n", 2),
+    ]:
+        try:
+            frontmatter.split(bad, name=label)
+        except frontmatter.FrontmatterError as exc:
+            results.check(f"frontmatter/reject-{label}", exc.line, line)
+        else:
+            results.fail(f"frontmatter/reject-{label}", "parsed instead of failing")
+
+    # A YAML error inside the block must report the line number in the *file*, not the block.
+    try:
+        frontmatter.split("---\nid: WI-0001\n\tbad: 1\n---\n", name="tabs.md")
+    except frontmatter.FrontmatterError as exc:
+        results.check("frontmatter/yaml-error-line", exc.line, 3)
+    else:
+        results.fail("frontmatter/yaml-error-line", "tab indentation should have been refused")
+
+    # render() is the inverse of split() for flat mappings.
+    rendered = frontmatter.render({"id": "WI-0001", "status": "draft"}, "\n# Title\n")
+    again, again_body, _ = frontmatter.split(rendered, name="round.md")
+    results.check("frontmatter/roundtrip", (again, again_body),
+                  ({"id": "WI-0001", "status": "draft"}, "\n# Title\n"))
+
+
+def run_report(results: Results) -> None:
+    rep = report_lib.Report("demo", root="/tmp/root")
+    rep.warn("/tmp/root/b.md", 2, "b.code", "second")
+    rep.error("/tmp/root/a.md", 10, "a.code", "first", hint="do the thing")
+    results.check("report/ok-with-warning-only", report_lib.Report("x").ok(), True)
+    results.check("report/errors", rep.errors, 1)
+    results.check("report/warnings", rep.warnings, 1)
+    results.check("report/not-ok", rep.ok(), False)
+    results.check("report/format-relativised", rep.findings[1].format(rep.root),
+                  "a.md:10: ERROR [a.code] first\n    hint: do the thing")
+
+    import io
+    buffer = io.StringIO()
+    code = rep.emit(buffer)
+    lines = buffer.getvalue().strip().split("\n")
+    results.check("report/exit-code", code, 1)
+    # Sorted by path, so a.md precedes b.md regardless of the order they were recorded in.
+    results.check("report/sorted", lines[0].startswith("a.md:10:"), True)
+    results.check("report/summary", lines[-1], "demo: 1 error, 1 warning")
+
+
 def repo_yaml_files() -> list:
     found = []
     for base, dirs, files in os.walk(REPO_ROOT):
@@ -209,6 +269,8 @@ def main() -> int:
     run_accept(results)
     run_reject(results)
     run_dump(results)
+    run_frontmatter(results)
+    run_report(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")
