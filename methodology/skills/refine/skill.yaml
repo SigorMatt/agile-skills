@@ -1,0 +1,85 @@
+name: refine
+version: 0.1.0
+persona: product-analyst
+purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
+
+when_to_use:
+  - An item sits at status draft and work cannot start until it is Ready.
+  - Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned.
+  - A reviewer or verifier sent an item back because what was asked for was never pinned down.
+  - Someone asks to "refine", "groom", "sharpen", or "get this ready" for a tracked item.
+
+dispatch:
+  on_status: [draft]
+  item_types: [work-item, bug]
+
+human_interaction: direct
+
+inputs:
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the draft being refined, and the acceptance criteria to be made decidable
+  - path: tracker/items/{{item.id}}/history.md
+    required: true
+    why: an item sent back from later stages must not be re-refined as if it were new
+  - path: tracker/items/{{item.id}}/journal.md
+    required: true
+    why: intake recorded the human's original answers verbatim; re-asking them wastes the human
+  - path: docs/product/vision.md
+    required: false
+    why: a criterion that contradicts the product vision is a conflict to raise, not to resolve
+  - path: tracker/items/*/item.md
+    required: false
+    why: a sibling item may already own part of this scope
+
+outputs:
+  - path: tracker/items/{{item.id}}/artifacts/refinement-qa.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/item.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+  - path: tracker/items/{{item.id}}/history.md
+    kind: append
+    when: on-success
+
+quality_gates:
+  - name: workspace-valid
+    description: The item still satisfies the schemas after refinement.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: definition-of-ready
+    description: Every DoR criterion for this item type is evaluated individually and recorded.
+    manual_check: Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: criteria-are-decidable
+    description: Every acceptance criterion can be settled by observation, by someone with no context.
+    manual_check: For each AC, name the command to run or the artifact to inspect and the verdict that would follow. Any AC for which you cannot do this is not ready.
+    enforcement: hard
+    on_failure: stay
+  - name: qa-recorded-verbatim
+    description: The exchange with the human is preserved, with assumed answers marked as assumed.
+    manual_check: refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement.
+    enforcement: hard
+    on_failure: stay
+
+escalation:
+  question: Ask the human directly and in batches while they are present. If they leave mid-refinement, file a question addressed to human, set the item to awaiting-answer with resume-to draft, and stop.
+  defect: Not applicable; this skill shapes requirements and does not evaluate delivered behaviour.
+  impasse: If the human cannot answer what the item needs and will not override, set the item to blocked, recording which Definition of Ready criteria remain unmet.
+
+exit_criteria:
+  - Every Definition of Ready criterion is recorded as passed, or as overridden by the human with the reason.
+  - Every acceptance criterion names how it would be observed.
+  - refinement-qa.md holds the full exchange, with assumed answers marked as assumed.
+  - The item's Out of scope section names at least one thing a reader could reasonably assume is included.
+  - The journal entry and the history row for this execution are written.
+
+next_status: ready
+failure_status: blocked

@@ -373,3 +373,32 @@ pipeline's paper trail should feel like.
 - **Gates:** miniyaml/PyYAML agreement on `intake/skill.yaml`.
 - **Artifacts produced:** `methodology/skills/intake/{skill.yaml,process.md}`.
 - **Result:** META-021 done. Next: META-022 (`refine`).
+
+---
+
+## 2026-08-16 — META-022 — skill `refine`
+
+- **Unit:** META-022
+- **Inputs read:** `spec/dor-dod.md`, `spec/work-item.md`, `spec/question.md` §1,
+  `methodology/pipeline.yaml`.
+- **Decisions:**
+  - "Challenge once, then record as assumed." A human badgered into a number they do not believe
+    has given a truce, not a requirement — and the truce is indistinguishable from agreement in
+    the record, which is worse than an honest `[assumed]` tag.
+  - `refinement-qa.md` answers are tagged `[human]` / `[assumed]` / `[unresolved]`, and verbatim
+    means verbatim. When `verify` later finds a behaviour contested, a tidied Q&A is worth
+    nothing as evidence.
+  - `refine` reads `history.md` **before** the item body, because an item sent back from
+    `verifying`/`in-review` is a different job from a fresh draft; the process says so
+    explicitly and names re-refining a send-back as one of the two failure modes.
+  - The `definition-of-ready` gate explicitly rejects a single overall verdict — it demands a
+    per-criterion record, which is what makes the checklist more than decoration.
+  - `refine` may not edit architecture docs; a vision conflict becomes a question to the
+    architect. Keeps the "who may write which doc" table in `spec/doc-header.md` §5 true.
+  - Named the concrete tell for the first failure mode: an adjective with no threshold
+    ("appropriate", "reasonable", "clean", "properly") marks where the disagreement will happen.
+- **Commands run:** `python3 scripts/lib/selftest.py` → 0 failures, cross-check includes
+  `refine/skill.yaml`.
+- **Gates:** miniyaml/PyYAML agreement.
+- **Artifacts produced:** `methodology/skills/refine/{skill.yaml,process.md}`.
+- **Result:** META-022 done. Next: META-023 (`plan`).
