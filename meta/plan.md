@@ -59,11 +59,11 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-041** — `adapters/claude-code/render.py` — renderer: methodology → Claude Code skills.
 - [x] **META-042** — `scripts/run-gate` + `scripts/transition` — gate execution and the gated
       status change (runtime-neutral half of hard enforcement).
-- [ ] **META-045** — `adapters/claude-code/` hook config, install/uninstall scripts, and the
+- [x] **META-045** — `adapters/claude-code/` hook config, install/uninstall scripts, and the
       adapter README with the gate enforcement table.
-- [ ] **META-043** — Rendered output committed under `adapters/claude-code/dist/`; determinism check wired
-      into `scripts/check`.
-- [ ] **META-044** — Deliberate failing-gate demonstration (evidence for acceptance B3).
+- [x] **META-043** — Rendered output committed under `adapters/claude-code/dist/`; determinism check wired
+      into `scripts/check`. (done as part of META-041)
+- [x] **META-044** — Deliberate failing-gate demonstration (evidence for acceptance B3).
 
 ## Phase 5 — consumer docs
 

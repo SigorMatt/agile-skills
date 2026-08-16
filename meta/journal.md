@@ -938,3 +938,50 @@ pipeline's paper trail should feel like.
   `validate-workspace` and `board-gen`; renderer now ships both scripts and the machine-readable
   `skill.yaml` contracts that `run-gate` needs; re-rendered `dist/`.
 - **Result:** META-042 done. Next: META-045 (adapter hook + installer + adapter README).
+
+---
+
+## 2026-08-17 — META-045 + META-044 — hook, installer, adapter README, and the blocking demo
+
+- **Units:** META-045 (adapter hook + installer + README) and META-044 (the deliberate failing
+  gate), done together because the demo is what proves the installer and hook actually work.
+- **Inputs read:** `adapters/README.md` (C1–C5 and the conformance checklist),
+  `meta/adr/ADR-0001` (hook contract, settings shape), every `skill.yaml`.
+- **Decisions:**
+  - The guard hook denies writes to `tracker/items/*/history.md` and `tracker/board.md`,
+    **including shell redirects**. Without it, `transition`'s refusal would be advice: an agent
+    could append the row directly and every downstream check would believe it.
+  - The hook **allows** anything it cannot parse. A guard that blocked on confusion would make
+    the tool unusable the first time an input shape changed; allowing degrades to the documented
+    convention, which is where we would have been anyway. Stated in the file so the choice is
+    not mistaken for an oversight.
+  - The installer merges into an existing `.claude/settings.json` rather than overwriting it,
+    identifies its own entries by a marker so an update replaces them without touching anyone
+    else's, and **refuses** to rewrite a settings file it cannot parse.
+  - Uninstall removes exactly what install added and explicitly leaves `tracker/` and `docs/`.
+    Removing the tooling must never remove the paper trail.
+  - The adapter README carries the **honest** gate table: every gate a machine can decide is
+    hard-enforced; the rest are marked convention, with the reason given rather than glossed.
+    `intake`'s and `next`'s gates are convention because neither owns a status transition, so
+    the enforcement mechanism has nothing to attach to — written down rather than hidden.
+- **Commands run:**
+  - Installed into a scratch project that already had a `settings.json` with someone else's
+    PreToolUse hook and a permissions block: both survived; a second install replaced only our
+    two entries; uninstall left the foreign hook and the permissions intact and removed the now
+    empty `.claude/skills/`.
+  - Hook fed real payload shapes: DENY for an `Edit` of `history.md`, DENY for a `Write` of
+    `board.md`, DENY for a shell append to `history.md`, ALLOW for `src/main.py`, ALLOW for
+    `cat history.md`, ALLOW for unparseable input.
+  - `meta/evidence/gate-failure-demo.sh` end to end: a legal transition allowed; an illegal one
+    refused; **a failing `tests-pass` gate refusing `planned → in-progress` with the status
+    unchanged afterwards**; the hook denying the bypass; and the identical command succeeding
+    once the test command was fixed. Transcript saved to `meta/evidence/gate-failure-demo.md`.
+  - Writing the demo exposed a real ordering defect in my first draft: it transitioned before
+    journaling, so `workspace-valid` failed for the wrong reason and the demo silently skipped a
+    step. Fixed by journaling before each transition — which is what every `process.md` already
+    requires, so the demo now models the correct sequence rather than a shortcut.
+- **Gates:** `./scripts/check` → 4 PASS, 1 SKIP.
+- **Artifacts produced:** `adapters/claude-code/hooks/guard-workspace-writes.py`,
+  `adapters/claude-code/install.py`, `adapters/claude-code/README.md`,
+  `meta/evidence/gate-failure-demo.{sh,md}`.
+- **Result:** META-044 and META-045 done. Phase 4 complete. Next: META-050 (`CONSUMER-PROMPT.md`).
