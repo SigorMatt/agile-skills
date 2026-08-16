@@ -23,7 +23,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-014** — `spec/doc-header.md` (docs/ version header + change log schema, ADR schema).
 - [x] **META-015** — `spec/dor-dod.md` (Definition of Ready, Definition of Done checklists).
 - [x] **META-016** — `spec/skill-contract.md` (skill.yaml schema, process.md requirements).
-- [ ] **META-017** — `spec/workspace-layout.md` (full consumer workspace tree + required files).
+- [x] **META-017** — `spec/workspace-layout.md` (full consumer workspace tree + required files).
 
 ## Phase 2 — `methodology/`
 

@@ -287,3 +287,31 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet; `scripts/lint-skills` (META-031) implements this page.
 - **Artifacts produced:** `spec/skill-contract.md`.
 - **Result:** META-016 done. Next: META-017 (`spec/workspace-layout.md`, incl. `project.yaml`).
+
+---
+
+## 2026-08-16 — META-017 — `spec/workspace-layout.md`
+
+- **Unit:** META-017
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R3/R4, `spec/skill-contract.md` §1.4.
+- **Decisions:**
+  - The workspace lives inside the consumer's repository, committed with the code. A tracker in
+    a separate system drifts within a week, and `git log --grep WI-0007` only reconstructs an
+    item's history if item and code share one history.
+  - Artifact filenames are **fixed** (`plan.md`, `impl-report.md`, …), not free choice: a skill
+    must find the previous stage's output without searching, and the validator must be able to
+    say "reached verifying with no impl-report.md".
+  - Re-running a skill overwrites its own artifact and appends a journal entry — never
+    `plan-2.md`. The journal holds the history of attempts; the artifact holds the current
+    answer.
+  - `journal.md`/`history.md` are created with headers at item creation, so "empty" and "lost"
+    are distinguishable.
+  - `board.md` is generated and `validate-workspace` reports `board.stale` by regenerating and
+    comparing — a board that disagrees with the tracker gets caught rather than believed.
+  - Open questions appear on the board *above* the summary, human-addressed first: when the
+    loop stops, that is the first thing a returning human reads.
+  - `tracker/project.yaml` gained `conventions.commit-subject`, which must contain `<ITEM-ID>` —
+    that is what makes DoD D8 mechanically checkable rather than a habit.
+- **Gates:** none yet; `scripts/validate-workspace` and `scripts/workspace-init` implement this.
+- **Artifacts produced:** `spec/workspace-layout.md`.
+- **Result:** META-017 done. Phase 1 (`spec/`) complete. Next: META-020 (`pipeline.yaml`).

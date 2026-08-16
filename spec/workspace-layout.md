@@ -1,0 +1,187 @@
+# Workspace layout
+
+The **workspace** is the tracker and documentation that the methodology creates *inside the
+consumer's own project*. It sits alongside the project's source code, in the same git
+repository, and is committed with it. That co-location is deliberate: a tracker in a different
+system drifts from the code within a week, and `git log --grep WI-0007` only reconstructs an
+item's history if the item and the code share a history.
+
+---
+
+## 1. The tree
+
+```
+<project root>/
+├── tracker/
+│   ├── project.yaml              # machine-readable project config (§3)
+│   ├── board.md                  # GENERATED — never hand-edited (§4)
+│   └── items/
+│       ├── EP-001/
+│       │   ├── item.md
+│       │   ├── journal.md
+│       │   ├── history.md
+│       │   ├── questions/
+│       │   └── artifacts/
+│       ├── WI-0001/
+│       │   ├── item.md
+│       │   ├── journal.md
+│       │   ├── history.md
+│       │   ├── questions/
+│       │   │   └── Q-001.md
+│       │   └── artifacts/
+│       │       ├── refinement-qa.md
+│       │       ├── plan.md
+│       │       ├── impl-report.md
+│       │       ├── verify-report.md
+│       │       └── review.md
+│       └── BUG-0001/
+│           └── … same shape …
+├── docs/
+│   ├── product/
+│   │   ├── vision.md
+│   │   └── prd.md
+│   ├── architecture/
+│   │   ├── overview.md
+│   │   └── adr/
+│   │       └── ADR-0001-<slug>.md
+│   └── process/
+│       └── ways-of-working.md
+└── <the project's own source code>
+```
+
+### 1.1 What MUST exist
+
+| Path | When |
+|------|------|
+| `tracker/project.yaml` | from workspace initialisation |
+| `tracker/items/` | from workspace initialisation |
+| `tracker/board.md` | after the first item exists |
+| `<item>/item.md`, `journal.md`, `history.md` | for every item directory, from creation |
+| `<item>/questions/`, `<item>/artifacts/` | directories may be empty, but MUST exist |
+| `docs/product/vision.md` | once an epic exists |
+| `docs/architecture/overview.md` | once any item has reached `planned` |
+
+An item directory missing `journal.md` or `history.md` is an error even if it has never been
+worked on. The files are created with their headers at the moment the item is created, so
+"empty" and "lost" are distinguishable.
+
+### 1.2 Artifact names are fixed
+
+| Artifact | Written by | Contains |
+|----------|-----------|----------|
+| `artifacts/refinement-qa.md` | `refine` | the full Q&A verbatim, each answer marked as `human` or `assumed` |
+| `artifacts/plan.md` | `plan` | design, steps, assumptions, ADR references, gate commands |
+| `artifacts/impl-report.md` | `implement` | what was built, AC → evidence map, deviations from the plan |
+| `artifacts/verify-report.md` | `verify` | per-AC verdict with evidence, gates run, defects found |
+| `artifacts/review.md` | `review-close` | what was examined, DoD result per criterion, verdict |
+
+Fixed names, not free choice. A skill looking for the previous stage's output must find it
+without searching, and a validator must be able to say "this item reached `verifying` but has
+no `impl-report.md`" — which is a real failure mode, not a hypothetical one.
+
+Re-running a skill **overwrites** its own artifact and appends a journal entry. It does not
+create `plan-2.md`. The journal is where the history of attempts lives; the artifact always
+holds the current answer.
+
+---
+
+## 2. Initialisation
+
+`scripts/workspace-init <project-root>` creates the tree, writes `tracker/project.yaml` with
+placeholders, and creates the `docs/` directories. It is idempotent: running it on an existing
+workspace makes no changes and exits 0.
+
+It MUST NOT create empty placeholder documents under `docs/`. An empty `vision.md` reads to a
+later skill as "the vision is empty", not as "nobody has written it yet".
+
+---
+
+## 3. `tracker/project.yaml`
+
+The machine-readable facts about the project that gates need and that no methodology file can
+know in advance.
+
+```yaml
+project:
+  name: wc-tool
+  trunk-branch: main
+  description: A command-line utility that summarises text files in a directory.
+
+commands:
+  test: python3 -m pytest -q
+  lint: python3 -m ruff check .
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"
+```
+
+| Field | Required | Rules |
+|-------|----------|-------|
+| `project.name` | yes | short slug |
+| `project.trunk-branch` | yes | the branch items merge into |
+| `project.description` | yes | one or two sentences |
+| `commands.test` | yes, may be `null` | resolved into `{{commands.test}}` |
+| `commands.lint` | yes, may be `null` | resolved into `{{commands.lint}}` |
+| `commands.build` | yes, may be `null` | resolved into `{{commands.build}}` |
+| `conventions.branch-prefix` | yes | default `wi/` |
+| `conventions.commit-subject` | yes | MUST contain `<ITEM-ID>`; this is what makes D8 checkable |
+
+A `null` command is honest — it means the project has none yet. It makes the corresponding gate
+**skipped**, and `plan`'s exit criteria require either filling it in or recording an ADR that
+says why the project has none. What is forbidden is a command that does not exist, or one that
+exits 0 without doing anything: both report a passing gate for work nobody checked.
+
+---
+
+## 4. `tracker/board.md` is generated
+
+`scripts/board-gen` regenerates it from item state. It carries a header saying so.
+
+```markdown
+<!-- GENERATED by board-gen. Do not edit; run scripts/board-gen. -->
+# Board — generated 2026-08-16T11:47:52Z
+
+## EP-001 — Summarise a directory of text files  (open)
+
+| id | title | type | status | priority | blocked by |
+|----|-------|------|--------|----------|------------|
+| WI-0001 | Count lines per file | work-item | done | high | — |
+| WI-0002 | Sort the summary | work-item | verifying | high | — |
+| BUG-0001 | Empty directory crashes | bug | in-progress | critical | — |
+| WI-0003 | Recurse into subdirectories | work-item | awaiting-answer | medium | Q-001 |
+
+## Open questions
+
+| item | question | to | blocking | age |
+|------|----------|----|----------|-----|
+| WI-0003 | Q-001 — should symlinked directories be followed? | human | yes | 12m |
+
+## Summary
+
+- 4 items: 1 done, 1 verifying, 1 in-progress, 1 awaiting-answer
+- 1 open question, 1 addressed to the human
+```
+
+Rules:
+
+- `board.md` is derived state. `validate-workspace` reports `board.stale` when regenerating it
+  would produce different content, so a board that disagrees with the tracker is caught rather
+  than believed.
+- The **Open questions** section MUST come before the summary, and questions addressed to the
+  human MUST be listed first. When the loop stops, this is the thing a returning human reads.
+
+---
+
+## 5. Relationship to the project's git history
+
+- Item work happens on `<conventions.branch-prefix><ITEM-ID>`, e.g. `wi/WI-0007`.
+- Every commit on that branch MUST match `conventions.commit-subject`, which MUST contain the
+  item ID. `git log --grep WI-0007` therefore reconstructs the item's code history (R4.4), and
+  `validate-workspace` can check it mechanically.
+- Workspace changes (tracker and docs) are committed **with** the code change that caused them,
+  not separately. A commit that changes only the tracker is legitimate for `intake`, `refine`
+  and `answer-questions`, which produce no code.
+- `review-close` merges the branch into `{{trunk}}`. The workspace never depends on a remote
+  existing: everything here works in a purely local repository.
