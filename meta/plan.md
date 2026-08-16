@@ -67,8 +67,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ## Phase 5 — consumer docs
 
-- [ ] **META-050** — `CONSUMER-PROMPT.md`.
-- [ ] **META-051** — `USAGE.md`.
+- [x] **META-050** — `CONSUMER-PROMPT.md`.
+- [x] **META-051** — `USAGE.md`.
 - [ ] **META-052** — `README.md` (project story, layout, roadmap).
 
 ## Phase 6 — end-to-end proof (`examples/toy-project/`)

@@ -1,0 +1,241 @@
+# Usage
+
+How to install the skills into a project, run the pipeline, read what it leaves behind, and
+resume after an interruption.
+
+If you only want the short version: install, paste [`CONSUMER-PROMPT.md`](CONSUMER-PROMPT.md),
+state your idea.
+
+---
+
+## 1. Requirements
+
+- **Python 3.9+** on `PATH`. Nothing else — no packages, no virtualenv, no lockfile. That is a
+  deliberate design constraint ([ADR-0002](meta/adr/ADR-0002-scripting-and-dependencies.md)):
+  the validator runs as a quality gate, and a gate that fails because a package is missing is
+  indistinguishable, to the agent running it, from a gate that fails because the work is wrong.
+- **git**, and the target project must be a git repository. An item's code history is
+  reconstructed with `git log --grep <ITEM-ID>`, so the pipeline needs one. A purely local
+  repository is fine; no remote is required.
+- An agent runtime with an adapter. Today that is
+  [`adapters/claude-code/`](adapters/claude-code/README.md).
+
+---
+
+## 2. Install
+
+```bash
+git clone <this repository> agile-skills
+cd agile-skills
+
+python3 adapters/claude-code/render.py                              # regenerate dist/ (optional; it is committed)
+python3 adapters/claude-code/install.py /path/to/your/project --dry-run
+python3 adapters/claude-code/install.py /path/to/your/project
+```
+
+The installer is idempotent, merges into an existing `.claude/settings.json` instead of
+overwriting it, and prints everything it touched. What it places is listed in
+[`adapters/claude-code/README.md`](adapters/claude-code/README.md) §2.
+
+To remove it later:
+
+```bash
+python3 adapters/claude-code/install.py /path/to/your/project --uninstall
+```
+
+Uninstall leaves `tracker/` and `docs/` alone. Those are your project's record; the tooling is
+replaceable, the record is not.
+
+### Verify the install
+
+In the project, start your agent session and ask what skills are available. You should see the
+eight: `intake`, `refine`, `plan`, `implement`, `verify`, `review-close`, `answer-questions`,
+`next`. Then check the tooling runs:
+
+```bash
+cd /path/to/your/project
+python3 .claude/agile-skills/scripts/validate-workspace .
+```
+
+Before the workspace exists it will tell you so, which is the correct answer.
+
+---
+
+## 3. Initialise the workspace
+
+```bash
+python3 .claude/agile-skills/scripts/workspace-init .
+```
+
+This creates `tracker/` and the `docs/` directories, and writes `tracker/project.yaml` with the
+project name and trunk branch filled in and the commands left as `null`.
+
+**Leave the `null`s alone.** `plan` fills in `commands.test` and `commands.lint` when it decides
+how the project is built, and a null command makes the matching gate report **skipped** rather
+than passed. Inventing a test command that does not exist would make every subsequent gate
+report a pass for a check nobody runs.
+
+Commit the workspace with your project. It belongs in the repository.
+
+---
+
+## 4. Permissions for long autonomous runs
+
+The pipeline runs many commands over a long session, and the rendered skills deliberately do not
+pre-approve tools for you — pre-approving shell access for a skill that runs arbitrary project
+commands is a decision you should make knowingly.
+
+Practical options, in increasing order of trust:
+
+| Setup | Effect | Good for |
+|-------|--------|----------|
+| Default (Manual) | You approve each action | The first run, while you are watching |
+| Allow-list specific commands in `.claude/settings.json` `permissions.allow` | Only the pipeline's own tooling runs unattended | Steady use — see the suggested list below |
+| `auto` mode | Long runs with background safety checks | Multi-hour autonomous runs |
+| `bypassPermissions` | No checks at all | Isolated containers only |
+
+**Do not use `dontAsk` mode while `intake` or `refine` are expected to run.** That mode denies
+the tool those skills use to question you, and the fallback — print the questions and stop —
+turns an interactive refinement into a dead end.
+
+A reasonable allow-list to start from, covering the pipeline's own tooling but not your project's
+build:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 .claude/agile-skills/scripts/*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)"
+    ]
+  }
+}
+```
+
+Add your project's test and lint commands once you trust the loop.
+
+---
+
+## 5. Run it
+
+Paste [`CONSUMER-PROMPT.md`](CONSUMER-PROMPT.md) into the session and state your idea. Then:
+
+- **`intake` and `refine` will interrogate you.** That is the point. The questions are where
+  most of the value is, and the record of your answers is what the rest of the pipeline builds
+  on. Answering "whatever you think" is allowed — it is recorded as an assumption, marked as
+  one, so nobody later mistakes it for a requirement.
+- **After refinement, the loop runs itself.** `next` picks one action, the skill does it, `next`
+  runs again.
+- **It stops when it should.** A question addressed to you, nothing runnable, or the epic done.
+
+You can also drive it by hand at any point:
+
+```bash
+python3 .claude/agile-skills/scripts/board-gen .        # refresh the board
+python3 .claude/agile-skills/scripts/validate-workspace . # is the record sound?
+```
+
+and invoke a skill directly with `/plan`, `/verify`, and so on.
+
+---
+
+## 6. Reading the paper trail
+
+Start at `tracker/board.md` — every item, its status, what is blocking it, and every open
+question with the human-addressed ones first.
+
+Then, for any item:
+
+| File | Answers |
+|------|---------|
+| `tracker/items/<ID>/item.md` | What was asked for, and how we will know it is done |
+| `tracker/items/<ID>/history.md` | The timeline: every status change, when, by which skill, why |
+| `tracker/items/<ID>/journal.md` | The detail: what each skill read, decided, ran, and which gates passed |
+| `tracker/items/<ID>/questions/` | What was unclear, who decided it, and which files changed as a result |
+| `tracker/items/<ID>/artifacts/` | The plan, the implementation report, the verification report, the review |
+| `git log --grep <ID>` | Every commit for that item |
+
+`docs/architecture/adr/` holds the decisions with their alternatives and their reversibility.
+
+The rule of thumb: **`history.md` tells you what happened, `journal.md` tells you why.** Scan
+the first; open the second when a line in it surprises you.
+
+`examples/toy-project/` is a complete worked example, including
+[`AUDIT.md`](examples/toy-project/AUDIT.md) — an independent reconstruction of the run from the
+record alone.
+
+---
+
+## 7. Pausing and resuming
+
+Stop whenever you like. All state is on disk.
+
+To resume — in the same session or a new one, days later:
+
+```bash
+python3 .claude/agile-skills/scripts/validate-workspace .
+python3 .claude/agile-skills/scripts/board-gen .
+```
+
+then read the board and run `/next`. Do not summarise where you were from memory; the
+pipeline is built so that resuming from the files costs at most one repeated skill execution.
+
+An item at `in-progress` means a branch exists with partial work: `implement` reconciles with
+what is there rather than starting over. That distinction is exactly why `planned` and
+`in-progress` are separate statuses.
+
+---
+
+## 8. When something goes wrong
+
+**The validator is failing.**
+
+```bash
+python3 .claude/agile-skills/scripts/validate-workspace .
+```
+
+Every finding carries a `path:line`, a code, and usually a hint. The codes are stable; the
+schema behind each one is in `.claude/agile-skills/spec/`.
+
+**A transition is refused.** Read the gate output above the refusal. Three shapes:
+
+- `FAIL` — a real gate failure. Fix the cause.
+- `SKIP` — a command is not configured, so the gate checked nothing. Configure it in
+  `tracker/project.yaml`, or accept that this check is not running.
+- `MANUAL` — a judgement gate. Carry it out and record the evidence in the journal.
+
+If the gate genuinely cannot pass and you want to proceed anyway, add `--force`. The override is
+written into the history reason permanently, which is the point: an override you can see is
+fine, an invisible one is not.
+
+**An edit was blocked.** Writes to `history.md` and `board.md` are denied on purpose. Use
+`transition` and `board-gen`. The block message tells you the exact command.
+
+**The pipeline is stuck.** Run `/next`; it will say which of the four stop conditions applies. If
+an item is `blocked`, its last history row says why and its journal says what was tried.
+
+**A skill did the wrong thing.** That is a defect in the skill, not in the run. The journal
+names the skill and its version, so you can find the contract that produced it. File it under
+`meta/` in this repository, fix the `process.md` or `skill.yaml`, bump the version, re-render,
+re-install. That loop is the whole point of the versioning.
+
+---
+
+## 9. Working on the methodology itself
+
+In this repository:
+
+```bash
+./scripts/check          # the gate: library self-test, lint-skills, the must-fail fixture,
+                         # render determinism, and the example workspace
+```
+
+Everything must pass before a change is done. If you change a `skill.yaml` or a `process.md`,
+bump that skill's version in the same commit and re-render — `scripts/check` fails on a stale
+`dist/`.

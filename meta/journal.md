@@ -985,3 +985,34 @@ pipeline's paper trail should feel like.
   `adapters/claude-code/install.py`, `adapters/claude-code/README.md`,
   `meta/evidence/gate-failure-demo.{sh,md}`.
 - **Result:** META-044 and META-045 done. Phase 4 complete. Next: META-050 (`CONSUMER-PROMPT.md`).
+
+---
+
+## 2026-08-17 — META-050 and META-051 — `CONSUMER-PROMPT.md` and `USAGE.md`
+
+- **Units:** META-050, META-051
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R6, `adapters/claude-code/README.md`,
+  `meta/adr/ADR-0001` §8 (permission modes), the eight `process.md` files.
+- **Decisions:**
+  - `CONSUMER-PROMPT.md` states the five things the session must know **before** any step, and
+    the "do not" list is concrete rather than moralising: never edit a criterion to make
+    something pass, never fix an unrelated defect, never batch items in one `next` run. Those
+    are the three failure modes the process files name most often.
+  - Step 5 fixes what to show the human on every pause — board, open questions **in full**,
+    what just happened, what is blocked. A returning human should not have to open a file to
+    answer a question.
+  - `USAGE.md` warns explicitly that `dontAsk` mode denies the tool `intake`/`refine` need, so
+    an unattended-run setting would silently turn refinement into a dead end. That warning only
+    exists because ADR-0001 recorded the fact when the docs were fetched.
+  - `USAGE.md` §8 distinguishes the three gate outcomes (FAIL / SKIP / MANUAL) explicitly,
+    because "the gate did not pass" is three different problems with three different fixes, and
+    conflating them is how a SKIP gets treated as a pass.
+  - It also tells the reader that a skill doing the wrong thing is a **defect in the skill**,
+    and names the loop: journal names the skill and version → fix `process.md`/`skill.yaml` →
+    bump → re-render → re-install. That is the iterate-and-deepen loop the vision asks for,
+    written where the person who hits the problem will read it.
+  - Both files are written to match what actually works; `CONSUMER-PROMPT.md` will be used
+    verbatim for the toy run in Phase 6, and re-checked against reality afterwards.
+- **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP.
+- **Artifacts produced:** `CONSUMER-PROMPT.md`, `USAGE.md`.
+- **Result:** META-050 and META-051 done. Next: META-052 (`README.md`).
