@@ -3,7 +3,7 @@ name: intake
 description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.1.0
+  methodology-version: 0.1.1
   persona: product-analyst
   human-interaction: direct
 ---
@@ -121,7 +121,7 @@ You talk to the human directly. You are the only skill besides `refine` that doe
 
 ## Journaling
 
-Write one entry on the **epic's** `journal.md` (not on each item) covering the whole intake, per
+Write the **full** entry on the epic's `journal.md`, covering the whole intake, per
 `spec/journal-and-history.md` §2:
 
 - `**Inputs read:**` — the existing artifacts you read, or `none (new workspace)`.
@@ -134,7 +134,29 @@ Write one entry on the **epic's** `journal.md` (not on each item) covering the w
 - `**Gates:**` — all four, each pass/fail with evidence.
 - `**Artifacts:**` — the epic, every item created, `vision.md`, `project.yaml`.
 
+Then write a **short entry on every item you created**, naming this execution and pointing at the
+epic's entry for the reasoning. Every skill execution that appears as an actor in an item's
+`history.md` must have a journal entry on that item — creating the item is such an execution —
+and `validate-workspace` reports `journal.execution.missing` if it does not. The short entry
+carries the same required bullets; its `**Decisions:**` may be "see EP-###'s entry for how the
+work was split", because that reasoning belongs to the split, not to this item.
+
 Then append `— → open` to the epic's `history.md`, and `— → draft` to each item's.
+
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the epic and the items you created (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
 
 ---
 

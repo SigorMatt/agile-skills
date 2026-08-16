@@ -1,5 +1,5 @@
 name: refine
-version: 0.1.0
+version: 0.1.1
 persona: product-analyst
 purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
 
@@ -39,6 +39,9 @@ outputs:
   - path: tracker/items/{{item.id}}/item.md
     kind: file
     when: always
+  - path: "a commit of the workspace files this execution wrote"
+    kind: commit
+    when: on-success
   - path: tracker/items/{{item.id}}/journal.md
     kind: append
     when: always

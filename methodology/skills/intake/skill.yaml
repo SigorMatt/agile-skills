@@ -1,5 +1,5 @@
 name: intake
-version: 0.1.0
+version: 0.1.1
 persona: product-analyst
 purpose: Turn a raw idea from a human into an epic and a first set of work items in the tracker.
 
@@ -39,6 +39,9 @@ outputs:
   - path: docs/product/vision.md
     kind: file
     when: always
+  - path: "a commit of the workspace files this execution wrote"
+    kind: commit
+    when: on-success
   - path: tracker/items/{{item.id}}/journal.md
     kind: append
     when: always

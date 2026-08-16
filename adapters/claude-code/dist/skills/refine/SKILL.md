@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.1.0
+  methodology-version: 0.1.1
   persona: product-analyst
   human-interaction: direct
 ---
@@ -132,6 +132,21 @@ Per `spec/journal-and-history.md` §2, on the item's `journal.md`:
   pass, R3 pass, R4 fail → rewrote AC2 and AC3, now pass, …`). A bare "DoR passed" does not
   satisfy the gate.
 - `**Status:**` `draft` → `ready`, or `draft` → `awaiting-answer` / `blocked`.
+
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the refined item and its Q&A record (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
 
 ---
 

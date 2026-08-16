@@ -124,6 +124,21 @@ On the item's `journal.md`:
   `every-criterion-is-addressed`.
 - `**Artifacts:**` — `plan.md`, every ADR created, docs updated with their new versions.
 
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the plan, any ADRs, and the documents you updated (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
+
 ---
 
 ## Self-check

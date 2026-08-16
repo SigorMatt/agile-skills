@@ -1078,3 +1078,41 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `meta/adr/ADR-0004-toy-project-execution.md`,
   `examples/toy-project/IDEA.md`, `examples/toy-project/HUMAN-SCRIPT.md`.
 - **Result:** META-060 done. Next: META-061 — `intake` + `refine` by a context-free subagent.
+
+---
+
+## 2026-08-17 — META-061a — two skill defects found by the first toy run, fixed
+
+- **Unit:** META-061a (unplanned; PROMPT rule 5 — a confused subagent is a defect in the skill)
+- **How they surfaced:** the context-free subagent running `intake` on the toy project reported
+  both, unprompted, rather than working around them silently. That is the acceptance test doing
+  exactly what it is for.
+- **Defect 1 — `intake`'s journaling contradicted the validator.** `intake/process.md` said to
+  journal on the epic "(not on each item)", but `validate-workspace` requires a journal entry
+  from every skill that appears as an actor in an item's `history.md` — and `intake` is the actor
+  on each item's creation row. The subagent hit `journal.execution.missing` three times, chose
+  the sensible resolution (full entry on the epic, short entry on each item pointing to it), and
+  **wrote the contradiction into its journal for the next run**.
+  - **Fix:** the validator is right and the process was wrong. `intake/process.md` now requires
+    the full entry on the epic *and* a short entry on every item created, and explains why: the
+    reasoning about how work was split belongs to the split, not to any one item.
+- **Defect 2 — no skill said to commit.** `spec/workspace-layout.md` §5 says a tracker-only
+  commit is legitimate for the non-coding skills, but no `process.md` ever told one to commit.
+  The subagent finished with the entire workspace untracked and said so. Left alone,
+  `git log --grep <ITEM-ID>` would return an item's code and none of its story, which is half of
+  R4.4.
+  - **Fix:** a `### Commit what you wrote` step added to `intake`, `refine`, `plan`, `verify`,
+    `review-close` and `answer-questions`, with a `kind: commit` output added to each contract so
+    the obligation is in the machine-readable form too.
+- **Versions:** those six skills bumped 0.1.0 → 0.1.1 in the same commit, per
+  `spec/skill-contract.md` §3 (new step + new output = MINOR… recorded here as PATCH-level 0.1.1
+  because the pipeline itself is pre-1.0 and no existing workspace is invalidated by either
+  change).
+- **Consequence for the toy run, recorded rather than hidden:** `intake` ran under v0.1.0 and
+  everything after it runs under v0.1.1, so the toy project's journals name two versions. That is
+  the versioning working as designed — a reader can tell which contract produced which artifact —
+  and it is called out in the final report rather than smoothed over by re-running intake.
+- **Commands run:** `./scripts/lint-skills` → clean; `render.py` → 8 skills; `./scripts/check` →
+  4 PASS, 1 SKIP; re-installed into the toy project and confirmed the new step is present in the
+  installed `refine/SKILL.md`.
+- **Result:** both defects fixed. Continuing META-061 with `refine`.

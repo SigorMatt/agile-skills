@@ -117,6 +117,21 @@ On the item's `journal.md`:
 - `**Gates:**` — all six by name with results.
 - `**Artifacts:**` — `verify-report.md`, any bug items filed, the criteria ticked in `item.md`.
 
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the verification report, the ticked criteria, and any bug items you filed (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
+
 ---
 
 ## Self-check

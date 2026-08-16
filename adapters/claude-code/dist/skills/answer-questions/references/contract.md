@@ -1,4 +1,4 @@
-# Contract — answer-questions v0.1.0
+# Contract — answer-questions v0.1.1
 
 Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -30,6 +30,7 @@ Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the auth
 | `tracker/items/{{item.id}}/artifacts/plan.md` | file | conditional |
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `docs/architecture/adr/ADR-####-{{item.id}}.md` | file | conditional |
+| `a commit of the workspace files this execution wrote` | commit | on-success |
 | `tracker/items/{{item.id}}/journal.md` | append | always |
 | `tracker/items/{{item.id}}/history.md` | append | on-success |
 

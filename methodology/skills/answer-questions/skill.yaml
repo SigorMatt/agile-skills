@@ -1,5 +1,5 @@
 name: answer-questions
-version: 0.1.0
+version: 0.1.1
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
@@ -51,6 +51,9 @@ outputs:
   - path: docs/architecture/adr/ADR-####-{{item.id}}.md
     kind: file
     when: conditional
+  - path: "a commit of the workspace files this execution wrote"
+    kind: commit
+    when: on-success
   - path: tracker/items/{{item.id}}/journal.md
     kind: append
     when: always

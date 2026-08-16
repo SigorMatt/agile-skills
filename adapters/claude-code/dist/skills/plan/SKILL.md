@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.1.0
+  methodology-version: 0.1.1
   persona: architect
   human-interaction: direct
 ---
@@ -149,6 +149,21 @@ On the item's `journal.md`:
 - `**Gates:**` — all five, with the AC mapping table as the evidence for
   `every-criterion-is-addressed`.
 - `**Artifacts:**` — `plan.md`, every ADR created, docs updated with their new versions.
+
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the plan, any ADRs, and the documents you updated (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
 
 ---
 

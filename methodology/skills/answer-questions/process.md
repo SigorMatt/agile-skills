@@ -109,6 +109,21 @@ If the answer changed the shape of the work rather than one item's detail, also 
 on the epic's journal — otherwise a scope decision lives only on a child item where nobody
 looking at the epic will find it.
 
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the answered questions and every artifact you propagated into (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
+
 ---
 
 ## Self-check

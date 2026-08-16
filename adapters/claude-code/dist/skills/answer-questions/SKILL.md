@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question and the answer must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.1.0
+  methodology-version: 0.1.1
   persona: architect
   human-interaction: direct
 ---
@@ -134,6 +134,21 @@ On the item's `journal.md`:
 If the answer changed the shape of the work rather than one item's detail, also write an entry
 on the epic's journal — otherwise a scope decision lives only on a child item where nobody
 looking at the epic will find it.
+
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the answered questions and every artifact you propagated into (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
 
 ---
 

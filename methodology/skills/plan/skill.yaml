@@ -1,5 +1,5 @@
 name: plan
-version: 0.1.0
+version: 0.1.1
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -48,6 +48,9 @@ outputs:
   - path: tracker/project.yaml
     kind: file
     when: conditional
+  - path: "a commit of the workspace files this execution wrote"
+    kind: commit
+    when: on-success
   - path: tracker/items/{{item.id}}/journal.md
     kind: append
     when: always
