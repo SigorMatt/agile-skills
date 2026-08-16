@@ -31,7 +31,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-021** — skill `intake` (skill.yaml + process.md).
 - [x] **META-022** — skill `refine`.
 - [x] **META-023** — skill `plan`.
-- [ ] **META-024** — skill `implement`.
+- [x] **META-024** — skill `implement`.
 - [ ] **META-025** — skill `verify`.
 - [ ] **META-026** — skill `review-close`.
 - [ ] **META-027** — skill `answer-questions`.
@@ -45,6 +45,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [ ] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
 - [ ] **META-033** — `scripts/board-gen` — regenerates `tracker/board.md`.
 - [ ] **META-034** — `scripts/workspace-init` — creates a fresh consumer workspace skeleton.
+- [ ] **META-036** — `scripts/check-commit-refs` — gate used by `implement`/`review-close`
+      (every commit on an item branch references the item ID).
 - [ ] **META-035** — `scripts/check` — repo self-gate running all of the above + render determinism.
 
 ## Phase 4 — adapters

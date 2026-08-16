@@ -431,3 +431,36 @@ pipeline's paper trail should feel like.
 - **Gates:** miniyaml/PyYAML agreement on `plan/skill.yaml`.
 - **Artifacts produced:** `methodology/skills/plan/{skill.yaml,process.md}`.
 - **Result:** META-023 done. Next: META-024 (`implement`).
+
+---
+
+## 2026-08-16 — META-024 — skill `implement`
+
+- **Unit:** META-024
+- **Inputs read:** `spec/question.md`, `spec/workspace-layout.md` §5, `spec/dor-dod.md` D3/D8/D10,
+  `methodology/skills/plan/process.md`.
+- **Decisions:**
+  - The "never ask the human" rule is justified structurally in the process text, not asserted:
+    a conversational answer leaves no artifact, so the *next* execution cannot see it and will
+    guess differently. Stopping is named as the correct outcome.
+  - Answers are read from the artifacts the answer updated, never from the question file. If the
+    artifacts were not updated, that is itself a question — which keeps
+    `spec/question.md` rule 5 enforceable.
+  - The item moves to `in-progress` **before** any code is written, so an interruption leaves a
+    truthful status and the resume path (reconcile with the branch) is unambiguous.
+  - Added the `commits-reference-the-item` gate backed by a real command,
+    `scripts/check-commit-refs`, so DoD D8 is machine-checked rather than remembered. Added
+    META-036 to the plan to build it.
+  - Gave the "is this decision mine?" question a mechanical test — changes an interface another
+    item depends on, contradicts an ADR, decides user-visible behaviour no AC covers, or is
+    expensive to reverse — so it does not depend on how confident the agent feels.
+  - Named the second failure mode as opportunistic fixing: individually worth doing, collectively
+    fatal, because the diff stops matching the criteria and the unrelated fix ships with no
+    criterion and no verification.
+  - `## What I did not do` is a required section of the implementation report: a declared
+    omission is a handover, an undeclared one is a defect in the report.
+- **Commands run:** `python3 scripts/lib/selftest.py` → 0 failures.
+- **Gates:** miniyaml/PyYAML agreement on `implement/skill.yaml`.
+- **Artifacts produced:** `methodology/skills/implement/{skill.yaml,process.md}`; new plan unit
+  META-036.
+- **Result:** META-024 done. Next: META-025 (`verify`).
