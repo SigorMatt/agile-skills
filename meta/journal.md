@@ -817,3 +817,36 @@ pipeline's paper trail should feel like.
 - **Gates:** `scripts/check` is the repository's own gate; it passes.
 - **Artifacts produced:** `scripts/check`; `origin` remote configured.
 - **Result:** META-035 done. Phase 3 complete. Next: META-040 (`adapters/README.md`).
+
+---
+
+## 2026-08-16 — META-040 — `adapters/README.md`, the adapter contract
+
+- **Unit:** META-040
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R5, `seed/02-ARCHITECTURE.md` §6,
+  `seed/03-ACCEPTANCE.md` B4, `meta/adr/ADR-0001`, `spec/skill-contract.md`.
+- **Decisions:**
+  - Written **before** the renderer, deliberately. Otherwise the contract gets back-filled from
+    whatever the renderer happened to do, and acceptance B4 ("a Codex CLI adapter could be
+    written without touching methodology/") would be untestable.
+  - Five capabilities C1–C5, each stating what the methodology needs, what a runtime may
+    substitute, and what must be documented when the runtime cannot provide it. C5 (isolated
+    execution) is explicitly optional — the workspace is the only channel between skills by
+    design, so isolation strengthens the pipeline rather than being a prerequisite.
+  - The load-bearing rule for C3: **an adapter must document per gate whether enforcement is
+    hard or convention.** Claiming enforcement the runtime does not provide is the one thing
+    that would make the "executable gates over vibes" premise a lie.
+  - Also for C3: an adapter must not design a gate around a mechanism that fires *after* the
+    action it is meant to prevent. That is ADR-0001's `PostToolUse` finding, generalised so it
+    binds every future adapter rather than living in one runtime's notes.
+  - "No per-skill special cases" is stated as a rule with a concrete tell (`if skill ==
+    "implement"`) and a remedy (add the field to `spec/skill-contract.md`).
+  - A 12-box conformance checklist, each gradeable with evidence, so "is this adapter
+    conformant?" is not a matter of opinion.
+  - §6 records the two questions a Codex CLI implementer will hit first (C2 without a structured
+    question mechanism; C3 without a blocking hook, where the substitute is to make the
+    *transition* the gated action) so they start from the questions rather than discovering them.
+- **Commands run:** `./scripts/check` → 3 PASS, 2 SKIP, exit 0.
+- **Gates:** repository gate green.
+- **Artifacts produced:** `adapters/README.md`.
+- **Result:** META-040 done. Next: META-041 (`adapters/claude-code/render.py`).

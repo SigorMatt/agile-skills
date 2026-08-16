@@ -55,7 +55,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ## Phase 4 — adapters
 
-- [ ] **META-040** — `adapters/README.md` — the adapter contract (capabilities, renderer inputs, conformance).
+- [x] **META-040** — `adapters/README.md` — the adapter contract (capabilities, renderer inputs, conformance).
 - [ ] **META-041** — `adapters/claude-code/render.py` — renderer: methodology → Claude Code skills.
 - [ ] **META-042** — `adapters/claude-code/` gate scripts + hook config (hard enforcement) + install script.
 - [ ] **META-043** — Rendered output committed under `adapters/claude-code/dist/`; determinism check wired
