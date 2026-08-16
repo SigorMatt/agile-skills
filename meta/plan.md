@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-023** — skill `plan`.
 - [x] **META-024** — skill `implement`.
 - [x] **META-025** — skill `verify`.
-- [ ] **META-026** — skill `review-close`.
+- [x] **META-026** — skill `review-close`.
 - [ ] **META-027** — skill `answer-questions`.
 - [ ] **META-028** — skill `next` (orchestrator).
 
@@ -45,8 +45,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [ ] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
 - [ ] **META-033** — `scripts/board-gen` — regenerates `tracker/board.md`.
 - [ ] **META-034** — `scripts/workspace-init` — creates a fresh consumer workspace skeleton.
-- [ ] **META-036** — `scripts/check-commit-refs` — gate used by `implement`/`review-close`
-      (every commit on an item branch references the item ID).
+- [ ] **META-036** — gate scripts `scripts/check-commit-refs` (every commit on an item branch
+      references the item ID) and `scripts/check-verify-freshness` (DoD D10: verification
+      postdates the last commit).
 - [ ] **META-035** — `scripts/check` — repo self-gate running all of the above + render determinism.
 
 ## Phase 4 — adapters

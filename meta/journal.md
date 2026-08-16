@@ -492,3 +492,35 @@ pipeline's paper trail should feel like.
 - **Gates:** miniyaml/PyYAML agreement on `verify/skill.yaml`.
 - **Artifacts produced:** `methodology/skills/verify/{skill.yaml,process.md}`.
 - **Result:** META-025 done. Next: META-026 (`review-close`).
+
+---
+
+## 2026-08-16 — META-026 — skill `review-close`
+
+- **Unit:** META-026
+- **Inputs read:** `spec/dor-dod.md` §3/§4, `spec/journal-and-history.md` §3,
+  `methodology/skills/verify/process.md`.
+- **Decisions:**
+  - The reviewer judges **two** things — the change and the record — and the process says why the
+    second is not paperwork: the next person to touch this code must not have to re-derive what
+    nobody wrote down.
+  - Record mechanics are checked *first* because they are cheap and decisive (history chains,
+    journal entries exist, ticks have evidence, questions closed with real consequences).
+  - DoD D10 becomes a real command, `scripts/check-verify-freshness`, and a stale verification
+    returns the item to `verifying` rather than `in-progress` — the code may be fine, it is the
+    evidence that expired. Added to META-036.
+  - Tests are re-run **on the merge result**, not only on the branch: the merge result is what
+    the project actually gets.
+  - `record-is-reconstructible` is a hard gate whose manual check is literally the audit
+    questions from `spec/journal-and-history.md` §3, so the acceptance test's audit is applied
+    continuously rather than once at the end.
+  - Epic closure lives here because this is the only moment in the pipeline where every
+    sibling's state is already in hand.
+  - Named the two failure modes: countersigning upstream green lights (defence: map every diff
+    hunk to a criterion), and closing over an unrecorded gap (accepting a gap is fine; not
+    writing it into `## Notes` or a follow-up item is how the trail stops being true).
+- **Commands run:** `python3 scripts/lib/selftest.py` → 0 failures.
+- **Gates:** miniyaml/PyYAML agreement on `review-close/skill.yaml`.
+- **Artifacts produced:** `methodology/skills/review-close/{skill.yaml,process.md}`; META-036
+  widened.
+- **Result:** META-026 done. Next: META-027 (`answer-questions`).

@@ -1,0 +1,113 @@
+name: review-close
+version: 0.1.0
+persona: reviewer
+purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
+
+when_to_use:
+  - An item sits at status in-review after verification passed.
+  - A change is ready to merge and needs a Definition of Done check first.
+  - An epic's last child item is being closed and the epic itself needs closing.
+  - Someone asks to "review", "close", "merge", or "sign off" a tracked item.
+
+dispatch:
+  on_status: [in-review]
+  item_types: [work-item, bug]
+
+human_interaction: via-questions
+
+inputs:
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the criteria, their tick state, and the outcome to be recorded
+  - path: tracker/items/{{item.id}}/artifacts/verify-report.md
+    required: true
+    why: the evidence behind each tick, and the declared gaps
+  - path: tracker/items/{{item.id}}/artifacts/impl-report.md
+    required: true
+    why: declared deviations from the plan, which the review must judge
+  - path: tracker/items/{{item.id}}/artifacts/plan.md
+    required: true
+    why: the design the change is reviewed against
+  - path: tracker/items/{{item.id}}/journal.md
+    required: true
+    why: the Definition of Done includes the completeness of the record itself
+  - path: tracker/items/{{item.id}}/history.md
+    required: true
+    why: a gap in the chain means a status changed outside a skill
+  - path: "the diff of {{item.branch}} against {{trunk}}"
+    required: true
+    why: the review judges the change, not the description of it
+  - path: docs/architecture/adr/
+    required: false
+    why: the change must not silently contradict a recorded decision
+
+outputs:
+  - path: tracker/items/{{item.id}}/artifacts/review.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/item.md
+    kind: file
+    when: always
+  - path: "merge of {{item.branch}} into {{trunk}}"
+    kind: commit
+    when: on-success
+  - path: tracker/items/EP-###/item.md
+    kind: file
+    when: conditional
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+  - path: tracker/items/{{item.id}}/history.md
+    kind: append
+    when: always
+
+quality_gates:
+  - name: definition-of-done
+    description: Every Definition of Done criterion is evaluated individually and recorded.
+    manual_check: Walk spec/dor-dod.md section 3 criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: verification-postdates-the-code
+    description: The verification ran against the final state of the branch, not an earlier one.
+    command: "scripts/check-verify-freshness {{item.id}} {{item.branch}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: verifying
+  - name: commits-reference-the-item
+    description: Every commit on the branch carries the item ID.
+    command: "scripts/check-commit-refs {{item.id}} {{item.branch}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: tests-pass-on-the-merge-result
+    description: The project's test command passes after merging, not only on the branch.
+    command: "{{commands.test}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: workspace-valid
+    description: The tracker and docs satisfy the schemas after closing.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: record-is-reconstructible
+    description: A reader with only the tracker, docs and git log could reconstruct what happened and why.
+    manual_check: Answer, using only those sources - what was built and why, which decisions were made and by which skill, what questions arose and how they were resolved, what verification found. Any answer you cannot give is a defect in the record, not in the reader.
+    enforcement: hard
+    on_failure: stay
+
+escalation:
+  question: File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect when the change contradicts a recorded decision and it is unclear which should give way. Set the item to awaiting-answer with resume-to in-review and stop.
+  defect: A defect in this item's own delivery sends it back to in-progress with reasons. A defect elsewhere, noticed during review, becomes a bug item.
+  impasse: If the item cannot be merged for reasons outside the change itself, set it to blocked with what was tried.
+
+exit_criteria:
+  - Every Definition of Done criterion is recorded as passed, or the item was rejected.
+  - review.md states what was examined, not only the verdict.
+  - The branch is merged into the trunk and the item is done with an outcome recorded.
+  - If this was the epic's last open child, the epic Definition of Done was applied and the epic closed or explicitly left open with the reason.
+  - The journal entry and the history row for this execution are written.
+
+next_status: done
+failure_status: in-progress
