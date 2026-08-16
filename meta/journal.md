@@ -127,3 +127,31 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `spec/README.md`, `spec/ids-and-statuses.md`,
   `meta/adr/ADR-0003-tracker-layout-and-id-allocation.md`.
 - **Result:** META-010 done. Next: META-011.
+
+---
+
+## 2026-08-16 — META-011 — `spec/work-item.md`
+
+- **Unit:** META-011
+- **Inputs read:** `spec/ids-and-statuses.md`, `seed/02-ARCHITECTURE.md` §3.
+- **Decisions:**
+  - `item.md` is identity, never log. What happened lives in `journal.md`/`history.md`. Stated
+    explicitly because the natural drift is for an item body to grow a running commentary, and
+    then two places disagree about what happened.
+  - Unknown frontmatter fields are an **error**, not a warning: a typo'd `piority:` that passed
+    validation would leave the board silently wrong, which is worse than a noisy failure.
+  - Acceptance criteria are checkbox lists labelled `AC<n>`; `verify` ticks a box only with
+    cited evidence and `review-close` may not close an item with an unticked box. This turns
+    "definition of done" into something a script can count rather than something an agent can
+    feel.
+  - Criteria are frozen after `ready` except via `answer-questions` or an explicit send-back.
+    Quietly loosening a criterion to make verification pass is the most damaging failure mode
+    available to this design, so the spec names it rather than trusting taste.
+  - An epic MUST NOT hand-maintain a child list; children are derived from `epic:` fields.
+    A second list would drift within one work item.
+  - Relations are three explicit list fields (`depends-on`, `blocks`, `relates-to`) instead of
+    one free-form `links` field, so each has a checkable meaning and dangling references are an
+    error.
+- **Gates:** none yet; `scripts/validate-workspace` (META-032) is written against this page.
+- **Artifacts produced:** `spec/work-item.md`.
+- **Result:** META-011 done. Next: META-012.

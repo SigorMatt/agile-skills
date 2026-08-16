@@ -17,7 +17,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 - [x] **META-010** — `spec/README.md` (spec index + conventions) and `spec/ids-and-statuses.md`
       (ID formats, status set, legal transitions, actor rules).
-- [ ] **META-011** — `spec/work-item.md` (item.md frontmatter + body schema, incl. epics & bugs).
+- [x] **META-011** — `spec/work-item.md` (item.md frontmatter + body schema, incl. epics & bugs).
 - [ ] **META-012** — `spec/journal-and-history.md` (journal entry schema, history entry schema).
 - [ ] **META-013** — `spec/question.md` (question artifact schema + protocol).
 - [ ] **META-014** — `spec/doc-header.md` (docs/ version header + change log schema, ADR schema).
