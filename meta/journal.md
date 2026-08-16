@@ -755,3 +755,35 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `scripts/validate-workspace`, `fixtures/broken-workspace/**`.
 - **Result:** META-032 done. Next: META-036 (git-backed gate scripts), then META-035
   (`scripts/check`).
+
+---
+
+## 2026-08-16 — META-036 — git-backed gate scripts
+
+- **Unit:** META-036
+- **Inputs read:** `spec/dor-dod.md` D8/D10, `spec/workspace-layout.md` §5,
+  `methodology/skills/{implement,review-close,verify}/skill.yaml`.
+- **Decisions:**
+  - Both scripts **fail** when they cannot look — a missing branch, a missing report, an
+    unreadable range. A gate that reports success when it could not check is worse than no gate,
+    because it is indistinguishable from a real pass in the journal.
+  - `check-commit-refs` falls back to checking the whole branch when the trunk ref does not
+    exist yet (a repository whose first work happens on a branch), rather than checking an empty
+    range and passing.
+  - It also fails when the range is empty: no commits means nothing was delivered, which should
+    never be a green gate on an item about to move to `verifying`.
+  - D10 needed a fact to compare against, so `verify` now writes `Verified-commit: <sha>` in its
+    report. Recorded in `spec/workspace-layout.md` §1.2 and in `verify/process.md` with the
+    reason: without it D10 degrades to an opinion about how small the last fix looked. This is
+    the second time a gate forced a small spec addition, and both times the addition made the
+    check possible rather than merely convenient.
+  - Error output names the fix (`git rebase -i --exec …`, "return the item to verifying"), since
+    the reader is an agent that has to act on it.
+- **Commands run (throwaway git repo, six paths):** commit-refs pass (1/1); commit-refs fail
+  (1 of 2 named, offender printed); commit-refs on a missing branch → exit 1; freshness pass;
+  freshness fail after a later commit, listing the commits added after verification; freshness
+  with no `Verified-commit:` line → exit 1. Every path behaved as specified.
+- **Gates:** the two scripts are themselves gates; both directions demonstrated.
+- **Artifacts produced:** `scripts/check-commit-refs`, `scripts/check-verify-freshness`; edits
+  to `spec/workspace-layout.md` and `methodology/skills/verify/process.md`.
+- **Result:** META-036 done. Next: META-035 (`scripts/check`).

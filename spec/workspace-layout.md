@@ -72,7 +72,7 @@ worked on. The files are created with their headers at the moment the item is cr
 | `artifacts/refinement-qa.md` | `refine` | the full Q&A verbatim, each answer marked as `human` or `assumed` |
 | `artifacts/plan.md` | `plan` | design, steps, assumptions, ADR references, gate commands |
 | `artifacts/impl-report.md` | `implement` | what was built, AC → evidence map, deviations from the plan |
-| `artifacts/verify-report.md` | `verify` | per-AC verdict with evidence, gates run, defects found |
+| `artifacts/verify-report.md` | `verify` | per-AC verdict with evidence, gates run, defects found. MUST contain a line `Verified-commit: <sha>` naming the commit that was verified — a verification that does not say what it verified cannot be shown to be current, and Definition of Done D10 turns on exactly that |
 | `artifacts/review.md` | `review-close` | what was examined, DoD result per criterion, verdict |
 
 Fixed names, not free choice. A skill looking for the previous stage's output must find it

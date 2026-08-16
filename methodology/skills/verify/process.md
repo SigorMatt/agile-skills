@@ -78,6 +78,8 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    ```markdown
    # Verification report — <ITEM-ID>
 
+   Verified-commit: <the full commit hash of the branch head you verified>
+
    ## Verdict
    ## Criteria
    | AC | verdict | command run | actual output | notes |
@@ -87,6 +89,10 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    ## Defects found
    ## Not verified, and why
    ```
+
+   The `Verified-commit:` line is not decoration. It is what lets `review-close` prove
+   mechanically that the verification postdates the last change; without it, D10 becomes an
+   opinion about how small the last fix looked.
 
    `## Not verified, and why` is mandatory and is often the most valuable section. Anything you
    could not check — no environment, no data, a criterion that turned out to be unfalsifiable —
