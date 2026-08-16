@@ -10,28 +10,35 @@ Overwritten BEFORE each work unit starts. A fresh session that has read only `PR
   push after every commit from then on. `origin` is configured and `main` tracks it. Journaled
   under META-035.
 
-## Current unit: META-040 — `adapters/README.md`, the adapter contract
+## Current phase: META-060..069 — the end-to-end proof
 
-**Why:** acceptance B4 requires the contract to be complete enough that a Codex CLI adapter
-could be written **without touching `methodology/`**. Writing it before the renderer keeps the
-renderer honest — it becomes an implementation of a stated contract rather than the contract
-being back-filled from whatever the renderer happened to do.
+**Where the run happens:** in a standalone git repository at `$CLAUDE_JOB_DIR/tmp/toy/linecount`
+(outside this repo, because a nested `.git` cannot be committed here — see ADR-0004). When the
+run is complete it is imported into `examples/toy-project/` **without** `.git`, together with
+`GIT-LOG.md` and `GIT-BRANCHES.md` so the git evidence survives the import.
+
+**How each step is run:** a context-free subagent, given only the installed skills, the
+consumer prompt, and the project path — never any memory of how the methodology was built
+(PROMPT rule 5). If a subagent gets confused, that is a defect in the skill: fix the skill,
+re-render, re-run, and journal the fix.
+
+**Current unit: META-060** — choose the toy project and write the inputs the run needs.
 
 **Steps**
-1. Write `adapters/README.md` covering:
-   - the capabilities any adapter must map (C1 skill discovery/triggering, C2 asking the human,
-     C3 gate execution, C4 install/uninstall, C5 optional isolated subagent execution), each
-     with what the methodology needs and what a runtime may substitute;
-   - exactly what a renderer consumes (`skill.yaml` + `process.md` + `spec/` + `pipeline.yaml`)
-     and the rule that needing anything else is a methodology defect;
-   - placeholder resolution (`spec/skill-contract.md` §1.4) and where `pipeline.yaml` and the
-     scripts must be installed so `validate-workspace` can find them;
-   - the honesty rule: an adapter documents per gate whether enforcement is hard or convention;
-   - a conformance checklist a new adapter can be graded against.
-2. Commit `adapters: the adapter contract (refs META-040)` and **push**.
+1. Write `meta/adr/ADR-0004-toy-project-execution.md`: where the run happens, why `.git` is not
+   imported, and how the git evidence is preserved instead.
+2. Create the scratch repository and install the rendered skills into it.
+3. Write `examples/toy-project/IDEA.md` — the raw, deliberately under-specified idea, exactly as
+   a human would state it.
+4. Write `examples/toy-project/HUMAN-SCRIPT.md` — the answer key the builder uses when playing
+   the human, with the standing rules for how to answer (be vague where a real person would be,
+   so `refine` has something to actually push back on).
+5. Commit and push.
 
 **Done criteria**
-- `adapters/README.md` exists and its conformance checklist is specific enough to grade against.
-- `./scripts/check` still green; tree clean; plan ticked; journal appended; pushed.
+- ADR-0004, `IDEA.md` and `HUMAN-SCRIPT.md` committed; scratch repo exists with skills installed
+  and `validate-workspace` reporting an uninitialised workspace.
+- `./scripts/check` still green; tree clean; pushed.
 
-**Next unit:** META-041 — `adapters/claude-code/render.py`.
+**Next unit:** META-061 — `intake` + `refine` via a context-free subagent, with the builder
+answering as the human.

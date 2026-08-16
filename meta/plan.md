@@ -73,7 +73,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ## Phase 6 — end-to-end proof (`examples/toy-project/`)
 
-- [ ] **META-060** — Choose toy project; write raw idea + simulated-human answer key
+- [x] **META-060** — Choose toy project; write raw idea + simulated-human answer key
       (`examples/toy-project/HUMAN-SCRIPT.md`).
 - [ ] **META-061** — Run `intake` + `refine` (context-free subagent; builder plays the human).
 - [ ] **META-062** — Run `plan` for the first work item.

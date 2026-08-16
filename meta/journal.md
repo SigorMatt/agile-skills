@@ -1042,3 +1042,39 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `README.md`.
 - **Result:** META-052 done. Phase 5 complete. Next: META-060 — choose the toy project and write
   the human answer key for the simulated refinement.
+
+---
+
+## 2026-08-17 — META-060 — toy project chosen; run inputs written
+
+- **Unit:** META-060
+- **Inputs read:** `seed/03-ACCEPTANCE.md` §C, `USAGE.md`, `adapters/claude-code/README.md`.
+- **Decisions (ADR-0004):**
+  - The run happens in a **standalone git repository outside this one** and is imported into
+    `examples/toy-project/` without `.git`, with the history preserved as `GIT-LOG.md` and
+    `GIT-BRANCHES.md`. A nested repository would either become a submodule (a reader clones and
+    gets an empty directory) or force the toy commits to share this build's history, which would
+    destroy the very `git log --grep <ID>` property the example exists to demonstrate.
+  - Rejected `git bundle` explicitly: it preserves everything and is unreadable, and C6 is
+    precisely about a reader reconstructing the story.
+- **Toy project:** `linecount`, a Python CLI that reports per-file line counts for a directory.
+  Chosen because its one-sentence statement is under-specified in exactly the ways this
+  methodology is meant to catch: "how much is in each file" (lines? bytes? words?), "a folder"
+  (subdirectories? symlinks? unreadable files?), and "nothing fancy" (a scope boundary stated as
+  a vibe).
+- **How the human is played:** `HUMAN-SCRIPT.md` was written **before** the run, so the answers
+  could not be tuned to whatever the pipeline produced. Three standing rules: answer vaguely
+  first and specifically when pushed; concede after one push-back; and refuse to decide one
+  thing outright ("whatever's sensible" for non-text files), so the pipeline must record an
+  **assumption** rather than invent a requirement — and the record must distinguish the two.
+  That refusal is also the seed for the organic upstream question acceptance C3 requires.
+- **Recorded honestly rather than engineered:** the human answers "no" to a Definition of Ready
+  override, so the override path is **not** exercised by this run. Noted in `HUMAN-SCRIPT.md`
+  and carried to the final report as a known gap instead of being faked.
+- **Commands run:** created the scratch repository, installed the rendered skills (11 actions,
+  8 skills present under `.claude/skills/`), and confirmed `validate-workspace` reports an
+  uninitialised workspace — which is the correct answer before `workspace-init`.
+- **Gates:** `./scripts/check` → 4 PASS, 1 SKIP.
+- **Artifacts produced:** `meta/adr/ADR-0004-toy-project-execution.md`,
+  `examples/toy-project/IDEA.md`, `examples/toy-project/HUMAN-SCRIPT.md`.
+- **Result:** META-060 done. Next: META-061 — `intake` + `refine` by a context-free subagent.
