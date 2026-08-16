@@ -204,3 +204,27 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet.
 - **Artifacts produced:** `spec/question.md`.
 - **Result:** META-013 done. Next: META-014.
+
+---
+
+## 2026-08-16 — META-014 — `spec/doc-header.md`
+
+- **Unit:** META-014
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R3, `seed/02-ARCHITECTURE.md` §3, `spec/question.md`.
+- **Decisions:**
+  - The header exists even though git stores diffs, because an agent reading a doc mid-run must
+    know how current it is *from the document*, without shelling out to git and without the
+    answer depending on whether the workspace is a git repo yet.
+  - "Fixing a typo is a content change" — no exceptions. The judgement "is this worth a row?" is
+    precisely what erodes a change log into uselessness.
+  - An ADR must list two options or say the decision was forced; otherwise it records a
+    conclusion, and a later reader cannot tell whether alternatives were considered or missed.
+  - `## Consequences` must state reversibility, because `plan`'s escalation rule
+    (`question.md` §1) turns on that property — leaving it implicit would break a decision
+    procedure elsewhere in the methodology.
+  - `implement` and `verify` may not write to `docs/`. Otherwise the authoritative record would
+    be edited by the very execution trying to satisfy it, and the check becomes circular.
+  - Empty placeholder documents are forbidden: an empty doc reads as an answer.
+- **Gates:** none yet.
+- **Artifacts produced:** `spec/doc-header.md`.
+- **Result:** META-014 done. Next: META-015.
