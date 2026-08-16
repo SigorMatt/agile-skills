@@ -402,3 +402,32 @@ pipeline's paper trail should feel like.
 - **Gates:** miniyaml/PyYAML agreement.
 - **Artifacts produced:** `methodology/skills/refine/{skill.yaml,process.md}`.
 - **Result:** META-022 done. Next: META-023 (`plan`).
+
+---
+
+## 2026-08-16 — META-023 — skill `plan`
+
+- **Unit:** META-023
+- **Inputs read:** `spec/question.md` §1 (the preference order), `spec/doc-header.md` §4,
+  `spec/skill-contract.md` §1.4, `spec/dor-dod.md`.
+- **Decisions:**
+  - `human_interaction: direct`, but constrained by the fixed preference order (cite a document
+    → make a reversible assumption → ask). The process names the failure in *both* directions:
+    skipping the middle option upward turns the human into a design service; skipping it
+    downward buries a real commitment in a plan step where nobody sees it was a choice.
+  - `plan` owns `tracker/project.yaml`'s `commands.*`. Choosing a test framework *is* a design
+    decision, so it belongs to the architect; and a null command must become an honest `skipped`
+    gate plus an ADR, never a passing gate for a check nobody runs.
+  - The AC-to-step mapping table is a hard gate. It also gives the "designing past the item"
+    failure a mechanical check: delete any step no AC maps to, and if the table still holds, the
+    step did not belong to this item.
+  - ADRs must state reversibility, because the preference order in step 4 turns on it — a future
+    `plan` reads that field to decide whether it may revisit the decision.
+  - Explicitly forbade padding the ADR trail with non-decisions: the real decisions hide in it.
+  - Named the second failure mode as deferring the one genuinely hard choice behind "handle the
+    edge cases appropriately", with the tell — the step that makes you uncomfortable is the one
+    that needs the ADR.
+- **Commands run:** `python3 scripts/lib/selftest.py` → 0 failures.
+- **Gates:** miniyaml/PyYAML agreement on `plan/skill.yaml`.
+- **Artifacts produced:** `methodology/skills/plan/{skill.yaml,process.md}`.
+- **Result:** META-023 done. Next: META-024 (`implement`).
