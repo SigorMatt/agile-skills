@@ -1016,3 +1016,29 @@ pipeline's paper trail should feel like.
 - **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP.
 - **Artifacts produced:** `CONSUMER-PROMPT.md`, `USAGE.md`.
 - **Result:** META-050 and META-051 done. Next: META-052 (`README.md`).
+
+---
+
+## 2026-08-17 — META-052 — `README.md`
+
+- **Unit:** META-052
+- **Inputs read:** `seed/00-VISION.md`, `seed/03-ACCEPTANCE.md` D3, the whole repository.
+- **Decisions:**
+  - Opens with what it does and the bet behind it, not with a feature list. The claim being made
+    is narrow and stated as such: the discipline of a good team is largely *procedural*, and
+    procedure is the part you can encode.
+  - Includes a **"What this is not"** section — not a coding agent, no ceremonies, no
+    parallelism, and explicitly **not a guarantee of quality**: it guarantees the checks ran and
+    the reasoning was recorded, which is a different claim. Overclaiming here would undercut
+    every honest thing the rest of the repository does.
+  - The three properties (state on the filesystem, executable gates where possible, every action
+    attributable to a skill) are given as the reasons the layout is what it is, so a reader can
+    predict where things live.
+  - The roadmap points at the known-weaknesses list in `meta/FINAL-REPORT.md` rather than
+    leaving a reader to discover them.
+  - Forward references to `examples/toy-project/` and `meta/FINAL-REPORT.md` are deliberate;
+    both land in the phases that follow, and META-070's sweep re-checks that every link resolves.
+- **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP.
+- **Artifacts produced:** `README.md`.
+- **Result:** META-052 done. Phase 5 complete. Next: META-060 — choose the toy project and write
+  the human answer key for the simulated refinement.
