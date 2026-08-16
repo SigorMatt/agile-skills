@@ -180,3 +180,27 @@ pipeline's paper trail should feel like.
 - **Gates:** none yet; `scripts/validate-workspace` implements §1's validation rules.
 - **Artifacts produced:** `spec/journal-and-history.md`.
 - **Result:** META-012 done. Next: META-013.
+
+---
+
+## 2026-08-16 — META-013 — `spec/question.md`
+
+- **Unit:** META-013
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R2/R4, `seed/02-ARCHITECTURE.md` §5.
+- **Decisions:**
+  - `## Options considered` requires two options **or** an explicit statement that the question
+    is not a choice. Without that rule the protocol degrades into "ask the architect everything"
+    and the cost of thinking is just pushed upstream.
+  - `## Consequences` must name files, not intentions. That is what makes "downstream skills
+    re-read artifacts, never the Q&A" enforceable rather than aspirational.
+  - Non-blocking questions exist and do **not** suspend the item — needed for "this should be
+    written down" without stalling delivery.
+  - Escalation to the human is restricted to four named conditions (intent not recorded,
+    irreversible, contradicts an ADR, record genuinely silent), and the escalating question must
+    say which applies. The human's attention is the scarcest resource in the loop.
+  - Recorded the real reason `implement`/`verify` may never ask directly: a chat answer leaves
+    no artifact, so the *next* execution — after a restart or on a sibling item — cannot see it
+    and will re-ask or guess differently.
+- **Gates:** none yet.
+- **Artifacts produced:** `spec/question.md`.
+- **Result:** META-013 done. Next: META-014.
