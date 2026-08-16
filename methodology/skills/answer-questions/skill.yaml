@@ -1,0 +1,102 @@
+name: answer-questions
+version: 0.1.0
+persona: architect
+purpose: Answer open questions from downstream skills using the record, propagate the answer into the authoritative artifacts, and escalate to the human only when required.
+
+when_to_use:
+  - An item sits at status awaiting-answer with an open blocking question.
+  - Open questions addressed to the architect exist on any item.
+  - A human has just answered an escalated question and the answer must reach the artifacts.
+  - Someone asks to "answer the open questions", "unblock", or "triage the questions" in a workspace.
+
+dispatch:
+  on_status: [awaiting-answer]
+  item_types: [work-item, bug, epic]
+
+human_interaction: direct
+
+inputs:
+  - path: tracker/items/{{item.id}}/questions/
+    required: true
+    why: the questions to triage, with the asker's context, options and recommendation
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the acceptance criteria an answer may have to amend
+  - path: tracker/items/{{item.id}}/artifacts/plan.md
+    required: false
+    why: most answers land here, and an answer that does not reach an artifact has not been given
+  - path: tracker/items/{{item.id}}/history.md
+    required: true
+    why: carries the resume-to status the item must be returned to
+  - path: docs/architecture/adr/
+    required: true
+    why: an answer that contradicts a recorded decision is an escalation, not an answer
+  - path: docs/product/
+    required: false
+    why: intent recorded at intake or refinement often already answers the question
+  - path: tracker/items/*/artifacts/refinement-qa.md
+    required: false
+    why: the human may have already answered this during refinement
+
+outputs:
+  - path: tracker/items/{{item.id}}/questions/Q-###.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/artifacts/plan.md
+    kind: file
+    when: conditional
+  - path: tracker/items/{{item.id}}/item.md
+    kind: file
+    when: always
+  - path: docs/architecture/adr/ADR-####-{{item.id}}.md
+    kind: file
+    when: conditional
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+  - path: tracker/items/{{item.id}}/history.md
+    kind: append
+    when: on-success
+
+quality_gates:
+  - name: answer-is-propagated
+    description: Every answered question names the files it changed, and those files were actually changed.
+    manual_check: For each question answered, open each file named in its Consequences section and confirm the change is there. A Consequences section naming no file fails this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: answered-from-the-record
+    description: The answer is grounded in documents, not invented.
+    manual_check: For each answer, cite the document, ADR, or Q&A entry it follows from - or state explicitly that the record was silent and record the new decision as an ADR.
+    enforcement: hard
+    on_failure: stay
+  - name: escalation-is-justified
+    description: A question passed to the human meets one of the four escalation conditions.
+    manual_check: For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition.
+    enforcement: hard
+    on_failure: stay
+  - name: workspace-valid
+    description: The tracker and docs still satisfy the schemas after propagation.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: item-resumed-correctly
+    description: The item returned to the status recorded in resume-to, not to a guessed one.
+    manual_check: Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match.
+    enforcement: hard
+    on_failure: stay
+
+escalation:
+  question: When the record cannot settle it, re-address the question to human, keep it open, state which escalation condition applies, and stop the loop rather than guessing.
+  defect: If a question reveals that delivered behaviour is wrong, file a bug item; do not fix it inside the answer.
+  impasse: If the human is unavailable and the question is blocking, leave the item at awaiting-answer and report it. An unanswerable question is not a reason to unblock the item.
+
+exit_criteria:
+  - Every question this execution handled is either answered with consequences, or addressed to the human with the condition stated.
+  - Every file named in a Consequences section actually contains the change.
+  - Items whose blocking questions are all resolved are returned to their recorded resume-to status.
+  - Any new decision is recorded as an ADR, cited from the question.
+  - The journal entry and the history row for this execution are written.
+
+next_status: null
+failure_status: blocked

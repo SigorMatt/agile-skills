@@ -524,3 +524,34 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `methodology/skills/review-close/{skill.yaml,process.md}`; META-036
   widened.
 - **Result:** META-026 done. Next: META-027 (`answer-questions`).
+
+---
+
+## 2026-08-16 — META-027 — skill `answer-questions`
+
+- **Unit:** META-027
+- **Inputs read:** `spec/question.md` (whole), `spec/doc-header.md` §3/§4, `spec/work-item.md` §2.
+- **Decisions:**
+  - Propagation is the gate, not the answer. `answer-is-propagated` requires opening each file
+    named in `## Consequences` and confirming the change is there; a `## Consequences` section
+    naming no file fails. The process calls a question marked `answered` that changed nothing
+    "the most damaging artifact this methodology can produce" — it looks resolved, blocks
+    nothing, and the next execution proceeds on the same missing information.
+  - Four answer routes in a fixed order (cite a document → quote recorded intent → decide and
+    write an ADR → escalate), with the process pushing back on skipping route 3 *and* on
+    skipping route 4.
+  - `next_status: null` — this skill restores `resume-to` rather than owning a fixed transition,
+    and `item-resumed-correctly` is a hard gate comparing the new row against the suspending
+    row.
+  - It handles **all** open questions on the item, not only the blocking one: non-blocking
+    questions otherwise accumulate into an untriaged backlog, and answering costs nearly nothing
+    once the context is loaded.
+  - Named the second failure mode precisely: amending an acceptance criterion to match what was
+    built. That single move makes verification unable to fail — "do not quietly reshape the
+    target around the arrow".
+  - A missing `resume-to` must be reconstructed *and* reported as a defect in the suspending
+    skill, so the iterate-and-deepen loop gets the signal.
+- **Commands run:** `python3 scripts/lib/selftest.py` → 0 failures.
+- **Gates:** miniyaml/PyYAML agreement on `answer-questions/skill.yaml`.
+- **Artifacts produced:** `methodology/skills/answer-questions/{skill.yaml,process.md}`.
+- **Result:** META-027 done. Next: META-028 (`next`, the orchestrator).
