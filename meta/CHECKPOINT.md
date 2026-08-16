@@ -3,27 +3,26 @@
 Overwritten BEFORE each work unit starts. A fresh session that has read only `PROMPT.md`,
 `meta/plan.md`, and this file must be able to start the unit named here.
 
-## Current unit: META-003 — scripting policy (ADR-0002) + `miniyaml`
+## Current unit: META-010 — `spec/README.md` + `spec/ids-and-statuses.md`
 
-**Why:** `scripts/validate-workspace` runs inside the *consumer's* project, which may have no
-Python packages installed. Every script must therefore run on a bare `python3`. That forces a
-YAML reader we own. Decide it explicitly instead of drifting into a dependency.
+**Why:** every other artifact in the build refers to IDs and statuses. Fixing them first stops
+`pipeline.yaml`, the skills and the validators from each inventing their own vocabulary.
 
 **Steps**
-1. Write `meta/adr/ADR-0002-scripting-and-dependencies.md`: Python 3.9+, stdlib only, no
-   third-party imports anywhere in `scripts/` or `adapters/`; the YAML subset we accept is
-   defined by us and violations are hard errors, never silent mis-parses.
-2. Write `scripts/lib/miniyaml.py` — subset reader (`load`, `load_file`) + `dump_frontmatter`.
-3. Write `scripts/lib/selftest.py` (runnable: `python3 scripts/lib/selftest.py`) with unit cases
-   for every supported construct and every rejected construct; when PyYAML happens to be
-   importable it additionally cross-checks miniyaml against it on the fixtures.
-4. Run the self-test; it must exit 0.
-5. Commit `scripts: mini YAML reader with dependency policy (refs META-003)`.
+1. `spec/README.md` — index of the spec files, the normative-language convention (MUST/SHOULD),
+   and the rule that `spec/` is the single source of truth that skills and adapters cite.
+2. `spec/ids-and-statuses.md` — ID formats and allocation rule; the tracked-item types; the
+   status set per type with the owning skill and terminal flag; the legal transition table with
+   the actor skill for each; priority values and their rank.
+3. Write `meta/adr/ADR-0003-tracker-layout-and-id-allocation.md` for the two decisions that are
+   not forced by the seed: epics/work-items/bugs share one uniform `tracker/items/<ID>/`
+   directory shape, and IDs are derived from the filesystem rather than a counter file.
+4. Commit `spec: IDs, item types and the status graph (refs META-010)`.
 
 **Done criteria**
-- `python3 scripts/lib/selftest.py` exits 0 and prints a pass count.
-- No `import yaml` (or any third-party import) required for it to pass.
-- ADR-0002 committed; plan ticked; journal appended; tree clean.
+- Both spec files exist; no runtime name (the word for any specific agent CLI) appears in them.
+- Every status listed has either an owning skill or is marked terminal.
+- Every transition names the actor skill.
+- ADR-0003 committed; plan ticked; journal appended; tree clean.
 
-**Next unit:** META-030 — `scripts/lib/frontmatter.py` + `scripts/lib/report.py` (findings
-collection and stable `path:line: LEVEL [code] message` output).
+**Next unit:** META-011 — `spec/work-item.md`.

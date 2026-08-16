@@ -15,7 +15,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ## Phase 1 — `spec/` (single source of truth, runtime-neutral)
 
-- [ ] **META-010** — `spec/README.md` (spec index + conventions) and `spec/ids-and-statuses.md`
+- [x] **META-010** — `spec/README.md` (spec index + conventions) and `spec/ids-and-statuses.md`
       (ID formats, status set, legal transitions, actor rules).
 - [ ] **META-011** — `spec/work-item.md` (item.md frontmatter + body schema, incl. epics & bugs).
 - [ ] **META-012** — `spec/journal-and-history.md` (journal entry schema, history entry schema).

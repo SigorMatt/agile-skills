@@ -98,3 +98,32 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `scripts/lib/frontmatter.py`, `scripts/lib/report.py`, 17 new cases in
   `scripts/lib/selftest.py`.
 - **Result:** META-030 done. Next: META-010 (spec index + IDs and statuses).
+
+---
+
+## 2026-08-16 — META-010 — spec index, IDs, item types, status graph
+
+- **Unit:** META-010
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R3/R4, `seed/02-ARCHITECTURE.md` §3.
+- **Decisions (ADR-0003):**
+  - Epics, work items and bugs share one directory shape under `tracker/items/<ID>/`. One glob
+    enumerates the tracker; the alternative (three sibling trees) would have made every
+    traversal in three separate scripts re-learn where trackable things live.
+  - The next ID is derived by scanning the filesystem, not stored in a counter file. A counter
+    is a second source of truth that goes wrong exactly when this project expects to be
+    interrupted — between incrementing and creating.
+  - `awaiting-answer` stores the status it suspended in its history entry rather than letting
+    `answer-questions` infer it. Inference silently discards completed verification when the
+    question came from `review-close`.
+- **Judgement calls recorded in the spec itself:**
+  - `planned` vs `in-progress` are kept distinct because they differ in *recovery* behaviour
+    (no branch yet vs. partial work on a branch), not for bureaucracy.
+  - Bugs enter at `ready`, not `draft`: a bug filed with reproduction steps already satisfies
+    the bug Definition of Ready, so routing it through `refine` would be theatre.
+  - Epics are never dispatched directly by the orchestrator; `review-close` closes an epic as
+    the final act of closing its last child, the one moment sibling state is already in hand.
+- **Gates:** none executable yet — `scripts/validate-workspace` (META-032) is what will enforce
+  this page, and it is written against it.
+- **Artifacts produced:** `spec/README.md`, `spec/ids-and-statuses.md`,
+  `meta/adr/ADR-0003-tracker-layout-and-id-allocation.md`.
+- **Result:** META-010 done. Next: META-011.
