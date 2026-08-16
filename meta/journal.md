@@ -345,3 +345,31 @@ pipeline's paper trail should feel like.
 - **Gates:** miniyaml/PyYAML agreement on `pipeline.yaml`.
 - **Artifacts produced:** `methodology/pipeline.yaml`; edit to `spec/ids-and-statuses.md`.
 - **Result:** META-020 done. Next: META-021 (`intake`).
+
+---
+
+## 2026-08-16 — META-021 — skill `intake`
+
+- **Unit:** META-021
+- **Inputs read:** `spec/skill-contract.md`, `spec/work-item.md` §4, `spec/dor-dod.md`,
+  `methodology/pipeline.yaml`.
+- **Decisions:**
+  - `dispatch.on_status: []` — `intake` is human-started, never scheduled. It creates items *at*
+    `draft` rather than transitioning anything, so `next_status: draft`, `failure_status: null`.
+  - The gate `no-solution-in-the-problem` exists because the characteristic analyst failure is
+    designing while framing. It is advisory (it is a judgement) but it must be recorded.
+  - Intake writes acceptance criteria it can already state and is told **not to pad them**. An
+    honestly rough criterion is better than a polished unfalsifiable one, and `refine` exists to
+    finish them.
+  - Human answers are recorded verbatim in the epic journal, because that journal is the only
+    record of the conversation and `refine`/`plan` depend on it.
+  - `commands.*` in `project.yaml` stay `null` at intake. Inventing a test command would make
+    the first gate report a pass for something nobody can run.
+  - The two named self-check failure modes are over-splitting (each extra item costs a full
+    pipeline round trip and a paper trail nobody reads) and criteria that sound testable but are
+    not, with a concrete test for the latter.
+- **Commands run:** `python3 scripts/lib/selftest.py` → `112 passed, 0 failed` (the new
+  `skill.yaml` is now in the PyYAML cross-check set).
+- **Gates:** miniyaml/PyYAML agreement on `intake/skill.yaml`.
+- **Artifacts produced:** `methodology/skills/intake/{skill.yaml,process.md}`.
+- **Result:** META-021 done. Next: META-022 (`refine`).

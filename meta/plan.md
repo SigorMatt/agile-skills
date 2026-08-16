@@ -28,7 +28,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 ## Phase 2 — `methodology/`
 
 - [x] **META-020** — `methodology/pipeline.yaml` (status graph, status→skill map, dispatch rules).
-- [ ] **META-021** — skill `intake` (skill.yaml + process.md).
+- [x] **META-021** — skill `intake` (skill.yaml + process.md).
 - [ ] **META-022** — skill `refine`.
 - [ ] **META-023** — skill `plan`.
 - [ ] **META-024** — skill `implement`.

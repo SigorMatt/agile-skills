@@ -3,26 +3,26 @@
 Overwritten BEFORE each work unit starts. A fresh session that has read only `PROMPT.md`,
 `meta/plan.md`, and this file must be able to start the unit named here.
 
-## Current unit: META-010 — `spec/README.md` + `spec/ids-and-statuses.md`
+## Current phase: META-021..028 — the eight skills
 
-**Why:** every other artifact in the build refers to IDs and statuses. Fixing them first stops
-`pipeline.yaml`, the skills and the validators from each inventing their own vocabulary.
+One skill per unit, one commit per skill. Each unit writes
+`methodology/skills/<name>/skill.yaml` + `process.md`, then journals and commits. No linter
+exists yet (META-031), so each unit ends by parsing the new `skill.yaml` with
+`python3 scripts/lib/miniyaml.py`-based check and re-running `scripts/lib/selftest.py`, whose
+cross-check now covers every YAML file in the repo.
 
-**Steps**
-1. `spec/README.md` — index of the spec files, the normative-language convention (MUST/SHOULD),
-   and the rule that `spec/` is the single source of truth that skills and adapters cite.
-2. `spec/ids-and-statuses.md` — ID formats and allocation rule; the tracked-item types; the
-   status set per type with the owning skill and terminal flag; the legal transition table with
-   the actor skill for each; priority values and their rank.
-3. Write `meta/adr/ADR-0003-tracker-layout-and-id-allocation.md` for the two decisions that are
-   not forced by the seed: epics/work-items/bugs share one uniform `tracker/items/<ID>/`
-   directory shape, and IDs are derived from the filesystem rather than a counter file.
-4. Commit `spec: IDs, item types and the status graph (refs META-010)`.
+Order and current position: **META-021 `intake`** → 022 `refine` → 023 `plan` → 024 `implement`
+→ 025 `verify` → 026 `review-close` → 027 `answer-questions` → 028 `next`.
 
-**Done criteria**
-- Both spec files exist; no runtime name (the word for any specific agent CLI) appears in them.
-- Every status listed has either an owning skill or is marked terminal.
-- Every transition names the actor skill.
-- ADR-0003 committed; plan ticked; journal appended; tree clean.
+**What every skill unit must satisfy**
+1. `skill.yaml` conforms to `spec/skill-contract.md` §1 — all required fields, no unknown keys,
+   `dispatch.on_status` consistent with `methodology/pipeline.yaml` `statuses[].owner`.
+2. `process.md` has the five required sections in order (`spec/skill-contract.md` §2.1), its
+   first step re-reads item state from disk, its last step is the transition *after* journaling,
+   and `## Self-check` names ≥ 2 specific failure modes for that role.
+3. No runtime, vendor, tool, or product name appears anywhere in either file.
+4. `python3 scripts/lib/selftest.py` exits 0 (it cross-checks the new YAML against PyYAML).
+5. Journal appended, plan ticked, tree clean.
 
-**Next unit:** META-011 — `spec/work-item.md`.
+**Next unit after META-028:** META-031 — `scripts/lint-skills`, which turns rules 1–3 above
+from a habit into a gate.
