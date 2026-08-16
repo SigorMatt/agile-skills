@@ -587,3 +587,44 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `methodology/skills/next/{skill.yaml,process.md}`.
 - **Result:** META-028 done. Phase 2 complete — all 8 skills exist. Next: META-031
   (`scripts/lint-skills`), which turns the conventions these eight follow into a gate.
+
+---
+
+## 2026-08-16 — META-031 — `scripts/lint-skills`
+
+- **Correction to the META-028 entry above:** it recorded the self-test as "120 passed / 41
+  inputs"; the run actually reported `119 passed, 0 failed` over 40 inputs. Corrected here by
+  appending rather than by editing that entry, per `spec/README.md` convention 2.
+- **Unit:** META-031
+- **Inputs read:** `spec/skill-contract.md`, `spec/ids-and-statuses.md`, `spec/README.md`,
+  `methodology/pipeline.yaml`, all eight contracts.
+- **Decisions:**
+  - The linter cross-checks status ownership in **both** directions and gives the two failures
+    different codes and hints: `ownership.unclaimed` (a stall) and `ownership.race` (two
+    claimants). Codes are distinct because the fixes are different.
+  - Placeholder checking covers `process.md` as well as `skill.yaml`. An unknown placeholder in
+    prose is the same defect: it resolves to nothing.
+  - `## Self-check`'s "at least two failure modes" was unenforceable as written, so
+    `spec/skill-contract.md` §2.2 was amended in this unit to require a bold lead-in containing
+    "goes wrong" plus ≥2 bold-led bullets. Making the rule checkable changed the spec, not the
+    skills — all eight already had the shape.
+  - Added `{{conventions.branch-prefix}}` and `{{conventions.commit-subject}}` to the spec's
+    placeholder table: `implement/process.md` legitimately used them and the linter was right to
+    flag them.
+- **Commands run:**
+  - `./scripts/lint-skills` → first run found 2 real defects: `answer-questions`'s purpose was
+    163 characters (limit 160), and `next/process.md`'s first step was "Validate" rather than a
+    read-from-disk. Both fixed — the second by rewriting `next` step 1 to read the whole
+    workspace from scratch every run, which is a genuine improvement: it states that the
+    orchestrator holds no state between runs.
+  - **Negative test** (deliberate breakage, then restore): injected a bad persona, a two-part
+    version, an unknown top-level key, a gate with both `command` and `manual_check`, and a
+    stolen `on_status`. The linter reported all six expected errors, including
+    `ownership.race` and `ownership.unclaimed`. Restored; clean again.
+  - **Negative test** for neutrality: appended a line naming a specific runtime to a
+    `process.md`; reported as `runtime-neutrality` with the line number. Removed; clean.
+  - `python3 scripts/lib/selftest.py` → 0 failures.
+- **Gates:** `scripts/lint-skills` exit 0 (8 contracts).
+- **Artifacts produced:** `scripts/lint-skills`; edits to `spec/skill-contract.md`,
+  `methodology/skills/next/process.md`, `methodology/skills/answer-questions/skill.yaml`.
+- **Result:** META-031 done. Next: META-032 (`scripts/validate-workspace`).

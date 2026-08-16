@@ -27,8 +27,13 @@ You are run in a loop. Each run picks one action and stops.
 Execute `pipeline.yaml`'s `orchestrator.steps` in order. Stop at the first step that produces an
 action.
 
-1. **Validate.** Run `scripts/validate-workspace`. If it fails, print its output and stop. Do
-   not dispatch anything: every skill begins by trusting the workspace, so dispatching against a
+1. **Read the whole workspace state from disk, and validate it.** Read `pipeline.yaml`, every
+   `tracker/items/*/item.md`, and every question file — every run, from scratch. You hold no
+   state between runs and you must not carry any: the previous run's picture is stale by
+   definition, because a skill ran in between.
+
+   Then run `scripts/validate-workspace`. If it fails, print its output and stop. Do not
+   dispatch anything: every skill begins by trusting the workspace, so dispatching against a
    broken one propagates the breakage into work that looks legitimate.
 
 2. **Surface questions addressed to the human.** Read every `tracker/items/*/questions/*.md`. If

@@ -40,7 +40,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 ## Phase 3 — `scripts/`
 
 - [x] **META-030** — `scripts/lib/` shared helpers (mini-YAML reader, frontmatter parser, findings printer).
-- [ ] **META-031** — `scripts/lint-skills` — validates every `skill.yaml` against `spec/skill-contract.md`,
+- [x] **META-031** — `scripts/lint-skills` — validates every `skill.yaml` against `spec/skill-contract.md`,
       checks `process.md` structure, and enforces "no runtime names under `methodology/` or `spec/`".
 - [ ] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
 - [ ] **META-033** — `scripts/board-gen` — regenerates `tracker/board.md`.

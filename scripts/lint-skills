@@ -1,0 +1,536 @@
+#!/usr/bin/env python3
+"""Validate methodology/ against spec/skill-contract.md and spec/ids-and-statuses.md.
+
+Usage: scripts/lint-skills [repo-root]
+
+Checks, in order:
+  * pipeline.yaml is well formed, and its skills list matches methodology/skills/ exactly
+  * every skill.yaml conforms to the contract schema (required fields, types, enums, no
+    unknown keys)
+  * dispatch.on_status and pipeline statuses agree in BOTH directions: an unclaimed
+    non-terminal status is a stall, a doubly-claimed one is a race
+  * every {{placeholder}} used anywhere in methodology/ is one the spec defines
+  * every process.md has the five required sections, in order, with the required shape
+  * nothing under methodology/ or spec/ names a runtime, vendor or product
+
+Exit 0 when there are no errors. See ADR-0002: standard library only.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+
+import miniyaml  # noqa: E402
+from report import Report  # noqa: E402
+
+PERSONAS = {"product-analyst", "architect", "developer", "qa-engineer", "reviewer", "scheduler"}
+HUMAN_INTERACTION = {"none", "direct", "via-questions"}
+OUTPUT_KINDS = {"file", "append", "branch", "commit", "status"}
+OUTPUT_WHEN = {"always", "on-success", "on-failure", "conditional"}
+GATE_EXPECT = {"exit-zero", "exit-nonzero"}
+GATE_ENFORCEMENT = {"hard", "advisory"}
+
+REQUIRED_TOP_LEVEL = [
+    "name", "version", "persona", "purpose", "when_to_use", "dispatch", "human_interaction",
+    "inputs", "outputs", "quality_gates", "escalation", "exit_criteria",
+    "next_status", "failure_status",
+]
+
+# spec/skill-contract.md section 1.4
+KNOWN_PLACEHOLDERS = {
+    "item.id", "item.branch", "item.type",
+    "workspace", "trunk",
+    "commands.test", "commands.lint", "commands.build",
+    "conventions.branch-prefix", "conventions.commit-subject",
+}
+
+PROCESS_SECTIONS = [
+    "## Preconditions",
+    "## Steps",
+    "## Journaling",
+    "## Self-check",
+    "## Failure and escalation",
+]
+
+# spec/README.md: nothing in methodology/ or spec/ may name a runtime, vendor or product.
+# Matched case-insensitively as whole words unless the pattern says otherwise.
+FORBIDDEN_TERMS = [
+    "claude", "anthropic", "opus", "sonnet", "haiku", "openai", "chatgpt", "gpt-4", "gpt-5",
+    "codex", "copilot", "cursor", "gemini", "llama", "mistral", "ollama", "langchain",
+    "skill.md", r"\.claude", "cline", "aider", "devin", "windsurf",
+]
+FORBIDDEN_RE = re.compile(
+    "|".join(rf"(?<![A-Za-z0-9]){term}(?![A-Za-z0-9])" for term in FORBIDDEN_TERMS),
+    re.IGNORECASE,
+)
+
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+KEBAB_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
+PLACEHOLDER_RE = re.compile(r"\{\{\s*([^}]*?)\s*\}\}")
+GOES_WRONG_RE = re.compile(r"^\*\*[^*]*goes wrong[^*]*\*\*", re.IGNORECASE | re.MULTILINE)
+
+
+def is_str(value) -> bool:
+    return isinstance(value, str) and value.strip() != ""
+
+
+class Linter:
+    def __init__(self, root: str) -> None:
+        self.root = os.path.abspath(root)
+        self.report = Report("lint-skills", self.root)
+        self.methodology = os.path.join(self.root, "methodology")
+        self.skills_dir = os.path.join(self.methodology, "skills")
+        self.pipeline_path = os.path.join(self.methodology, "pipeline.yaml")
+        self.pipeline = None
+        self.statuses = {}
+        self.skill_contracts = {}
+
+    # ---- pipeline ------------------------------------------------------------------
+
+    def load_pipeline(self) -> bool:
+        if not os.path.isfile(self.pipeline_path):
+            self.report.error(self.pipeline_path, 0, "pipeline.missing",
+                              "methodology/pipeline.yaml does not exist")
+            return False
+        try:
+            self.pipeline = miniyaml.load_file(self.pipeline_path)
+        except miniyaml.YamlError as exc:
+            self.report.error(self.pipeline_path, exc.line, "pipeline.unparsable", exc.message)
+            return False
+        if not isinstance(self.pipeline, dict):
+            self.report.error(self.pipeline_path, 1, "pipeline.shape",
+                              "pipeline.yaml must be a mapping")
+            return False
+
+        for key in ("item_types", "skills", "priorities", "statuses", "transitions",
+                    "orchestrator"):
+            if key not in self.pipeline:
+                self.report.error(self.pipeline_path, 0, "pipeline.field.missing",
+                                  f"required key {key!r} is missing")
+
+        for entry in self.pipeline.get("statuses") or []:
+            if not isinstance(entry, dict) or not is_str(entry.get("name")):
+                self.report.error(self.pipeline_path, 0, "pipeline.status.shape",
+                                  f"status entry is malformed: {entry!r}")
+                continue
+            self.statuses[entry["name"]] = entry
+            if "owner" not in entry:
+                self.report.error(self.pipeline_path, 0, "pipeline.status.owner",
+                                  f"status {entry['name']!r} does not declare an owner")
+            if not isinstance(entry.get("terminal"), bool):
+                self.report.error(self.pipeline_path, 0, "pipeline.status.terminal",
+                                  f"status {entry['name']!r} must declare terminal as a boolean")
+            if entry.get("owner") is None and entry.get("terminal") is False:
+                self.report.error(
+                    self.pipeline_path, 0, "pipeline.status.stalled",
+                    f"status {entry['name']!r} is non-terminal but has no owning skill",
+                    hint="every non-terminal status needs exactly one owner, or the "
+                         "orchestrator has no way to advance an item in it")
+        return True
+
+    def check_skill_registry(self) -> None:
+        declared = list(self.pipeline.get("skills") or [])
+        on_disk = sorted(
+            name for name in os.listdir(self.skills_dir)
+            if os.path.isdir(os.path.join(self.skills_dir, name))
+        ) if os.path.isdir(self.skills_dir) else []
+
+        for name in declared:
+            if name not in on_disk:
+                self.report.error(self.pipeline_path, 0, "registry.missing-directory",
+                                  f"pipeline.yaml lists skill {name!r} but "
+                                  f"methodology/skills/{name}/ does not exist")
+        for name in on_disk:
+            if name not in declared:
+                self.report.error(os.path.join(self.skills_dir, name), 0,
+                                  "registry.unregistered",
+                                  f"methodology/skills/{name}/ exists but pipeline.yaml does "
+                                  f"not list it in skills")
+
+    # ---- contracts -----------------------------------------------------------------
+
+    def check_skill(self, name: str) -> None:
+        directory = os.path.join(self.skills_dir, name)
+        contract_path = os.path.join(directory, "skill.yaml")
+        process_path = os.path.join(directory, "process.md")
+
+        for path, code in ((contract_path, "skill.yaml"), (process_path, "process.md")):
+            if not os.path.isfile(path):
+                self.report.error(path, 0, "skill.file.missing", f"{code} does not exist")
+        if not os.path.isfile(contract_path):
+            return
+
+        try:
+            contract = miniyaml.load_file(contract_path)
+        except miniyaml.YamlError as exc:
+            self.report.error(contract_path, exc.line, "skill.unparsable", exc.message)
+            return
+        if not isinstance(contract, dict):
+            self.report.error(contract_path, 1, "skill.shape", "skill.yaml must be a mapping")
+            return
+
+        self.skill_contracts[name] = contract
+        self.check_contract_fields(name, contract_path, contract)
+        self.check_gates(contract_path, contract)
+        self.check_placeholders(contract_path, self.read(contract_path))
+        if os.path.isfile(process_path):
+            self.check_process(name, process_path, self.read(process_path))
+
+    def check_contract_fields(self, name: str, path: str, contract: dict) -> None:
+        for field in REQUIRED_TOP_LEVEL:
+            if field not in contract:
+                self.report.error(path, 0, "contract.field.missing",
+                                  f"required field {field!r} is missing")
+        for field in contract:
+            if field not in REQUIRED_TOP_LEVEL:
+                self.report.error(path, 0, "contract.field.unknown",
+                                  f"unknown field {field!r}",
+                                  hint="a misspelled key that lints clean is a contract "
+                                       "clause that silently does nothing")
+
+        if contract.get("name") != name:
+            self.report.error(path, 0, "contract.name.mismatch",
+                              f"name is {contract.get('name')!r} but the directory is {name!r}")
+        if not (is_str(contract.get("version")) and SEMVER_RE.match(contract["version"])):
+            self.report.error(path, 0, "contract.version",
+                              f"version must be MAJOR.MINOR.PATCH, found "
+                              f"{contract.get('version')!r}")
+        if contract.get("persona") not in PERSONAS:
+            self.report.error(path, 0, "contract.persona",
+                              f"persona {contract.get('persona')!r} is not one of "
+                              f"{sorted(PERSONAS)}")
+        purpose = contract.get("purpose")
+        if not is_str(purpose):
+            self.report.error(path, 0, "contract.purpose", "purpose must be a non-empty string")
+        else:
+            if len(purpose) > 160:
+                self.report.error(path, 0, "contract.purpose.length",
+                                  f"purpose is {len(purpose)} characters; the limit is 160")
+            if "\n" in purpose:
+                self.report.error(path, 0, "contract.purpose.multiline",
+                                  "purpose must be a single line")
+
+        when = contract.get("when_to_use")
+        if not isinstance(when, list) or len(when) < 2 or not all(is_str(x) for x in when):
+            self.report.error(path, 0, "contract.when_to_use",
+                              "when_to_use must be a list of at least two non-empty strings")
+
+        if contract.get("human_interaction") not in HUMAN_INTERACTION:
+            self.report.error(path, 0, "contract.human_interaction",
+                              f"human_interaction must be one of {sorted(HUMAN_INTERACTION)}")
+
+        self.check_dispatch(path, contract)
+        self.check_io(path, contract)
+
+        escalation = contract.get("escalation")
+        if not isinstance(escalation, dict):
+            self.report.error(path, 0, "contract.escalation", "escalation must be a mapping")
+        else:
+            for key in ("question", "defect", "impasse"):
+                if not is_str(escalation.get(key)):
+                    self.report.error(path, 0, "contract.escalation.key",
+                                      f"escalation.{key} must be a non-empty string")
+
+        exits = contract.get("exit_criteria")
+        if not isinstance(exits, list) or len(exits) < 2 or not all(is_str(x) for x in exits):
+            self.report.error(path, 0, "contract.exit_criteria",
+                              "exit_criteria must be a list of at least two non-empty strings")
+
+        for field in ("next_status", "failure_status"):
+            value = contract.get(field, "")
+            if value is None:
+                continue
+            if value not in self.statuses:
+                self.report.error(path, 0, "contract.status.unknown",
+                                  f"{field} is {value!r}, which is not a status in pipeline.yaml")
+
+    def check_dispatch(self, path: str, contract: dict) -> None:
+        dispatch = contract.get("dispatch")
+        if not isinstance(dispatch, dict):
+            self.report.error(path, 0, "contract.dispatch", "dispatch must be a mapping")
+            return
+        for key in ("on_status", "item_types"):
+            if not isinstance(dispatch.get(key), list):
+                self.report.error(path, 0, "contract.dispatch.key",
+                                  f"dispatch.{key} must be a list (it may be empty)")
+        item_types = set(self.pipeline.get("item_types") or [])
+        for value in dispatch.get("item_types") or []:
+            if value not in item_types:
+                self.report.error(path, 0, "contract.dispatch.item_type",
+                                  f"dispatch.item_types contains {value!r}, which pipeline.yaml "
+                                  f"does not define")
+        for status in dispatch.get("on_status") or []:
+            if status not in self.statuses:
+                self.report.error(path, 0, "contract.dispatch.status",
+                                  f"dispatch.on_status contains {status!r}, which is not a "
+                                  f"status in pipeline.yaml")
+
+    def check_io(self, path: str, contract: dict) -> None:
+        inputs = contract.get("inputs")
+        if not isinstance(inputs, list) or not inputs:
+            self.report.error(path, 0, "contract.inputs", "inputs must be a non-empty list")
+        else:
+            for entry in inputs:
+                if not isinstance(entry, dict):
+                    self.report.error(path, 0, "contract.input.shape",
+                                      f"input entry is not a mapping: {entry!r}")
+                    continue
+                if not is_str(entry.get("path")):
+                    self.report.error(path, 0, "contract.input.path",
+                                      f"input entry has no path: {entry!r}")
+                if not isinstance(entry.get("required"), bool):
+                    self.report.error(path, 0, "contract.input.required",
+                                      f"input {entry.get('path')!r} must declare required as a "
+                                      f"boolean")
+                if not is_str(entry.get("why")):
+                    self.report.error(path, 0, "contract.input.why",
+                                      f"input {entry.get('path')!r} must say why it is read",
+                                      hint="an input nobody can justify is either dead weight "
+                                           "or a missing rationale")
+
+        outputs = contract.get("outputs")
+        if not isinstance(outputs, list) or not outputs:
+            self.report.error(path, 0, "contract.outputs", "outputs must be a non-empty list")
+            return
+        for entry in outputs:
+            if not isinstance(entry, dict):
+                self.report.error(path, 0, "contract.output.shape",
+                                  f"output entry is not a mapping: {entry!r}")
+                continue
+            if not is_str(entry.get("path")):
+                self.report.error(path, 0, "contract.output.path",
+                                  f"output entry has no path: {entry!r}")
+            if entry.get("kind") not in OUTPUT_KINDS:
+                self.report.error(path, 0, "contract.output.kind",
+                                  f"output {entry.get('path')!r} has kind "
+                                  f"{entry.get('kind')!r}; expected one of "
+                                  f"{sorted(OUTPUT_KINDS)}")
+            if entry.get("when") not in OUTPUT_WHEN:
+                self.report.error(path, 0, "contract.output.when",
+                                  f"output {entry.get('path')!r} has when "
+                                  f"{entry.get('when')!r}; expected one of "
+                                  f"{sorted(OUTPUT_WHEN)}")
+
+    def check_gates(self, path: str, contract: dict) -> None:
+        gates = contract.get("quality_gates")
+        if not isinstance(gates, list):
+            self.report.error(path, 0, "contract.gates", "quality_gates must be a list")
+            return
+        seen = set()
+        statuses = set(self.statuses)
+        for gate in gates:
+            if not isinstance(gate, dict):
+                self.report.error(path, 0, "gate.shape", f"gate is not a mapping: {gate!r}")
+                continue
+            name = gate.get("name")
+            if not (is_str(name) and KEBAB_RE.match(name)):
+                self.report.error(path, 0, "gate.name",
+                                  f"gate name {name!r} must be kebab-case")
+            elif name in seen:
+                self.report.error(path, 0, "gate.name.duplicate",
+                                  f"two gates are both named {name!r}")
+            else:
+                seen.add(name)
+            if not is_str(gate.get("description")):
+                self.report.error(path, 0, "gate.description",
+                                  f"gate {name!r} must have a description")
+
+            has_command = is_str(gate.get("command"))
+            has_manual = is_str(gate.get("manual_check"))
+            if has_command == has_manual:
+                self.report.error(
+                    path, 0, "gate.check",
+                    f"gate {name!r} must have exactly one of command or manual_check",
+                    hint="a gate with both invites reporting the manual check when the "
+                         "command fails")
+            if has_command and gate.get("expect", "exit-zero") not in GATE_EXPECT:
+                self.report.error(path, 0, "gate.expect",
+                                  f"gate {name!r} has expect {gate.get('expect')!r}; expected "
+                                  f"one of {sorted(GATE_EXPECT)}")
+            if gate.get("enforcement") not in GATE_ENFORCEMENT:
+                self.report.error(path, 0, "gate.enforcement",
+                                  f"gate {name!r} has enforcement "
+                                  f"{gate.get('enforcement')!r}; expected one of "
+                                  f"{sorted(GATE_ENFORCEMENT)}")
+            on_failure = gate.get("on_failure")
+            if not is_str(on_failure) or (
+                on_failure not in {"stay", "retry", "escalate"} and on_failure not in statuses
+            ):
+                self.report.error(path, 0, "gate.on_failure",
+                                  f"gate {name!r} has on_failure {on_failure!r}; expected "
+                                  f"stay, retry, escalate, or a status name")
+
+    # ---- cross-checks --------------------------------------------------------------
+
+    def check_status_ownership(self) -> None:
+        """Each non-terminal status: exactly one owner, and that skill claims it."""
+        claimed = {}
+        for name, contract in self.skill_contracts.items():
+            dispatch = contract.get("dispatch")
+            if not isinstance(dispatch, dict):
+                continue
+            for status in dispatch.get("on_status") or []:
+                claimed.setdefault(status, []).append(name)
+
+        for status, entry in self.statuses.items():
+            owner = entry.get("owner")
+            claimants = claimed.get(status, [])
+            if owner is None:
+                if claimants:
+                    self.report.error(
+                        self.pipeline_path, 0, "ownership.terminal-claimed",
+                        f"status {status!r} has no owner in pipeline.yaml but is claimed by "
+                        f"{', '.join(sorted(claimants))}")
+                continue
+            if owner not in self.skill_contracts:
+                self.report.error(self.pipeline_path, 0, "ownership.unknown-owner",
+                                  f"status {status!r} names owner {owner!r}, which is not a "
+                                  f"skill")
+                continue
+            if claimants != [owner]:
+                if not claimants:
+                    self.report.error(
+                        os.path.join(self.skills_dir, owner, "skill.yaml"), 0,
+                        "ownership.unclaimed",
+                        f"pipeline.yaml gives status {status!r} to {owner!r}, but that skill's "
+                        f"dispatch.on_status does not list it",
+                        hint="an unclaimed status stalls every item that reaches it")
+                else:
+                    self.report.error(
+                        self.pipeline_path, 0, "ownership.race",
+                        f"status {status!r} is owned by {owner!r} but claimed by "
+                        f"{', '.join(sorted(claimants))}",
+                        hint="two skills claiming one status is a race the orchestrator "
+                             "cannot resolve")
+
+    def check_placeholders(self, path: str, text: str) -> None:
+        for match in PLACEHOLDER_RE.finditer(text):
+            token = match.group(1)
+            if token not in KNOWN_PLACEHOLDERS:
+                line = text.count("\n", 0, match.start()) + 1
+                self.report.error(
+                    path, line, "placeholder.unknown",
+                    f"{{{{{token}}}}} is not a placeholder defined in "
+                    f"spec/skill-contract.md section 1.4",
+                    hint="an unrecognised placeholder resolves to nothing, which can make a "
+                         "gate trivially pass")
+
+    def check_process(self, name: str, path: str, text: str) -> None:
+        lines = text.split("\n")
+        found = []
+        for index, line in enumerate(lines):
+            stripped = line.rstrip()
+            if stripped in PROCESS_SECTIONS:
+                found.append((stripped, index + 1))
+
+        seen_names = [section for section, _ in found]
+        for section in PROCESS_SECTIONS:
+            if section not in seen_names:
+                self.report.error(path, 0, "process.section.missing",
+                                  f"required section {section!r} is missing")
+        ordered = [s for s in seen_names if s in PROCESS_SECTIONS]
+        expected_order = [s for s in PROCESS_SECTIONS if s in ordered]
+        if ordered != expected_order:
+            self.report.error(path, 0, "process.section.order",
+                              f"sections are out of order: {ordered} "
+                              f"(expected {expected_order})")
+
+        if not lines or not lines[0].startswith(f"# {name} "):
+            self.report.error(path, 1, "process.title",
+                              f"first line must be '# {name} — <persona>'")
+
+        self.check_placeholders(path, text)
+
+        sections = self.split_sections(lines, found)
+
+        steps = sections.get("## Steps", "")
+        if not re.search(r"^\s*1\.\s", steps, re.MULTILINE):
+            self.report.error(path, 0, "process.steps.unnumbered",
+                              "## Steps must be a numbered list")
+        first_step = re.split(r"^\s*2\.\s", steps, maxsplit=1, flags=re.MULTILINE)[0]
+        if "from disk" not in first_step.lower():
+            self.report.error(
+                path, 0, "process.steps.first",
+                "the first step must re-read the item's current state from disk",
+                hint="skills are resumed after interruptions; the most likely wrong "
+                     "assumption is that the workspace is as this skill last left it")
+
+        self_check = sections.get("## Self-check", "")
+        match = GOES_WRONG_RE.search(self_check)
+        if not match:
+            self.report.error(
+                path, 0, "process.self-check.failure-modes",
+                "## Self-check must contain a bold lead-in naming how this skill goes wrong",
+                hint="spec/skill-contract.md section 2.2")
+        else:
+            after = self_check[match.end():]
+            bullets = re.findall(r"^\s*[-*]\s+\*\*", after, re.MULTILINE)
+            if len(bullets) < 2:
+                self.report.error(
+                    path, 0, "process.self-check.failure-modes",
+                    f"## Self-check names {len(bullets)} failure mode(s); at least two are "
+                    f"required")
+
+    @staticmethod
+    def split_sections(lines: list, found: list) -> dict:
+        sections = {}
+        for position, (section, line_number) in enumerate(found):
+            start = line_number
+            end = found[position + 1][1] - 1 if position + 1 < len(found) else len(lines)
+            sections[section] = "\n".join(lines[start:end])
+        return sections
+
+    # ---- neutrality ----------------------------------------------------------------
+
+    def check_runtime_neutrality(self) -> None:
+        for base in ("methodology", "spec"):
+            root = os.path.join(self.root, base)
+            for directory, dirs, files in os.walk(root):
+                dirs[:] = [d for d in dirs if d != "__pycache__"]
+                for filename in sorted(files):
+                    path = os.path.join(directory, filename)
+                    text = self.read(path)
+                    for index, line in enumerate(text.split("\n"), start=1):
+                        match = FORBIDDEN_RE.search(line)
+                        if match:
+                            self.report.error(
+                                path, index, "runtime-neutrality",
+                                f"names a specific runtime or vendor: {match.group(0)!r}",
+                                hint="methodology/ and spec/ are runtime-neutral; move this "
+                                     "to adapters/<runtime>/")
+
+    @staticmethod
+    def read(path: str) -> str:
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+    # ---- driver --------------------------------------------------------------------
+
+    def run(self) -> int:
+        if not os.path.isdir(self.skills_dir):
+            self.report.error(self.skills_dir, 0, "skills.missing",
+                              "methodology/skills/ does not exist")
+            return self.report.emit()
+        if self.load_pipeline():
+            self.check_skill_registry()
+            for name in sorted(os.listdir(self.skills_dir)):
+                if os.path.isdir(os.path.join(self.skills_dir, name)):
+                    self.check_skill(name)
+            self.check_status_ownership()
+        self.check_runtime_neutrality()
+        self.report.note(f"checked {len(self.skill_contracts)} skill contracts")
+        return self.report.emit()
+
+
+def main(argv: list) -> int:
+    root = argv[1] if len(argv) > 1 else os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))
+    return Linter(root).run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

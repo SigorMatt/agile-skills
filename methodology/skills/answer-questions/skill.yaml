@@ -1,7 +1,7 @@
 name: answer-questions
 version: 0.1.0
 persona: architect
-purpose: Answer open questions from downstream skills using the record, propagate the answer into the authoritative artifacts, and escalate to the human only when required.
+purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
 when_to_use:
   - An item sits at status awaiting-answer with an open blocking question.

@@ -167,6 +167,8 @@ against the workspace, never by the methodology.
 | `{{commands.test}}` | `commands.test` from `tracker/project.yaml` |
 | `{{commands.lint}}` | `commands.lint` from `tracker/project.yaml` |
 | `{{commands.build}}` | `commands.build` from `tracker/project.yaml` |
+| `{{conventions.branch-prefix}}` | `conventions.branch-prefix` from `tracker/project.yaml` |
+| `{{conventions.commit-subject}}` | `conventions.commit-subject` from `tracker/project.yaml` |
 
 A `{{commands.*}}` placeholder that resolves to `null` makes the gate **skipped**, and the
 skill MUST journal it as skipped with the reason. It MUST NOT be reported as passed. `plan` is
@@ -217,6 +219,10 @@ of a skill is that worker's first day.
 - `## Self-check` MUST name at least two **specific** failure modes for this skill — the things
   this role actually gets wrong — not generic advice. This section is the main defence against
   a plausible-looking but wrong execution, and it is where lessons from a bad run get recorded.
+  So that this is checkable rather than aspirational, the failure modes MUST appear as a bold
+  lead-in line containing the phrase **goes wrong**, followed by at least two bullets that each
+  begin with a bold phrase naming the mode. `scripts/lint-skills` enforces the shape; only the
+  author can enforce that the modes are real.
 - Cross-references to `spec/` are by filename and section, so a reader can open exactly one
   more file rather than the whole spec.
 
