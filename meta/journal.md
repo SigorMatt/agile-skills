@@ -628,3 +628,31 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `scripts/lint-skills`; edits to `spec/skill-contract.md`,
   `methodology/skills/next/process.md`, `methodology/skills/answer-questions/skill.yaml`.
 - **Result:** META-031 done. Next: META-032 (`scripts/validate-workspace`).
+
+---
+
+## 2026-08-16 — META-037 — `scripts/lib/workspace.py`
+
+- **Unit:** META-037 (added to the plan during this unit; META-032 was too large for one
+  commit, so parsing was split from rules per PROMPT rule 9)
+- **Inputs read:** `spec/workspace-layout.md`, `spec/work-item.md`, `spec/journal-and-history.md`,
+  `spec/question.md`, `spec/doc-header.md`.
+- **Decisions:**
+  - **Parsing here, rules in the callers.** Three scripts must agree exactly on what a file
+    means; two parsers would eventually disagree, and the disagreement would surface as a board
+    that contradicts the validator.
+  - The loader never judges validity. It records what it could not read in `load_errors` and
+    leaves every verdict to the caller — so `board-gen` can render a partially broken workspace
+    while `validate-workspace` fails on it.
+  - Line numbers are carried through every structure (history rows, journal entries, acceptance
+    criteria) and are *file* line numbers, so a finding points at the line a human would open.
+    The self-test asserts this rather than assuming it.
+  - The em-dash placeholder in history is normalised to `None` via an explicit method rather
+    than being special-cased at each call site.
+- **Commands run:** `python3 scripts/lib/selftest.py` → `152 passed, 0 failed` (33 new cases
+  over a temp workspace built in the test, including a deliberately malformed journal heading
+  that must be *reported*, and a status that disagrees with the last history row that the
+  loader must **not** quietly fix).
+- **Gates:** self-test exit 0.
+- **Artifacts produced:** `scripts/lib/workspace.py`; workspace cases in `scripts/lib/selftest.py`.
+- **Result:** META-037 done. Next: META-034 (`scripts/workspace-init`), then META-032.

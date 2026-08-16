@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 import report as report_lib  # noqa: E402
+import workspace as workspace_lib  # noqa: E402
 from miniyaml import YamlError  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -220,6 +221,178 @@ def run_report(results: Results) -> None:
     results.check("report/summary", lines[-1], "demo: 1 error, 1 warning")
 
 
+ITEM_MD = """---
+id: WI-0001
+type: work-item
+title: Count lines per file
+status: verifying
+priority: high
+epic: EP-001
+created: 2026-08-16T09:12:04Z
+updated: 2026-08-16T11:47:52Z
+branch: wi/WI-0001
+depends-on:
+  - WI-0002
+---
+
+## Story
+
+As a reader, I want a line count, so that I can see which file dominates.
+
+## Acceptance criteria
+
+- [x] AC1 — one row per regular file with its line count
+- [ ] AC2 — rows sorted by descending count
+- [ ]  AC3 - a missing path exits 2
+
+## Out of scope
+
+- Recursion.
+"""
+
+HISTORY_MD = """# History — WI-0001
+
+| when | from | to | actor | resume-to | reason |
+|------|------|----|-------|-----------|--------|
+| 2026-08-16T09:12:04Z | — | draft | intake | — | created from idea refinement |
+| 2026-08-16T09:58:11Z | draft | ready | refine | — | DoR passed |
+| 2026-08-16T11:05:52Z | ready | awaiting-answer | plan | ready | Q-001 blocking |
+"""
+
+JOURNAL_MD = """# Journal — WI-0001
+
+## 2026-08-16T09:58:11Z — refine v0.1.0 — product-analyst
+
+- **Item:** WI-0001
+- **Gates:** definition-of-ready → pass
+- **Status:** `draft` → `ready`
+
+## not a valid heading
+
+- **Item:** WI-0001
+"""
+
+QUESTION_MD = """---
+id: Q-001
+item: WI-0001
+from-skill: plan
+addressed-to: architect
+blocking: true
+status: open
+created: 2026-08-16T11:05:52Z
+---
+
+## Context
+
+Tie-break order is undefined.
+
+## Question
+
+Which file wins a tie?
+"""
+
+
+def build_workspace(base: str) -> str:
+    item_dir = os.path.join(base, "tracker", "items", "WI-0001")
+    os.makedirs(os.path.join(item_dir, "questions"))
+    os.makedirs(os.path.join(item_dir, "artifacts"))
+    os.makedirs(os.path.join(base, "docs", "product"))
+    writes = {
+        os.path.join(base, "tracker", "project.yaml"):
+            "project:\n  name: demo\n  trunk-branch: main\n  description: A demo.\n"
+            "commands:\n  test: python3 -m pytest -q\n  lint: null\n  build: null\n"
+            "conventions:\n  branch-prefix: wi/\n"
+            '  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"\n',
+        os.path.join(item_dir, "item.md"): ITEM_MD,
+        os.path.join(item_dir, "history.md"): HISTORY_MD,
+        os.path.join(item_dir, "journal.md"): JOURNAL_MD,
+        os.path.join(item_dir, "questions", "Q-001.md"): QUESTION_MD,
+        os.path.join(item_dir, "artifacts", "plan.md"): "# Plan\n",
+        os.path.join(base, "docs", "product", "vision.md"):
+            "---\ntitle: Vision\nversion: 2\nstatus: current\nupdated: 2026-08-16T09:12:04Z\n"
+            "updated-by: intake\nupdated-for: EP-001\n---\n\n# Vision\n\nBody.\n\n"
+            "## Change log\n\n| version | when | by | for | what changed |\n"
+            "|---|---|---|---|---|\n| 2 | 2026-08-16T09:12:04Z | intake | EP-001 | Scope |\n"
+            "| 1 | 2026-08-15T16:02:00Z | intake | EP-001 | First version |\n",
+    }
+    for path, text in writes.items():
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+    return base
+
+
+def run_workspace(results: Results) -> None:
+    import tempfile
+    with tempfile.TemporaryDirectory() as base:
+        build_workspace(base)
+        ws = workspace_lib.Workspace(base).load()
+
+        results.check("workspace/project-name", (ws.project or {}).get("project", {}).get("name"),
+                      "demo")
+        results.check("workspace/command-test", ws.command("test"), "python3 -m pytest -q")
+        results.check("workspace/command-lint-null", ws.command("lint"), None)
+        results.check("workspace/branch-prefix", ws.convention("branch-prefix"), "wi/")
+        results.check("workspace/items", sorted(ws.items), ["WI-0001"])
+
+        item = ws.items["WI-0001"]
+        # Deliberately inconsistent with the last history row, so validate-workspace has
+        # something real to catch later; the loader itself must not "fix" it.
+        results.check("workspace/item-status", item.status, "verifying")
+        results.check("workspace/item-type", item.type, "work-item")
+        results.check("workspace/depends-on", item.fields.get("depends-on"), ["WI-0002"])
+        results.check("workspace/sections",
+                      sorted(item.sections), ["## Acceptance criteria", "## Out of scope",
+                                              "## Story"])
+
+        criteria = item.acceptance_criteria()
+        results.check("workspace/ac-count", len(criteria), 3)
+        results.check("workspace/ac-ticked", [c["checked"] for c in criteria],
+                      [True, False, False])
+        results.check("workspace/ac-labels", [c["label"] for c in criteria],
+                      ["AC1", "AC2", "AC3"])
+        # Line numbers must point at the real file line a human would open.
+        with open(item.path, "r", encoding="utf-8") as handle:
+            file_lines = handle.read().split("\n")
+        results.check("workspace/ac-line-accurate",
+                      file_lines[criteria[0]["line"] - 1].strip().startswith("- [x] AC1"), True)
+
+        results.check("workspace/history-rows", len(item.history), 3)
+        results.check("workspace/history-first-from",
+                      item.history[0].normalised(item.history[0].from_status), None)
+        results.check("workspace/history-resume-to", item.history[2].resume_to, "ready")
+        results.check("workspace/history-actor", item.history[1].actor, "refine")
+
+        results.check("workspace/journal-entries", len(item.journal), 1)
+        results.check("workspace/journal-skill", item.journal[0].skill, "refine")
+        results.check("workspace/journal-version", item.journal[0].version, "0.1.0")
+        results.check("workspace/journal-bullets", item.journal[0].bullets.get("Item"), "WI-0001")
+        # The malformed heading must be reported, not silently skipped.
+        codes = [code for _, _, code, _, _ in ws.load_errors]
+        results.check("workspace/journal-bad-heading-reported", "journal.heading" in codes, True)
+
+        results.check("workspace/questions", [q.identifier for q in item.questions], ["Q-001"])
+        results.check("workspace/blocking", len(item.blocking_questions()), 1)
+        results.check("workspace/question-sections",
+                      sorted(item.questions[0].sections), ["## Context", "## Question"])
+
+        results.check("workspace/docs", len(ws.docs), 1)
+        results.check("workspace/doc-version", ws.docs[0].fields.get("version"), 2)
+        results.check("workspace/doc-changelog-rows", len(ws.docs[0].changelog), 2)
+        results.check("workspace/doc-changelog-top", ws.docs[0].changelog[0][0][0], "2")
+
+        results.check("workspace/artifacts", item.artifacts, ["plan.md"])
+        results.check("workspace/has-artifact", item.has_artifact("plan.md"), True)
+        results.check("workspace/statuses-reached", sorted(item.statuses_reached()),
+                      ["awaiting-answer", "draft", "ready"])
+
+    # A workspace that is not there at all reports it rather than raising.
+    with tempfile.TemporaryDirectory() as empty:
+        ws = workspace_lib.Workspace(empty).load()
+        codes = {code for _, _, code, _, _ in ws.load_errors}
+        results.check("workspace/empty-reports-missing",
+                      {"project.missing", "items.missing"} <= codes, True)
+
+
 def repo_yaml_files() -> list:
     found = []
     for base, dirs, files in os.walk(REPO_ROOT):
@@ -271,6 +444,7 @@ def main() -> int:
     run_dump(results)
     run_frontmatter(results)
     run_report(results)
+    run_workspace(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

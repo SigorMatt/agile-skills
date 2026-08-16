@@ -42,6 +42,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-030** — `scripts/lib/` shared helpers (mini-YAML reader, frontmatter parser, findings printer).
 - [x] **META-031** — `scripts/lint-skills` — validates every `skill.yaml` against `spec/skill-contract.md`,
       checks `process.md` structure, and enforces "no runtime names under `methodology/` or `spec/`".
+- [x] **META-037** — `scripts/lib/workspace.py` — one loader/model shared by every script that
+      reads a workspace, so the validator and the board can never disagree about a file.
 - [ ] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
 - [ ] **META-033** — `scripts/board-gen` — regenerates `tracker/board.md`.
 - [ ] **META-034** — `scripts/workspace-init` — creates a fresh consumer workspace skeleton.
