@@ -1154,3 +1154,70 @@ pipeline's paper trail should feel like.
   requires to happen organically.
 - **Gates:** toy workspace `validate-workspace` exit 0; `./scripts/check` green in this repo.
 - **Result:** META-061 done. Next: META-062 — `plan` for WI-0001.
+
+---
+
+## 2026-08-17 — META-062/063/065 + META-063a — the autonomous run, and two design defects it exposed
+
+- **Units:** META-062 (`plan`), META-063 (`implement`), META-065 (`verify`) all ran; plus
+  META-063a, an unplanned fix unit for the two defects the run exposed.
+- **How it was run:** one context-free subagent looping `/next` unattended, explicitly forbidden
+  from asking a human and told to stop at the first hard stop.
+- **What ran, in order:** `next` dispatched `plan` (WI-0001 `ready → planned`), `implement`
+  (`planned → in-progress → verifying`), `verify` (`verifying → in-review`), then `review-close`
+  — which **refused to close on a hard gate** and stopped. WI-0002 was correctly rejected as a
+  candidate every time (`depends-on: WI-0001`, not done), and EP-001 because `open` has a null
+  owner. The selection logic behaved exactly as `pipeline.yaml` specifies.
+- **What the skills produced:** a plan mapping all 13 criteria to steps and named tests, three
+  ADRs (including one for a case *no acceptance criterion covered* — a file that cannot be
+  read), `commands.test` filled in while `commands.lint` was deliberately left null so
+  `lint-clean` reports **skipped** rather than passed; `linecount.py` with 27 tests over three
+  commits all naming the item; and a verification that decided all 13 criteria by commands it
+  ran against fixtures it built — a real PNG, a fresh `git clone`, `chmod 000` paths, symlinks,
+  and 14 deliberate mutations of the delivered behaviour to confirm the suite catches them.
+
+### Defect 1 — the freshness gate could never pass, and I caused it
+
+`check-verify-freshness` compared the verified sha against the branch head. In META-061a I added
+a commit step to `verify` — so `verify`'s own record commit becomes the head, and the gate reads
+its own required output as "code changed after verification". D10 passed on the facts
+(`git diff` showed only `tracker/` files) and failed as a gate. Every exit from `in-review` was
+blocked, including filing a question about it.
+
+**Fix:** the gate now compares **paths, not shas**. If the head has moved but every changed path
+is under `tracker/` or `docs/`, the verification still covers the code and the gate passes,
+saying so. This makes the gate *more* precise, not weaker: D10 is about the code the verification
+covers, and a record-only commit is not a code change.
+
+Verified both directions on the real repository: passes on the toy project's actual state
+("only the record changed (6 files)"), and still fails in a throwaway clone with one real edit to
+`linecount.py`, naming the file and the commit.
+
+### Defect 2 — gates guarded every transition, which traps items
+
+`transition` ran the acting skill's hard gates on *every* move. Two consequences the run hit:
+
+- `implement` is told to move an item to `in-progress` **before** writing code, but `tests-pass`
+  and `commits-reference-the-item` cannot pass on an empty branch. The subagent worked around it
+  by committing a first slice before transitioning, and recorded the deviation — but the
+  process and the tooling genuinely disagreed.
+- With the freshness gate failing, `review-close` could not reject, could not send back, and
+  **could not even file a question** about the gate blocking it. The item was trapped.
+
+**Fix:** a skill's hard gates now guard only its **completion** transition — the move to its own
+`next_status`. On any other move they still run and are still reported, but they do not refuse.
+Escaping downward is never what a gate should prevent; declaring success is. Recorded in
+`spec/skill-contract.md` §1.3 with both reasons, and in the adapter's enforcement notes.
+
+### On whether these are fixes or conveniences
+
+Both were checked against that question deliberately, because "the gate is inconvenient" is
+exactly how a methodology like this rots. Defect 1 makes the check narrower and more accurate.
+Defect 2 removes a deadlock that made a hard gate unfileable-against. Neither weakens what a
+gate asserts at the moment it matters. The subagent's own analysis reached the same three
+options and it declined to use `--force` — correctly, since overriding a hard gate is not the
+reviewer's call.
+
+- **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP; re-rendered and re-installed into the toy
+  project; both directions of the freshness gate demonstrated on the real repository.
+- **Result:** defects fixed. Resuming the run at `review-close`.

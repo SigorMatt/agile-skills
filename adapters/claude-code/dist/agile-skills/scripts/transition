@@ -9,7 +9,12 @@ Usage:
 What it does, in order:
   1. checks the transition is legal from the item's current status, for this actor, against
      pipeline.yaml;
-  2. runs the actor skill's hard, command-backed gates and refuses if any fails;
+  2. runs the actor skill's hard, command-backed gates. They REFUSE the move only when it is
+     the skill's completion transition — the move to its own `next_status`. On any other move
+     (a send-back, a question, an impasse, or an intermediate step such as
+     `planned -> in-progress`) the gates are still run and reported, but they do not block:
+     escaping downward is never what a gate should prevent, and a skill that cannot file a
+     question about its own failing gate is trapped;
   3. writes the new status (and outcome/branch if given) into item.md and bumps `updated`;
   4. appends the history row;
   5. regenerates the board;
@@ -41,6 +46,16 @@ import miniyaml  # noqa: E402
 
 def now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def find_contract(skill: str) -> str:
+    """The acting skill's contract, wherever it was installed."""
+    for candidate in (os.path.join(HERE, "skills", skill, "skill.yaml"),
+                      os.path.join(HERE, "..", "skills", skill, "skill.yaml"),
+                      os.path.join(HERE, "..", "methodology", "skills", skill, "skill.yaml")):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return ""
 
 
 def find_pipeline() -> str:
@@ -192,6 +207,23 @@ def main(argv: list) -> int:
         with open(item_path, "w", encoding="utf-8") as handle:
             handle.write(frontmatter.render(fields, body))
 
+    # A skill's hard gates guard the transition that DECLARES ITS WORK COMPLETE — the move to
+    # its own `next_status`. They are still run and reported on every other transition, but they
+    # do not refuse one. Two reasons, both learned from a real run:
+    #   * `implement` moves an item to `in-progress` before any code exists, so `tests-pass`
+    #     cannot pass there by construction;
+    #   * blocking a send-back, or a move to `awaiting-answer`, on the gates of the very work
+    #     that is failing traps the item: the skill cannot even file a question about it.
+    # Escaping downward is never the thing a gate should prevent. Declaring success is.
+    contract_path = find_contract(actor)
+    completion_status = None
+    if contract_path:
+        try:
+            completion_status = (miniyaml.load_file(contract_path) or {}).get("next_status")
+        except miniyaml.YamlError:
+            completion_status = None
+    gating = completion_status is not None and to_status == completion_status
+
     reason = options["reason"]
     if "force" in flags:
         reason = f"{reason} [gates forced]"
@@ -203,6 +235,12 @@ def main(argv: list) -> int:
         print(gate_result.stdout.rstrip())
         if gate_result.stderr.strip():
             print(gate_result.stderr.rstrip(), file=sys.stderr)
+        if not gating:
+            if gate_result.returncode != 0:
+                print(f"transition: gates reported above are NOT blocking this move — "
+                      f"{actor!r} only gates its completion transition "
+                      f"(to {completion_status!r}), and this is {to_status!r}.")
+            gate_result = subprocess.CompletedProcess(gate_result.args, 0, "", "")
         if gate_result.returncode == 1:
             print(f"transition: refused — a hard gate for {actor!r} failed. Fix it, or rerun "
                   f"with --force to record an explicit override in the history reason.",

@@ -68,21 +68,44 @@ def main(argv: list) -> int:
         return 1
     head_sha = head.stdout.strip()
 
-    if not head_sha.startswith(verified) and not verified.startswith(head_sha[:len(verified)]):
-        newer = git(["log", "--format=%h %s", f"{verified}..{branch}"], root)
-        print(f"check-verify-freshness: {item_id} was verified at {verified} but {branch} is "
-              f"now at {head_sha[:8]}", file=sys.stderr)
-        if newer.returncode == 0 and newer.stdout.strip():
-            print("  commits added after verification:", file=sys.stderr)
-            for line in newer.stdout.strip().split("\n"):
-                print(f"    {line}", file=sys.stderr)
-        print("  the verification does not apply to what would be merged; return the item to "
-              "verifying", file=sys.stderr)
-        return 1
+    if head_sha.startswith(verified) or verified.startswith(head_sha[:len(verified)]):
+        print(f"check-verify-freshness: {item_id} verified at {head_sha[:8]}, which is the head "
+              f"of {branch}")
+        return 0
 
-    print(f"check-verify-freshness: {item_id} verified at {head_sha[:8]}, which is the head of "
-          f"{branch}")
-    return 0
+    # The head has moved. D10 is about the *code* the verification covers, and `verify` and
+    # `review-close` are required to commit their own records — those commits necessarily move
+    # the head past the sha the report names. So compare paths, not shas: a change confined to
+    # the workspace does not invalidate a verification of the code.
+    changed = git(["diff", "--name-only", f"{verified}..{branch}"], root)
+    if changed.returncode != 0:
+        print(f"check-verify-freshness: cannot diff {verified}..{branch}: "
+              f"{changed.stderr.strip()}", file=sys.stderr)
+        return 1
+    paths = [line for line in changed.stdout.split("\n") if line.strip()]
+    code_paths = [path for path in paths
+                  if not (path.startswith("tracker/") or path.startswith("docs/"))]
+
+    if not code_paths:
+        print(f"check-verify-freshness: {item_id} verified at {verified[:8]}; {branch} has "
+              f"moved to {head_sha[:8]} but only the record changed "
+              f"({len(paths)} file(s) under tracker/ or docs/), so the verification still "
+              f"covers the code")
+        return 0
+
+    newer = git(["log", "--format=%h %s", f"{verified}..{branch}", "--"] + code_paths, root)
+    print(f"check-verify-freshness: {item_id} was verified at {verified} but code has changed "
+          f"since; {branch} is now at {head_sha[:8]}", file=sys.stderr)
+    print("  code files changed after verification:", file=sys.stderr)
+    for path in code_paths[:20]:
+        print(f"    {path}", file=sys.stderr)
+    if newer.returncode == 0 and newer.stdout.strip():
+        print("  in these commits:", file=sys.stderr)
+        for line in newer.stdout.strip().split("\n"):
+            print(f"    {line}", file=sys.stderr)
+    print("  the verification does not apply to what would be merged; return the item to "
+          "verifying", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

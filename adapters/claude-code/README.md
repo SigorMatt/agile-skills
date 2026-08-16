@@ -96,6 +96,12 @@ This is the honest table the adapter contract requires. **Hard** means something
 1. **`transition` refuses.** A status change runs the actor skill's command-backed hard gates
    first and exits non-zero without writing anything if one fails. This is where most hard
    enforcement lives.
+
+   It refuses only the skill's **completion** transition — the move to its own `next_status`
+   (`spec/skill-contract.md` §1.3). On any other move the gates still run and are still
+   reported, but they do not block. Otherwise `implement` could never reach `in-progress`
+   (`tests-pass` cannot pass before any code exists) and no skill could file a question about
+   the gate that was blocking it.
 2. **The `PreToolUse` hook denies.** Direct writes to `tracker/items/*/history.md` and
    `tracker/board.md` are blocked, including shell redirects, so `transition` cannot be routed
    around. Without this, mechanism 1 would be advice.
