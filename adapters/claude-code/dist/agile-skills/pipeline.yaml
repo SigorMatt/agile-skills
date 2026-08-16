@@ -173,6 +173,12 @@ transitions:
     resume_to: forbidden
     condition: Epic only. Every child item is done and the epic Definition of Done passes.
 
+  - from: done
+    to: open
+    actor: any
+    resume_to: forbidden
+    condition: Epic only. A defect was filed against the epic's delivered behaviour after it closed, so the goal is no longer met. The reopening row records which item reopened it.
+
   - from: any-non-terminal
     to: awaiting-answer
     actor: any

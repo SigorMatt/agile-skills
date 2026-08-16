@@ -47,7 +47,9 @@ Validation rules:
   `history.gap` and means something changed `status` without going through a skill.
 - The last row's `to` MUST equal the item's current `status` in `item.md`.
 - Every transition MUST be legal per `ids-and-statuses.md` §4, with a matching `actor`.
-- A row whose `to` is `done` MUST be the last row.
+- A row whose `to` is `done` MUST be the last row **for a `work-item` or a `bug`**. An epic may
+  be reopened (`ids-and-statuses.md` §3.4), so a `done → open` row may follow one on an epic;
+  nothing else may.
 - Timestamps MUST be non-decreasing.
 
 ### Why `actor` is a skill and not a person

@@ -396,9 +396,11 @@ class Validator:
                                   f"{from_status} → {to_status} by {row.actor!r} is not a "
                                   f"transition in pipeline.yaml")
 
-            if previous_to == "done":
+            if previous_to == "done" and not (expected_type == "epic" and to_status == "open"):
                 self.report.error(path, row.line, "history.after-done",
-                                  "a row follows a transition to done; done is terminal")
+                                  "a row follows a transition to done; done is terminal",
+                                  hint="the one exception is an epic reopened by a defect filed "
+                                       "after it closed (spec/ids-and-statuses.md §3.4)")
 
             suspended_from = resume_to if suspending else suspended_from
             previous_to = to_status

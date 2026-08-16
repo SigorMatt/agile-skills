@@ -76,7 +76,7 @@ whose delivered behaviour it contradicts, via `found-in`.
 | `open` | Has child items that are not all `done`. | none — epics advance through their children | yes* |
 | `awaiting-answer` | A blocking question about the epic's own scope is open. | `answer-questions` | no |
 | `blocked` | Every child is blocked or awaiting a human. | none — a human must act | yes |
-| `done` | Every child item is `done`, and the epic has been closed with an outcome. | none | yes |
+| `done` | Every child item is `done`, and the epic has been closed with an outcome. | none | yes, but reopenable — see §3.4 |
 
 \* "Terminal" here means *the orchestrator never dispatches a skill against an open epic
 directly*. An epic is closed by `review-close` as the final act of closing its last open child
@@ -89,6 +89,26 @@ what makes an interrupted run recoverable. `planned` means no branch and no code
 starting over is free. `in-progress` means a branch exists and partial work is on it, so the
 skill MUST reconcile with what is already there rather than starting again. A single status
 could not carry that difference, and the recovery behaviour would depend on the agent guessing.
+
+### 3.4 A closed epic can be reopened
+
+`done` is terminal for a `work-item` and a `bug`: once closed, that unit of work is finished,
+and a later defect is a *new* item. An **epic** is different, and the difference is not
+cosmetic. An epic states a goal. If a defect is later found in the behaviour that epic
+delivered, the goal is no longer met — and the defect must be filed under that epic, because
+that is the goal it violates.
+
+So a `done` epic MAY return to `open`, by any skill, when a child item is filed against it after
+it closed. The transition is recorded like any other, and the reason names the item that caused
+it. When that item closes, `review-close` applies the epic Definition of Done again and may
+close the epic again.
+
+The alternative — forbidding it — was tried and produces a lie: `validate-workspace` reports
+`epic.closed-with-open-children`, and the only ways to silence it are to file the bug under a
+different epic (breaking the link between the defect and the goal it violates) or not to file it
+at all. A methodology that makes "do not record the defect" the path of least resistance has
+chosen the wrong invariant. This was found by an independent regression pass against a closed
+epic, not by reasoning about it.
 
 ## 4. Legal transitions
 
@@ -112,6 +132,7 @@ Every row is the only legal way to reach that status. Any other transition is in
 | *any non-terminal* | `blocked` | any skill | a documented impasse no skill can resolve |
 | `blocked` | *the status it came from* | any skill | a human recorded a resolution in the item |
 | `open` | `done` | `review-close` | epic only: every child item is `done` |
+| `done` | `open` | any skill | epic only: a defect was filed against the epic's delivered behaviour after it closed (§3.4) |
 | *any* | `blocked` | any skill | epic only, or as above |
 
 Notes:

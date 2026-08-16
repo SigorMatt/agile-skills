@@ -1263,3 +1263,49 @@ reviewer's call.
   — without saying what to look for — so that any bug is filed by `verify` because `verify` found
   it. That run is in progress; whatever it reports is what gets recorded.
 - **Result:** META-062 through META-067 done for the two work items and the epic.
+
+---
+
+## 2026-08-17 — META-065a — independent regression pass, and the spec gap it exposed
+
+- **Unit:** META-065a (unplanned)
+- **Why it was run:** the pipeline closed both items and the epic with `verify` finding no
+  defects, so acceptance C4 (a `verify`-filed BUG that reaches `done`) had nothing to point at.
+  Manufacturing a defect would have been worthless evidence. Instead the builder ran the tool by
+  hand, confirmed a real defect existed, and then dispatched an **independent regression
+  verification** of the closed epic — **without saying what to look for** — so that whatever got
+  filed was filed by `verify` because `verify` found it.
+- **What it found — three real defects, none planted, all `found-in: WI-0001`:**
+  - **BUG-0001 (high)** — a direct AC7 failure. A symlink loop or a symlink into an unreadable
+    directory escapes the file lister and is caught by the *folder*-level handler, so the tool
+    prints `Too many levels of symbolic links` about a folder that is perfectly readable, exits
+    2, and never counts the real files beside it.
+  - **BUG-0002 (medium)** — the seam between ADR-0002 and AC10. When every file is skipped,
+    stdout prints `no files`, byte-identical to a genuinely empty folder. This is the defect the
+    builder had found independently, which is a useful cross-check on the pass.
+  - **BUG-0003 (medium)** — file *contents* are never decoded, but `os.scandir` decodes *names*,
+    so a filename containing an invalid byte raises `UnicodeEncodeError`: a traceback, empty
+    stdout, and exit 1 — a status no document in the project defines. It also inverts the epic's
+    own "why now": `wc -l *` handles that folder cleanly.
+  - It also **declined to file** two things and said why: a `total` that excludes skipped files
+    (AC3's own wording settles it) and a `BrokenPipeError` reachable only at 5000 files, outside
+    the human's stated scale. Recording what it judged not-a-defect is as useful as the defects.
+- **The spec gap it exposed:** `verify` must file a bug "under the same epic", but EP-001 was
+  `done`, and a `done` epic had **no legal transition out**. The pass filed the bugs anyway,
+  left `workspace-valid` honestly failing with `epic.closed-with-open-children`, refused to
+  guess a resolution, and filed a non-blocking question with three options and no
+  recommendation — because the answer redefines "done" for every epic in the pipeline. That is
+  the question protocol working exactly as designed.
+- **The fix:** a closed epic can be **reopened**. `pipeline.yaml` gains `done → open` for epics;
+  `spec/ids-and-statuses.md` §3.4 states the rule and the argument; `journal-and-history.md`
+  narrows "a `done` row must be last" to work items and bugs; `validate-workspace` allows that
+  one row after `done` on an epic and nothing else.
+  - The reasoning, recorded in the spec: forbidding it makes "do not record the defect" the path
+    of least resistance, because the only ways to silence the validator are to file the bug under
+    a different epic — severing it from the goal it violates — or not to file it at all. A
+    methodology that rewards not recording a defect has chosen the wrong invariant.
+- **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP; re-rendered and re-installed;
+  `validate-workspace` on the toy project now reports exactly one error,
+  `epic.closed-with-open-children`, which is precisely what the reopen is for.
+- **Result:** methodology fixed. Next: `answer-questions` answers Q-001 and the loop carries the
+  three bugs to `done` (META-066).

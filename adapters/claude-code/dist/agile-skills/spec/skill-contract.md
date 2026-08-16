@@ -143,8 +143,18 @@ Rules:
 
 - A gate MUST have exactly one of `command` or `manual_check`. A gate with both invites
   reporting the manual check when the command fails.
-- **`enforcement: hard` means an adapter MUST prevent the transition when the gate fails**, by
-  the strongest mechanism that runtime offers. `advisory` means the skill must run it, record
+- **A skill's gates guard its *completion* transition** — the move to its own `next_status` —
+  and nothing else. On any other transition an adapter MUST still run them and record the
+  results, and MUST NOT refuse the move. Two reasons, both found by running the pipeline rather
+  than by reasoning about it:
+  - Some skills own an intermediate status. `implement` moves an item to `in-progress` *before*
+    any code exists, so `tests-pass` cannot pass at that moment by construction. A gate that
+    cannot pass when it is checked is not a gate, it is a deadlock.
+  - Blocking a send-back, or a move to `awaiting-answer`, on the gates of the very work that is
+    failing traps the item: the skill cannot even file a question about the gate that is
+    stopping it. Escaping downward is never what a gate should prevent; declaring success is.
+- **`enforcement: hard` means an adapter MUST prevent the completion transition when the gate
+  fails**, by the strongest mechanism that runtime offers. `advisory` means the skill must run it, record
   the result, and may proceed on failure with the reason journaled. Which gates are actually
   hard-enforced in a given runtime is documented by that adapter, not claimed here.
 - A gate MUST be runnable by an agent with no conversational context — its `command` cannot
