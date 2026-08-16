@@ -1416,3 +1416,34 @@ reviewer's call.
   self-test, lint-skills, the 44-code must-fail fixture, render determinism, and the must-pass
   example workspace.
 - **Result:** META-066 and META-068 done. Next: META-069, the audit.
+
+---
+
+## 2026-08-17 — META-070 (in progress) — acceptance sweep finds two untested paths
+
+- **Unit:** META-070
+- **Evidence gathered so far:** 8 contracts lint clean with no runtime names anywhere under
+  `methodology/` or `spec/`; 10 statuses, 17 transitions, **no non-terminal status without an
+  owner**; 9 spec files; 8 rendered skills; the toy workspace validates with 0 errors and 0
+  warnings; three `verify`-filed bugs all reached `done` with `outcome: delivered` and
+  `found-in: WI-0001`; **no `[gates forced]` row anywhere in the workspace**.
+- **Two acceptance paths are genuinely untested, and I am recording that before deciding what to
+  do about it rather than after:**
+  1. **`awaiting-answer` was never reached.** Five questions were filed and answered — by
+     `implement`, `plan` and `verify`, all to the architect, all answered from the record — but
+     **every one was judged non-blocking**, so no item was ever suspended. The judgement looks
+     right in each case; the consequence is that the highest-risk path in the whole protocol
+     (file → suspend → answer → propagate → resume at `resume-to`) has never run end to end.
+     Acceptance C3 names that path explicitly.
+  2. **The Definition of Ready override was never exercised**, because the scripted human
+     refused to override — which was written into `HUMAN-SCRIPT.md` before the run and is
+     therefore honest, but leaves `refine`'s loudest failure path untested.
+- **Decision:** run **one more work item** designed so that both paths are exercised for real,
+  rather than ticking C3 on a partial demonstration. The two gaps are causally linked in
+  practice — an item pushed past the Definition of Ready with an unresolved point is precisely
+  what produces a blocking question downstream — so one item can exercise both honestly:
+  the human overrides DoR on an unresolved output-shape question, and `implement` then hits a
+  user-visible decision it is not entitled to make and must suspend the item.
+- **Sequencing:** the audit (META-069) is reading the imported tree now, so the extra item runs
+  in the scratch repository afterwards, followed by a re-import and a short addendum to the
+  audit covering it.
