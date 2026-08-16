@@ -1221,3 +1221,45 @@ reviewer's call.
 - **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP; re-rendered and re-installed into the toy
   project; both directions of the freshness gate demonstrated on the real repository.
 - **Result:** defects fixed. Resuming the run at `review-close`.
+
+---
+
+## 2026-08-17 — META-062..067 — the autonomous run completed
+
+- **Units:** META-062 (`plan`), META-063 (`implement`), META-064 (`answer-questions`),
+  META-065 (`verify`), META-067 (`review-close`, both items and the epic).
+- **How it ran:** one context-free subagent looping `/next` unattended. Ten dispatches:
+  plan → implement → verify → review-close (**refused by a gate**) → *tooling fixed* →
+  review-close → plan → implement (**filed Q-001**) → answer-questions → verify → review-close,
+  which closed WI-0002 and then EP-001.
+- **The orchestrator behaved exactly as specified**, with no engineering leaking in: WI-0002 was
+  rejected as a candidate on every run while `depends-on: WI-0001` was unmet, EP-001 was never
+  dispatched because `open` has a null owner, and when Q-001 opened, the architect question
+  preempted the status owner — step 3 before step 4, as `pipeline.yaml` says.
+- **Acceptance C3 — the question round trip happened organically.** `implement` discovered that
+  WI-0002's AC10 described a folder that **cannot exist**: 27 files whose two largest hold 9 and
+  7 lines cannot sum to 1204. Nobody planted this; it was a worked example refine wrote and
+  nobody arithmetic-checked. `implement` filed Q-001 rather than silently choosing a fixture,
+  correctly marked it non-blocking (the *rule* was implementable, only the illustration was
+  impossible), and continued. `answer-questions` corrected the example from the human's own
+  verbatim refinement words, kept his `27` and `1204`, and propagated the amendment into three
+  files. **No acceptance criterion was edited to make anything pass** — the amendment was to an
+  illustration that was arithmetically impossible, recorded as such in the criterion, the item's
+  notes and the plan.
+- **Final state:** `main` at 14 commits, every one naming its item; both items `done` and merged;
+  EP-001 `done` with all six success measures re-run on the merged trunk; 46 tests green from a
+  fresh clone with nothing installed; `validate-workspace` clean, 0 errors and 0 warnings.
+- **No `--force` anywhere.** No history row in the toy workspace carries `[gates forced]`. The
+  one gate that refused a transition was fixed in the tooling and the transition then passed on
+  its merits — which is the outcome the design wants, and the reason `--force` exists at all is
+  that it was *not* needed here.
+- **Left visible rather than papered over** (the run reported both): `docs/product/vision.md`
+  does not mention `--top`, and `review-close` is not permitted to edit product docs; and the
+  argparse usage line changed once `--top` existed, so WI-0002's no-argument error is not
+  byte-identical to WI-0001's — recorded in WI-0002's notes as an accepted difference.
+- **Acceptance C4 is not yet met:** `verify` found no defects in either item, so no BUG was filed.
+  Rather than manufacture one, the builder exercised the delivered tool directly and found a real
+  boundary defect, then dispatched an **independent regression verification** of the closed epic
+  — without saying what to look for — so that any bug is filed by `verify` because `verify` found
+  it. That run is in progress; whatever it reports is what gets recorded.
+- **Result:** META-062 through META-067 done for the two work items and the epic.

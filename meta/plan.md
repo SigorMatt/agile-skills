@@ -76,12 +76,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-060** — Choose toy project; write raw idea + simulated-human answer key
       (`examples/toy-project/HUMAN-SCRIPT.md`).
 - [x] **META-061** — Run `intake` + `refine` (context-free subagent; builder plays the human).
-- [ ] **META-062** — Run `plan` for the first work item.
-- [ ] **META-063** — Run `implement` (must organically raise an upstream question).
-- [ ] **META-064** — Run `answer-questions` (question round trip completes).
+- [x] **META-062** — Run `plan` for the first work item.
+- [x] **META-063** — Run `implement` (must organically raise an upstream question).
+- [x] **META-064** — Run `answer-questions` (question round trip completes).
 - [ ] **META-065** — Run `verify` (files a BUG).
 - [ ] **META-066** — Drive the BUG through the pipeline to done.
-- [ ] **META-067** — Run `review-close`; complete remaining items until the epic is done.
+- [x] **META-067** — Run `review-close`; complete remaining items until the epic is done.
 - [ ] **META-068** — `scripts/validate-workspace` green on the toy workspace; `board.md` regenerated.
 - [ ] **META-069** — Audit test by a fresh subagent → `examples/toy-project/AUDIT.md`.
 
