@@ -1376,3 +1376,43 @@ reviewer's call.
 - **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP; re-rendered; re-installed and confirmed
   both the spec sentence and the new flag are present in the installed copies.
 - **Result:** the run can proceed. Sending it back to repair the row and continue.
+
+---
+
+## 2026-08-17 — META-066/068 — the bugs reached done; the run is imported
+
+- **Units:** META-066 (BUG-0001..0003 driven to `done`), META-068 (import and validate).
+- **What the run did after the restamp:** 13 more `next` dispatches, one action each —
+  implement/verify/review-close on BUG-0001, then the full plan→implement→verify→review-close on
+  BUG-0002 and BUG-0003, plus two `answer-questions` runs that correctly preempted the status
+  owners. EP-001 was closed a second time with all six success measures re-run on the merged
+  trunk.
+- **Acceptance C4 is met three times over.** Every bug was filed by `verify`, and every one
+  reached `done` through the full pipeline, with its regression tests demonstrated to fail
+  against the pre-fix build.
+- **Things the run did that are worth recording as evidence the design works:**
+  - **No bug's scope widened.** BUG-0001's fix passes within a line of BUG-0002's symptom and
+    left it alone; BUG-0002's edits a function two lines from BUG-0003's crash and left that.
+    Each declared the omission, and each was checked by the next item's `verify`.
+  - **`verify` measured an ADR's claim instead of trusting it.** ADR-0008 justified its decision
+    with an example using `LC_ALL=C`; verification found that CPython's UTF-8 mode makes that
+    example wrong, and that `PYTHONIOENCODING=ascii` demonstrates it decisively. The ADR went to
+    v2 carrying both the correction *and* the original belief, per `doc-header.md` §4 — and **no
+    code changed**, because the decision was right and only its evidence was wrong. That is the
+    distinction the ADR format exists to preserve.
+  - **A criterion was found to be unsatisfiable and was narrowed, not deleted.** BUG-0001's AC6
+    required each of four regression tests to fail without the fix, which the "unchanged
+    behaviour" test cannot do by construction. It was scoped to AC1–AC3 through a filed question,
+    matching wording BUG-0002 already used.
+  - Three questions were filed and answered **inside the record**; none needed the human.
+- **Final state of the run:** 5 items done, epic done, 0 open questions, `validate-workspace`
+  0 errors and 0 warnings, 60 tests green from a fresh clone with nothing installed, and **no
+  `[gates forced]` row anywhere in the workspace**. `git log --grep` reconstructs each item
+  (10, 9, 11, 6, 7 and 5 commits).
+- **Import (META-068):** `examples/toy-project/import.sh` copied the tracker, the docs and the
+  source, and rendered the real history into `GIT-LOG.md` and `GIT-BRANCHES.md` (ADR-0004).
+  `validate-workspace` on the imported tree: **6 items, 10 documents, 0 errors, 0 warnings**.
+- **`./scripts/check` is now fully green with no skipped steps** for the first time: library
+  self-test, lint-skills, the 44-code must-fail fixture, render determinism, and the must-pass
+  example workspace.
+- **Result:** META-066 and META-068 done. Next: META-069, the audit.

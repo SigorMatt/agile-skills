@@ -1,0 +1,23 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: linecount
+  trunk-branch: main
+  description: >-
+    A single-file Python 3 command-line tool that lists the files directly inside a folder with
+    their line counts, largest first, so the biggest files are visible immediately.
+
+commands:
+  # AC13 of WI-0001 fixes the test command: run from the repository root, nothing installed.
+  test: python3 -m unittest discover
+  # lint and build are null on purpose, and ADR-0003 records why: no linter ships with CPython
+  # and the project may not depend on one, and there is nothing to build. The lint-clean gate is
+  # therefore reported as skipped, not passed.
+  lint: null
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"
