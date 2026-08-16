@@ -1116,3 +1116,41 @@ pipeline's paper trail should feel like.
   4 PASS, 1 SKIP; re-installed into the toy project and confirmed the new step is present in the
   installed `refine/SKILL.md`.
 - **Result:** both defects fixed. Continuing META-061 with `refine`.
+
+---
+
+## 2026-08-17 — META-061 — `intake` + `refine` on the toy project
+
+- **Unit:** META-061
+- **How it was run:** two context-free subagents, each given only the installed skills,
+  `CONSUMER-PROMPT.md` and the project path, and told explicitly not to read anything outside the
+  project. The builder answered as the human from `HUMAN-SCRIPT.md`, extending it in the same
+  spirit where a question was not anticipated.
+- **Result:** `EP-001` open; `WI-0001` and `WI-0002` at `ready`; `docs/product/vision.md` v1;
+  `validate-workspace` exit 0 with the one expected warning (`commands.test` is null until
+  `plan` sets it); two commits, each naming its item.
+- **What the skills actually produced, worth recording as evidence they work:**
+  - `intake` split the work along the seam the human named himself, and journalled why it
+    rejected two other splits — including that a counting item without sorting "would deliver
+    nothing he does not have", since `wc -l *` already does that.
+  - It kept the human's "you decide, I don't really care" about non-text files as a **delegated
+    open point**, not a requirement, and said why: inventing a rule and recording it as his would
+    be indistinguishable from him asking for it.
+  - It separated the scope exclusions the human stated from the ones the analyst derived, on the
+    record.
+  - `refine` produced a per-criterion DoR verdict with evidence, found R4 and R8 failing on both
+    items, and turned 9 criteria into 13 and 4 into 11 — each with a command or an observation.
+    AC1 now carries a worked example down to the exact spaces.
+  - `refine` recorded a case where the human **rejected its proposal** and kept both its proposal
+    and his reason, rather than presenting his choice as the plan all along.
+  - It labelled two criteria as resting on nobody's word but its own (`WI-0001` AC12, and the
+    `(all 1 files)` plural) so `plan` and `verify` inherit that risk visibly.
+  - When WI-0002's criteria interacted with WI-0001's, it refused to edit WI-0001 — which is past
+    `ready` and therefore frozen — and wrote the interaction into WI-0002's notes instead. The
+    freeze rule from `spec/work-item.md` §2 held under pressure without anyone enforcing it.
+- **Gap deliberately left open for the next stage:** nothing in either item covers a *single
+  file inside the folder* that cannot be read. The human was never asked, and the builder did not
+  volunteer it. That is the gap `implement` should hit and escalate, which is what acceptance C3
+  requires to happen organically.
+- **Gates:** toy workspace `validate-workspace` exit 0; `./scripts/check` green in this repo.
+- **Result:** META-061 done. Next: META-062 — `plan` for WI-0001.

@@ -75,7 +75,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 - [x] **META-060** — Choose toy project; write raw idea + simulated-human answer key
       (`examples/toy-project/HUMAN-SCRIPT.md`).
-- [ ] **META-061** — Run `intake` + `refine` (context-free subagent; builder plays the human).
+- [x] **META-061** — Run `intake` + `refine` (context-free subagent; builder plays the human).
 - [ ] **META-062** — Run `plan` for the first work item.
 - [ ] **META-063** — Run `implement` (must organically raise an upstream question).
 - [ ] **META-064** — Run `answer-questions` (question round trip completes).
