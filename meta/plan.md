@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-022** — skill `refine`.
 - [x] **META-023** — skill `plan`.
 - [x] **META-024** — skill `implement`.
-- [ ] **META-025** — skill `verify`.
+- [x] **META-025** — skill `verify`.
 - [ ] **META-026** — skill `review-close`.
 - [ ] **META-027** — skill `answer-questions`.
 - [ ] **META-028** — skill `next` (orchestrator).

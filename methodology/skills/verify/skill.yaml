@@ -1,0 +1,103 @@
+name: verify
+version: 0.1.0
+persona: qa-engineer
+purpose: Independently decide whether an item meets its acceptance criteria, with evidence, and file bugs for what is wrong.
+
+when_to_use:
+  - An item sits at status verifying and its implementation reports itself complete.
+  - Someone needs an independent check that acceptance criteria are actually met, not just claimed.
+  - A defect needs filing against behaviour that was already delivered.
+  - Someone asks to "verify", "test", "QA", or "check this actually works" for a tracked item.
+
+dispatch:
+  on_status: [verifying]
+  item_types: [work-item, bug]
+
+human_interaction: via-questions
+
+inputs:
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the acceptance criteria are the only standard this skill judges against
+  - path: tracker/items/{{item.id}}/artifacts/impl-report.md
+    required: true
+    why: the claimed evidence, which this skill checks rather than trusts
+  - path: tracker/items/{{item.id}}/artifacts/plan.md
+    required: true
+    why: deviations from the plan are where undeclared behaviour hides
+  - path: tracker/items/{{item.id}}/artifacts/refinement-qa.md
+    required: false
+    why: settles what a criterion meant when its wording is contested
+  - path: "the code on branch {{item.branch}}"
+    required: true
+    why: verification runs against the branch head, not against a description of it
+  - path: tracker/project.yaml
+    required: true
+    why: the commands the gates run
+
+outputs:
+  - path: tracker/items/{{item.id}}/artifacts/verify-report.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/item.md
+    kind: file
+    when: always
+  - path: tracker/items/BUG-####/item.md
+    kind: file
+    when: conditional
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+  - path: tracker/items/{{item.id}}/history.md
+    kind: append
+    when: always
+
+quality_gates:
+  - name: tests-pass
+    description: The project's own test command passes on the branch head, run by this skill rather than reported by another.
+    command: "{{commands.test}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: escalate
+  - name: lint-clean
+    description: The project's own lint command passes on the branch head.
+    command: "{{commands.lint}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: escalate
+  - name: workspace-valid
+    description: The tracker still satisfies the schemas after this skill's writes.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: every-criterion-independently-checked
+    description: Each acceptance criterion was exercised by this skill, not accepted from the implementation report.
+    manual_check: For each AC, record the command this skill ran and its actual output. Citing the implementation report as evidence fails this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: negative-cases-exercised
+    description: The stated failure and boundary behaviours were actually triggered.
+    manual_check: For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened.
+    enforcement: hard
+    on_failure: stay
+  - name: tests-would-fail-without-the-change
+    description: The tests demonstrating each criterion are sensitive to the behaviour they claim to test.
+    manual_check: For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed.
+    enforcement: advisory
+    on_failure: stay
+
+escalation:
+  question: File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect when a criterion is ambiguous and the record does not settle it. Set the item to awaiting-answer with resume-to verifying and stop. Never ask the human directly.
+  defect: A failure of this item's own criteria sends the item back to in-progress. A failure of behaviour delivered by another item is a new bug item at status ready, with reproduction steps, real output, and found-in.
+  impasse: If verification cannot be performed at all - the code will not run, the environment is unusable - set the item to blocked with what was tried.
+
+exit_criteria:
+  - Every acceptance criterion has a verdict backed by a command this skill ran and its actual output.
+  - Every criterion that passed is ticked in item.md, and no criterion is ticked without evidence.
+  - Failures are recorded as a send-back for this item's own criteria, or as bug items for behaviour delivered elsewhere.
+  - verify-report.md records the verdicts, the gates, and the defects found.
+  - The journal entry and the history row for this execution are written.
+
+next_status: in-review
+failure_status: in-progress

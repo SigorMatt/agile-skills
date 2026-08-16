@@ -464,3 +464,31 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `methodology/skills/implement/{skill.yaml,process.md}`; new plan unit
   META-036.
 - **Result:** META-024 done. Next: META-025 (`verify`).
+
+---
+
+## 2026-08-16 — META-025 — skill `verify`
+
+- **Unit:** META-025
+- **Inputs read:** `spec/dor-dod.md` §3, `spec/work-item.md` §3, `spec/question.md`,
+  `methodology/skills/implement/process.md`.
+- **Decisions:**
+  - Citing `impl-report.md` as evidence **fails** the central gate. Independence is the reason
+    this skill exists; accepting the report converts an independent check into a second opinion
+    about the same claim.
+  - The process orders reading deliberately: criteria before the implementation report. Reading
+    the report first anchors the verifier to checking that the code does what it does.
+  - Added `tests-would-fail-without-the-change` — revert the behaviour and watch the test fail.
+    A test that passes against an absent implementation makes a criterion look covered forever.
+  - Gave the send-back vs. bug classification a decisive test: does an acceptance criterion of
+    *this* item say the behaviour should differ? Yes → send-back; no → bug. Misrouting either way
+    puts the work in the wrong place.
+  - `## Not verified, and why` is a mandatory report section — an undeclared gap reads to
+    `review-close` as a clean pass.
+  - The verified commit hash goes in the journal: a verification is only meaningful against a
+    specific state, which is also what makes DoD D10 checkable.
+  - A verifier may not fix the code it rejected — there would be nobody checking the repair.
+- **Commands run:** `python3 scripts/lib/selftest.py` → 0 failures.
+- **Gates:** miniyaml/PyYAML agreement on `verify/skill.yaml`.
+- **Artifacts produced:** `methodology/skills/verify/{skill.yaml,process.md}`.
+- **Result:** META-025 done. Next: META-026 (`review-close`).
