@@ -889,3 +889,52 @@ pipeline's paper trail should feel like.
 - **Gates:** `./scripts/check` → 4 PASS, 1 SKIP (the render step is now live and green).
 - **Artifacts produced:** `adapters/claude-code/render.py`, `adapters/claude-code/dist/**`.
 - **Result:** META-041 done. Next: META-042 (gate runner, hooks, installer).
+
+---
+
+## 2026-08-17 — META-042 — `scripts/run-gate` and `scripts/transition`
+
+- **Unit:** META-042 (the runtime-neutral half of gate enforcement; the hook and installer are
+  split out as META-045, because they are adapter-specific and this is not)
+- **Inputs read:** `spec/skill-contract.md` §1.3–1.4, `spec/ids-and-statuses.md` §4,
+  `adapters/README.md` capability C3, every `skill.yaml`.
+- **Decisions:**
+  - `transition` exists so that "gates pass before the status changes" is a property of a
+    **program**, not of an agent's discipline. It checks legality against `pipeline.yaml`, runs
+    the actor skill's hard command-gates, refuses on failure, then writes `item.md`, appends the
+    history row, regenerates the board, and re-validates.
+  - `--force` is provided and records `[gates forced]` **in the history reason**, permanently.
+    An override that is indistinguishable from a clean pass is worse than no override path at
+    all, because it would be taken silently.
+  - A gate that could not be *run* (run-gate exits 2) also refuses the transition: "a gate that
+    could not run is not a gate that passed."
+  - `run-gate` reports four outcomes — PASS / FAIL / SKIP / MANUAL. `MANUAL` is deliberately not
+    a pass: a `manual_check` cannot be discharged by a script, and pretending otherwise would
+    make the judgement gates decorative.
+  - `--branch` is written to `item.md` **before** the gates run, because it is a fact about the
+    item rather than part of the status change, and `check-commit-refs` resolves
+    `{{item.branch}}`. If a gate then fails, the field is still true.
+- **Bug found and fixed during verification:** `run-gate` was rewriting a gate command that
+  names one of our scripts by *replacing the whole command*, which silently discarded the gate's
+  own arguments and passed the workspace root as the first positional. So
+  `scripts/check-commit-refs {{item.id}} {{item.branch}}` ran as
+  `check-commit-refs <root>` and failed for the wrong reason. Now only the program is rewritten,
+  the resolved arguments are kept, and `--root` is appended; `validate-workspace` and `board-gen`
+  gained `--root` so every gate-invoked script takes the workspace the same way. Caught only
+  because the demo run produced a FAIL that did not match the repository state — a reminder that
+  a gate failing is not self-evidently the code's fault.
+- **Commands run (throwaway workspace + git repo):**
+  - `run-gate --all` for `refine` → correctly FAILs `workspace-valid` on an unjournalled
+    workspace and reports three MANUAL gates.
+  - `run-gate --gate tests-pass` with `commands.test: null` → **SKIP**, not PASS, with the reason.
+  - `transition` draft → ready by `refine`: legal, applied, board regenerated.
+  - `transition` ready → done by `refine`: **refused**, not a transition in `pipeline.yaml`.
+  - `transition` → `awaiting-answer` without `--resume-to`: **refused**.
+  - With `commands.test: "exit 1"`, `transition` planned → in-progress by `implement`:
+    **refused**, `tests-pass` FAIL, and the item's status was unchanged afterwards. This is the
+    acceptance-B3 blocking demonstration in its runtime-neutral form.
+- **Gates:** `./scripts/check` → 4 PASS, 1 SKIP; renderer re-run and `--check` clean.
+- **Artifacts produced:** `scripts/run-gate`, `scripts/transition`; `--root` on
+  `validate-workspace` and `board-gen`; renderer now ships both scripts and the machine-readable
+  `skill.yaml` contracts that `run-gate` needs; re-rendered `dist/`.
+- **Result:** META-042 done. Next: META-045 (adapter hook + installer + adapter README).

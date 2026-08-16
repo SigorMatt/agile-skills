@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""Move an item to a new status — the only sanctioned way to do it.
+
+Usage:
+  scripts/transition <ITEM-ID> --to <status> --actor <skill> --reason "..." \\
+                     [--resume-to <status>] [--outcome delivered] [--branch wi/WI-0001] \\
+                     [--root .] [--dry-run] [--force]
+
+What it does, in order:
+  1. checks the transition is legal from the item's current status, for this actor, against
+     pipeline.yaml;
+  2. runs the actor skill's hard, command-backed gates and refuses if any fails;
+  3. writes the new status (and outcome/branch if given) into item.md and bumps `updated`;
+  4. appends the history row;
+  5. regenerates the board;
+  6. runs validate-workspace and reports.
+
+This exists so that "the gates must pass before the status changes" is a property of a program
+rather than of an agent's discipline. Editing `history.md` by hand bypasses every check here,
+which is why the adapter's hook denies exactly that.
+
+`--force` skips step 2 and records `[gates forced]` in the reason, so an override is visible in
+the record forever rather than being indistinguishable from a clean pass.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import datetime
+import os
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import frontmatter  # noqa: E402
+import miniyaml  # noqa: E402
+
+
+def now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def find_pipeline() -> str:
+    for candidate in (os.path.join(HERE, "pipeline.yaml"),
+                      os.path.join(HERE, "..", "pipeline.yaml"),
+                      os.path.join(HERE, "..", "methodology", "pipeline.yaml")):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return ""
+
+
+def is_terminal(pipeline, status) -> bool:
+    for entry in pipeline.get("statuses") or []:
+        if entry["name"] == status:
+            return bool(entry.get("terminal"))
+    return False
+
+
+def legal(pipeline, from_status, to_status, actor, suspended_from) -> bool:
+    for rule in pipeline.get("transitions") or []:
+        rule_from, rule_to, rule_actor = rule.get("from"), rule.get("to"), rule.get("actor")
+        if rule_from is None:
+            if from_status is not None:
+                continue
+        elif rule_from == "any-non-terminal":
+            if from_status is None or is_terminal(pipeline, from_status):
+                continue
+        elif rule_from != from_status:
+            continue
+        if rule_to == "resume-to":
+            if suspended_from is None or to_status != suspended_from:
+                continue
+        elif rule_to != to_status:
+            continue
+        if rule_actor != "any" and rule_actor != actor:
+            continue
+        return True
+    return False
+
+
+def last_resume_to(history_text: str):
+    """The resume-to recorded on the most recent row that suspended the item."""
+    found = None
+    for line in history_text.split("\n"):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) != 6 or cells[0] == "when":
+            continue
+        if all(set(cell) <= set("-: ") and cell for cell in cells):
+            continue
+        if cells[2] in ("awaiting-answer", "blocked") and cells[4] not in ("—", "-", ""):
+            found = cells[4]
+    return found
+
+
+def current_status(history_text: str):
+    latest = None
+    for line in history_text.split("\n"):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) != 6 or cells[0] == "when":
+            continue
+        if all(set(cell) <= set("-: ") and cell for cell in cells):
+            continue
+        latest = cells[2]
+    return latest
+
+
+def main(argv: list) -> int:
+    if len(argv) < 2 or argv[1].startswith("--"):
+        print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
+        return 2
+    item_id = argv[1]
+    options = {"root": "."}
+    flags = set()
+    index = 2
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--dry-run", "--force"):
+            flags.add(token[2:])
+            index += 1
+            continue
+        if not token.startswith("--") or index + 1 >= len(argv):
+            print(f"transition: unexpected argument {token!r}", file=sys.stderr)
+            return 2
+        options[token[2:]] = argv[index + 1]
+        index += 2
+
+    for required in ("to", "actor", "reason"):
+        if required not in options:
+            print(f"transition: --{required} is required", file=sys.stderr)
+            return 2
+
+    root = os.path.abspath(options["root"])
+    item_dir = os.path.join(root, "tracker", "items", item_id)
+    item_path = os.path.join(item_dir, "item.md")
+    history_path = os.path.join(item_dir, "history.md")
+    if not os.path.isfile(item_path) or not os.path.isfile(history_path):
+        print(f"transition: {item_id} does not exist at {item_dir}", file=sys.stderr)
+        return 1
+
+    pipeline_path = find_pipeline()
+    if not pipeline_path:
+        print("transition: cannot find pipeline.yaml", file=sys.stderr)
+        return 1
+    pipeline = miniyaml.load_file(pipeline_path)
+
+    fields, body, _ = frontmatter.load_file(item_path)
+    with open(history_path, "r", encoding="utf-8") as handle:
+        history_text = handle.read()
+
+    from_status = current_status(history_text)
+    if from_status != fields.get("status"):
+        print(f"transition: item.md says {fields.get('status')!r} but the last history row ends "
+              f"at {from_status!r}; fix the record before transitioning", file=sys.stderr)
+        return 1
+
+    to_status = options["to"]
+    actor = options["actor"]
+    resume_to = options.get("resume-to")
+    suspended = last_resume_to(history_text)
+
+    if not legal(pipeline, from_status, to_status, actor, suspended):
+        print(f"transition: {from_status} → {to_status} by {actor!r} is not a transition in "
+              f"pipeline.yaml", file=sys.stderr)
+        if from_status in ("awaiting-answer", "blocked"):
+            print(f"  this item was suspended from {suspended!r}; that is the only status it "
+                  f"may resume to", file=sys.stderr)
+        return 1
+
+    if to_status in ("awaiting-answer", "blocked") and not resume_to:
+        print(f"transition: a move to {to_status!r} must pass --resume-to <status>",
+              file=sys.stderr)
+        return 1
+    if to_status not in ("awaiting-answer", "blocked") and resume_to:
+        print("transition: --resume-to only applies when suspending an item", file=sys.stderr)
+        return 1
+
+    # The branch is a fact about the item, not part of the status change, and the gates need to
+    # see it (check-commit-refs resolves {{item.branch}}). Write it before they run; if a gate
+    # then fails, the field is still true — the branch does exist.
+    if options.get("branch") and fields.get("branch") != options["branch"] \
+            and "dry-run" not in flags:
+        fields["branch"] = options["branch"]
+        with open(item_path, "w", encoding="utf-8") as handle:
+            handle.write(frontmatter.render(fields, body))
+
+    reason = options["reason"]
+    if "force" in flags:
+        reason = f"{reason} [gates forced]"
+    else:
+        gate_result = subprocess.run(
+            [sys.executable, os.path.join(HERE, "run-gate"), "--skill", actor,
+             "--item", item_id, "--all", "--root", root],
+            capture_output=True, text=True)
+        print(gate_result.stdout.rstrip())
+        if gate_result.stderr.strip():
+            print(gate_result.stderr.rstrip(), file=sys.stderr)
+        if gate_result.returncode == 1:
+            print(f"transition: refused — a hard gate for {actor!r} failed. Fix it, or rerun "
+                  f"with --force to record an explicit override in the history reason.",
+                  file=sys.stderr)
+            return 1
+        if gate_result.returncode not in (0, 1):
+            print(f"transition: refused — could not run {actor!r}'s gates (run-gate exited "
+                  f"{gate_result.returncode}). A gate that could not run is not a gate that "
+                  f"passed.", file=sys.stderr)
+            return 1
+
+    timestamp = now()
+    fields["status"] = to_status
+    fields["updated"] = timestamp
+    if options.get("outcome"):
+        fields["outcome"] = options["outcome"]
+    if options.get("branch"):
+        fields["branch"] = options["branch"]
+    row = (f"| {timestamp} | {from_status} | {to_status} | {actor} "
+           f"| {resume_to or '—'} | {reason} |\n")
+
+    if "dry-run" in flags:
+        print(f"transition: would move {item_id} {from_status} → {to_status}")
+        print(f"transition: would append {row.strip()}")
+        return 0
+
+    with open(item_path, "w", encoding="utf-8") as handle:
+        handle.write(frontmatter.render(fields, body))
+    with open(history_path, "a", encoding="utf-8") as handle:
+        handle.write(row)
+
+    subprocess.run([sys.executable, os.path.join(HERE, "board-gen"), root],
+                   capture_output=True, text=True)
+    print(f"transition: {item_id} {from_status} → {to_status} (by {actor})")
+
+    validation = subprocess.run(
+        [sys.executable, os.path.join(HERE, "validate-workspace"), root],
+        capture_output=True, text=True)
+    print(validation.stdout.rstrip())
+    if validation.returncode != 0:
+        print("transition: the transition was applied, but the workspace no longer validates. "
+              "Fix the findings above before the next skill runs.", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

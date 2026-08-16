@@ -1,0 +1,104 @@
+name: implement
+version: 0.1.0
+persona: developer
+purpose: Execute the recorded plan on a branch, with tests, and report which evidence satisfies each acceptance criterion.
+
+when_to_use:
+  - An item sits at status planned and its plan.md is written.
+  - Work on an item was interrupted and it sits at in-progress with a partial branch.
+  - A blocking question that stopped implementation has just been answered.
+  - Verification or review sent an item back to in-progress with specific defects to fix.
+
+dispatch:
+  on_status: [planned, in-progress]
+  item_types: [work-item, bug]
+
+human_interaction: via-questions
+
+inputs:
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the acceptance criteria define what to build and when to stop
+  - path: tracker/items/{{item.id}}/artifacts/plan.md
+    required: true
+    why: the design decisions this skill executes and must not re-litigate
+  - path: tracker/items/{{item.id}}/history.md
+    required: true
+    why: distinguishes a fresh start from resuming a branch, and carries any send-back reason
+  - path: tracker/items/{{item.id}}/questions/
+    required: false
+    why: an answered question changes the plan, and the answer is in the artifacts it updated
+  - path: docs/architecture/adr/
+    required: false
+    why: constraints the plan assumes but does not restate
+  - path: tracker/project.yaml
+    required: true
+    why: the branch prefix, the commit subject convention, and the commands the gates run
+
+outputs:
+  - path: "branch {{item.branch}}"
+    kind: branch
+    when: always
+  - path: "commits on {{item.branch}} referencing {{item.id}}"
+    kind: commit
+    when: always
+  - path: tracker/items/{{item.id}}/artifacts/impl-report.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+  - path: tracker/items/{{item.id}}/history.md
+    kind: append
+    when: always
+
+quality_gates:
+  - name: tests-pass
+    description: The project's own test command passes on the branch head.
+    command: "{{commands.test}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: lint-clean
+    description: The project's own lint command passes on the branch head.
+    command: "{{commands.lint}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: workspace-valid
+    description: The tracker still satisfies the schemas after this skill's writes.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: every-criterion-has-a-test
+    description: Each acceptance criterion is exercised by a named test or a reproducible command.
+    manual_check: For each AC, name the test function or the exact command and its expected output. An AC demonstrated only by reading the code fails this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: commits-reference-the-item
+    description: Every commit on the branch carries the item ID, so the item's code history is reconstructible.
+    command: "scripts/check-commit-refs {{item.id}} {{item.branch}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: no-unplanned-scope
+    description: The change delivers this item's criteria and nothing else.
+    manual_check: Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed.
+    enforcement: advisory
+    on_failure: stay
+
+escalation:
+  question: File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect, set the item to awaiting-answer with resume-to recorded, and stop. Never ask the human directly and never proceed on a guess.
+  defect: If you find a defect in behaviour delivered by another item, file a bug item with reproduction steps and found-in, and continue with this item.
+  impasse: If the plan cannot be executed and no question would unblock it, set the item to blocked with the approaches tried and why each failed.
+
+exit_criteria:
+  - Every acceptance criterion has code and a test or reproducible command that exercises it.
+  - All hard gates passed on the branch head, not on an earlier state.
+  - impl-report.md maps each acceptance criterion to its evidence and lists any deviation from the plan.
+  - Every commit on the branch references the item ID.
+  - The journal entry and the history row for this execution are written.
+
+next_status: verifying
+failure_status: blocked

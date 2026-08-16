@@ -24,7 +24,16 @@ from workspace import Workspace  # noqa: E402
 
 def main(argv: list) -> int:
     check_only = "--check" in argv
-    positional = [arg for arg in argv[1:] if not arg.startswith("-")]
+    positional = []
+    index = 1
+    while index < len(argv):
+        if argv[index] == "--root" and index + 1 < len(argv):
+            positional.insert(0, argv[index + 1])
+            index += 2
+            continue
+        if not argv[index].startswith("-"):
+            positional.append(argv[index])
+        index += 1
     root = os.path.abspath(positional[0] if positional else ".")
 
     workspace = Workspace(root).load()

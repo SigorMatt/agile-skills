@@ -1,0 +1,99 @@
+name: plan
+version: 0.1.0
+persona: architect
+purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
+
+when_to_use:
+  - An item sits at status ready and nobody has decided how it will be built.
+  - A design decision needs recording as an ADR before code is written.
+  - The project has no architecture overview and an item is about to be implemented.
+  - Someone asks to "design", "plan", or "work out the approach" for a tracked item.
+
+dispatch:
+  on_status: [ready]
+  item_types: [work-item, bug]
+
+human_interaction: direct
+
+inputs:
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the acceptance criteria are the contract this design must satisfy
+  - path: tracker/items/{{item.id}}/artifacts/refinement-qa.md
+    required: false
+    why: assumptions and unresolved points recorded during refinement constrain the design
+  - path: docs/architecture/overview.md
+    required: false
+    why: the existing shape of the system, which this change must fit or explicitly change
+  - path: docs/architecture/adr/
+    required: false
+    why: decisions already taken must not be silently re-decided
+  - path: tracker/project.yaml
+    required: true
+    why: the trunk branch and the project's own commands, which this skill must fill in if absent
+  - path: "the project's source code"
+    required: false
+    why: a plan written without reading what exists is a guess
+
+outputs:
+  - path: tracker/items/{{item.id}}/artifacts/plan.md
+    kind: file
+    when: always
+  - path: docs/architecture/adr/ADR-####-{{item.id}}.md
+    kind: file
+    when: conditional
+  - path: docs/architecture/overview.md
+    kind: file
+    when: conditional
+  - path: tracker/project.yaml
+    kind: file
+    when: conditional
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+  - path: tracker/items/{{item.id}}/history.md
+    kind: append
+    when: on-success
+
+quality_gates:
+  - name: workspace-valid
+    description: The tracker and docs still satisfy the schemas after planning.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: every-criterion-is-addressed
+    description: The plan says how each acceptance criterion will be satisfied and how it will be shown.
+    manual_check: Map every AC in item.md to a step in plan.md and to the test or observation that will demonstrate it. An AC with no step is a hole in the design.
+    enforcement: hard
+    on_failure: stay
+  - name: project-commands-resolved
+    description: The gate commands downstream skills will run are either configured or explicitly recorded as absent.
+    manual_check: tracker/project.yaml has a real command for test and lint, or an ADR records why the project has none. A command that does not exist, or one that exits zero without checking anything, fails this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: decisions-recorded
+    description: Every non-obvious choice is either an ADR or an explicitly reversible assumption.
+    manual_check: List the choices this plan makes. For each, point to an ADR, or to an entry under Assumptions stating what would be needed to reverse it.
+    enforcement: hard
+    on_failure: stay
+  - name: plan-is-executable-without-you
+    description: A developer with no context can follow the plan.
+    manual_check: Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make.
+    enforcement: advisory
+    on_failure: stay
+
+escalation:
+  question: Prefer in order - answer from the documents and cite them, then make a reversible assumption and record it under Assumptions, then ask the human. Ask only when the decision is irreversible or depends on intent no document records.
+  defect: If planning reveals that already-delivered behaviour is wrong, file a bug item rather than widening this plan to fix it.
+  impasse: If the item cannot be designed without a decision nobody can make, set it to blocked and record the options and what each would cost.
+
+exit_criteria:
+  - plan.md exists with numbered steps, each naming the files it touches and the observable result.
+  - Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.
+  - Every non-obvious decision is an ADR or a recorded reversible assumption.
+  - tracker/project.yaml names the test and lint commands, or an ADR records why it cannot.
+  - The journal entry and the history row for this execution are written.
+
+next_status: planned
+failure_status: blocked

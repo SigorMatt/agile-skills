@@ -731,6 +731,10 @@ def main(argv: list) -> int:
             pipeline = argv[index + 1]
             index += 2
             continue
+        if argv[index] == "--root":
+            positional.insert(0, argv[index + 1])
+            index += 2
+            continue
         positional.append(argv[index])
         index += 1
     root = positional[0] if positional else "."

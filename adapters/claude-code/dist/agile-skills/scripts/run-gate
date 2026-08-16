@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""Run a skill's quality gates for an item, with placeholders resolved.
+
+Usage:
+  scripts/run-gate --skill implement --item WI-0001 --gate tests-pass [--root .]
+  scripts/run-gate --skill implement --item WI-0001 --all [--root .]
+
+Exit 0 when every gate asked for passed or was skipped for a declared reason. Exit 1 when a
+gate with `enforcement: hard` failed. Exit 2 for a usage error.
+
+A gate whose command contains a placeholder that resolves to null is **SKIPPED**, and the skip
+is printed. It is never reported as a pass — `spec/skill-contract.md` §1.4. A gate whose check
+is a `manual_check` cannot be run here; it is printed so a worker can carry it out, and it is
+reported as MANUAL rather than as either outcome.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shlex
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import frontmatter  # noqa: E402
+import miniyaml  # noqa: E402
+
+PLACEHOLDER_RE = re.compile(r"\{\{\s*([^}]*?)\s*\}\}")
+
+
+def find_contract(skill: str) -> str:
+    """The contract may sit in the source tree or beside the installed scripts."""
+    for candidate in (
+        os.path.join(HERE, "skills", skill, "skill.yaml"),
+        os.path.join(HERE, "..", "skills", skill, "skill.yaml"),
+        os.path.join(HERE, "..", "methodology", "skills", skill, "skill.yaml"),
+    ):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return ""
+
+
+class Resolver:
+    """Resolve {{...}} against tracker/project.yaml and the item being acted on."""
+
+    def __init__(self, root: str, item_id: str) -> None:
+        self.root = root
+        self.item_id = item_id
+        self.project = {}
+        self.item = {}
+        project_path = os.path.join(root, "tracker", "project.yaml")
+        if os.path.isfile(project_path):
+            self.project = miniyaml.load_file(project_path) or {}
+        item_path = os.path.join(root, "tracker", "items", item_id, "item.md")
+        if os.path.isfile(item_path):
+            self.item = frontmatter.load_file(item_path)[0]
+
+    def value(self, token: str):
+        commands = self.project.get("commands") or {}
+        conventions = self.project.get("conventions") or {}
+        project = self.project.get("project") or {}
+        table = {
+            "item.id": self.item_id,
+            "item.branch": self.item.get("branch"),
+            "item.type": self.item.get("type"),
+            "workspace": self.root,
+            "trunk": project.get("trunk-branch"),
+            "commands.test": commands.get("test"),
+            "commands.lint": commands.get("lint"),
+            "commands.build": commands.get("build"),
+            "conventions.branch-prefix": conventions.get("branch-prefix"),
+            "conventions.commit-subject": conventions.get("commit-subject"),
+        }
+        if token not in table:
+            raise KeyError(token)
+        return table[token]
+
+    def resolve(self, text: str):
+        """Return (resolved, unresolved-token or None)."""
+        missing = None
+
+        def replace(match):
+            nonlocal missing
+            token = match.group(1)
+            value = self.value(token)
+            if value is None or value == "":
+                missing = missing or token
+                return ""
+            return str(value)
+
+        return PLACEHOLDER_RE.sub(replace, text), missing
+
+
+def run_one(gate: dict, resolver: Resolver, root: str) -> tuple:
+    """Return (outcome, detail). Outcome is PASS, FAIL, SKIP or MANUAL."""
+    if gate.get("manual_check"):
+        return "MANUAL", gate["manual_check"]
+
+    try:
+        command, missing = resolver.resolve(gate["command"])
+    except KeyError as exc:
+        return "FAIL", f"unknown placeholder {{{{{exc.args[0]}}}}} in the gate command"
+    if missing:
+        source = "the item's item.md" if missing.startswith("item.") else "tracker/project.yaml"
+        return "SKIP", (f"{{{{{missing}}}}} has no value in {source}, so there is nothing to "
+                        f"run; this gate checked nothing")
+
+    # A gate command naming one of our own scripts is rewritten to wherever the scripts were
+    # actually installed. Only the program is rewritten: the gate's own arguments (already
+    # placeholder-resolved) are kept, and --root is appended so the script acts on the
+    # workspace rather than on the current directory.
+    parts = shlex.split(command)
+    if parts and parts[0].startswith("scripts/"):
+        candidate = os.path.join(HERE, os.path.basename(parts[0]))
+        if os.path.isfile(candidate):
+            command = shlex.join([sys.executable, candidate] + parts[1:] + ["--root", root])
+
+    result = subprocess.run(command, shell=True, cwd=root, capture_output=True, text=True)
+    expected_zero = gate.get("expect", "exit-zero") == "exit-zero"
+    ok = (result.returncode == 0) if expected_zero else (result.returncode != 0)
+    detail = f"`{command}` exited {result.returncode}"
+    if not ok:
+        tail = (result.stdout + result.stderr).strip().split("\n")
+        detail += "\n" + "\n".join(f"      {line}" for line in tail[-15:])
+    return ("PASS" if ok else "FAIL"), detail
+
+
+def main(argv: list) -> int:
+    options = {"root": "."}
+    flags = set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token == "--all":
+            flags.add("all")
+            index += 1
+            continue
+        if not token.startswith("--") or index + 1 >= len(argv):
+            print(f"run-gate: unexpected argument {token!r}", file=sys.stderr)
+            return 2
+        options[token[2:]] = argv[index + 1]
+        index += 2
+
+    for required in ("skill", "item"):
+        if required not in options:
+            print(f"run-gate: --{required} is required", file=sys.stderr)
+            return 2
+    if "gate" not in options and "all" not in flags:
+        print("run-gate: pass --gate <name> or --all", file=sys.stderr)
+        return 2
+
+    root = os.path.abspath(options["root"])
+    contract_path = find_contract(options["skill"])
+    if not contract_path:
+        print(f"run-gate: no contract found for skill {options['skill']!r}", file=sys.stderr)
+        return 2
+    contract = miniyaml.load_file(contract_path)
+    gates = contract.get("quality_gates") or []
+
+    if "all" in flags:
+        selected = gates
+    else:
+        selected = [gate for gate in gates if gate["name"] == options["gate"]]
+        if not selected:
+            print(f"run-gate: {options['skill']} has no gate named {options['gate']!r}; "
+                  f"it has {', '.join(gate['name'] for gate in gates)}", file=sys.stderr)
+            return 2
+
+    resolver = Resolver(root, options["item"])
+    failures = []
+    for gate in selected:
+        outcome, detail = run_one(gate, resolver, root)
+        print(f"{outcome:6} {gate['name']}  ({gate['enforcement']})")
+        for line in detail.split("\n"):
+            print(f"       {line.strip() if not line.startswith('      ') else line}")
+        if outcome == "FAIL" and gate["enforcement"] == "hard":
+            failures.append(gate["name"])
+
+    manual = [gate["name"] for gate in selected if gate.get("manual_check")]
+
+    print()
+    if failures:
+        print(f"run-gate: {len(failures)} hard gate(s) failed: {', '.join(failures)}")
+        return 1
+    if manual:
+        print(f"run-gate: {len(manual)} gate(s) are manual checks and were not run: "
+              f"{', '.join(manual)} — record your evidence for each in the journal")
+    print("run-gate: no hard gate failed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

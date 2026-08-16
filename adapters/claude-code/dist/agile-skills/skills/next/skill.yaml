@@ -1,0 +1,71 @@
+name: next
+version: 0.1.0
+persona: scheduler
+purpose: Pick the single next runnable action from workspace state and dispatch the skill that owns it.
+
+when_to_use:
+  - Someone asks what to work on next, or to continue, resume, or keep going in a tracked project.
+  - A skill has just finished and the pipeline should advance.
+  - Work is being resumed after an interruption and nobody knows where it stopped.
+  - Someone asks for the board, the current state, or what is blocking progress.
+
+dispatch:
+  on_status: []
+  item_types: []
+
+human_interaction: none
+
+inputs:
+  - path: methodology/pipeline.yaml
+    required: true
+    why: the status graph, the status-to-skill map, and the selection key - this skill's entire world model
+  - path: tracker/items/*/item.md
+    required: true
+    why: the statuses, priorities, dependencies and creation times the selection key ranks
+  - path: tracker/items/*/questions/*.md
+    required: true
+    why: an open blocking question changes what may run, and a human-addressed question stops the loop
+  - path: tracker/items/*/history.md
+    required: false
+    why: reports where an item stopped when nothing is runnable
+
+outputs:
+  - path: tracker/board.md
+    kind: file
+    when: always
+  - path: "a dispatch decision, reported to the caller"
+    kind: status
+    when: always
+
+quality_gates:
+  - name: workspace-valid
+    description: The workspace satisfies the schemas before any dispatch decision is made.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: board-current
+    description: The board reflects the tracker at the moment of the decision.
+    command: scripts/board-gen
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: selection-is-deterministic
+    description: The chosen item follows the pipeline's selection key with no judgement applied.
+    manual_check: State the candidate set and the selection key values that eliminated each rejected candidate. If any candidate was rejected for a reason not in the key, the selection is invalid.
+    enforcement: hard
+    on_failure: stay
+
+escalation:
+  question: This skill never files questions. It surfaces questions others filed and stops.
+  defect: This skill never evaluates work. A defect it appears to see is invisible to it - it reads status, not content.
+  impasse: If the workspace does not validate, report the validator output and stop. Dispatching against a broken workspace would make every downstream skill unsound.
+
+exit_criteria:
+  - The workspace validated, or the run stopped with the validator's output.
+  - The board was regenerated.
+  - Exactly one of - a question was surfaced and the loop stopped, a skill was dispatched, or the board was reported with the reason nothing is runnable.
+  - The dispatch decision names the item, its status, and the owning skill taken from pipeline.yaml.
+
+next_status: null
+failure_status: null

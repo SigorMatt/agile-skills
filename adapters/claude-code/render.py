@@ -42,7 +42,7 @@ SHARED_DIR = ".claude/agile-skills"
 
 SCRIPTS_TO_SHIP = [
     "validate-workspace", "board-gen", "workspace-init", "new-item",
-    "check-commit-refs", "check-verify-freshness", "run-gate",
+    "check-commit-refs", "check-verify-freshness", "run-gate", "transition",
 ]
 LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "workspace.py", "board.py"]
 SPEC_TO_SHIP = [
@@ -351,6 +351,11 @@ def render_into(destination: str) -> list:
     # validate-workspace looks for pipeline.yaml beside itself before ../methodology/.
     shutil.copyfile(os.path.join(ROOT, "methodology", "pipeline.yaml"),
                     os.path.join(shared, "scripts", "pipeline.yaml"))
+    # run-gate needs the machine-readable contracts, not the rendered prose form of them.
+    for name, _, _ in rendered:
+        os.makedirs(os.path.join(shared, "skills", name), exist_ok=True)
+        shutil.copyfile(os.path.join(ROOT, "methodology", "skills", name, "skill.yaml"),
+                        os.path.join(shared, "skills", name, "skill.yaml"))
 
     write(os.path.join(destination, "MANIFEST.md"), render_manifest(pipeline, rendered))
     return rendered
