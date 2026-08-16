@@ -24,3 +24,27 @@ pipeline's paper trail should feel like.
 - **Artifacts produced:** `meta/plan.md`, `meta/CHECKPOINT.md`, `meta/journal.md`,
   `meta/BLOCKERS.md`, `.gitignore`.
 - **Result:** META-001 done. Next: META-002.
+
+---
+
+## 2026-08-16 — META-002 — verified Claude Code skill format
+
+- **Unit:** META-002
+- **Inputs read:** `https://code.claude.com/docs/en/{claude_code_docs_map,skills,hooks,permission-modes}.md`
+  (the `docs.anthropic.com` URL in PROMPT.md 301-redirects to `code.claude.com`).
+- **Decisions (all recorded in ADR-0001):**
+  - Install at **project** level `.claude/skills/<name>/`, not personal.
+  - Renderer emits only the six Agent-Skills-spec-legal frontmatter fields by default, so
+    rendered skills stay portable; Claude-Code-only fields are opt-in per skill and recorded in
+    the dist manifest.
+  - `AskUserQuestion` is the confirmed human-question mechanism; `disallowed-tools:
+    AskUserQuestion` is the **hard** enforcement of R2's "implement/verify never ask the human".
+  - Gate hardness comes from `PreToolUse` hooks (exit 2, or `permissionDecision: deny` with exit
+    0). `PostToolUse` cannot block — so no gate may be designed to rely on it.
+- **Explicitly not confirmed:** whether a skill invocation itself is a gateable tool call. The
+  adapter therefore gates observable side effects (transition script, `git commit`) instead of
+  assuming it. Written into ADR-0001 "What could NOT be confirmed" so the adapter cannot silently
+  drift into assuming it later.
+- **Gates:** n/a.
+- **Artifacts produced:** `meta/adr/ADR-0001-claude-code-skill-format.md`.
+- **Result:** META-002 done. Next: META-003.
