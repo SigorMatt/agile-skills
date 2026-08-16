@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Create the workspace skeleton inside a project. Idempotent.
+
+Usage: scripts/workspace-init [project-root]
+
+Creates tracker/ (with project.yaml and items/) and the docs/ directories. Running it again on
+an existing workspace changes nothing and exits 0 — a skill may call it without first having to
+decide whether the workspace exists.
+
+It deliberately creates **no** documents under docs/. An empty vision.md reads to a later skill
+as "the vision is empty", not as "nobody has written it yet" (spec/workspace-layout.md section 2).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+PROJECT_TEMPLATE = """\
+# Machine-readable project facts. Skills resolve {{commands.*}} and {{conventions.*}} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: {name}
+  trunk-branch: {trunk}
+  description: null
+
+commands:
+  test: null
+  lint: null
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"
+"""
+
+DIRECTORIES = [
+    "tracker",
+    "tracker/items",
+    "docs",
+    "docs/product",
+    "docs/architecture",
+    "docs/architecture/adr",
+    "docs/process",
+]
+
+
+def detect_trunk(root: str) -> str:
+    """Best guess at the trunk branch name, without requiring a git repository."""
+    head_path = os.path.join(root, ".git", "HEAD")
+    try:
+        with open(head_path, "r", encoding="utf-8") as handle:
+            ref = handle.read().strip()
+    except OSError:
+        return "main"
+    if ref.startswith("ref: refs/heads/"):
+        return ref[len("ref: refs/heads/"):]
+    return "main"
+
+
+def main(argv: list) -> int:
+    root = os.path.abspath(argv[1] if len(argv) > 1 else ".")
+    if not os.path.isdir(root):
+        print(f"workspace-init: {root} is not a directory", file=sys.stderr)
+        return 1
+
+    created = []
+    for relative in DIRECTORIES:
+        path = os.path.join(root, relative)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+            created.append(relative)
+
+    project_path = os.path.join(root, "tracker", "project.yaml")
+    if not os.path.isfile(project_path):
+        with open(project_path, "w", encoding="utf-8") as handle:
+            handle.write(PROJECT_TEMPLATE.format(name=os.path.basename(root),
+                                                 trunk=detect_trunk(root)))
+        created.append("tracker/project.yaml")
+
+    if created:
+        print(f"workspace-init: created {len(created)} path(s) under {root}")
+        for relative in created:
+            print(f"  + {relative}")
+    else:
+        print(f"workspace-init: workspace already present at {root}; nothing to do")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

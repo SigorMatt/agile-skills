@@ -46,7 +46,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
       reads a workspace, so the validator and the board can never disagree about a file.
 - [ ] **META-032** — `scripts/validate-workspace` — validates a consumer workspace against `spec/`.
 - [ ] **META-033** — `scripts/board-gen` — regenerates `tracker/board.md`.
-- [ ] **META-034** — `scripts/workspace-init` — creates a fresh consumer workspace skeleton.
+- [x] **META-034** — `scripts/workspace-init` + `scripts/new-item` — schema-correct skeletons
+      for a workspace and for an item, including derive-next-ID.
 - [ ] **META-036** — gate scripts `scripts/check-commit-refs` (every commit on an item branch
       references the item ID) and `scripts/check-verify-freshness` (DoD D10: verification
       postdates the last commit).

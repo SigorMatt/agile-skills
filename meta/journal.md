@@ -656,3 +656,36 @@ pipeline's paper trail should feel like.
 - **Gates:** self-test exit 0.
 - **Artifacts produced:** `scripts/lib/workspace.py`; workspace cases in `scripts/lib/selftest.py`.
 - **Result:** META-037 done. Next: META-034 (`scripts/workspace-init`), then META-032.
+
+---
+
+## 2026-08-16 — META-034 — `scripts/workspace-init` and `scripts/new-item`
+
+- **Unit:** META-034 (widened to two scripts: creating a workspace and creating an item are the
+  same concern — getting a schema-correct skeleton on disk without relying on memory)
+- **Inputs read:** `spec/workspace-layout.md` §1–3, `spec/work-item.md` §2–4,
+  `spec/journal-and-history.md` §1.
+- **Decisions:**
+  - `workspace-init` is idempotent and says so: a skill may call it without first deciding
+    whether the workspace exists.
+  - It creates **no** documents under `docs/`. Per the spec, an empty `vision.md` reads to a
+    later skill as "the vision is empty" rather than "nobody has written it yet".
+  - `project.yaml` is written with `commands.*` as `null` and a comment explaining that a null
+    is honest and makes the matching gate *skipped*. The template teaches the rule at the point
+    of use.
+  - `new-item` writes a **skeleton with the required headings**, not content. It is a substitute
+    for remembering the format, not for thinking — stated in its own docstring so a future
+    contributor does not grow it into a generator.
+  - `--next-id <type>` implements the derive-from-filesystem allocation rule (ADR-0003) in one
+    place, so no skill has to reimplement the scan.
+  - It refuses to overwrite an existing item and refuses an ID whose prefix disagrees with
+    `--type`. Both were verified by running them.
+  - `workspace-init` guesses the trunk branch by reading `.git/HEAD` directly rather than
+    shelling out, so it works in a directory that is not yet a repository.
+- **Commands run:** created a temp workspace; ran `workspace-init` twice (second run: "nothing
+  to do"); allocated `EP-001`, created it, allocated `WI-0001`, created it, and confirmed the
+  next allocation returned `WI-0002`; both refusal paths exited 1 with the right message; the
+  generated `history.md` carries the six-column header and the `— → draft` row.
+- **Gates:** none declared for scripts; verified by execution as above.
+- **Artifacts produced:** `scripts/workspace-init`, `scripts/new-item`.
+- **Result:** META-034 done. Next: META-032 (`scripts/validate-workspace`).
