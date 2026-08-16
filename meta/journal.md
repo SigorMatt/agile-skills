@@ -48,3 +48,28 @@ pipeline's paper trail should feel like.
 - **Gates:** n/a.
 - **Artifacts produced:** `meta/adr/ADR-0001-claude-code-skill-format.md`.
 - **Result:** META-002 done. Next: META-003.
+
+---
+
+## 2026-08-16 — META-003 — scripting policy + YAML subset reader
+
+- **Unit:** META-003
+- **Inputs read:** `seed/01-REQUIREMENTS.md` R3 (validation script runs in the consumer's
+  project), `meta/adr/ADR-0001` (rendered frontmatter must round-trip).
+- **Decisions:** ADR-0002 — Python 3.9+, stdlib only, everywhere. No `requirements.txt` exists
+  and none may be added. YAML is read by `scripts/lib/miniyaml.py`, a reader for a documented
+  subset that raises `YamlError` with a line number on anything outside it rather than guessing.
+  Rationale: a gate that fails because a package is missing is indistinguishable, to the agent
+  running it, from a gate that fails because the work is wrong.
+- **Commands run:** `python3 scripts/lib/selftest.py` → `93 passed, 0 failed`, cross-check
+  `ran against PyYAML 6.0.1 on 31 inputs`.
+- **Discoveries during verification (both were real divergences, both fixed in the reader/tests):**
+  - `2e3`: the first implementation coerced it to a float; PyYAML (YAML 1.1) leaves it a string.
+    `_FLOAT_RE` now requires a dot, so the two readers agree. Caught only by the cross-check —
+    which justifies keeping that layer.
+  - `dump_frontmatter("0.1.0")` needs no quotes and round-trips as a string; the test's
+    expectation was wrong, not the emitter.
+- **Gates:** `scripts/lib/selftest.py` exit 0.
+- **Artifacts produced:** `meta/adr/ADR-0002-scripting-and-dependencies.md`,
+  `scripts/lib/miniyaml.py`, `scripts/lib/selftest.py`.
+- **Result:** META-003 done. Next: META-030.

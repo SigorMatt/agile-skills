@@ -10,7 +10,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-001** — `git init`, `meta/` scaffolding (plan, journal, CHECKPOINT, BLOCKERS), `.gitignore`.
 - [x] **META-002** — Verify current Claude Code skill format against official docs; record findings +
       URLs in `meta/adr/ADR-0001-claude-code-skill-format.md`. (PROMPT rule 6)
-- [ ] **META-003** — ADR-0002: scripting language & dependency policy for `scripts/`; `scripts/lib/`
+- [x] **META-003** — ADR-0002: scripting language & dependency policy for `scripts/`; `scripts/lib/`
       skeleton with a self-test.
 
 ## Phase 1 — `spec/` (single source of truth, runtime-neutral)
