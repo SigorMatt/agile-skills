@@ -50,7 +50,10 @@ Validation rules:
 - A row whose `to` is `done` MUST be the last row **for a `work-item` or a `bug`**. An epic may
   be reopened (`ids-and-statuses.md` §3.4), so a `done → open` row may follow one on an epic;
   nothing else may.
-- Timestamps MUST be non-decreasing.
+- Timestamps MUST be non-decreasing. The tool that appends a row is responsible for this: it
+  MUST stamp the row no earlier than the previous row, and MUST say so when it has had to.
+  One artifact stamped by hand with a local time labelled `Z` would otherwise make every
+  subsequent row on that item look out of order, and the item would be unable to move at all.
 
 ### Why `actor` is a skill and not a person
 

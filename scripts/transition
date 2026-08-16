@@ -48,6 +48,43 @@ def now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def last_when(history_text: str):
+    """The `when` of the most recent history row, or None."""
+    latest = None
+    for line in history_text.split("\n"):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) != 6 or cells[0] == "when":
+            continue
+        if all(set(cell) <= set("-: ") and cell for cell in cells):
+            continue
+        latest = cells[0]
+    return latest
+
+
+def monotonic_now(history_text: str):
+    """A timestamp that is never earlier than the last row's.
+
+    `history.md` must be non-decreasing, and the rows before this one were not necessarily
+    written by this script — an artifact stamped by hand with a local time labelled `Z` is
+    enough to make every subsequent row look out of order. Clamping here means one bad
+    timestamp cannot poison the whole item's record, and the clamp is announced rather than
+    silent, because a clock that needs clamping is itself worth knowing about.
+    """
+    stamp = now()
+    previous = last_when(history_text)
+    if previous and previous >= stamp:
+        try:
+            parsed = datetime.datetime.strptime(previous, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            return stamp, None
+        bumped = (parsed + datetime.timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return bumped, previous
+    return stamp, None
+
+
 def find_contract(skill: str) -> str:
     """The acting skill's contract, wherever it was installed."""
     for candidate in (os.path.join(HERE, "skills", skill, "skill.yaml"),
@@ -252,7 +289,11 @@ def main(argv: list) -> int:
                   f"passed.", file=sys.stderr)
             return 1
 
-    timestamp = now()
+    timestamp, clamped_after = monotonic_now(history_text)
+    if clamped_after:
+        print(f"transition: the previous history row is stamped {clamped_after}, which is not "
+              f"earlier than this machine's clock ({now()}). Using {timestamp} so the record "
+              f"stays orderable. Check that earlier artifacts were stamped in UTC.")
     fields["status"] = to_status
     fields["updated"] = timestamp
     if options.get("outcome"):

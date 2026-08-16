@@ -1309,3 +1309,37 @@ reviewer's call.
   `epic.closed-with-open-children`, which is precisely what the reopen is for.
 - **Result:** methodology fixed. Next: `answer-questions` answers Q-001 and the loop carries the
   three bugs to `done` (META-066).
+
+---
+
+## 2026-08-17 — META-066a — a clock defect, and the tooling change it forced
+
+- **Unit:** META-066a (unplanned)
+- **What happened:** `answer-questions` answered EP-001/Q-001 by reopening the epic exactly as
+  the amended spec allows — and then `plan` on BUG-0001 hit a wall that had nothing to do with
+  planning. The independent regression pass had stamped its four artifacts with **local time
+  labelled `Z`** (`2026-08-17T01:30:00Z` for what was really `2026-08-16T22:30:00Z`), so every
+  history row the pipeline wrote afterwards was, correctly, "earlier than the previous row".
+  The item could not move at all.
+- **What the subagent did, and why it was right:** it refused every repair available to it —
+  `history.md` is hook-denied by design, `transition` had no `--when`, and patching the script's
+  clock or reverting through git would be a skill rewriting its own history. It also refused to
+  suspend the item, because appending a second row would carry the same defective timestamp and
+  make the record worse. It filed a question with five costed options and a recommendation, and
+  stopped. That is the escalation protocol doing exactly its job under real pressure.
+- **A second correction it made and recorded rather than tidied:** during
+  `answer-questions` it left `outcome: delivered` on the reopened epic; the validator refused it
+  with `item.outcome.premature`; it cleared the field and put both the wrong decision and its
+  reversal in the journal and in the question's answer.
+- **The fix, which is the subagent's own recommendation:** `scripts/transition` now stamps each
+  row with `max(now(), previous_row + 1s)` and **announces** the clamp, naming the offending
+  earlier timestamp. One artifact stamped in local time can no longer freeze an item, and a
+  clock that needs clamping is surfaced rather than silently accommodated. Recorded as a rule in
+  `spec/journal-and-history.md` §1: the tool appending a row is responsible for monotonicity and
+  must say when it has enforced it.
+- **Why not simply forbid hand-written timestamps:** they are unavoidable — a question's
+  `created`, a journal heading, a doc's `updated` are all written by a worker, and telling
+  workers to be careful is not a mechanism. Making the append-side robust is.
+- **Commands run:** `./scripts/check` → 4 PASS, 1 SKIP after re-render; re-installed into the
+  toy project.
+- **Result:** tooling fixed. Sending the run back to answer BUG-0001/Q-001 and continue.
