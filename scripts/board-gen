@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Regenerate tracker/board.md from tracker state.
+
+Usage:
+  scripts/board-gen [workspace-root]     write the board
+  scripts/board-gen --check [root]       exit 1 if the committed board is stale, write nothing
+
+The board is derived state. It exists in the repository because a human opening the project
+should see the state without running anything — and it is checked for staleness because a
+derived file nobody verifies is a file that quietly starts lying.
+"""
+
+from __future__ import annotations
+
+import datetime
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+
+import board as board_lib  # noqa: E402
+from workspace import Workspace  # noqa: E402
+
+
+def main(argv: list) -> int:
+    check_only = "--check" in argv
+    positional = [arg for arg in argv[1:] if not arg.startswith("-")]
+    root = os.path.abspath(positional[0] if positional else ".")
+
+    workspace = Workspace(root).load()
+    fatal = [entry for entry in workspace.load_errors
+             if entry[2] in ("project.missing", "items.missing")]
+    if fatal:
+        for path, _, code, message, _ in fatal:
+            print(f"board-gen: {code}: {message} ({path})", file=sys.stderr)
+        return 1
+
+    generated_at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    rendered = board_lib.render(workspace, generated_at)
+    path = board_lib.board_path(workspace)
+
+    existing = ""
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            existing = handle.read()
+
+    if check_only:
+        if not existing:
+            print("board-gen: tracker/board.md does not exist", file=sys.stderr)
+            return 1
+        if board_lib.differs(rendered, existing):
+            print("board-gen: tracker/board.md is stale; run scripts/board-gen",
+                  file=sys.stderr)
+            return 1
+        print("board-gen: board is current")
+        return 0
+
+    if existing and not board_lib.differs(rendered, existing):
+        print("board-gen: board already current; not rewriting the timestamp")
+        return 0
+
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(rendered)
+    print(f"board-gen: wrote {os.path.relpath(path, root)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

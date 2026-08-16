@@ -154,9 +154,9 @@ exits 0 without doing anything: both report a passing gate for work nobody check
 
 ## Open questions
 
-| item | question | to | blocking | age |
-|------|----------|----|----------|-----|
-| WI-0003 | Q-001 — should symlinked directories be followed? | human | yes | 12m |
+| item | question | to | blocking | created |
+|------|----------|----|----------|---------|
+| WI-0003 | Q-001 — should symlinked directories be followed? | human | yes | 2026-08-16T11:32:10Z |
 
 ## Summary
 
@@ -168,7 +168,9 @@ Rules:
 
 - `board.md` is derived state. `validate-workspace` reports `board.stale` when regenerating it
   would produce different content, so a board that disagrees with the tracker is caught rather
-  than believed.
+  than believed. The comparison ignores the `# Board — generated <timestamp>` line and nothing
+  else: every other byte must be a function of tracker state, which is why the questions table
+  carries each question's `created` timestamp rather than its age.
 - The **Open questions** section MUST come before the summary, and questions addressed to the
   human MUST be listed first. When the loop stops, this is the thing a returning human reads.
 

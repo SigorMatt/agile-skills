@@ -689,3 +689,30 @@ pipeline's paper trail should feel like.
 - **Gates:** none declared for scripts; verified by execution as above.
 - **Artifacts produced:** `scripts/workspace-init`, `scripts/new-item`.
 - **Result:** META-034 done. Next: META-032 (`scripts/validate-workspace`).
+
+---
+
+## 2026-08-16 — META-033 — `scripts/lib/board.py` and `scripts/board-gen`
+
+- **Unit:** META-033
+- **Inputs read:** `spec/workspace-layout.md` §4, `scripts/lib/workspace.py`.
+- **Decisions:**
+  - Rendering lives in `lib/board.py` so `validate-workspace` can render in memory and compare.
+    That comparison is the only reason a generated file is allowed in the repository at all.
+  - **Amended `spec/workspace-layout.md` §4 during this unit:** the questions table showed an
+    `age` column, which makes the board a function of the clock and would make the staleness
+    check fail on every run. Replaced with the question's `created` timestamp. The spec now
+    states the invariant explicitly — every byte except the generated-at line is a function of
+    tracker state — so the reason the column changed is recorded where it will be read.
+  - `board-gen` with no changes does **not** rewrite the file. Rewriting only the timestamp
+    would produce a diff on every run and train readers to ignore board changes in review.
+  - `--check` mode exists so the board can be a gate without the gate having a side effect.
+  - Human-addressed questions sort first, per the spec's rule about what a returning human reads.
+- **Commands run (temp workspace):** generated the board; `--check` → current; a second
+  generation correctly declined to rewrite; flipped an item's status → `--check` exited 1 with
+  "board is stale"; restored → current again.
+- **Gates:** `board-gen --check` exit 0 on a current board, exit 1 on a stale one — both
+  demonstrated.
+- **Artifacts produced:** `scripts/lib/board.py`, `scripts/board-gen`; edits to
+  `spec/workspace-layout.md` §4.
+- **Result:** META-033 done. Next: META-032 (`scripts/validate-workspace`).
