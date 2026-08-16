@@ -1447,3 +1447,53 @@ reviewer's call.
 - **Sequencing:** the audit (META-069) is reading the imported tree now, so the extra item runs
   in the scratch repository afterwards, followed by a re-import and a short addendum to the
   audit covering it.
+
+---
+
+## 2026-08-17 — META-069 — the audit
+
+- **Unit:** META-069
+- **How it was run:** a fresh agent with no knowledge of the project, restricted to
+  `tracker/`, `docs/`, `GIT-LOG.md`, `GIT-BRANCHES.md` and `src/` — explicitly barred from
+  `README.md`, `IDEA.md`, `HUMAN-SCRIPT.md` and anything outside `examples/toy-project/`, since
+  those describe the exercise rather than the work.
+- **It answered all four questions** — what was built and why, which decisions were made and by
+  whom, what questions arose and how they resolved, what verification found — so the paper trail
+  requirement (R4) holds. That is acceptance C6.
+- **It did not take the record's word for anything**, which is the part that makes the result
+  worth having: it re-ran the tool and its suite, rebuilt all three bug reproductions and the
+  acceptance-criteria worked examples, re-ran the encoding measurement ADR-0008 rests on, removed
+  each bug fix and confirmed the suite failed as claimed, and resolved all 45 commit shas.
+- **What it confirmed:** every behavioural claim reproduced byte for byte; every mutation
+  produced the failures the record claims; `lint-clean` is reported *skipped* and never passed;
+  no gate was ever forced; and where the project was wrong it said so — a reversed decision, a
+  corrected ADR rationale, an admitted clock failure, a gate failure reported rather than routed
+  around.
+- **What it found wrong, and I am recording every one rather than the flattering summary:**
+  - **The bug items' timestamps are fiction.** The monotonic clamp produced six transitions at
+    one-second intervals, and one execution is dated 2h14m apart between its history row and its
+    journal entry. The cause is disclosed in the record; the *consequence* — that chronology is
+    only recoverable from `GIT-LOG.md` — is not. This is a direct cost of my own clamp fix.
+  - **A factually wrong justification propagated into five documents**, including shipped source
+    comments, an ADR and the architecture overview — and was contradicted by a transcript thirty
+    lines above it in the same item's plan. Six review layers passed it.
+  - **Two commit shas in reports do not resolve**, one of them the sha a bug reproduction is
+    pinned to. The other 43 are exact.
+  - An implementation report's line arithmetic is wrong; one review passed a
+    record-completeness criterion on counts that were themselves wrong, while its sibling review
+    counted the identical structure correctly.
+  - **One overclaim it falsified in a single command**: the epic closes claiming "a number,
+    never a stack trace", but piping 5000 files into `head -1` still raises `BrokenPipeError` and
+    exits 1 — a case the regression pass measured and chose not to file.
+  - **Independence is nominal.** One agent played customer, analyst, architect, developer,
+    verifier and reviewer. Disclosed in two refinement artifacts and **not** in the vision or the
+    epic, which are the documents a manager would actually read.
+- **Verdict: qualified sign-off** — the work is accounted for, with four corrections required
+  first and two standing caveats. That is a better outcome than a clean pass: a clean pass from
+  an auditor this thorough would have meant it was not looking.
+- **What this tells me about the methodology**, for the final report: the gates catch what a
+  machine can decide and the review layers demonstrably do **not** catch a plausible-sounding
+  false claim repeated across documents. That is the single most important finding of this whole
+  build, and it argues for a specific next iteration — a check that resolves every sha and
+  cross-document claim mechanically, because judgement gates did not.
+- **Result:** META-069 done. `AUDIT.md` committed.

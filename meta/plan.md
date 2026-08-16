@@ -83,7 +83,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] **META-066** — Drive the BUG through the pipeline to done.
 - [x] **META-067** — Run `review-close`; complete remaining items until the epic is done.
 - [x] **META-068** — `scripts/validate-workspace` green on the toy workspace; `board.md` regenerated.
-- [ ] **META-069** — Audit test by a fresh subagent → `examples/toy-project/AUDIT.md`.
+- [x] **META-069** — Audit test by a fresh subagent → `examples/toy-project/AUDIT.md`.
 
 ## Phase 7 — close
 
