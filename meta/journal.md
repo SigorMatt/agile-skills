@@ -1556,3 +1556,38 @@ reviewer's call.
 - **Commands run:** `./scripts/check` → all steps passed after re-render.
 - **Result:** R10 added. WI-0003 is running through the pipeline under the checklist it was
   refined against; the journals record which version applied.
+
+---
+
+## 2026-08-17 — META-070c — acceptance C3's blocking round trip happened, organically
+
+- **Unit:** META-070c
+- **What happened:** WI-0003 ran plan → implement → verify → review-close, and `review-close`
+  **suspended the item**. Not because of anything planted: it reached Definition of Done D7
+  ("documents the change invalidated have been updated") and found that
+  `docs/product/vision.md` still described `--sort` as *being added, not delivered* — which
+  `intake` had written correctly, because at that moment it was true.
+- **It could not fix it, and said exactly why.** `spec/doc-header.md` §5 allocates
+  `product/vision.md` to `intake`, `refine` and `answer-questions`; `review-close` is listed
+  only for `ways-of-working.md`. The reviewer quoted that section's own reasoning back: it would
+  be "editing the document and then certifying D7 and DE4 against my own edit". So it filed a
+  **blocking** question addressed to the architect, set WI-0003 to `awaiting-answer` with
+  `resume-to: in-review`, left the branch deliberately unmerged (merging first would have made
+  the question academic), and stopped.
+- **This is acceptance C3, and it arose from the methodology rather than from the exercise.** The
+  rule that produced it is one I wrote for a different reason — to stop the record being updated
+  by the same execution trying to satisfy it — and it fired, correctly, on a case I had not
+  anticipated. That is a better demonstration than the one I set out to engineer.
+- **It also rejected the easy option on the record's own precedent.** Option C was "close with D7
+  and DE4 recorded unmet", which the spec permits — and it declined, noting that this is exactly
+  what happened to `--top` at the epic's first closure, and that the human's response on
+  returning had been to have it fixed.
+- **What the earlier skills produced:** `plan` traced every design choice to an existing ADR or a
+  recorded reversible assumption, and wrote **ADR-0009** recording the `--top`/`--sort`
+  combination as *deliberately unspecified*, with four options and reversal costs — which is R10
+  satisfied before R10 existed. `implement` added 17 tests and modified none of the existing 60.
+  `verify` decided all ten criteria by commands it ran, and left behind a test that fails if a
+  future tidy-up discards ADR-0004's hand-rolled validation — a regression test protecting a
+  *decision*, not just a behaviour.
+- **Result:** the round trip is completing now: `answer-questions` answers from the record,
+  updates the vision, and the item resumes at `in-review`.
