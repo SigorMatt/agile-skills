@@ -98,7 +98,7 @@ met say so rather than being argued into a tick.
 ### A. Methodology completeness
 - [x] **A1** all 8 skills valid; `scripts/lint-skills` passes — `./scripts/check` step 2, "8 skill
       contracts, 0 errors". Negative-tested at META-031: six injected faults, six reported.
-- [x] **A2** `pipeline.yaml` full status graph; `next` matches it — 10 statuses, 18 transitions;
+- [x] **A2** `pipeline.yaml` full status graph; `next` matches it — 10 statuses, 17 transitions;
       **no non-terminal status without an owner**, cross-checked in both directions by
       `lint-skills` (`ownership.unclaimed` / `ownership.race`).
 - [x] **A3** `spec/` complete — 9 files: skill contract, work item, journal+history, question,
