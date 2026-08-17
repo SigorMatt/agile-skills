@@ -1591,3 +1591,44 @@ reviewer's call.
   *decision*, not just a behaviour.
 - **Result:** the round trip is completing now: `answer-questions` answers from the record,
   updates the vision, and the item resumes at `in-review`.
+
+---
+
+## 2026-08-17 — META-070d — WI-0003 closed; a third gate defect found and codified
+
+- **Unit:** META-070d
+- **The run completed:** 6 items done, EP-001 closed a second time with **all seven** success
+  measures re-run against the merged trunk — including the two-folder measure added when the epic
+  reopened, which showed the two folders' outputs identical under `--sort name` and with no
+  correspondence under count order. 244 lines of tool, 77 tests, nine ADRs, six questions asked
+  and answered inside the record.
+- **The third tooling defect, found and correctly solved by the run:** `review-close`'s procedure
+  merges at step 8 and closes at step 9, but the `commits-reference-the-item` gate inspects
+  `trunk..branch` — which is **empty once the branch is merged**. Merging first therefore makes
+  the gate refuse the very close it was a precondition for.
+  - What the run did: refused `--force` (it would stamp `[gates forced]` on a row whose gates are
+    otherwise clean), **read how the five earlier items had closed**, found WI-0001's history row
+    saying "closing before the fast-forward so commits-reference-the-item still has a range",
+    rewound its unpublished trial merge, closed on the branch with the gate passing on a real
+    range, and fast-forwarded afterwards. It solved it by consulting the record — which is what
+    the record is for.
+  - It also declined to file a bug under EP-001, correctly: the defect is in the methodology's
+    tooling, and a bug there would describe something the linecount tracker does not own.
+  - **Fix:** `review-close/process.md` step 8 now specifies the order the run discovered —
+    trial-merge and test, discard the trial, close while the branch is still unmerged, then merge
+    — and says why, ending "If you find yourself reaching for a gate override here, stop: you
+    have merged too early." Bumped to v0.1.2. `check-commit-refs` now detects the
+    already-merged case and prints that instruction instead of the misleading "nothing was
+    delivered".
+- **Acceptance C3 is now met with evidence, organically:**
+  `| in-review | awaiting-answer | review-close | in-review | Q-001 blocking: D7 fails because
+  vision.md still says --sort is not delivered, and review-close may not update it |` followed by
+  `| awaiting-answer | in-review | answer-questions | — | Q-001 answered from the record;
+  vision.md v3 records --sort as delivered; resumed at the recorded resume-to |`. Filed →
+  suspended with `resume-to` → answered by the architect → document updated → resumed at exactly
+  the recorded status.
+- **Final imported state:** 7 items, 11 documents, `validate-workspace` 0 errors 0 warnings;
+  six questions, five non-blocking and one blocking, all answered; nine statuses' worth of
+  history including `awaiting-answer`; and **no `[gates forced]` row anywhere in the workspace**.
+- **`./scripts/check`** passes with no skipped steps.
+- **Result:** META-070d done.

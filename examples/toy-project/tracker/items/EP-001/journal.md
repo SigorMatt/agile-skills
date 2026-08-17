@@ -609,3 +609,260 @@ Append-only. One entry per skill execution, per spec/journal-and-history.md sect
   folder at all. Five items, 191 lines of tool, 60 tests, eight ADRs, four questions asked and
   answered inside the record. One gap remains visible: the product vision still does not mention
   `--top`.
+
+## 2026-08-16T23:50:12Z — intake v0.1.1 — product-analyst
+
+- **Item:** EP-001
+  (the same execution created WI-0003, which carries its own shorter entry)
+- **Trigger:** invoked directly by the human with a new request against the delivered tool —
+  "sometimes I want it sorted by filename instead of by count … Add a `--sort` option for that."
+  Not dispatched by `next`; the epic was `done` and nothing was runnable.
+- **Inputs read:**
+  - the human's stated request and his answers to six questions, in this session (verbatim below)
+  - `tracker/items/EP-001/item.md` (goal, all six success measures, scope, out of scope) and
+    `history.md` (closed twice, reopened once already, under §3.4)
+  - `tracker/items/WI-0001/item.md`, `WI-0002/item.md` — the delivered order and the `--top`
+    precedent; `WI-0002/artifacts/refinement-qa.md` for how its Q&A was tagged
+  - `tracker/board.md` (5 items, all done; EP-001 done), `tracker/project.yaml`
+  - `docs/product/vision.md` (v1)
+  - `linecount.py` — the delivered sort key `(-count, os.fsencode(name))`, `parse_args`, and
+    `format_report`'s `label`, so the criteria describe the tool that exists
+  - `.claude/agile-skills/spec/ids-and-statuses.md` (§3.4 and §4), `work-item.md`,
+    `journal-and-history.md`, `dor-dod.md`, `doc-header.md`
+- **Decisions:**
+  - **Reopened EP-001 rather than opening EP-002.** §3.4 sanctions `done → open` when a child is
+    filed against a closed epic, and the wording there is about defects; this is a feature. I put
+    the choice to the human rather than deciding it, because the honest reading is arguable: the
+    tool is being asked to answer a *second* question ("is this file here?") next to the one the
+    epic's goal names ("which files are big?"). He chose to keep it under EP-001 — "it's the same
+    tool and the same folder-full-of-files problem, I'm just looking at it a second way" — so the
+    reopen is his call, recorded, not mine.
+  - **The epic's success measures and scope were amended, not left alone.** A reopened epic that
+    still lists only the measures its first closure met would let `review-close` close it again
+    without ever testing what this item delivers (DE3 is applied to whatever is written there). I
+    added one measure — the two-folder comparison — in the human's own terms, and one scope
+    bullet for the option. Both are marked in the text as added at the reopen, so a reader can
+    see which measures the first two closures were judged against.
+  - **One item, not two.** A `--sort` that accepted `name` but not `count` would be half an
+    interface, and `count` costs nothing once the switch exists; splitting them would produce a
+    second item that delivers nothing observable on its own. Nothing here is separable the way
+    `--top` was separable from the base listing.
+  - **`priority: medium`, set by the analyst.** The human gave no ordering and there is nothing
+    to order against — WI-0003 is the only open item. `medium` matches `--top` and states what is
+    true: the epic's delivered goal stands without this. Recorded rather than presented as his.
+  - **The `--top` interaction was left open on purpose.** He was asked, and explicitly declined
+    to decide (verbatim in Q3 below). The skill's rule is that an unknown written down is a
+    question `refine` can pick up and an invented answer is a false requirement, so it is in
+    WI-0003's `## Notes` as an open point with both readings spelled out, and no criterion was
+    written for it here.
+  - **Two things he was never asked** are also recorded as open rather than assumed: what a bad
+    or missing `--sort` value does, and whether the test-command criterion (WI-0002 AC11's
+    precedent) applies. Writing either one now would put words in his mouth that `verify` would
+    later enforce.
+  - **`docs/product/vision.md` bumped to v2, covering `--top` as well.** The vision was silent on
+    `--top`, and `review-close` recorded that silence as an accepted gap at the epic's first
+    closure rather than fixing it. The human asked for both: "I'd rather the vision described
+    what the tool actually does. And while you're there — nobody ever added `--top` to that
+    vision either." `--sort` is written there as *being added, not delivered*, because it is not.
+  - **`project.yaml` untouched.** `commands.test` is already `python3 -m unittest discover` and
+    nothing about this item changes the trunk, the prefix or the commit convention.
+- **Questions raised:** six, all asked directly of the human in one batch and all answered; five
+  settled, one (Q3) explicitly deferred by him and carried into WI-0003's `## Notes` as an open
+  point for `refine`. No question artifact was filed — he was present. Answers are verbatim and
+  tagged `[human — simulated by the builder]`, the tag this run uses because every human answer
+  in it was produced by the builder standing in for the human; nothing below is the word of a
+  real user.
+
+  **Restatement, and his response** `[human — simulated by the builder]`:
+
+  > Restatement's right. It's a view change, not a change to the numbers.
+
+  (The restatement he confirmed: `--sort` switches the row order to filename order and leaves
+  everything else — row format, which files are listed, the counts, the total row, the exit
+  codes, and the no-flags default of largest-first — exactly as delivered.)
+
+  **Q1 — what does this let you do that you cannot do today, observably?** I proposed "on a
+  folder of ~40 files you can find a known filename by reading down the names instead of scanning
+  every row", and asked him to reject it if the real use was narrower.
+  `[human — simulated by the builder]`:
+
+  > Your version is close but it's not about ~40 files. The real one: I keep two folders that are
+  > meant to hold the same set of notes, and I want to run the tool on both and eyeball whether
+  > the same filenames are present. In count order the two outputs are shuffled differently even
+  > when the contents match, so I can't compare them. Name order makes the two outputs line up.
+  > So the win is: **two folders with the same filenames produce rows in the same order, so I can
+  > compare them by eye.** That's checkable.
+
+  **Q2 — what is the spelling, and what values does it take?** Options put to him: (a)
+  `--sort name` / `--sort count` with `count` the default; (b) a bare `--sort` flag meaning "by
+  name"; (c) a differently-named flag such as `--by-name`. I proposed (a).
+  `[human — simulated by the builder]`:
+
+  > Option (a) — `--sort name` and `--sort count`, count is the default. And no `-s`. Same as
+  > `--top`: one spelling.
+
+  **Q3 — what does `--sort name` mean together with `--top 3`?** Options put to him: (a) `--top`
+  still picks the three largest and `--sort name` only orders those three for display; (b) the
+  name order applies first, so `--top 3` returns the three alphabetically-first files; or (c) the
+  two flags together are an error. I proposed (a). `[human — simulated by the builder]`:
+
+  > Honestly, I haven't used them together and I don't know. Don't hold this up for it — I want
+  > to see the basic thing working. Pick whatever's least surprising and I'll tell you if it's
+  > wrong when I use it.
+
+  **Left open.** He was asked once and declined; the skill's rule is not to badger him into a
+  number he does not believe. `refine` must choose, mark it `[assumed]`, and write it as a
+  criterion — `plan`, `implement` and `verify` cannot ask him at all.
+
+  **Q4 — which name order, exactly?** Options: (a) raw byte order, consistent with the existing
+  tie-break, which sorts `Zebra.md` before `apple.md`; (b) case-insensitive, which matches
+  intuition but needs a rule for names that are not valid UTF-8. I proposed (a), and asked
+  whether a descending name order was wanted. `[human — simulated by the builder]`:
+
+  > Keep byte order. I don't want it doing something clever and locale-dependent behind my back,
+  > and consistency with the tie-break you already have is worth more to me than `apple.md`
+  > sorting where I'd expect. Ascending only — I have no use for descending names.
+
+  **Q5 — does anything else about the output change?** I proposed no: identical row format,
+  column width, total row and label, stderr behaviour, exit codes, and `no files` on an empty
+  folder — and asked whether `--sort count` should be byte-identical to passing no flag.
+  `[human — simulated by the builder]`:
+
+  > Confirmed, nothing else changes. And yes, `--sort count` should produce byte-identical output
+  > to giving no flag at all — if spelling out the default changes anything, that's a bug.
+
+  **Q6 — is this the last thing, is it one thing, and does it belong to EP-001?**
+  `[human — simulated by the builder]`:
+
+  > (a) That's the whole request. No `--reverse`, no filtering. I mean it this time. (b) Keep it
+  > under EP-001 and reopen it — it's the same tool and the same folder-full-of-files problem,
+  > I'm just looking at it a second way. Amend the vision the way you proposed; I'd rather the
+  > vision described what the tool actually does. And while you're there — nobody ever added
+  > `--top` to that vision either, so put that in too.
+
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/new-item --next-id work-item` → exit 0, `WI-0003`
+  - `python3 .claude/agile-skills/scripts/new-item --id WI-0003 --type work-item …` → exit 0
+  - `python3 .claude/agile-skills/scripts/transition EP-001 --to open --actor intake --reason …`
+    → exit 1: the move was applied (`done → open`), and the exit code is the post-move validation
+    reporting `journal.execution.missing` on WI-0003 — this entry and WI-0003's are what clear
+    it. The pre-move gate run also reported `workspace-valid` FAIL, correctly and non-blockingly:
+    at that moment WI-0003 was a draft under a closed epic, which is the state the move fixes.
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 8 items, 10 documents
+  - `git commit` of `tracker/` and `docs/` → see Artifacts
+- **Gates:**
+  - `workspace-valid` (hard) → **pass** — `validate-workspace .` exits 0 after this entry,
+    WI-0003's entry and `board-gen` (0 errors, 0 warnings). It failed twice during the run, both
+    times for a state this execution then fixed, and both failures are named above rather than
+    smoothed over.
+  - `epic-has-success-measures` (hard) → **pass** — the measure added for this reopen is "run
+    over two folders that are meant to hold the same set of notes … the two listings name the
+    files in the same order and can be compared row for row by eye". It is checkable by building
+    two folders with the same names and different contents and comparing the two outputs; it is
+    not a restatement of the goal, and it is failed by today's tool. The six existing measures
+    were re-read and none is invalidated by this item.
+  - `items-are-separable` (advisory) → **pass** — one item. It could be built immediately: it
+    depends on nothing unfinished (WI-0001 and WI-0002 are `done`), and no `depends-on` is
+    recorded for that reason.
+  - `no-solution-in-the-problem` (advisory) → **pass, with the check stated** — the title and
+    story name `--sort`, `name`, `count` and byte order. Every one of those is the human's own
+    word from Q2 and Q4, not an implementation I chose; the story itself names no data structure
+    and no mechanism. Nothing was removed.
+- **Artifacts:**
+  - `tracker/items/WI-0003/` — `item.md`, `journal.md`, `history.md`, empty `questions/` and
+    `artifacts/` (new)
+  - `tracker/items/EP-001/item.md` — one success measure and one scope bullet added; `outcome`
+    cleared and `status` set to `open` by the transition
+  - `docs/product/vision.md` v1 → v2
+  - `tracker/board.md` regenerated
+  - commit `tracker: reopen EP-001 and create WI-0003 for --sort (refs EP-001)`
+- **Status:** EP-001 `done` → `open`; WI-0003 `—` → `draft`
+- **Result:** The epic is open again with the human's own success measure for the new request
+  written into it, and WI-0003 is a draft carrying five settled decisions and three named open
+  points. `refine` is next, and it has real questions to ask: the `--top` interaction he declined
+  to decide, the failure shape of a bad `--sort` value, and the test criterion.
+
+### A limitation of `scripts/transition`, found here
+
+`done → open` on an epic leaves `outcome: delivered` in the frontmatter, and the script has no
+way to clear it — `--outcome ""` is falsy and ignored. A reopened epic therefore fails
+`item.outcome.missing` ("outcome MUST be present if and only if status is done") until a human or
+a skill edits the field out by hand, which this execution did before transitioning. It is
+recorded here rather than fixed, because the fix belongs to the methodology repository, not to
+this project's tracker. The previous reopen (2026-08-16T22:40:08Z, by `answer-questions`) hit the
+same thing.
+
+## 2026-08-17T00:26:55Z — review-close v0.1.1 — reviewer
+
+- **Item:** EP-001
+- **Trigger:** WI-0003 — the epic's last child not at `done` — was closed by this same execution,
+  which is the only point in the pipeline where every sibling's state is already in hand
+- **Inputs read:** `tracker/items/EP-001/item.md` (goal, why now, **seven** success measures,
+  scope, out of scope), `history.md` (five rows: opened, closed, reopened for the three bugs,
+  closed again, reopened for WI-0003), this journal in full; every child's `item.md` for status
+  and outcome; every `questions/*.md` across all six children; `docs/product/vision.md` v3 and
+  `docs/architecture/overview.md` v5; the merged trunk at `035b169`
+- **Decisions:**
+  - **The epic closes, with every success measure met.** All seven were re-run against the merged
+    trunk rather than inherited from the two earlier closures — including the six that this item
+    did not touch, because "still true" is a claim about today's code and not about the code that
+    passed them in August's first closure. Results below.
+  - **The seventh measure — the one added when the epic was reopened — is the one worth reading.**
+    It was written in the human's own terms at intake ("two folders with the same filenames produce
+    rows in the same order, so I can compare them by eye") and it is now demonstrable: on two
+    folders holding the same five note names with different contents, the default count order
+    lists them as `zettel, ideas, todo, meeting-2026-08, inbox` and `inbox, meeting-2026-08, todo,
+    ideas, zettel` — no correspondence at all — while `--sort name` lists both as `ideas, inbox,
+    meeting-2026-08, todo, zettel`, identical line for line. The measure is met by the flag doing
+    exactly the job he asked for, not by a proxy for it.
+  - **Nothing is left unmet, so nothing is closed over.** `spec/dor-dod.md` §4 permits closing an
+    epic with a measure unmet provided it is stated; that permission was not needed here.
+  - **The epic's own `Q-001` (from its first life) and all five child questions are `answered`**,
+    with consequences propagated — DE5 holds without re-filing anything against a follow-up item.
+- **Questions raised:** none.
+- **Commands:** all run against the merged trunk `035b169`:
+  - **Measure 1 & 3** — `python3 linecount.py <folder>` on a 33-file folder of mixed notes, code, a
+    subdirectory and a PNG → first rows ` 500  big_notes.md`, ` 200  second.py`, `  40
+    note_22.md`; exit 0. Piped into `head -3` → exit 0, nothing on stderr, no garbling. **Met.**
+  - **Measure 2** — the same folder contains `subdir/`: `linecount` exits **0**; `wc -l *` in that
+    folder exits **1** with `wc: subdir: Is a directory`. **Met**, and still the concrete
+    difference from the tool the human was using.
+  - **Measure 4** — the folder holds a real 1×1 PNG: `grep -c Traceback` over the whole output →
+    **0**; the row `   3  image.png` is listed rather than skipped; exit 0. **Met.**
+  - **Measure 5** — `python3 linecount.py /no/such` → `linecount: /no/such: No such file or
+    directory` on stderr, exit **2**. An unreadable folder (mode 000) → `Permission denied`,
+    exit 2, nothing on stdout. **Met.**
+  - **Measure 6** — `linecount.py` imports only `argparse`, `os`, `sys` and `__future__`;
+    `python3 -m unittest discover` from the repository root → `OK`, 77 tests, nothing installed.
+    **Met.**
+  - **Measure 7 (added at this reopen)** — two folders, same five names, different contents.
+    Count order: the two name columns differ (`diff` exits 1). `--sort name`: the two name columns
+    are identical (`diff` exits 0). **Met.**
+- **Gates:** the epic Definition of Done, `spec/dor-dod.md` §4, criterion by criterion:
+  - **DE1 pass** — all six children `done`: WI-0001, WI-0002, WI-0003, BUG-0001, BUG-0002,
+    BUG-0003.
+  - **DE2 pass** — every child records `outcome: delivered`; none was dropped, so no `## Notes`
+    explanation is owed.
+  - **DE3 pass** — all seven success measures re-run above, each with the command and its output.
+    None is unmet.
+  - **DE4 pass** — `docs/product/vision.md` v3 now records **both** flags as delivered. This is
+    the criterion that failed at the first closure, when the vision was silent about `--top`; it
+    was fixed on the human's instruction at this reopen and completed through `WI-0003/Q-001`,
+    which is also why `review-close` filed a question rather than editing a product document it
+    would then certify.
+  - **DE5 pass** — six questions exist across the epic and its children; all six are `answered`,
+    each with `## Consequences` naming files. Nothing re-filed against a follow-up item.
+- **Artifacts:**
+  - `tracker/items/EP-001/item.md` — `status: done`, `outcome: delivered`
+  - this entry; `tracker/board.md` regenerated
+- **Status:** `open` → `done` (`outcome: delivered`)
+- **Result:** EP-001 closes a third time, now with seven success measures rather than six. What
+  the epic delivered: a single-file, standard-library tool that lists a folder's files by line
+  count largest-first with no flags, narrows to the N largest with `--top`, re-orders to filename
+  order with `--sort name` so two folders can be compared row for row, and answers awkward input —
+  subdirectories, unresolvable symlinks, unreadable files, binary files, names that are not valid
+  UTF-8 — with a number rather than a stack trace. Six items, 244 lines of tool, 77 tests, nine
+  ADRs, six questions asked and answered inside the record. One thing is deliberately undefined and
+  says so: which files `--top N --sort name` selects. The human declined to decide it, and no skill
+  decided it for him.

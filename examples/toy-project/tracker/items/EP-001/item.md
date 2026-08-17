@@ -5,7 +5,7 @@ title: See at a glance which files in a folder are the big ones
 status: done
 priority: high
 created: "2026-08-16T21:13:40Z"
-updated: "2026-08-16T23:29:13Z"
+updated: "2026-08-17T00:27:37Z"
 outcome: delivered
 ---
 
@@ -42,6 +42,10 @@ which rules out a shell alias living only in their own dotfiles.
   message naming that problem and exits with a non-zero status.
 - A person who is handed the folder and has only Python 3 installed can run the tool, and run
   its tests, without installing anything first.
+- Run over two folders that are meant to hold the same set of notes, the tool can be asked for
+  an order that does not depend on the line counts, so the two listings name the files in the
+  same order and can be compared row for row by eye. (Added when EP-001 was reopened for
+  WI-0003; the human's own measure, verbatim in this epic's second intake entry.)
 
 ## Scope
 
@@ -57,6 +61,9 @@ which rules out a shell alias living only in their own dotfiles.
   run them.
 - A later, separate addition of a `--top N` option that limits the output to the N largest
   files.
+- A later, separate addition of a `--sort` option that switches the row order between the
+  default largest-first and filename order, changing the order of the rows and nothing else.
+  (Added when EP-001 was reopened for WI-0003.)
 
 ## Out of scope
 

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-"""List the files directly inside a folder with their line counts, largest first.
+"""List the files directly inside a folder with their line counts, largest first by default.
 
-Usage: python3 linecount.py [--top N] <folder>
+Usage: python3 linecount.py [--top N] [--sort name|count] <folder>
+
+The rows come out in the order `--sort` names: `count` (the default, and what you get with no
+flag) is the count descending, then the filename ascending; `name` is the filename ascending
+alone, which is the order to ask for when comparing two folders that should hold the same files
+(WI-0003 AC1, AC2). Both compare names as bytes, so neither depends on the locale.
 
 A line is a newline byte, plus one for a final line that has text but no newline after it, so
 every file is counted by the same rule and none of them is decoded (WI-0001 AC5, AC9). Names are
@@ -44,6 +49,22 @@ def count_lines(path):
     if last and last != b"\n":
         lines += 1
     return lines
+
+
+def sort_rows(rows, order):
+    """`rows` — a list of (count, name) — in the order to print them.
+
+    `count` is the count descending, then the name ascending, which is what WI-0001 AC2 fixed and
+    what every run without `--sort` still gets. `name` is the name ascending alone (WI-0003 AC1);
+    within one folder the names are unique, so it needs no tie-break.
+
+    Both compare `os.fsencode`d names rather than `str`, which is the same choice ADR-0008 made
+    for the output side: the order is defined for a name that is not valid UTF-8, and it does not
+    depend on `LANG`. It is the reason `Zebra.md` sorts before `apple.md`.
+    """
+    if order == "name":
+        return sorted(rows, key=lambda row: os.fsencode(row[1]))
+    return sorted(rows, key=lambda row: (-row[0], os.fsencode(row[1])))
 
 
 def list_files(folder):
@@ -117,19 +138,37 @@ def parse_top(value):
     return number
 
 
+def parse_sort(value):
+    """The order `value` names, for `--sort`: `name` or `count`.
+
+    Raises ValueError whose message is the reason, ready to print after `linecount: --sort: `.
+    Validated here rather than with argparse's `choices=` for the reason ADR-0004 gives for
+    `--top`: argparse writes a usage block above its message, and WI-0003 AC7 wants one line.
+    The comparison is case-sensitive, so `--sort Name` is rejected — it is neither of the two
+    values AC7 names (plan.md, Assumptions 1).
+    """
+    if value not in ("name", "count"):
+        raise ValueError(f"{value!r} is not 'name' or 'count'")
+    return value
+
+
 def parse_args(argv):
-    """Parse `argv` into the folder to report on and the raw `--top` value.
+    """Parse `argv` into the folder to report on and the raw `--top` and `--sort` values.
 
     argparse handles every usage error it owns: a message on stderr and exit 2, which is the
     failure shape AC11 and AC12 require (ADR-0001). `--top` carries no `type=`, so its value
     arrives as a string for `parse_top` to judge; an unknown option such as `-t` is still
-    argparse's to reject (WI-0002 AC8).
+    argparse's to reject (WI-0002 AC8), as is `-s` and a `--sort` with no value (WI-0003 AC5,
+    AC7). `--sort` carries no `choices=` for the same reason and defaults to `"count"`, so `main`
+    has no "flag absent" case to tell apart from `--sort count` — which is WI-0003 AC3.
     """
     parser = argparse.ArgumentParser(
         prog="linecount",
         description="List the files in a folder with their line counts, largest first.")
     parser.add_argument("folder", help="the folder to report on")
     parser.add_argument("--top", metavar="N", help="show only the N largest files")
+    parser.add_argument("--sort", metavar="KEY", default="count",
+                        help="order the rows: count (default) or name")
     return parser.parse_args(argv)
 
 
@@ -144,6 +183,14 @@ def main(argv):
         except ValueError as exc:
             print(f"linecount: --top: {exc}", file=sys.stderr)
             return 2
+
+    try:
+        order = parse_sort(args.sort)
+    except ValueError as exc:
+        # After the `--top` block, so a run with both flags wrong reports `--top` first. Nothing
+        # asks for either order; it is the cheaper one to write (plan.md, Assumptions 2).
+        print(f"linecount: --sort: {exc}", file=sys.stderr)
+        return 2
 
     try:
         names = list_files(args.folder)
@@ -162,7 +209,7 @@ def main(argv):
             unreadable += 1
             print(f"linecount: {name}: {exc.strerror or exc}", file=sys.stderr)
 
-    rows.sort(key=lambda row: (-row[0], os.fsencode(row[1])))
+    rows = sort_rows(rows, order)
 
     if not rows:
         # `no files` means the folder held none — empty, or only subdirectories, or only entries
@@ -177,6 +224,12 @@ def main(argv):
     else:
         # The rows shown are the first N of the order above; the total is still every file in
         # the folder, and says so (WI-0002 AC1, AC3, AC6).
+        #
+        # "The order above" is now `--sort`'s, so with `--sort name` this takes the N
+        # alphabetically first rather than the N largest. Nothing decided that: WI-0003 left the
+        # combination unspecified on purpose and did not touch this line (ADR-0009). WI-0003 AC9
+        # pins only its shape — exit 0, at most N rows, this label. Do not treat what it selects
+        # as a contract.
         text = format_report(rows[:top], sum(count for count, _ in rows),
                              f"total (all {len(rows)} files)")
     # The report is data, not text: a file's name is echoed as the bytes the filesystem gave us,

@@ -85,8 +85,17 @@ def main(argv: list) -> int:
             offenders.append((sha[:8], subject))
 
     if total == 0:
-        print(f"check-commit-refs: no commits on {rev_range}; nothing was delivered",
-              file=sys.stderr)
+        merged = git(["merge-base", "--is-ancestor", branch, trunk], root).returncode == 0
+        if merged:
+            print(f"check-commit-refs: {branch} is already merged into {trunk}, so "
+                  f"{rev_range} is empty and this gate has nothing left to inspect.",
+                  file=sys.stderr)
+            print("  Close the item BEFORE merging: the gate reads the commits not yet on the "
+                  "trunk, and merging first empties that range. Rewind the merge, close, then "
+                  "merge.", file=sys.stderr)
+        else:
+            print(f"check-commit-refs: no commits on {rev_range}; nothing was delivered",
+                  file=sys.stderr)
         return 1
 
     if offenders:

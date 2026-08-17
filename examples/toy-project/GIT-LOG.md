@@ -6,6 +6,108 @@ and `GIT-BRANCHES.md` for the per-item `git log --grep` output that Definition o
 D8 requires.
 
 ```text
+* f16aa0f 2026-08-17T03:27:45+03:00 agile-skills builder
+|     tracker: close EP-001 with all seven success measures re-run (refs EP-001)
+| 
+|  tracker/board.md                |  6 ++--
+|  tracker/items/EP-001/history.md |  1 +
+|  tracker/items/EP-001/item.md    |  5 +--
+|  tracker/items/EP-001/journal.md | 74 +++++++++++++++++++++++++++++++++++++++
+|  4 files changed, 81 insertions(+), 5 deletions(-)
+| 
+* 035b169 2026-08-17T03:26:14+03:00 agile-skills builder
+|     tracker: the review, the closed item, and the merge (refs WI-0003)
+| 
+|  tracker/board.md                          |   6 +-
+|  tracker/items/WI-0003/artifacts/review.md |  99 +++++++++++++++++++++++++
+|  tracker/items/WI-0003/history.md          |   1 +
+|  tracker/items/WI-0003/item.md             |  28 +++++++-
+|  tracker/items/WI-0003/journal.md          | 107 ++++++++++++++++++++++++++++
+|  5 files changed, 236 insertions(+), 5 deletions(-)
+| 
+* 383e35d 2026-08-17T03:20:02+03:00 agile-skills builder
+|     tracker: Q-001 answered; vision v3 records --sort as delivered (refs WI-0003)
+| 
+|  docs/product/vision.md                   | 12 ++---
+|  tracker/board.md                         | 12 ++---
+|  tracker/items/WI-0003/history.md         |  1 +
+|  tracker/items/WI-0003/item.md            |  4 +-
+|  tracker/items/WI-0003/journal.md         | 83 ++++++++++++++++++++++++++++++
+|  tracker/items/WI-0003/questions/Q-001.md | 62 ++++++++++++++++++++--
+|  6 files changed, 156 insertions(+), 18 deletions(-)
+| 
+* 821eaef 2026-08-17T03:16:57+03:00 agile-skills builder
+|     tracker: Q-001 filed, D7 blocks closing until the vision is updated (refs WI-0003)
+| 
+|  tracker/board.md                         |  12 ++--
+|  tracker/items/WI-0003/history.md         |   1 +
+|  tracker/items/WI-0003/item.md            |   4 +-
+|  tracker/items/WI-0003/journal.md         | 111 +++++++++++++++++++++++++++++
+|  tracker/items/WI-0003/questions/Q-001.md |  88 +++++++++++++++++++++++
+|  5 files changed, 209 insertions(+), 7 deletions(-)
+| 
+* b6c7414 2026-08-17T03:12:35+03:00 agile-skills builder
+|     tracker: the verification report and the ticked criteria (refs WI-0003)
+| 
+|  tracker/board.md                                 |   6 +-
+|  tracker/items/WI-0003/artifacts/verify-report.md | 100 +++++++++++++++++++++
+|  tracker/items/WI-0003/history.md                 |   1 +
+|  tracker/items/WI-0003/item.md                    |  24 ++---
+|  tracker/items/WI-0003/journal.md                 |  83 +++++++++++++++++
+|  5 files changed, 199 insertions(+), 15 deletions(-)
+| 
+* 8792e41 2026-08-17T03:08:46+03:00 agile-skills builder
+|     tracker: the implementation report and this item's record (refs WI-0003)
+| 
+|  tracker/board.md                               |  6 +-
+|  tracker/items/WI-0003/artifacts/impl-report.md | 86 ++++++++++++++++++++++++
+|  tracker/items/WI-0003/history.md               |  2 +
+|  tracker/items/WI-0003/item.md                  |  5 +-
+|  tracker/items/WI-0003/journal.md               | 70 +++++++++++++++++++
+|  5 files changed, 164 insertions(+), 5 deletions(-)
+| 
+* 214dc3d 2026-08-17T03:07:24+03:00 agile-skills builder
+|     linecount: add --sort to order the rows by name or by count (refs WI-0003)
+| 
+|  linecount.py            |  63 +++++++++++++++--
+|  tests/test_linecount.py | 172 ++++++++++++++++++++++++++++++++++++++++++++++
+|  2 files changed, 230 insertions(+), 5 deletions(-)
+| 
+* 4b02d9b 2026-08-17T03:04:52+03:00 agile-skills builder
+|     tracker: the plan, ADR-0009, and overview v5 (refs WI-0003)
+| 
+|  ...op-and-sort-combination-is-left-unspecified.md |  97 ++++++++++++
+|  docs/architecture/overview.md                     |  23 ++-
+|  tracker/board.md                                  |   6 +-
+|  tracker/items/WI-0003/artifacts/plan.md           | 167 ++++++++++++++++++++
+|  tracker/items/WI-0003/history.md                  |   1 +
+|  tracker/items/WI-0003/item.md                     |   4 +-
+|  tracker/items/WI-0003/journal.md                  |  95 +++++++++++
+|  7 files changed, 383 insertions(+), 10 deletions(-)
+| 
+* 2cf8fa1 2026-08-17T02:59:04+03:00 agile-skills builder
+|     tracker: the refined item and its Q&A record (refs WI-0003)
+| 
+|  tracker/board.md                                 |   6 +-
+|  tracker/items/WI-0003/artifacts/refinement-qa.md | 199 +++++++++++++++++++++
+|  tracker/items/WI-0003/history.md                 |   1 +
+|  tracker/items/WI-0003/item.md                    | 139 ++++++++++----
+|  tracker/items/WI-0003/journal.md                 | 140 +++++++++++++++
+|  5 files changed, 445 insertions(+), 40 deletions(-)
+| 
+* 7073bca 2026-08-17T02:52:12+03:00 agile-skills builder
+|     tracker: reopen EP-001 and create WI-0003 for --sort (refs EP-001)
+| 
+|  docs/product/vision.md           |  21 ++++-
+|  tracker/board.md                 |   9 +-
+|  tracker/items/EP-001/history.md  |   1 +
+|  tracker/items/EP-001/item.md     |  12 ++-
+|  tracker/items/EP-001/journal.md  | 183 +++++++++++++++++++++++++++++++++++++
+|  tracker/items/WI-0003/history.md |   5 +
+|  tracker/items/WI-0003/item.md    |  95 +++++++++++++++++++
+|  tracker/items/WI-0003/journal.md |  33 +++++++
+|  8 files changed, 348 insertions(+), 11 deletions(-)
+| 
 * 0fc856b 2026-08-17T02:29:18+03:00 agile-skills builder
 |     tracker: the epic closed a second time against its success measures (refs EP-001)
 | 

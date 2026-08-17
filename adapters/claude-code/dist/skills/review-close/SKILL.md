@@ -4,7 +4,7 @@ description: "Review the change and its record against the Definition of Done, t
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.1.1
+  methodology-version: 0.1.2
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -99,9 +99,22 @@ You cannot ask the human. You may reject, and rejection is a normal outcome, not
      evidence does not support a tick.
    - **Accept** → continue.
 
-8. **Merge into `{{trunk}}`** and run `{{commands.test}}` **on the merge result**. A change that
-   passed on its branch can still fail after merging, and the merge result is what the project
-   actually gets. If it fails, do not "fix it quickly" — send the item back with the failure.
+8. **Trial-merge, then close, then merge — in that order.** The order is not arbitrary and
+   getting it wrong deadlocks the close:
+
+   1. **Trial-merge** the branch into a throwaway copy of `{{trunk}}` and run
+      `{{commands.test}}` **on the merge result**. A change that passed on its branch can still
+      fail after merging, and the merge result is what the project actually gets. If it fails,
+      discard the trial and send the item back with the failure — do not "fix it quickly".
+   2. **Discard the trial merge.** It was never published; nothing depends on it.
+   3. **Close the item while the branch is still unmerged** (step 9). This is the part that is
+      easy to get wrong: `commits-reference-the-item` inspects the commits on the branch that
+      are *not yet* on the trunk, and once the branch is merged that range is **empty**. Merging
+      first therefore makes the gate refuse the very close it was a precondition for.
+   4. **Then merge into `{{trunk}}` for real.**
+
+   If you find yourself reaching for a gate override here, stop: you have merged too early.
+   Rewind and close first.
 
 9. **Close the item.** Set `status: done` and `outcome: delivered` (or `dropped` / `duplicate`,
    with the reason in `## Notes`). Write `artifacts/review.md`:

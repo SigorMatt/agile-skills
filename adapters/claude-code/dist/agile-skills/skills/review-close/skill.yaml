@@ -1,5 +1,5 @@
 name: review-close
-version: 0.1.1
+version: 0.1.2
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 

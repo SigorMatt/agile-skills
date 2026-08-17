@@ -638,5 +638,177 @@ class UndecodableNameTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
 
 
+def row_names(stdout):
+    """The filename column of a report, in order, without the total row.
+
+    `lstrip` first: the count column is right-aligned, so a narrow count in a wide column starts
+    the line with the same two spaces that separate the columns.
+    """
+    lines = stdout.splitlines()
+    return [line.lstrip().split(b"  ", 1)[1] for line in lines[:-1]]
+
+
+class ParseSortTest(unittest.TestCase):
+    """WI-0003 AC7 at the validator: `--sort`'s value is judged in our own code (ADR-0004)."""
+
+    def test_parse_sort_accepts(self):
+        self.assertEqual(linecount.parse_sort("name"), "name")
+        self.assertEqual(linecount.parse_sort("count"), "count")
+
+    def test_parse_sort_rejects(self):
+        for value in ("size", "Name", "COUNT", "", "1", "names"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    linecount.parse_sort(value)
+
+
+class SortRowsTest(unittest.TestCase):
+    """WI-0003 AC1 at the sorter, where the order is arithmetic rather than I/O."""
+
+    ROWS = [(2, "Zebra.md"), (7, "apple.md"), (5, "notes.md")]
+
+    def test_count_order_is_what_wi_0001_fixed(self):
+        self.assertEqual(linecount.sort_rows(self.ROWS, "count"),
+                         [(7, "apple.md"), (5, "notes.md"), (2, "Zebra.md")])
+
+    def test_count_order_breaks_ties_by_name(self):
+        rows = [(5, "b.md"), (9, "big.txt"), (5, "a.md")]
+        self.assertEqual(linecount.sort_rows(rows, "count"),
+                         [(9, "big.txt"), (5, "a.md"), (5, "b.md")])
+
+    def test_name_order_is_byte_order(self):
+        # Uppercase before lowercase, because bytes: 'Z' is 0x5a and 'a' is 0x61.
+        self.assertEqual(linecount.sort_rows(self.ROWS, "name"),
+                         [(2, "Zebra.md"), (7, "apple.md"), (5, "notes.md")])
+
+    def test_name_order_survives_a_name_that_is_not_utf_8(self):
+        # The name as `os.scandir` would hand it over. Comparing `os.fsencode`d names keeps this
+        # defined; comparing `str` would order by surrogates instead (ADR-0008).
+        odd = os.fsdecode(b"bad\xff.txt")
+        rows = [(1, odd), (2, "bad.txt")]
+        self.assertEqual(linecount.sort_rows(rows, "name"), [(2, "bad.txt"), (1, odd)])
+
+    def test_sort_rows_does_not_mutate_its_input(self):
+        rows = list(self.ROWS)
+        linecount.sort_rows(rows, "name")
+        self.assertEqual(rows, self.ROWS)
+
+
+class SortTest(unittest.TestCase):
+    """WI-0003 end to end: the script run as a user would run it, with `--sort`."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.folder = self.tmp.name
+        self.addCleanup(self.tmp.cleanup)
+
+    def file(self, name, lines, folder=None):
+        return write(folder or self.folder, name, b"x\n" * lines)
+
+    def ac1_folder(self):
+        """The folder AC1 names: Zebra.md 2 lines, apple.md 7, notes.md 5."""
+        self.file("Zebra.md", 2)
+        self.file("apple.md", 7)
+        self.file("notes.md", 5)
+
+    def test_ac1_name_order(self):
+        self.ac1_folder()
+        result = run("--sort", "name", self.folder)
+        self.assertEqual(result.stdout,
+                         b" 2  Zebra.md\n 7  apple.md\n 5  notes.md\n14  total\n")
+        self.assertEqual(result.stderr, b"")
+        self.assertEqual(result.returncode, 0)
+
+    def test_ac2_two_folders_line_up(self):
+        # The human's own measure: same names, different contents, same order in both outputs.
+        self.file("notes.md", 3)
+        self.file("todo.md", 1)
+        self.file("ideas.md", 2)
+        with tempfile.TemporaryDirectory() as other:
+            self.file("notes.md", 40, folder=other)
+            self.file("todo.md", 12, folder=other)
+            self.file("ideas.md", 7, folder=other)
+            first = run("--sort", "name", self.folder)
+            second = run("--sort", "name", other)
+        expected = [b"ideas.md", b"notes.md", b"todo.md"]
+        self.assertEqual(row_names(first.stdout), expected)
+        self.assertEqual(row_names(second.stdout), expected)
+        # The counts really do differ, so the shared order is not a coincidence of equal files.
+        self.assertNotEqual(first.stdout, second.stdout)
+        self.assertEqual((first.returncode, second.returncode), (0, 0))
+
+    def test_ac3_count_is_byte_identical_to_no_flag(self):
+        self.ac1_folder()
+        spelled = run("--sort", "count", self.folder)
+        implied = run(self.folder)
+        self.assertEqual(spelled.stdout, implied.stdout)
+        self.assertEqual(spelled.stderr, implied.stderr)
+        self.assertEqual(spelled.returncode, implied.returncode)
+
+    def test_ac4_default_output_is_still_the_count_order(self):
+        self.ac1_folder()
+        result = run(self.folder)
+        self.assertEqual(result.stdout,
+                         b" 7  apple.md\n 5  notes.md\n 2  Zebra.md\n14  total\n")
+        self.assertEqual(result.stderr, b"")
+        self.assertEqual(result.returncode, 0)
+
+    def test_ac5_no_short_form(self):
+        self.ac1_folder()
+        result = run("-s", "name", self.folder)
+        self.assertEqual(result.stdout, b"")
+        self.assertNotEqual(result.stderr, b"")
+        self.assertEqual(result.returncode, 2)
+
+    def test_ac6_empty_folder_whatever_the_order(self):
+        for order in ("name", "count"):
+            with self.subTest(order=order):
+                result = run("--sort", order, self.folder)
+                self.assertEqual(result.stdout, b"no files\n")
+                self.assertEqual(result.stderr, b"")
+                self.assertEqual(result.returncode, 0)
+
+    def test_ac7_bad_value_is_one_line(self):
+        self.ac1_folder()
+        result = run("--sort", "size", self.folder)
+        self.assertEqual(result.stdout, b"")
+        self.assertEqual(len(result.stderr.splitlines()), 1)
+        self.assertTrue(result.stderr.startswith(b"linecount: --sort: "), result.stderr)
+        self.assertEqual(result.returncode, 2)
+
+    def test_ac7_missing_value_is_argparse_s(self):
+        self.ac1_folder()
+        # `--sort` last: argparse has no value to take. `--sort <folder>`: the folder is taken as
+        # the value, and the positional is then missing. Both are usage errors, and ours is not
+        # involved in either.
+        for args in ((self.folder, "--sort"), ("--sort", self.folder)):
+            with self.subTest(args=args):
+                result = run(*args)
+                self.assertEqual(result.stdout, b"")
+                self.assertIn(b"usage:", result.stderr)
+                self.assertEqual(result.returncode, 2)
+
+    def test_ac8_spellings_agree(self):
+        self.ac1_folder()
+        runs = [run("--sort", "name", self.folder),
+                run(self.folder, "--sort", "name"),
+                run("--sort=name", self.folder)]
+        for other in runs[1:]:
+            self.assertEqual(other.stdout, runs[0].stdout)
+            self.assertEqual(other.stderr, runs[0].stderr)
+            self.assertEqual(other.returncode, runs[0].returncode)
+
+    def test_ac9_top_and_sort_together_keep_their_shape(self):
+        # Deliberately says nothing about *which* files are selected: WI-0003 left that open and
+        # ADR-0009 records why. Shape only — and a traceback here would be a defect.
+        self.ac1_folder()
+        result = run("--top", "2", "--sort", "name", self.folder)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stderr, b"")
+        lines = result.stdout.splitlines()
+        self.assertLessEqual(len(lines) - 1, 2)
+        self.assertTrue(lines[-1].endswith(b"total (all 3 files)"), lines[-1])
+
+
 if __name__ == "__main__":
     unittest.main()

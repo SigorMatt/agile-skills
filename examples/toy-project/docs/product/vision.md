@@ -1,10 +1,10 @@
 ---
 title: linecount vision
-version: 1
+version: 3
 status: current
-updated: 2026-08-16T21:13:44Z
-updated-by: intake
-updated-for: EP-001
+updated: 2026-08-17T00:20:02Z
+updated-by: answer-questions
+updated-for: WI-0003
 ---
 
 # linecount vision
@@ -27,10 +27,21 @@ or three rows, which is the entire point — the existing alternative, `wc -l *`
 same numbers in glob order and leaves the reader to scan for the largest, and it fails
 outright when the folder contains a subdirectory.
 
+Two flags exist, and both narrow or re-angle that same answer rather than adding a second job:
+
+- **`--top N`** (delivered, WI-0002) shows only the N largest files. The total row still counts
+  every file in the folder and says so, because "how much is in this folder" is the question
+  being answered and the number must not shrink when fewer rows are asked for.
+- **`--sort name` / `--sort count`** (delivered, WI-0003) chooses the row order. `count` is the default and needs no flag. `name` orders the
+  rows by filename instead, which answers a second question the author actually has: run over
+  two folders that are meant to hold the same notes, a count-ordered listing shuffles
+  differently in each, and a name-ordered one lines up so the two can be compared by eye.
+
 Two properties matter as much as the counting itself:
 
-- **No flags for the common case.** If the obvious output needs several arguments, the tool has
-  failed on its own terms.
+- **No flags for the common case.** The flags above are for narrowing and for comparing; the
+  question the tool exists for is answered with nothing but a folder path. If the obvious output
+  needs several arguments, the tool has failed on its own terms.
 - **A number, not a stack trace.** Folders contain unusual things. Encountering one is not an
   error condition; being unable to read the folder at all is, and that is reported plainly with
   a non-zero exit so it is noticed inside a script.
@@ -52,4 +63,6 @@ was ruled out by him at intake, not assumed.
 
 | version | when | by | for | what changed |
 |---------|------|----|-----|--------------|
+| 3 | 2026-08-17T00:20:02Z | answer-questions | WI-0003 | `--sort` recorded as delivered rather than "being added … not delivered at the time of writing". The bullet's description of what the flag does is unchanged — it was written from the refined criteria and matches what shipped. Answering `WI-0003/Q-001`, filed by `review-close` because merging the branch made v2's wording stale and D7/DE4 test for exactly that, and `doc-header.md` §5 does not permit `review-close` to edit this document |
+| 2 | 2026-08-16T23:50:12Z | intake | EP-001 | Recorded the two flags: `--top N` as delivered, and `--sort name` / `--sort count` as being added for WI-0003 and not yet delivered. Named the second question the tool now answers — comparing two folders that should hold the same files — and restated "no flags for the common case" so it survives the flags existing. Asked for by the human when EP-001 was reopened: "I'd rather the vision described what the tool actually does … nobody ever added `--top` to that vision either, so put that in too" |
 | 1 | 2026-08-16T21:13:44Z | intake | EP-001 | First version, from the intake conversation for EP-001 |

@@ -7,12 +7,13 @@ repository.
 ## Branches
 
 ```text
-main  0fc856b  tracker: the epic closed a second time against its success measures (refs EP-001)
+main  f16aa0f  tracker: close EP-001 with all seven success measures re-run (refs EP-001)
 wi/BUG-0001  15a0216  tracker: the review, the closed item, and the merge (refs BUG-0001)
 wi/BUG-0002  c9f3498  tracker: the review, the closed item, and the merge (refs BUG-0002)
 wi/BUG-0003  6f7917e  tracker: the review, the closed item, and the merge (refs BUG-0003)
 wi/WI-0001  461e37f  tracker: the review, the closed item, and the merge (refs WI-0001)
 wi/WI-0002  6201e33  tracker: the review, the closed item, and the merge (refs WI-0002)
+wi/WI-0003  035b169  tracker: the review, the closed item, and the merge (refs WI-0003)
 ```
 
 ## BUG-0001
@@ -61,6 +62,8 @@ a95b1be tracker: the independent regression report, three bug items, and Q-001 (
 
 ```text
 $ git log --grep EP-001 --oneline --all
+f16aa0f tracker: close EP-001 with all seven success measures re-run (refs EP-001)
+7073bca tracker: reopen EP-001 and create WI-0003 for --sort (refs EP-001)
 0fc856b tracker: the epic closed a second time against its success measures (refs EP-001)
 df475d5 tracker: Q-001 answered and EP-001 reopened for the three bugs (refs EP-001)
 a95b1be tracker: the independent regression report, three bug items, and Q-001 (refs EP-001)
@@ -72,6 +75,7 @@ a95b1be tracker: the independent regression report, three bug items, and Q-001 (
 
 ```text
 $ git log --grep WI-0001 --oneline --all
+035b169 tracker: the review, the closed item, and the merge (refs WI-0003)
 a95b1be tracker: the independent regression report, three bug items, and Q-001 (refs EP-001)
 461e37f tracker: the review, the closed item, and the merge (refs WI-0001)
 d41a046 tracker: the review and the record of a gate that refuses every exit (refs WI-0001)
@@ -97,5 +101,20 @@ abc7c66 linecount: add --top N, limiting the rows but not the total (refs WI-000
 4825e16 tracker: the plan, ADR-0004, ADR-0005, and overview v2 (refs WI-0002)
 711039e tracker: the refined item and its Q&A record (refs WI-0002)
 3b41d56 tracker: the refined item and its Q&A record (refs WI-0001)
+```
+
+## WI-0003
+
+```text
+$ git log --grep WI-0003 --oneline --all
+035b169 tracker: the review, the closed item, and the merge (refs WI-0003)
+383e35d tracker: Q-001 answered; vision v3 records --sort as delivered (refs WI-0003)
+821eaef tracker: Q-001 filed, D7 blocks closing until the vision is updated (refs WI-0003)
+b6c7414 tracker: the verification report and the ticked criteria (refs WI-0003)
+8792e41 tracker: the implementation report and this item's record (refs WI-0003)
+214dc3d linecount: add --sort to order the rows by name or by count (refs WI-0003)
+4b02d9b tracker: the plan, ADR-0009, and overview v5 (refs WI-0003)
+2cf8fa1 tracker: the refined item and its Q&A record (refs WI-0003)
+7073bca tracker: reopen EP-001 and create WI-0003 for --sort (refs EP-001)
 ```
 
