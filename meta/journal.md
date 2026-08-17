@@ -1632,3 +1632,29 @@ reviewer's call.
   history including `awaiting-answer`; and **no `[gates forced]` row anywhere in the workspace**.
 - **`./scripts/check`** passes with no skipped steps.
 - **Result:** META-070d done.
+
+---
+
+## 2026-08-17 — META-071 — `meta/FINAL-REPORT.md`
+
+- **Unit:** META-071
+- **Inputs read:** `meta/plan.md` (the filled acceptance mirror), the whole of `meta/journal.md`,
+  all five ADRs, `examples/toy-project/AUDIT.md`.
+- **What the report says, and what it refuses to say:**
+  - It leads with the six defects the toy run exposed, and states that four of them were **caused
+    by this build** — two of them by fixes to earlier defects. That is the honest shape of what
+    happened, and burying it would have made the report useless as input to the next iteration.
+  - It names the most important finding in the whole build: **the review layers do not catch a
+    plausible false claim.** Every machine-decidable gate held; every gate resting on a
+    human-style read did not. The audit found a factually wrong justification propagated into
+    five documents and passed by six review layers.
+  - It states that the chronology in the paper trail is orderable but not accurate — a direct
+    cost of my own clamp fix — and that independence is procedural rather than adversarial.
+  - It lists the three specified paths that have never run, rather than implying full coverage.
+  - It refuses the quality claim outright: the methodology guarantees the checks ran and the
+    reasoning was recorded, which is a different and smaller thing than guaranteeing quality.
+  - The first recommended iteration follows directly from the evidence: four of the audit's six
+    findings were mechanically checkable and needed no judgement, so the machine-checkable
+    perimeter should grow before anything else is deepened.
+- **Gates:** `./scripts/check` — all steps passed, no skips.
+- **Result:** META-071 done.

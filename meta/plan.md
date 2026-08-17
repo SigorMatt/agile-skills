@@ -88,7 +88,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 ## Phase 7 — close
 
 - [x] **META-070** — Acceptance sweep: re-verify every box in `seed/03-ACCEPTANCE.md` with evidence.
-- [ ] **META-071** — `meta/FINAL-REPORT.md`.
+- [x] **META-071** — `meta/FINAL-REPORT.md`.
 
 ## Acceptance checklist mirror (`seed/03-ACCEPTANCE.md`)
 
