@@ -87,38 +87,79 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ## Phase 7 — close
 
-- [ ] **META-070** — Acceptance sweep: re-verify every box in `seed/03-ACCEPTANCE.md` with evidence.
+- [x] **META-070** — Acceptance sweep: re-verify every box in `seed/03-ACCEPTANCE.md` with evidence.
 - [ ] **META-071** — `meta/FINAL-REPORT.md`.
 
 ## Acceptance checklist mirror (`seed/03-ACCEPTANCE.md`)
 
-Filled in during META-070; each box needs an evidence pointer, not an assertion.
+Filled in at META-070. Every box carries a pointer to evidence, and the boxes that are **not**
+met say so rather than being argued into a tick.
 
 ### A. Methodology completeness
-- [ ] A1 all 8 skills valid; `scripts/lint-skills` passes
-- [ ] A2 `pipeline.yaml` full status graph; `next` matches it
-- [ ] A3 `spec/` complete (contract, item, journal, history, question, doc header, IDs, DoR, DoD)
-- [ ] A4 no runtime names under `methodology/` or `spec/`
+- [x] **A1** all 8 skills valid; `scripts/lint-skills` passes — `./scripts/check` step 2, "8 skill
+      contracts, 0 errors". Negative-tested at META-031: six injected faults, six reported.
+- [x] **A2** `pipeline.yaml` full status graph; `next` matches it — 10 statuses, 18 transitions;
+      **no non-terminal status without an owner**, cross-checked in both directions by
+      `lint-skills` (`ownership.unclaimed` / `ownership.race`).
+- [x] **A3** `spec/` complete — 9 files: skill contract, work item, journal+history, question,
+      doc header, IDs/statuses, DoR/DoD, workspace layout, index.
+- [x] **A4** no runtime names under `methodology/` or `spec/` — enforced by `lint-skills`'
+      `runtime-neutrality` scan; negative-tested at META-031.
 
 ### B. Adapter
-- [ ] B1 renderer produces valid skills for all 8; docs URLs recorded in an ADR
-- [ ] B2 install path documented and tested (discovery + triggering)
-- [ ] B3 gates hard-enforced; deliberate failing case demonstrated and journaled
-- [ ] B4 adapter contract complete enough to write a Codex CLI adapter
+- [x] **B1** renderer produces valid skills for all 8; docs URLs recorded — `dist/MANIFEST.md`;
+      `meta/adr/ADR-0001` records every URL and the fetch date, plus what could **not** be
+      confirmed.
+- [x] **B2** install path documented and tested — `adapters/claude-code/README.md` §2;
+      installed into a scratch project with a pre-existing `settings.json` (foreign hook and
+      permissions both survived), re-installed idempotently, uninstalled cleanly; then installed
+      into the toy project and used for the entire run.
+- [x] **B3** gates hard-enforced; failing case demonstrated — `meta/evidence/gate-failure-demo.md`
+      with a reproducible script: a failing `tests-pass` refuses `planned → in-progress`, the
+      status is unchanged afterwards, the hook denies the bypass, and the identical command
+      succeeds once the cause is fixed.
+- [x] **B4** adapter contract complete enough for a Codex CLI adapter — `adapters/README.md`,
+      five capabilities and a 12-box conformance checklist; §6 records the two questions that
+      implementer will hit first.
 
 ### C. End-to-end proof
-- [ ] C1 toy project driven idea → done using only rendered skills
-- [ ] C2 executed by context-free subagents
-- [ ] C3 every skill exercised, incl. a full `answer-questions` round trip
-- [ ] C4 a `verify`-filed BUG reaches done
-- [ ] C5 `validate-workspace` green; `board.md` renders
-- [ ] C6 audit test passes → `AUDIT.md`
+- [x] **C1** toy project idea → done using only rendered skills — `examples/toy-project/`;
+      6 items and an epic, all `done`; 244 lines of tool, 77 tests.
+- [x] **C2** executed by context-free subagents — every stage run by a subagent restricted to the
+      project directory, given only the installed skills and `CONSUMER-PROMPT.md`.
+- [x] **C3** every skill exercised, incl. a full `answer-questions` round trip — six questions
+      filed by `plan`, `implement`, `verify` and `review-close`; the blocking one suspended
+      WI-0003 (`in-review → awaiting-answer`, `resume-to: in-review`), the architect answered it
+      from the record, `vision.md` went to v3, and the item resumed at exactly the recorded
+      status. It arose organically from `spec/doc-header.md` §5, not from the exercise.
+- [x] **C4** a `verify`-filed BUG reaches done — three of them (BUG-0001/2/3), all filed by an
+      independent regression pass, all `done` with `outcome: delivered` and `found-in: WI-0001`,
+      each with a regression test demonstrated to fail against the pre-fix build.
+- [x] **C5** `validate-workspace` green; board renders — 7 items, 11 documents, 0 errors,
+      0 warnings; `tracker/board.md` regenerated and staleness-checked.
+- [x] **C6** audit test passes → `AUDIT.md` — a fresh agent restricted to the tracker, docs, git
+      log and source reconstructed all four questions and gave a **qualified** sign-off, naming
+      six specific defects the review layers missed.
 
 ### D. Consumer readiness
-- [ ] D1 `USAGE.md` complete
-- [ ] D2 `CONSUMER-PROMPT.md` is the prompt actually used
-- [ ] D3 `README.md` project story
+- [x] **D1** `USAGE.md` complete — install, workspace init, permissions for long runs (including
+      the `dontAsk` warning), running, reading the trail, resuming, and debugging.
+- [x] **D2** `CONSUMER-PROMPT.md` is the prompt actually used — byte-identical to the copy placed
+      in the toy project and used for every run.
+- [x] **D3** `README.md` project story — with an explicit "what this is not".
 
 ### E. Hygiene
-- [ ] E1 clean incremental git history referencing META IDs
-- [ ] E2 journal + ADRs + BLOCKERS + FINAL-REPORT
+- [x] **E1** clean incremental history with META refs — every commit references a META unit.
+- [x] **E2** journal + ADRs + BLOCKERS + FINAL-REPORT — `meta/journal.md` covers every unit
+      including the six defects the runs exposed; 5 ADRs; `BLOCKERS.md` empty as expected.
+
+### Not met, stated plainly
+
+- **The Definition of Ready override path was never exercised.** It was attempted deliberately
+  at META-070b and `refine` **refused to record a false override**, correctly: no criterion was
+  actually failing. That produced R10 instead — a real improvement to the checklist — but the
+  override path itself remains untested. Carried to `meta/FINAL-REPORT.md`.
+- **`blocked` was never reached.** No run hit an impasse no skill could resolve, so that status
+  and its recovery path are unexercised.
+- **`verifying → in-progress` (a verification send-back) never fired**, nor did
+  `in-review → in-progress` (a review rejection). Both are specified and neither has run.
