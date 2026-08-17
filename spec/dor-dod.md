@@ -30,6 +30,16 @@ reviewer cannot tell which criterion was the weak one.
 | R7 | The item is independently deliverable: nothing in `depends-on` is unfinished, or the dependency is recorded and the item is sequenced after it | [auto] |
 | R8 | The refinement Q&A is recorded verbatim in `artifacts/refinement-qa.md`, including which answers came from the human and which were assumed | [auto] |
 | R9 | Estimated to be deliverable as one coherent change. If it is not, it was split, and this item is one of the parts | [skill] |
+| R10 | Every combination of the behaviours this item introduces — its options, its flags, its modes — either has a stated behaviour in a criterion, or is named in `## Out of scope`, or is recorded in `## Notes` as deliberately unconstrained with who left it so | [skill] |
+
+R10 was added after a real run found the checklist could not express what was wrong. An item
+specified `--sort`, an earlier item had specified `--top`, and nothing anywhere said what the two
+did *together*. Every other criterion passed: each individual criterion was decidable, the story
+was complete, the scope was stated. `refine` correctly refused to record a Definition of Ready
+override, because naming a criterion that was not failing would have been a false entry — and it
+was right that none was failing. The gap was in the checklist. R10 does not force the
+combination to be *decided*; it forces it to be **visible**, which is the difference between an
+open question someone can find and one nobody knows exists.
 
 ### The override
 

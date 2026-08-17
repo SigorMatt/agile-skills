@@ -1520,3 +1520,39 @@ reviewer's call.
   the pattern was visible at all.
 - **Commands run:** `./scripts/check` → all steps passed; re-rendered and re-installed.
 - **Result:** fixed.
+
+---
+
+## 2026-08-17 — META-070b — the Definition of Ready gains R10, because a run proved it was missing
+
+- **Unit:** META-070b
+- **What happened:** the extra work item (WI-0003, `--sort`) was set up specifically so the
+  simulated human would push it through with one thing unresolved — how `--sort name` and
+  `--top N` behave together — expecting `refine` to record a Definition of Ready override, since
+  the override path had never been exercised.
+- **`refine` refused, and was right.** Its reasoning, verbatim from the run: the override record
+  has a mandatory field naming *which criteria were not met*, and walking R1–R9 it found all nine
+  passing — every one of the ten criteria was individually decidable. "To record the override I
+  would have had to name a criterion that isn't failing, and a history row saying an item was
+  forced through a gate it actually passed is a false entry that devalues every real override in
+  this repo."
+- **That is a defect in my checklist, not in its judgement.** There was no criterion an item
+  could fail by leaving a combination of its own behaviours unconstrained. The skill was more
+  rigorous than the spec it was applying, and it said so instead of manufacturing a record that
+  would have looked correct.
+- **The fix:** `spec/dor-dod.md` gains **R10** — every combination of the behaviours an item
+  introduces either has a stated behaviour in a criterion, or is named in `## Out of scope`, or
+  is recorded in `## Notes` as deliberately unconstrained **with who left it so**. R10
+  deliberately does not force a combination to be *decided*; it forces it to be **visible**,
+  which is the difference between an open question someone can find and one nobody knows exists.
+  The spec records the run that produced it.
+- **What it did instead, which is what R10 now requires anyway:** tagged the human's answer
+  `[unresolved]`, quoted it in full, wrote both readings with a worked example into `## Notes`,
+  and instructed `implement` not to escalate it — because escalating would have got it decided
+  and written down as a decision, which is exactly what the human refused.
+- **Consequence for acceptance C3:** the Definition of Ready override remains unexercised, and
+  the attempt to exercise it produced something more useful than a tick would have been. Recorded
+  as an honest gap; the final report says so rather than claiming the box.
+- **Commands run:** `./scripts/check` → all steps passed after re-render.
+- **Result:** R10 added. WI-0003 is running through the pipeline under the checklist it was
+  refined against; the journals record which version applied.
