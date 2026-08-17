@@ -105,6 +105,20 @@ record-completeness criterion on counts that were themselves wrong. **Every gate
 decide held; every gate resting on a human-style read did not.** The machine-checkable perimeter
 needs to grow.
 
+It is worse than that, and the audit's second pass is what showed it. A seventh work item ran
+*after* those findings were raised, and **the wrong claim spread into an eighth document** —
+written by a skill that re-quoted the sentence rather than re-checking it — while three of the
+four corrections the auditor required were never made. Its diagnosis is structural and correct:
+**the Definition of Done asks whether *this* change invalidated a document; nothing asks whether
+something written three items ago is still true.** That absence is why one false sentence
+survived two verifications, three reviews and two epic closures.
+
+The methodology now has `D12` and `DE6` for exactly this, added in response — a scoped re-read of
+the claims about behaviour an item touched, and an epic-level counterpart. **Neither has been
+exercised.** They are the right shape of fix and they are, as of this report, untested prose about
+untested prose — which is the honest status and precisely why recommendation 1 below is to make
+this class mechanical rather than to trust another checklist item.
+
 **The paper trail's chronology is not trustworthy.** The monotonic clamp keeps the record
 *orderable*, not *accurate*: six transitions ended up at one-second intervals, and one execution
 is dated over two hours apart between its history row and its journal entry. Real chronology is

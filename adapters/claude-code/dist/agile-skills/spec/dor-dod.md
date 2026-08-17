@@ -86,6 +86,19 @@ time and records the result in the filing journal entry.
 | D9 | The change is merged into the trunk, and the branch's work is not left only on the branch | [auto] |
 | D10 | `verify` ran **after** the last code change. A verification older than the code it verifies does not count | [auto] |
 | D11 | The review record exists at `artifacts/review.md` and states what was examined, not only the verdict | [skill] |
+| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it | [skill] |
+
+### D12 exists because D7 was not enough
+
+D7 asks whether *this* change invalidated a document. Nothing asked whether something written
+three items ago is still true. An independent audit of a real run found the consequence: a
+factually wrong justification for a decision reached two comments in shipped source, an ADR and
+an architecture overview — and then, after the audit raised it, **spread to a seventh document**,
+because every skill that touched the area re-quoted the sentence rather than re-checking it.
+Every machine-decidable gate held throughout; every gate resting on a human-style read did not.
+
+D12 is scoped deliberately — the behaviour *this item touched*, not all of `docs/` — so it is a
+real read of a few paragraphs rather than a ritual nobody performs.
 
 ### D3 and D10 are the two that get skipped
 
@@ -106,6 +119,13 @@ to `done` with a note.
 | DE3 | The epic's `## Success measures` are each addressed — met, or explicitly not met with the reason | [skill] |
 | DE4 | `docs/product/` reflects what was actually built, not what was proposed | [skill] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
+| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written | [skill] |
+
+DE6 is the epic-level counterpart of D12, and it is where a claim that no single item touched
+gets caught. Treat it the way a regression pass treats behaviour: the run that found three real
+defects in delivered code existed because someone re-checked behaviour nobody had changed. Prose
+deserves the same, and in the run that produced this rule, every uncorrected finding lived in
+prose.
 
 DE3 is the criterion that stops a pipeline from mistaking "all the tickets are closed" for
 "the goal was achieved". If a success measure was not met, closing the epic is still allowed —

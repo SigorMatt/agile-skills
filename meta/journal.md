@@ -1658,3 +1658,39 @@ reviewer's call.
     perimeter should grow before anything else is deepened.
 - **Gates:** `./scripts/check` — all steps passed, no skips.
 - **Result:** META-071 done.
+
+---
+
+## 2026-08-17 — META-071a — the audit's second pass, and the Definition of Done gains D12/DE6
+
+- **Unit:** META-071a
+- **What the addendum found.** The sixth item's own record is the cleanest in the project — all
+  ten criteria verified by running them, and this time **every numeric claim reconciles** (the
+  `172 0` numstat, the 63-line diff, both commit counts), which the first pass had specifically
+  faulted. The blocking question was judged a good one, honestly marked `blocking: true`, and the
+  resume matched the recorded `resume-to` exactly. The epic's reopen was judged not only
+  legitimate but *better handled than it had to be*: the record noticed §3.4 is written about
+  defects while this was a feature, put the choice to the human rather than taking it, and
+  **raised the epic's bar before re-clearing it** by adding a seventh success measure.
+- **And then the finding that matters.** Three of the four corrections the auditor required after
+  the first pass were **never made**, and the false `ls -b` justification **spread to a seventh
+  document** — written *after* the audit raised it, by a skill that re-quoted the sentence rather
+  than re-checking it. A record-completeness counting error the auditor had flagged on one item
+  **recurred** on another.
+- **The auditor's diagnosis, which is structural and which I accept:** the Definition of Done
+  asks whether *this* change invalidated a document; **nothing asks whether something written
+  three items ago is still true.** That absence is what let one wrong sentence survive two
+  verifications, three reviews and two epic closures, and it is why every uncorrected finding in
+  the project lives in prose rather than in behaviour.
+- **The fix:** `spec/dor-dod.md` gains **D12** (every claim in `docs/` about the behaviour *this
+  item touched* is still true, checked by reading it against the code) and **DE6**, its
+  epic-level counterpart. D12 is deliberately scoped to the behaviour the item touched, so it is
+  a real read of a few paragraphs rather than a ritual nobody performs. The spec records the
+  audit that produced both.
+- **Recorded in the final report, not softened:** D12 and DE6 have **not been exercised**. They
+  are the right shape of fix and are currently untested prose about untested prose — which is
+  exactly why the report's first recommendation is to make this class *mechanical* rather than to
+  trust another checklist item. Four of the audit's six findings needed no judgement at all: they
+  were unresolvable shas, an arithmetic error, and a repeated sentence whose wording had diverged.
+- **Gates:** `./scripts/check` — all steps passed, no skips.
+- **Result:** META-071a done.

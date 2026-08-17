@@ -572,3 +572,256 @@ section 5 — the clock failure, both AC6 wordings, the `BrokenPipeError` measur
 the record disclosed about itself and I merely confirmed. That is the behaviour I want from a
 record. It is the ones it did not disclose that keep this a qualified sign-off rather than a clean
 one.
+
+---
+---
+
+# Addendum — WI-0003 and the epic's third closure
+
+**Audited 2026-08-17, after the report above.** The project changed under me: a sixth item was
+added and closed, and `EP-001` was reopened a second time and closed a third. Same read
+restrictions as before. Same method — I ran every acceptance criterion myself rather than reading
+the reports' word for it.
+
+This addendum covers only what changed, plus the status of the four corrections the report above
+required.
+
+## A1. What the sixth item added, and whether the record supports it
+
+`WI-0003` adds `--sort name` / `--sort count`, choosing whether rows come out in filename order or
+in the delivered count order. The stated purpose is narrow and concrete: the author keeps two
+folders meant to hold the same notes, and a count-ordered listing shuffles them differently, so the
+two outputs cannot be compared by eye (`WI-0003/item.md` `## Story`; the human's own framing at
+`EP-001/journal.md` lines 689–694).
+
+The tool grew from 191 to 244 lines and from 60 to 77 tests, gaining `parse_sort` and `sort_rows`.
+One ADR (ADR-0009), `overview.md` v5 and `vision.md` v3 accompany it.
+
+**I ran all ten acceptance criteria against the delivered code.** All ten hold as written:
+
+| AC | what I ran | result |
+|----|-----------|--------|
+| AC1 | `--sort name` on `Zebra.md`(2), `apple.md`(7), `notes.md`(5) | ` 2  Zebra.md` / ` 7  apple.md` / ` 5  notes.md` / `14  total`, exit 0 — byte order, uppercase first, exactly as written |
+| AC2 | `--sort name` on two folders with the same three names and different counts | both name columns `ideas.md, notes.md, todo.md`; identical order despite counts of 1/3/9 against 44/20/2 |
+| AC3 | `--sort count` vs no flag, `cmp` on both streams | identical, both exit 0 |
+| AC4 | the 77-test suite; the no-flag path | passes; no-flag output unchanged |
+| AC5 | `-s name` | argparse error, empty stdout, exit 2 |
+| AC6 | both values on an empty folder | `no files`, exit 0, no total row |
+| AC7 | `--sort size`; `--sort` with no value | `linecount: --sort: 'size' is not 'name' or 'count'` — one line, exit 2; missing value falls to argparse, exit 2 |
+| AC8 | all three spellings, `cmp` | identical |
+| AC9 | `--top 2 --sort name` | exit 0, two rows, `14  total (all 3 files)` |
+| AC10 | `python3 -m unittest discover` | `Ran 77 tests … OK` |
+
+I also re-ran the three earlier bug reproductions against the new code: the symlink loop, the
+all-unreadable folder and the undecodable filename all still behave as their items require. Nothing
+regressed.
+
+**The best thing in this item is what it refused to decide.** `--top` and `--sort` together select
+different files under two equally defensible readings. The human was asked, declined, and then
+declined the fallback of letting the analyst record an assumption in his name
+(`WI-0003/artifacts/refinement-qa.md` lines 55–64). What the record then did is the part worth
+noting: `refine` tagged it `[unresolved]`, `plan` wrote ADR-0009 to explain that nothing was
+decided and why, AC9 was written to bound the *shape* of the combination (exit 0, at most N rows,
+the labelled total) without fixing its content, and the item's `## Notes` explicitly instruct
+`plan`, `implement` and `verify` not to file a question about it, because escalating would get it
+decided by someone other than him.
+
+I checked whether that held. It did. `--top 2 --sort name` on the criteria's own folder returns
+`Zebra.md` and `apple.md` — the two alphabetically first, not the two largest — which is precisely
+what ADR-0009 line 71 says falls out of writing no code for it, what `impl-report.md` line 72
+records as an observation, what `verify-report.md` line 26 refuses to treat as a verdict, and what
+`item.md` `## Notes` carries forward as an accepted gap. Four documents, one consistent story, and
+none of them claims it was chosen. Leaving a question open through plan, implementation,
+verification and review without anyone quietly closing it is harder than answering it, and it was
+done.
+
+**The numeric claims check out this time,** which matters given what the first report found. The
+test file is 814 lines against 642 before, exactly the `172 0` numstat the review and verify report
+both cite; `linecount.py` is 244 against 191, consistent with the 63-line figure at +63/−10; and
+the two commit counts (`all 1 commit(s)` at implementation, `all 5 commits` at review) are both
+correct against the merge bases the record names. This is the class of claim that failed repeatedly
+in the first five items.
+
+## A2. The reopening and the third closure
+
+**Legitimate on its face, and the record explains it.** `EP-001/history.md` carries
+`done → open` at 23:49:51Z by `intake`, reason "reopened for WI-0003: the human asked for a
+`--sort` option against the delivered tool", and `open → done` at 00:27:37Z. The mechanism is the
+same `spec/ids-and-statuses.md` §3.4 route used for the three bugs.
+
+Two things about it are better than they had to be:
+
+- **The record notices that §3.4 does not obviously cover this case.** §3.4 is written about
+  *defects*; this is a feature request. `EP-001/journal.md` lines 633–639 says so, states that the
+  honest reading is arguable, and records that the choice was put to the human rather than taken by
+  the analyst — "it's the same tool and the same folder-full-of-files problem". That is the right
+  handling of a rule being stretched.
+- **The epic's success measures were amended at the reopen, not left alone.** A seventh measure was
+  added — the two-folder comparison, in the human's own words — with the explicit reasoning that a
+  reopened epic still listing only the measures its first closure met would let `review-close` close
+  it again without testing what the new item delivers (`EP-001/journal.md` lines 640–645). Each
+  measure is marked in `item.md` as added at the reopen, so a reader can see which bar the earlier
+  closures were judged against. I re-ran the seventh measure myself: two folders, same five names,
+  different contents — count order gives two different name columns, `--sort name` gives identical
+  ones. Met.
+
+One wrinkle, disclosed rather than found by me: WI-0003 was created at 23:48:51Z and the epic
+reopened at 23:49:51Z, so for sixty seconds a draft item sat under a closed epic — the exact state
+that produced `EP-001/Q-001` the first time round. The intake entry names the resulting
+`workspace-valid` failure and says the move fixes it (lines 748–750). Also recorded there:
+`scripts/transition` still cannot clear `outcome` on a reopened epic, so the field had to be edited
+out by hand for the second time. Both are logged as methodology defects rather than quietly
+absorbed.
+
+## A3. The blocking question
+
+`WI-0003/Q-001` is the first question in this project's history to suspend an item, and it is a
+good one to have blocked on.
+
+- **Who filed it, and why they could not resolve it.** `review-close`, at `in-review`, with every
+  other Definition-of-Done criterion already passing. D7 requires that documents the change
+  invalidated be updated; `vision.md` v2 described `--sort` as "being added … not delivered at the
+  time of writing", which merging would make false. `review-close` may not edit `product/vision.md`
+  — `spec/doc-header.md` §5 allocates that document to `intake`, `refine` and `answer-questions` —
+  and the reason it may not is exactly the circularity in play here: it would be editing the
+  document and then certifying D7 and DE4 against its own edit (`Q-001` lines 35–40). So the skill
+  that found the problem was structurally barred from fixing it. That is the correct reason to file
+  rather than act.
+- **It was labelled honestly.** `blocking: true`, and the item genuinely moved to
+  `awaiting-answer` with `resume-to: in-review`. Contrast the first report's finding that
+  `BUG-0001/Q-001` was filed `blocking: false` while stating in its own text that it blocked
+  everything. This one does not do that.
+- **Who answered, and what changed.** `answer-questions` took option A: `vision.md` v2 → v3, the
+  `--sort` bullet's parenthetical changed to "(delivered, WI-0003)", with a change-log row. Nothing
+  else in the document was touched, and the answer says why the minimum edit was the right one. No
+  criterion was amended, no ADR written or superseded, and `Q-001` line 143 states explicitly that
+  ADR-0009 is untouched — the answer does not use the opening to settle the question the human
+  refused to settle.
+- **Did the item resume where the record says?** Yes. `history.md` row 12 is
+  `awaiting-answer → in-review`, actor `answer-questions`, matching the `resume-to` recorded on the
+  row that suspended it; the item then closed from `in-review` in the following row. The second
+  `review-close` execution is a separate journal entry, and `review.md` line 3 names both
+  executions. I checked all four and they agree.
+
+The answer also flags its own weak point without being asked to: the vision is edited saying
+"delivered" *before* the merge that delivers it, so the word is true only as of the execution that
+follows (`Q-001` lines 115–121). That is the kind of caveat most records leave out.
+
+One bookkeeping slip: `answered-at: 2026-08-17T00:20:02Z` is one second *after* the history row
+that resumed the item (`00:20:01Z`), so the record has the item resuming before the question was
+answered. Trivial in itself, and the same class as everything in A5.
+
+## A4. Status of the four corrections the report above required
+
+Plainly, one by one. **Three of the four are untouched.**
+
+**1. The `ls -b` rationale — NOT corrected, and it spread.** Still present, unchanged, in
+`src/linecount.py` lines 14 and 236, `ADR-0008` lines 53 and 106, and
+`docs/architecture/overview.md` line 66. It also propagated into a seventh document during this
+item: `WI-0003/artifacts/verify-report.md` line 52 records the undecodable name as "printed as
+`ls -b` prints it". I re-ran the comparison on the current code: `ls -b` prints `bad\377.txt`, the
+tool prints the raw byte, `wc` prints the raw byte. The claim was wrong when I raised it and is now
+repeated once more, in a document written after I raised it.
+
+**2. The stack-trace overclaim — NOT corrected, but the new closure is more careful.**
+`EP-001/journal.md` line 608 still reads "printing a number, never a stack trace". `BrokenPipeError`
+still reproduces on the delivered code — I ran it again: 5000 files piped to `head -1`, traceback,
+first-stage exit 1. The journal is append-only so that line cannot be edited, but nothing forbids a
+later entry correcting it, and this project has done exactly that before (the reversal of the
+epic's `outcome` field). No correcting entry exists. In mitigation, the third closure's own summary
+(lines 863–865) enumerates the input classes it survives — "subdirectories, unresolvable symlinks,
+unreadable files, binary files, names that are not valid UTF-8" — rather than repeating the
+absolute, and every class it names does hold. The new claim is defensible. The old one still stands.
+
+**3. The two dangling shas — NOT corrected.** `1d10023` (`EP-001/journal.md` line 543) and
+`2946f57` (`BUG-0003/artifacts/plan.md` line 12, repeated in that item's journal) still resolve
+against neither `GIT-LOG.md` nor `GIT-BRANCHES.md`. `plan.md` is an editable artifact — this
+project amended a plan in place during BUG-0003 — so at least one of the two was fixable.
+
+**4. The ride-alongs — one fixed, the rest not.** The question undercount **is** fixed: the third
+closure says "six questions asked and answered inside the record" (line 865) and DE5 says "six
+questions exist across the epic and its children", both of which I verified as correct. The
+`184`/`185` line-count gap, the impossible `164 → 175` figure against commit `06fc185`, and
+BUG-0002's wrong D5 counts are all untouched.
+
+Worth being precise about *why* the one that got fixed got fixed: not because it was on a list, but
+because `review-close` recounted the questions from scratch while closing the epic. The same is
+true of the vision's silence about `--top`, which the first report noted as an accepted gap — it was
+closed because the human raised it again at intake, not because anyone tracked it. This project has
+no route by which a known-wrong statement in a *closed* item's documents gets retired. D7 asks
+whether the current change invalidated a document; nothing asks whether anything already written is
+still true.
+
+## A5. New problems
+
+**1. The overview's change log got worse, not better.** My earlier finding was that v4
+(`01:36:00Z`) predated v3 (`01:50:00Z`). v5 is now stamped `2026-08-17T00:05:00Z` — earlier than
+both — and shares that timestamp exactly with v2. Three of five rows are out of chronological
+order and two different versions claim the same instant.
+
+**2. Three ADRs claim the same second.** ADR-0004, ADR-0005 (both WI-0002) and ADR-0009 (WI-0003)
+are all stamped `2026-08-17T00:05:00Z`, though `GIT-LOG.md` puts the commits that introduced them
+roughly four hours apart. The doc-header timestamps in `docs/` remain the one place the clock
+correction never reached.
+
+**3. History rows are now honest; journal headings still are not.** This is a real improvement and
+a real remaining gap. WI-0003's history rows track the git commits within a minute or two and several match
+exactly — the monotonic-clamp fix worked, and nothing in this item resembles the three bug items'
+six-second histories. But the journal headings are still chosen values, and they now cluster
+implausibly: the `verify` entry is headed `00:20:00Z` while its own history row and its own commit
+`b6c7414` are both `00:12:35Z`, and `verify-report.md` line 5 repeats the `00:20:00Z` figure. On
+the record, verification is therefore dated seven and a half minutes after it happened and *after*
+the `review-close` execution that filed `Q-001` about it (question created `00:15:13Z`). Three
+documents, three incompatible orderings of the same two events.
+
+**4. Another item miscount.** `EP-001/journal.md` line 752 records `validate-workspace` returning
+"8 items, 10 documents". There were seven items at that moment. The same entry's document count is
+right, and line 582 of the same file uses the same convention correctly for six.
+
+**5. The D5 counting error recurred, one item later.** The first report flagged
+`BUG-0002/artifacts/review.md` for certifying "a journal entry per execution; history chains" on
+counts that were wrong. `WI-0003/artifacts/review.md` line 10 does it again, and contradicts itself
+inside one sentence: "seven entries for seven skill executions (… `review-close` has two …)". Six
+other skills plus two `review-close` executions is eight, and `journal.md` holds eight entries. D5
+remains the criterion whose entire job is counting, and it remains the one being passed on bad
+counts.
+
+**6. An instruction to a downstream skill was overridden without the instructing document saying
+so.** `EP-001/journal.md` line 715 tells `refine` it "must choose, mark it `[assumed]`, and write it
+as a criterion" for the `--top`/`--sort` interaction. `refine` did not, because when it asked again
+the human refused the assumption route as well. That is the right outcome, and it is visible from
+the item — `refinement-qa.md` line 46 opens "You told me to pick", so the departure is deliberate
+and on the record. But a reader of the epic's journal alone is left with an instruction that was
+never carried out and no marker saying so. Reconcilable only by reading both files.
+
+## A6. Updated verdict
+
+**The sixth item does not change my sign-off, and standing alone it would earn a cleaner one than
+the first five.** Its criteria are decidable and all ten hold under my own commands; its numeric
+claims are consistent for the first time in this project; its blocking question is labelled
+blocking and resumed exactly where the record says; the epic's bar was raised before it was
+re-cleared rather than after; and it managed the genuinely difficult thing of carrying an
+unanswered product question through four skills without anyone answering it on the customer's
+behalf. Its self-criticism — the reviewer's finding against the pipeline's own merge-ordering gate
+— is aimed at the tooling rather than at nothing.
+
+**But my report is now a follow-up, and follow-ups are judged on what was fixed.** Three of the
+four required corrections are untouched, one of them propagated into a new document written after
+I raised it, and two findings I flagged as patterns (the doc-header timestamps, the D5 counts)
+recurred rather than being contained. The single correction that did land was re-derived
+independently by a skill doing new work; nothing acted on it as a finding.
+
+That changes what I would tell a manager. The first report said, in effect: *good record, four
+things to fix.* The honest second reading is: **good record, produced by a process with no
+mechanism for fixing anything already closed.** Each item's Definition of Done asks whether *this*
+change invalidated a document. Nothing anywhere asks whether something written three items ago is
+still true, and the `ls -b` error — wrong in two comments in shipped source, propagating on its
+sixth and seventh outing — is what that absence costs. Two verifications, three reviews and two
+epic closures have now read past it.
+
+**Sign-off: unchanged — qualified yes, and the qualifications are the same ones.** I would add one
+recommendation. The `ls -b` correction should no longer be tracked as a defect in a document; it
+should be tracked as evidence that this methodology needs a standing check — a periodic re-read of
+the claims in `docs/` against the code, owned by someone, on the same footing as the regression
+pass that found the three bugs. That pass exists for behaviour. Nothing equivalent exists for
+prose, and prose is where every uncorrected finding in this project lives.
