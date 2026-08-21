@@ -1,0 +1,20 @@
+{
+  "fingerprints": [
+    "{\"head\": \"f8502bdb06225f08fb684094154a7544a53451d7\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"done\", \"WI-0002\": \"awaiting-answer\", \"WI-0003\": \"ready\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"EP-001/Q-002\", \"answered\", true], [\"EP-001/Q-003\", \"answered\", true], [\"EP-001/Q-004\", \"answered\", true], [\"EP-001/Q-005\", \"answered\", true], [\"EP-001/Q-006\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"answered\", true], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0002/Q-003\", \"answered\", true], [\"WI-0002/Q-004\", \"open\", false], [\"WI-0002/Q-005\", \"open\", false], [\"WI-0002/Q-006\", \"open\", false], [\"WI-0003/Q-001\", \"answered\", true], [\"WI-0003/Q-002\", \"answered\", true]]}",
+    "{\"head\": \"f8502bdb06225f08fb684094154a7544a53451d7\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"done\", \"WI-0002\": \"awaiting-answer\", \"WI-0003\": \"ready\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"EP-001/Q-002\", \"answered\", true], [\"EP-001/Q-003\", \"answered\", true], [\"EP-001/Q-004\", \"answered\", true], [\"EP-001/Q-005\", \"answered\", true], [\"EP-001/Q-006\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"answered\", true], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0002/Q-003\", \"answered\", true], [\"WI-0002/Q-004\", \"open\", false], [\"WI-0002/Q-005\", \"open\", false], [\"WI-0002/Q-006\", \"open\", false], [\"WI-0003/Q-001\", \"answered\", true], [\"WI-0003/Q-002\", \"answered\", true]]}",
+    "{\"head\": \"f8502bdb06225f08fb684094154a7544a53451d7\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"done\", \"WI-0002\": \"awaiting-answer\", \"WI-0003\": \"ready\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"EP-001/Q-002\", \"answered\", true], [\"EP-001/Q-003\", \"answered\", true], [\"EP-001/Q-004\", \"answered\", true], [\"EP-001/Q-005\", \"answered\", true], [\"EP-001/Q-006\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"answered\", true], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0002/Q-003\", \"answered\", true], [\"WI-0002/Q-004\", \"open\", true], [\"WI-0002/Q-005\", \"open\", true], [\"WI-0002/Q-006\", \"open\", true], [\"WI-0003/Q-001\", \"answered\", true], [\"WI-0003/Q-002\", \"answered\", true]]}",
+    "{\"head\": \"ea9c4071670993f85622caf4825b6b16ee009319\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"done\", \"WI-0002\": \"done\", \"WI-0003\": \"verifying\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"EP-001/Q-002\", \"answered\", true], [\"EP-001/Q-003\", \"answered\", true], [\"EP-001/Q-004\", \"answered\", true], [\"EP-001/Q-005\", \"answered\", true], [\"EP-001/Q-006\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"answered\", true], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0002/Q-003\", \"answered\", true], [\"WI-0002/Q-004\", \"answered\", true], [\"WI-0002/Q-005\", \"answered\", true], [\"WI-0002/Q-006\", \"answered\", true], [\"WI-0003/Q-001\", \"answered\", true], [\"WI-0003/Q-002\", \"answered\", true]]}"
+  ],
+  "in-flight": null,
+  "iteration": "iteration-1-expenses",
+  "next-job": null,
+  "next-role": "worker",
+  "project": "/home/msi/agile-skills-throwaway/expenses",
+  "repo-snapshot": [],
+  "started": "2026-08-21T14:14:33Z",
+  "status": "stopped",
+  "stop-detail": "turn 4 (worker) exited -1: turn exceeded the timeout and was killed",
+  "stop-reason": "turn-failed",
+  "stopped": "2026-08-21T15:19:04Z",
+  "turn": 4
+}

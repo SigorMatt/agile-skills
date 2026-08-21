@@ -320,3 +320,145 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   mutating commands, or move the guard to the file-write tools where the target is a parameter
   rather than prose.
 - Status: open
+
+## F-019 — A failed transition mid-chain leaves record and status divergent, undetectably
+- Severity: correctness, enforcement-integrity (top cluster with F-001, F-018)
+- Component: scripts (transition, validate-workspace, all CLI entry points), methodology
+  (every skill's process contract)
+- Symptom: during WI-0003's implement, a `cd` into the item directory made the relative
+  script path fail — `transition` never ran — but it failed mid-chain, so the rest of the
+  chained shell command executed anyway: the journal entry claiming
+  `in-progress → verifying` and tracker commit 234f170 both landed while the item was still
+  `in-progress`. The worker's own correction names it: "a workspace that briefly disagreed
+  with its own record, in the one direction the record cannot detect." Second relative-path
+  failure of the same session.
+- Evidence: meta/harness/evidence/iteration-1-full/ —
+  project/tracker/items/WI-0003/journal.md, the appended correction after the implement
+  entry (≈ lines 587–602); commit 234f170 vs the history rows.
+- Direction: three fixes, all mechanical. (a) Every toolkit script resolves the project
+  root itself (walk up to a workspace marker) instead of assuming CWD. (b) Process
+  contracts forbid chaining `transition` with other commands; it is a checkpoint whose
+  exit code gates everything after it. (c) validate-workspace gains a cross-check: every
+  journal `**Status:**` line must have a matching history row — the undetectable direction
+  becomes detectable.
+- Status: open
+
+## F-020 — refine files several separate questions for one item in one round
+- Severity: UX/enhancement, low priority
+- Component: methodology (refine), spec/question.md
+- Symptom: the sim, in persona, on receiving WI-0002/Q-004..Q-006 at once: "three separate
+  emails landed on me for one work item — fine that they're batched, but it's the same item
+  asking three times running." The protocol batches per round-trip but presents per-file.
+- Evidence: meta/harness/evidence/iteration-1-full/ — run/SIM-LOG.md, turn 3.
+- Direction: keep one question artifact per decision (provenance needs it), but let refine
+  present them as one grouped ask per item per round — a presentation change in the
+  question body/consequences convention, not a schema change.
+- Status: open
+
+## H-002 — turn-failed is terminal in code; USAGE §9 promises resume; --fresh destroys the run
+- Severity: harness, correctness + doc contradiction (sharpest harness defect of iteration 1)
+- Component: harness/run_iteration.py (stop handling, line ~529), harness/USAGE.md §9
+- Symptom: a turn killed by --turn-timeout records status=stopped / stop-reason=turn-failed;
+  rerunning prints "this run already stopped: pass --fresh to archive it and start a new
+  one" — while USAGE §9's last entry says "A turn hangs. --turn-timeout kills it... Resume
+  with the same command." The documented recovery does not exist; the only offered exit
+  archives four turns of good work. --reaudit (the plausible alternative) is
+  contamination-specific and does not clear the stop. Recovery required hand-editing
+  state.json (status → running, drop the stop fields), which worked.
+- Evidence: meta/harness/evidence/iteration-1-full/ — run/state.json.bak (the stopped
+  state), run/iteration-log.jsonl turn 4 and the stop events; owner's session log
+  2026-08-21.
+- Direction: classify stop reasons as resumable (timeout kill, limit/auth rejection) vs
+  terminal (epic-done, blocked-no-recourse, budget, contamination); resumable stops resume
+  on plain rerun, exactly as §9 already promises. Fix the --fresh hint text to say what it
+  actually does (see H-003).
+- Status: open
+
+## H-003 — --fresh archives the run logs but not the project workspace
+- Severity: harness, correctness of semantics + misleading docs
+- Component: harness/run_iteration.py (--fresh), harness/provision.py, FINAL-REPORT §6,
+  USAGE §3
+- Symptom: FINAL-REPORT §6 presents provision + --fresh as the clean start; in practice
+  provision is idempotent ("nothing to commit (already provisioned)") and --fresh archives
+  only harness/runs state, so iteration 1 silently resumed the mini run's epic: turn 1's
+  sim found IDEA.md already present, turn 2's worker found 13/16 questions already
+  answered and WI-0001 done. Acceptable outcome, wrong expectation; the trail now spans
+  two runs.
+- Evidence: meta/harness/evidence/iteration-1-full/ — run/SIM-LOG.md turn 1 (IDEA.md
+  already present) and turn 3 (probes fired before any logged sim turn);
+  run/iteration-log.jsonl turn 2 (worker no-op report).
+- Direction: provision gains --wipe (or --fresh re-provisions the workspace too, behind an
+  explicit confirmation); whichever way, one flag means one thing and USAGE says which.
+  Needed anyway for iteration 1b's true-fresh start.
+- Status: open
+
+## H-004 — After a start/resume, the driver runs a worker turn into unanswered human questions
+- Severity: harness, scheduling (one full round trip wasted per occurrence)
+- Component: harness/run_iteration.py (turn scheduling), sim job selection
+- Symptom: iteration 1 turn 2 was a pure no-op the worker itself diagnosed: turn 1's sim
+  job was "open" (deliver the idea), three questions from the resumed workspace sat
+  unanswered, the worker's orchestrator correctly halted at step 2, and a whole worker
+  turn produced nothing. Turn 3's sim then answered.
+- Evidence: meta/harness/evidence/iteration-1-full/ — run/iteration-log.jsonl turn 2
+  (worker-report notes), HARNESS-STATUS.md as captured in the turn record.
+- Direction: before dispatching a worker turn, the driver checks its own observed state
+  for unanswered human-addressed questions; if any exist, dispatch a sim "answer" turn
+  first. The observed fields already exist in the log schema.
+- Status: open
+
+## H-005 — A killed turn loses its cost and inherits a stale worker-report
+- Severity: harness, evidence integrity
+- Component: harness/run_iteration.py (turn accounting, status capture)
+- Symptom: turn 4 (killed at 3603s, 255 tool calls, a full Opus-hour) is logged with
+  cost_usd=0.00, so the iteration's economics understate real spend; and its logged
+  worker-report is turn 2's — the killed turn never wrote HARNESS-STATUS.md, and the
+  driver read the stale file without noticing, silently misattributing a two-hour-old
+  status to the killed turn.
+- Evidence: meta/harness/evidence/iteration-1-full/ — run/iteration-log.jsonl turn 4
+  (cost 0.00, stop_reason human-question-open — impossible for that turn).
+- Direction: mark killed turns' cost as unknown (or derive a floor from the transcript);
+  compare HARNESS-STATUS.md's mtime against turn start and record "no status written"
+  instead of a stale one.
+- Status: open
+
+## H-006 — Turn granularity: one turn may pack many skill executions, defeating the timeout
+- Severity: harness, design
+- Component: harness/prompts/worker-turn.md, run_iteration.py (--turn-timeout)
+- Symptom: turn 4 legally executed answer-questions consumption, refine, plan, implement
+  and most of verify across two items in one turn — 255 tool calls — so the per-turn
+  timeout killed a healthy run precisely because it was going well. The timeout punishes
+  progress when the unit of accounting is "as much as fits."
+- Evidence: meta/harness/evidence/iteration-1-full/ — run/iteration-log.jsonl turn 4;
+  the WI-0002/WI-0003 journal timestamps spanning one turn.
+- Direction: either the worker prompt stops after N skill executions per turn (making
+  turns comparable and timeouts meaningful), or the timeout is documented as
+  worst-single-skill × N with a generous default. Prefer the former: bounded turns also
+  bound the blast radius of every kill.
+- Status: open
+
+---
+
+### Addendum to F-001 (2026-08-21, iteration 1)
+DE6 — one of the two criteria FINAL-REPORT recorded as unexercised — has now executed,
+during EP-001's closure, and caught a real propagated false claim: overview.md's
+"no environment beyond EXPENSES_STORE" contradicted store_path()'s XDG_DATA_HOME read;
+corrected at v5 with provenance to WI-0003 review F3. Status of the class: works when
+followed; still agent-discipline-dependent, and the mechanization direction (claim
+provenance + adversarial verification) stands unchanged. Evidence:
+meta/harness/evidence/iteration-1-full/ — project/tracker/items/EP-001/journal.md,
+review-close entry, DE6.
+
+### Addendum to F-013 (2026-08-21, iteration 1)
+The epic-blocking-question contradiction forced its workaround again in this run's turn 1:
+the worker filed the epic's question with blocking: false plus a written explanation,
+documented in EP-001/questions/Q-001.md and reported in HARNESS-STATUS turn 2. Second
+independent occurrence; the escalation path for epics remains uncarryable as specified.
+
+### Addendum to F-017 (2026-08-21, iteration 1) — decisive evidence
+WI-0003's plan entry is stamped 15:35:00 and implement 16:10:00, but the turn that did
+that work was killed at 15:19:04 and nothing ran again until 17:32:57. The timestamps are
+fabrications written into a dead zone — a timeline audit of the journal would "prove" work
+happened while nothing was running. Timestamps must come from executing a clock command,
+never from the model. Evidence: meta/harness/evidence/iteration-1-full/ —
+project/tracker/items/WI-0003/journal.md (plan and implement headers) against
+run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
