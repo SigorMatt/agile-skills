@@ -641,9 +641,39 @@ class Run:
             self.state["status"] = "running"
             self.state["stop-reason"] = None
             self.state["stop-detail"] = "cleared by --reaudit: the rules that fired were fixed"
+            # A contamination stop happens *before* the turn's decision is taken, so `next-role`
+            # still says whatever it said before that turn. Re-deriving it from the workspace is
+            # not a nicety: resuming without it repeats the turn that was already completed, and
+            # a repeated worker turn costs real money to reach the same stop.
+            last = self.last_turn()
+            if last:
+                observed = scan_project(self.project_dir)
+                decision = self.decide(last["role"], observed, last)
+                if decision["stop"]:
+                    say(f"the workspace itself now says: {decision['reason']}")
+                else:
+                    self.state["next-role"] = decision["next-role"]
+                    self.state["next-job"] = decision.get("next-job")
+                    say(f"next turn re-derived from the workspace: {decision['next-role']}"
+                        f" ({decision.get('next-job') or '-'})")
             self.save_state()
             say("the contamination stop is cleared; the run continues")
         return 0
+
+    def last_turn(self):
+        """The most recent completed turn record in the iteration log."""
+        record = None
+        if not os.path.isfile(self.log_path):
+            return None
+        with open(self.log_path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                if entry.get("event") == "turn":
+                    record = entry
+        return record
 
     def decide(self, role, observed, record):
         """What happens after a turn — the stop conditions of DESIGN §2, computed from disk."""
