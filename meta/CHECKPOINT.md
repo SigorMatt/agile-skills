@@ -1,23 +1,21 @@
 # CHECKPOINT
 
-## Current unit — META-077
+## Current unit — META-078
 
-`harness/tests/` — prove the contamination assertions fire.
+Driver restart, verified by execution.
 
 **Steps**
-1. `harness/tests/test_harness.py` (stdlib `unittest`): synthetic `stream-json` transcripts —
-   a clean worker turn, a worker that reads the probe script, a worker that names the repo, a
-   sim that writes outside its three permitted paths, a sim that uses a shell, a sim that edits
-   a question's frontmatter on disk. Each violating fixture MUST produce the matching rule; the
-   clean ones MUST produce nothing.
-2. Also cover: `frontmatter`, `scan_project`'s answered-question detection, the worker
-   status-block parser, and that `provision.ALLOW_LIST` still equals USAGE §4's block verbatim.
-3. Wire the test file into `./scripts/check` as a step.
+1. Start a run against the scratch project, kill the driver mid-turn (SIGKILL to the driver and
+   its `claude` child), then rerun the same command.
+2. It must resume the same iteration from `state.json` — same run directory, turn numbering
+   continuing, no lost or duplicated log lines, the project trail intact.
+3. Record what the interrupted turn left behind and how the rerun reconciled it; if the toolkit
+   handles the half-finished turn badly, that is a finding, not a fix.
 
-**Done when** — `python3 harness/tests/test_harness.py` passes, `./scripts/check` runs it, tree
-clean.
+**Done when** — the kill/rerun is demonstrated with the log to show for it, `./scripts/check`
+passes, tree clean.
 
-**Next unit** — META-078, driver restart verified by killing a run mid-turn.
+**Next unit** — META-079, `harness/USAGE.md`.
 
 ## Standing instructions (still in force)
 

@@ -122,8 +122,15 @@ def _paths_in(tool_name, tool_input):
     return found
 
 
-def _resolve(path, cwd):
-    expanded = os.path.expanduser(path)
+def _resolve(path, cwd, home=None):
+    """Absolute form of a path as the session would have meant it.
+
+    `home` is a parameter rather than a call to `os.path.expanduser` so that the tests can audit
+    a transcript from a machine that is not this one: `~` means the *audited* session's home.
+    """
+    expanded = path
+    if expanded.startswith("~"):
+        expanded = (home or os.path.expanduser("~")) + expanded[1:]
     if not os.path.isabs(expanded):
         expanded = os.path.join(cwd, expanded)
     return os.path.normpath(expanded)
@@ -167,7 +174,7 @@ def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None):
                     "W2", tool, f"named {token!r}, which only harness content contains", blob))
                 break
         for raw in _paths_in(tool, tool_input):
-            resolved = _resolve(raw, project_dir)
+            resolved = _resolve(raw, project_dir, home)
             if _inside(resolved, project_dir):
                 continue
             if not _inside(resolved, home):

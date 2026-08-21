@@ -1887,3 +1887,37 @@ reviewer's call.
   The sim turn prompt now passes `{{NOW}}` and says that a guessed timestamp is worse than none.
 - **Gates:** `./scripts/check` — all 5 steps passed, no skips.
 - **Result:** META-076 done.
+
+---
+
+## 2026-08-21 — META-077 — proving the contamination assertions can fail
+
+- **Unit:** META-077
+- **Built:** `harness/tests/test_harness.py`, 26 tests, and a sixth step in `./scripts/check`
+  that runs them.
+- **The point of the file, written at the top of it:** a contamination check that cannot fail is
+  not a check. Every rule gets a transcript that must be **rejected** and one that must be
+  **accepted** — `W1` reading the harness directory, `W2` naming a token only harness content
+  contains, `W3` escaping the project (by `~`, by absolute path, by a sibling throwaway
+  project), `W4` a change appearing in this repository while a turn runs, `S1` a sim write
+  outside its three permitted paths, `S2` a sim reaching for a shell or an agent, `S3` a sim
+  closing or deleting a question on disk.
+- **The accepted cases matter as much:** an ordinary worker turn (board-gen, reading an item,
+  writing source, committing, running pytest) must produce **nothing**, and so must a sim that
+  fills in `## Answer` and appends to its log. A rule that fires on honest work would be turned
+  off within one iteration.
+- **Two defects in my own audit, found by writing the tests:**
+  1. `_resolve` expanded `~` with the *auditor's* home, so a transcript from another machine —
+     or a test fixture pretending to be one — silently escaped the check. Home is now a
+     parameter: `~` means the audited session's home, not mine.
+  2. The first version of the `W4` test asserted `all(v["rule"] == "W4" ...)` over a list that
+     is empty when this repository happens to be clean — a test that passes vacuously and would
+     never have caught a broken rule. It now builds a real git repository in a temp directory,
+     dirties it, and requires the violation, including the file name in the evidence.
+- **Three tests are about drift rather than contamination:** `provision.ALLOW_LIST` must still
+  equal the JSON block in `USAGE.md` §4 verbatim (if the owner's advice to consumers changes,
+  the harness's setup has to change with it, or the run stops being evidence about the
+  documented path); every iteration config must name a persona and probe file that exist; and
+  both turn prompts must carry a version and leave no `{{PLACEHOLDER}}` unfilled.
+- **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
+- **Result:** META-077 done.

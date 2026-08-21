@@ -183,7 +183,7 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
       F-008 interim async protocol for the worker.
 - [x] **META-076** — `harness/run_iteration.py` — the driver: turn alternation, driver-computed
       status, stop conditions, iteration log, per-turn transcript capture.
-- [ ] **META-077** — contamination assertions + `harness/tests/` — the audit fires on deliberate
+- [x] **META-077** — contamination assertions + `harness/tests/` — the audit fires on deliberate
       violations (fixtures) and passes on clean transcripts; wired into `scripts/check`.
 - [ ] **META-078** — driver restart: resume an interrupted run from `state.json`; verified by
       killing a run mid-turn and rerunning.
