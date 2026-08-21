@@ -1,33 +1,30 @@
 # CHECKPOINT
 
-## The mission is complete.
+## Current unit — META-073
 
-Every unit in [`plan.md`](plan.md) is ticked, every box in `seed/03-ACCEPTANCE.md` carries an
-evidence pointer, and [`FINAL-REPORT.md`](FINAL-REPORT.md) is written. `./scripts/check` passes
-with no skipped steps. The working tree is clean and `main` is pushed to `origin`.
+**Phase H, the two-session iteration harness.** Mission prompt:
+`meta/harness/HARNESS-PROMPT.md` (read it below its divider). Design: `meta/harness/DESIGN.md`.
+Queue: `meta/harness/PROJECT-QUEUE.md`. Plan units: `meta/plan.md` Phase H.
 
-There is no next unit. If you are a fresh session picking this up, read
-[`FINAL-REPORT.md`](FINAL-REPORT.md) first — its §5 lists the recommended next iterations, in
-order, with the reasoning for that order.
+**Steps**
+1. `harness/provision.py` — create the throwaway project directory (default root
+   `~/agile-skills-throwaway`, `--root`/`HARNESS_THROWAWAY_ROOT` override), `git init` with a
+   repo-local identity, initial commit, run `adapters/claude-code/install.py`, run
+   `workspace-init`, merge the USAGE §4 allow-list into `.claude/settings.json`, write
+   `SIMULATION-NOTICE.md` and the project `.gitignore`, commit.
+2. Idempotent on re-run; refuses to touch a non-empty directory that is not one of ours
+   (marker file `.harness/provision.json`).
+3. Verify by execution: provision a real project, run `validate-workspace` in it, re-run
+   provision to prove idempotence, and prove the refusal on a non-empty stranger directory.
+
+**Done when** — the script is committed with its execution evidence quoted in the journal,
+`./scripts/check` passes, tree clean.
+
+**Next unit** — META-074, `harness/skills/simulated-human/`.
 
 ## Standing instructions (still in force)
 
 - **The unit cycle ends with `git push`, not `git commit`.** Instructed by the human on
   2026-08-16; `origin` is `git@github.com:SigorMatt/agile-skills.git` and `main` tracks it.
-
-## If you are starting the next iteration
-
-The recommended first piece of work is `validate-claims` — a script that resolves every commit
-sha cited in an artifact, checks line-count claims against `git diff --numstat`, and flags a
-sentence repeated across documents whose wording has diverged. Four of the six findings in
-`examples/toy-project/AUDIT.md` are in that class and none of them needed judgement. The two
-checklist criteria added in response to the audit (`D12`, `DE6` in `spec/dor-dod.md`) are
-**unexercised**, which is the argument for making the class mechanical rather than trusting
-another checklist item.
-
-## Where the toy run lives
-
-It was executed in a standalone repository outside this one and imported without `.git`
-(ADR-0004). That scratch repository is disposable — `examples/toy-project/` plus `IDEA.md` and
-`HUMAN-SCRIPT.md` contain everything needed to reproduce the run from scratch, and
-`import.sh` re-imports a fresh one.
+- This session must NOT modify `methodology/` or `spec/`. Toolkit defects found while building
+  the harness are filed as findings (F-011 onward), not fixed here.

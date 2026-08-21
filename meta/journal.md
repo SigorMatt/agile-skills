@@ -1714,3 +1714,39 @@ reviewer's call.
   methodology contradicted the methodology, and the record said so instead of smoothing it over.
 - **Result:** mission complete. `meta/CHECKPOINT.md` now says so and points at
   `FINAL-REPORT.md` §5 for what comes next.
+
+---
+
+## 2026-08-21 — META-072 — Phase H opens: the harness execution model
+
+- **Unit:** META-072
+- **Mission:** `meta/harness/HARNESS-PROMPT.md` — build the two-session iteration harness per
+  `meta/harness/DESIGN.md`, prove it with one mini end-to-end iteration on queue entry 1, and do
+  not touch `methodology/` or `spec/`. Toolkit defects go to `meta/findings/FINDINGS.md` as
+  F-011 onward.
+- **Read before writing anything:** `DESIGN.md`, `PROJECT-QUEUE.md`, `PROMPT.md`, `USAGE.md`,
+  `CONSUMER-PROMPT.md`, `spec/question.md`, `spec/ids-and-statuses.md`, and the `intake`,
+  `refine`, `answer-questions` and `next` procedures — the harness's async protocol has to be
+  assembled out of paths those four already specify, or it is a toolkit change in disguise.
+- **The pleasant discovery:** it can be. `intake` ("the human leaves mid-intake"), `refine`
+  ("the human is not present"), `spec/question.md` §3 ("human answers in the file →
+  answer-questions propagates") and `next` step 2 (a human-addressed question stops the loop)
+  already compose into exactly the file-based turn protocol the harness needs. F-008 stays
+  deferred; harness v1 needs no toolkit change, as `DESIGN.md` §5 predicted.
+- **The unpleasant one, already visible on the page:** `answer-questions`' precondition 1 says
+  "if every open question is addressed to `human`, you have nothing to do: report and stop" —
+  which contradicts its own step 4 (`answered-by: human`) and the protocol diagram it implements.
+  Taken literally it makes the answered-by-the-human case unrunnable. Not fixed here; queued for
+  the findings unit and worked around in the worker turn prompt, which is harness-owned.
+- **Verified by execution, not recalled** (`ADR-0005` §1): `claude 2.1.238` accepts `--max-turns`
+  even though this build's `--help` omits it; `--output-format json` really does carry
+  `permission_denials` and `total_cost_usd`; `stream-json` really does expose every `tool_use`
+  input, which is what makes the contamination assertion an observation rather than a promise.
+  Docs have moved to `code.claude.com`; the `docs.anthropic.com` map still 301s there.
+- **Decisions recorded** in `ADR-0005`: turn zero belongs to the sim (otherwise the first worker
+  turn has no idea to work on); the sim is caged to `Read,Write,Edit,Glob,Grep` so "writes only
+  permitted files" is cheap to hold; the worker loses `AskUserQuestion` so it *cannot* ask a
+  human who is not there; the throwaway root defaults outside `~/git` because
+  `/home/msi/git/CLAUDE.md` would otherwise be auto-loaded into every worker turn.
+- **Gates:** `./scripts/check` — all 5 steps passed, no skips.
+- **Result:** META-072 done.

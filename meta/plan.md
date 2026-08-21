@@ -163,3 +163,31 @@ met say so rather than being argued into a tick.
   and its recovery path are unexercised.
 - **`verifying → in-progress` (a verification send-back) never fired**, nor did
   `in-review → in-progress` (a review rejection). Both are specified and neither has run.
+
+---
+
+## Phase H — the two-session iteration harness
+
+Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, queue:
+`meta/harness/PROJECT-QUEUE.md`. Same unit discipline as every phase above.
+
+- [x] **META-072** — Phase H plan + `ADR-0005`: headless Claude Code specifics confirmed against
+      the current docs and the installed CLI (flags, permission modes, model per invocation,
+      transcript capture), and the harness's own architectural choices.
+- [ ] **META-073** — `harness/provision.py` — mechanical throwaway-project setup, idempotent,
+      refuses a non-empty unexpected directory. Verified by provisioning a real project and
+      running `validate-workspace` in it.
+- [ ] **META-074** — `harness/skills/simulated-human/` — `SKILL.md`, `personas/`, `probes/`
+      (queue entries 1–4), and the SIM-LOG protocol including planted-vs-organic tagging.
+- [ ] **META-075** — `harness/prompts/` — versioned worker and sim turn prompts, including the
+      F-008 interim async protocol for the worker.
+- [ ] **META-076** — `harness/run_iteration.py` — the driver: turn alternation, driver-computed
+      status, stop conditions, iteration log, per-turn transcript capture.
+- [ ] **META-077** — contamination assertions + `harness/tests/` — the audit fires on deliberate
+      violations (fixtures) and passes on clean transcripts; wired into `scripts/check`.
+- [ ] **META-078** — driver restart: resume an interrupted run from `state.json`; verified by
+      killing a run mid-turn and rerunning.
+- [ ] **META-079** — `harness/USAGE.md`, verified by following it literally.
+- [ ] **META-080** — the mini end-to-end iteration on queue entry 1 (`expenses`), artefacts
+      committed under `meta/harness/evidence/`.
+- [ ] **META-081** — findings F-011+ from the run, and `meta/harness/FINAL-REPORT.md`.
