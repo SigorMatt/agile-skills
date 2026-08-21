@@ -1,19 +1,24 @@
 # CHECKPOINT
 
-## Current unit — META-079
+## Current unit — META-080
 
-`harness/USAGE.md` — how the owner runs an iteration end to end.
+The mini end-to-end iteration, on PROJECT-QUEUE entry 1 (`expenses`).
 
 **Steps**
-1. Write it: prerequisites and quota, provision, run, the run directory's contents, how to read
-   a run (board → SIM-LOG planted-vs-organic → iteration log → item trail), how to adjust the
-   human between iterations, the contamination rules, what to do after an iteration, and the
-   failure modes with what each stop reason means.
-2. Then follow it literally for the mini run in META-080, and fix whatever it got wrong.
+1. Follow `harness/USAGE.md` literally, at the default throwaway root
+   (`~/agile-skills-throwaway`), correcting the document wherever it is wrong.
+2. `harness/provision.py --iteration iteration-1-expenses`, then
+   `harness/run_iteration.py --iteration iteration-1-expenses --max-turns 16` with the default
+   models (worker opus, sim sonnet).
+3. Target: intake + refinement completed through the async protocol, one work item at `done`,
+   at least one planted probe consumed — or a stop condition correctly reported.
+4. Copy the whole run plus a copy of the project trail into
+   `meta/harness/evidence/iteration-1-mini/` and commit it.
 
-**Done when** — the document is committed, `./scripts/check` passes, tree clean.
+**Done when** — the evidence is committed with an honest account of how far the run got,
+`./scripts/check` passes, tree clean.
 
-**Next unit** — META-080, the mini end-to-end iteration on queue entry 1.
+**Next unit** — META-081, findings F-011+ and `meta/harness/FINAL-REPORT.md`.
 
 ## Standing instructions (still in force)
 

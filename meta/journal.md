@@ -1956,3 +1956,28 @@ reviewer's call.
   that gets switched off within one iteration.
 - **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
 - **Result:** META-078 done.
+
+---
+
+## 2026-08-21 — META-079 — `harness/USAGE.md`
+
+- **Unit:** META-079
+- **Built:** `harness/USAGE.md` — prerequisites and what an iteration costs, provisioning
+  (including why `--trust` exists), running and resuming, the run directory's contents, how to
+  read a run, how to adjust the human between iterations, the contamination rules as a table,
+  what to do after an iteration, and every stop reason with what it means.
+- **The section I care most about is §5, "reading a run", and its order:** board first (where
+  the work got to), then `SIM-LOG.md` — because that is where `[PLANTED:` and `[ORGANIC]`
+  separate coverage from defect, and a finding filed without checking which one you are looking
+  at is worse than no finding — then the iteration log, then the item trail. The last line says
+  the thing the whole harness exists to make possible: the harness proves the pipeline ran; only
+  the trail shows whether it ran honestly.
+- **§9 is written from the stop reasons the driver can actually emit**, not from imagined
+  failures: `turn-failed`, `blocked-no-recourse` (and the instruction to check SIM-LOG before
+  treating it as a defect), `stalled`, a status file that disagrees with the tracker, and a hung
+  turn.
+- **Not yet verified.** This document is written to be followed literally in META-080, and
+  whatever it gets wrong there gets fixed there. Writing it first is deliberate: a usage
+  document written after the run describes what happened, not what the reader must do.
+- **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
+- **Result:** META-079 done.
