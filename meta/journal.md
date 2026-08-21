@@ -1816,3 +1816,39 @@ reviewer's call.
 - **Gates:** `./scripts/check` — all 5 steps passed, no skips. (The sim is exercised by
   execution in META-076, when the driver can run a turn.)
 - **Result:** META-074 done.
+
+---
+
+## 2026-08-21 — META-075 — the two turn prompts
+
+- **Unit:** META-075
+- **Built:** `harness/prompts/worker-turn.md` and `harness/prompts/sim-turn.md`, both versioned
+  in a first-line comment so the iteration log can record which prompt produced a turn.
+- **The worker prompt does not replace `CONSUMER-PROMPT.md`, it amends it.** The project carries
+  a copy of the real consumer prompt and the turn prompt says "that document is your
+  instructions", then adds six amendments and says the amendments win where they conflict. A
+  harness that paraphrased the consumer prompt would be testing the paraphrase; the consumer
+  prompt is one of the things under test.
+- **The six amendments,** in the order they matter: (A) the human is not here — file questions
+  through the question mechanism, batch every question you have this turn because each round trip
+  costs a turn, never guess to avoid asking; (B) **consume the stakeholder's answers first**,
+  before `/next`, or the turn accomplishes nothing — the orchestrator stops on any open
+  human-addressed question, so an answered-but-still-open question deadlocks the pipeline;
+  (C) everything you know must be on disk, because the next turn is a different session;
+  (D) stay inside the project directory; (E) work until you actually stop, not until a milestone
+  feels like a good pause — there is nobody to report to mid-turn; (F) write `HARNESS-STATUS.md`
+  with a fenced JSON block, `stop_reason` from a fixed six-value set.
+- **Amendment B carries the workaround for the `answer-questions` precondition defect** found in
+  META-072: its precondition 1 reads as though the skill has nothing to do when every open
+  question is addressed to `human`, which is exactly the state a human-answered question is in.
+  The prompt tells the worker to do the job anyway and to say in the journal that it did — a
+  harness-side workaround for a toolkit defect that this session may not fix, and the journal
+  note means the run's own record will show the workaround being applied.
+- **The status file is deliberately not trusted.** The prompt says so out loud: the driver reads
+  the workspace too, and a status file that disagrees with the tracker is a finding.
+- **The sim prompt is short by design** — the persona and probe live in files, and DESIGN §3's
+  whole argument is that prompt-borne character is the first thing a fresh turn loses. It
+  supplies only what changes per turn: project path, turn number, log path, persona and probe
+  paths, and the job (`open` or `answer`).
+- **Gates:** `./scripts/check` — all 5 steps passed, no skips.
+- **Result:** META-075 done.

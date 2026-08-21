@@ -1,23 +1,29 @@
 # CHECKPOINT
 
-## Current unit — META-075
+## Current unit — META-076
 
-`harness/prompts/` — the two versioned turn prompts.
+`harness/run_iteration.py` — the driver.
 
 **Steps**
-1. `worker-turn.md` — points at the project's own `CONSUMER-PROMPT.md` (the real thing under
-   test) and states the async amendments: the human is not in the session and has no question
-   tool; questions go through the question mechanism addressed to `human`, item suspended, stop;
-   filled-in `## Answer` sections are consumed through `answer-questions` FIRST, before `/next`;
-   state on disk only, never chat; stop reason and open human questions to `HARNESS-STATUS.md`
-   with a fenced JSON block for the driver; never read outside the project.
-2. `sim-turn.md` — invoke `/simulated-human`, name the project path, the SIM-LOG path, the turn
-   number, and which job this is (open the engagement / answer).
-3. Both files carry a version line; the driver logs which version it used.
+1. Run directory `harness/runs/<run-id>/` with `state.json`, `iteration-log.jsonl`, `SIM-LOG.md`
+   and `turns/<n>-<role>.stream.jsonl`.
+2. Render the active persona/probe into `harness/.claude/skills/simulated-human/` so the sim
+   turn can discover the skill; source of truth stays under `harness/skills/`.
+3. Turn alternation: sim `open` turn first (the worker has no idea to work on otherwise), then
+   worker → driver status check → sim → worker …
+4. Driver-computed status: parse `tracker/items/*/item.md` and `questions/*.md`, run
+   `validate-workspace`, compare against the worker's `HARNESS-STATUS.md` self-report and log
+   any disagreement.
+5. Stop conditions: epic done; blocked with no recourse; validator failure; turn budget
+   (`--max-turns`); a stalled cycle; a failed turn.
+6. Every turn logged with command, prompt version, model, duration, cost, permission denials and
+   the observed status.
 
-**Done when** — both prompts exist, `scripts/check` passes, tree clean.
+**Done when** — the driver runs end to end against the provisioned project for at least the
+opening sim turn and one worker turn, with the log to show for it. Contamination assertions land
+in META-077.
 
-**Next unit** — META-076, `harness/run_iteration.py`.
+**Next unit** — META-077, the contamination audit and `harness/tests/`.
 
 ## Standing instructions (still in force)
 

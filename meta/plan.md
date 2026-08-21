@@ -179,7 +179,7 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
       running `validate-workspace` in it.
 - [x] **META-074** — `harness/skills/simulated-human/` — `SKILL.md`, `personas/`, `probes/`
       (queue entries 1–4), and the SIM-LOG protocol including planted-vs-organic tagging.
-- [ ] **META-075** — `harness/prompts/` — versioned worker and sim turn prompts, including the
+- [x] **META-075** — `harness/prompts/` — versioned worker and sim turn prompts, including the
       F-008 interim async protocol for the worker.
 - [ ] **META-076** — `harness/run_iteration.py` — the driver: turn alternation, driver-computed
       status, stop conditions, iteration log, per-turn transcript capture.
