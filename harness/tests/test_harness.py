@@ -136,8 +136,12 @@ class WorkerBoundary(unittest.TestCase):
         import subprocess
         with tempfile.TemporaryDirectory() as root:
             subprocess.run(["git", "init", "-q", root], check=True)
-            with open(os.path.join(root, "tracked.txt"), "w", encoding="utf-8") as handle:
-                handle.write("one\n")
+            os.makedirs(os.path.join(root, "spec"))
+            os.makedirs(os.path.join(root, "meta"))
+            with open(os.path.join(root, "spec", "tracked.md"), "w", encoding="utf-8") as h:
+                h.write("one\n")
+            with open(os.path.join(root, "meta", "notes.md"), "w", encoding="utf-8") as h:
+                h.write("one\n")
             subprocess.run(["git", "add", "-A"], cwd=root, check=True)
             subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
                             "commit", "-qm", "init"], cwd=root, check=True)
@@ -146,11 +150,17 @@ class WorkerBoundary(unittest.TestCase):
             self.assertEqual(before, [])
             self.assertEqual(audit.audit_repo_tree(root, before), [])
 
-            with open(os.path.join(root, "tracked.txt"), "w", encoding="utf-8") as handle:
-                handle.write("two\n")
+            # the owner editing meta/ during a run is not a contamination event
+            with open(os.path.join(root, "meta", "notes.md"), "w", encoding="utf-8") as h:
+                h.write("two\n")
+            self.assertEqual(audit.audit_repo_tree(root, before), [])
+
+            # a change to the toolkit under test is
+            with open(os.path.join(root, "spec", "tracked.md"), "w", encoding="utf-8") as h:
+                h.write("two\n")
             found = audit.audit_repo_tree(root, before)
             self.assertEqual(rules(found), ["W4"])
-            self.assertIn("tracked.txt", found[0]["evidence"])
+            self.assertIn("spec/tracked.md", found[0]["evidence"])
 
             # a change that was already there before the turn is the owner's, not the turn's
             self.assertEqual(audit.audit_repo_tree(root, audit.repo_tree_snapshot(root)), [])

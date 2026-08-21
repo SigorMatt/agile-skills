@@ -290,16 +290,25 @@ def repo_tree_snapshot(repo_dir):
     return sorted(line for line in result.stdout.split("\n") if line.strip())
 
 
-def audit_repo_tree(repo_dir, before):
-    """W4: a turn must not change this repository.
+# What a run must never change: the toolkit that is under test. `meta/` and `harness/` are
+# excluded because the owner reviewing or editing them while a run is in flight is ordinary, and
+# a rule that fires on the owner's own typing gets switched off within one iteration. A turn
+# reaching into `harness/` is caught by W1 and W2 from the transcript, where it belongs.
+TOOLKIT_PATHS = ("methodology/", "spec/", "adapters/", "scripts/", "examples/", "fixtures/",
+                 "README.md", "USAGE.md", "CONSUMER-PROMPT.md", "PROMPT.md")
 
-    Compared against a snapshot taken immediately before the turn rather than against "clean",
-    because the owner may legitimately be editing the harness while a run is in flight; what is
-    forbidden is a *new* change appearing while a turn is running.
+
+def audit_repo_tree(repo_dir, before):
+    """W4: a turn must not change the toolkit it is running.
+
+    Compared against a snapshot taken immediately before the turn rather than against "clean":
+    what is forbidden is a *new* change appearing while a turn is running.
     """
     after = repo_tree_snapshot(repo_dir)
     appeared = [line for line in after if line not in set(before)]
-    if not appeared:
+    guarded = [line for line in appeared
+               if any(part.startswith(TOOLKIT_PATHS) for part in line[2:].strip().split(" -> "))]
+    if not guarded:
         return []
-    return [violation("W4", "-", "the toolkit repository changed during a turn",
-                      "\n".join(appeared))]
+    return [violation("W4", "-", "the toolkit changed while a turn was running",
+                      "\n".join(guarded))]

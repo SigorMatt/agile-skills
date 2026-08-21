@@ -185,7 +185,7 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
       status, stop conditions, iteration log, per-turn transcript capture.
 - [x] **META-077** — contamination assertions + `harness/tests/` — the audit fires on deliberate
       violations (fixtures) and passes on clean transcripts; wired into `scripts/check`.
-- [ ] **META-078** — driver restart: resume an interrupted run from `state.json`; verified by
+- [x] **META-078** — driver restart: resume an interrupted run from `state.json`; verified by
       killing a run mid-turn and rerunning.
 - [ ] **META-079** — `harness/USAGE.md`, verified by following it literally.
 - [ ] **META-080** — the mini end-to-end iteration on queue entry 1 (`expenses`), artefacts

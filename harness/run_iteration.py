@@ -34,6 +34,7 @@ import datetime
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -228,7 +229,69 @@ def worker_report(project_dir):
 # running a turn
 
 
-def stream_turn(argv, cwd, transcript_path, timeout):
+def reap_orphan(pid_path):
+    """Kill a turn whose driver was killed out from under it.
+
+    A `kill -9` on the driver does not reach the `claude` process it started — observed, not
+    assumed (META-078). The orphan keeps writing to the transcript of a turn nobody is waiting
+    for, and the resumed run would then have two sessions in the same project at once, which is
+    the one thing a filesystem-state pipeline cannot survive. So every turn records its child's
+    pid, and a resuming driver kills whatever it finds still breathing.
+    """
+    if not os.path.isfile(pid_path):
+        return None
+    try:
+        pid = int(read(pid_path).strip())
+    except ValueError:
+        os.unlink(pid_path)
+        return None
+    alive = False
+    try:
+        os.kill(pid, 0)
+        with open(f"/proc/{pid}/cmdline", "rb") as handle:
+            alive = b"claude" in handle.read()
+    except (OSError, ProcessLookupError, PermissionError):
+        alive = False
+    if alive:
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except (OSError, ProcessLookupError):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                pass
+        time.sleep(1)
+    try:
+        os.unlink(pid_path)
+    except OSError:
+        pass
+    return pid if alive else None
+
+
+def another_driver(driver_pid_path):
+    """The pid of a driver already running this iteration, or None.
+
+    Two drivers in one project would interleave turns into the same workspace, which is the
+    corruption the restart requirement exists to prevent.
+    """
+    if not os.path.isfile(driver_pid_path):
+        return None
+    try:
+        pid = int(read(driver_pid_path).strip())
+    except ValueError:
+        return None
+    if pid == os.getpid():
+        return None
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as handle:
+            if b"run_iteration" in handle.read():
+                return pid
+    except OSError:
+        return None
+    return None
+
+
+def stream_turn(argv, cwd, transcript_path, timeout, pid_path=None):
     """Run a headless turn, tee its transcript to disk, and report what came back.
 
     stderr goes straight to a file rather than a pipe: the transcript is read line by line while
@@ -241,7 +304,21 @@ def stream_turn(argv, cwd, transcript_path, timeout):
     with open(transcript_path, "w", encoding="utf-8") as sink, \
             open(stderr_path, "w", encoding="utf-8") as errors:
         process = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE,
-                                   stderr=errors, text=True, bufsize=1)
+                                   stderr=errors, text=True, bufsize=1,
+                                   start_new_session=True)
+        if pid_path:
+            write(pid_path, f"{process.pid}\n")
+
+        def terminate(signum, frame):
+            """Ctrl-C, or a supervisor's SIGTERM: take the turn down with us."""
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                pass
+            raise SystemExit(130)
+
+        previous = {sig: signal.signal(sig, terminate)
+                    for sig in (signal.SIGINT, signal.SIGTERM)}
         try:
             for line in process.stdout:
                 sink.write(line)
@@ -266,9 +343,17 @@ def stream_turn(argv, cwd, transcript_path, timeout):
                     raise TimeoutError
             process.wait(timeout=60)
         except TimeoutError:
-            process.kill()
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                process.kill()
             return {"exit": -1, "stderr": "turn exceeded the timeout and was killed",
                     "duration": time.time() - started, "tool_calls": tool_calls}
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+            if pid_path and os.path.isfile(pid_path):
+                os.unlink(pid_path)
     return {"exit": process.returncode, "stderr": read(stderr_path)[-2000:],
             "duration": time.time() - started, "tool_calls": tool_calls}
 
@@ -303,6 +388,8 @@ class Run:
         self.log_path = os.path.join(self.run_dir, "iteration-log.jsonl")
         self.state_path = os.path.join(self.run_dir, "state.json")
         self.sim_log = os.path.join(self.run_dir, "SIM-LOG.md")
+        self.pid_path = os.path.join(self.run_dir, "turn.pid")
+        self.driver_pid_path = os.path.join(self.run_dir, "driver.pid")
         self.args = args
         self.max_turns = args.max_turns or self.config.get("max-turns", 24)
         self.worker_model = args.worker_model or self.config.get("worker-model", "opus")
@@ -365,7 +452,8 @@ class Run:
         transcript = os.path.join(self.turns_dir, f"{number:03d}-worker.stream.jsonl")
         say(f"turn {number} — worker ({self.worker_model}, "
             f"{self.args.worker_permission_mode})")
-        outcome = stream_turn(argv, self.project_dir, transcript, self.args.turn_timeout)
+        outcome = stream_turn(argv, self.project_dir, transcript, self.args.turn_timeout,
+                              self.pid_path)
         uses, fields = turn_result_fields(transcript)
         repo_before = self.state.get("repo-snapshot") or []
         violations = audit.audit_worker(uses, self.project_dir, HERE, REPO) + \
@@ -396,7 +484,7 @@ class Run:
         say(f"turn {number} — sim ({self.sim_model}, job={job}, "
             f"persona={self.config['persona']})")
         before = audit.question_frontmatter_snapshot(self.project_dir)
-        outcome = stream_turn(argv, HERE, transcript, self.args.turn_timeout)
+        outcome = stream_turn(argv, HERE, transcript, self.args.turn_timeout, self.pid_path)
         uses, fields = turn_result_fields(transcript)
         violations = audit.audit_sim(uses, self.project_dir, HERE, self.sim_log) + \
             audit.audit_sim_tree(self.project_dir, before)
@@ -412,9 +500,17 @@ class Run:
                 f"run: {self.project_dir} does not exist.\n"
                 f"     Provision it first:  harness/provision.py --iteration {self.iteration}\n")
             return 2
+        running = another_driver(self.driver_pid_path)
+        if running:
+            sys.stderr.write(
+                f"run: driver pid {running} is already running this iteration.\n"
+                "     Stop it before starting another; two drivers would interleave turns\n"
+                "     into the same workspace.\n")
+            return 2
         if self.args.fresh:
             self.archive()
         os.makedirs(self.turns_dir, exist_ok=True)
+        write(self.driver_pid_path, f"{os.getpid()}\n")
 
         self.state = self.load_state()
         if self.state and self.state.get("status") == "stopped" and not self.args.fresh:
@@ -432,10 +528,18 @@ class Run:
                       "sim-model": self.sim_model,
                       "worker-permission-mode": self.args.worker_permission_mode})
         else:
+            orphan = reap_orphan(self.pid_path)
+            if orphan:
+                say(f"reaped an orphaned turn process (pid {orphan}) left by the previous driver")
+            in_flight = self.state.get("in-flight")
             say(f"resuming {self.iteration} at turn {self.state['turn'] + 1} "
                 f"({self.state['next-role']})")
+            if in_flight:
+                say(f"turn {in_flight['turn']} ({in_flight['role']}) was interrupted; "
+                    "running it again — every skill reconciles with what it finds on disk")
             self.log({"event": "resume", "at": now(), "from-turn": self.state["turn"],
-                      "next-role": self.state["next-role"]})
+                      "next-role": self.state["next-role"], "interrupted": in_flight,
+                      "reaped-pid": orphan})
 
         while True:
             if self.state["turn"] >= self.max_turns:

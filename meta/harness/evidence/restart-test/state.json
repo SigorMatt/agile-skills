@@ -1,0 +1,20 @@
+{
+  "fingerprints": [
+    "{\"head\": \"340cf6b074aa8cc1390fc6129c068bbb314f71e2\", \"items\": {}, \"questions\": []}",
+    "{\"head\": \"50554c5766bba6c6b136021f4a6015f76fb64bf8\", \"items\": {\"EP-001\": \"open\"}, \"questions\": [[\"EP-001/Q-001\", \"open\", false]]}"
+  ],
+  "in-flight": null,
+  "iteration": "iteration-1-expenses",
+  "next-job": "answer",
+  "next-role": "sim",
+  "project": "/tmp/claude-1000/-home-msi-git-agile-skills/74627f4c-97a4-44a8-9a7a-28cd365d683d/scratchpad/tw/expenses",
+  "repo-snapshot": [
+    " M harness/run_iteration.py"
+  ],
+  "started": "2026-08-21T01:50:30Z",
+  "status": "stopped",
+  "stop-detail": "2 turns used; the run was not finished",
+  "stop-reason": "turn-budget",
+  "stopped": "2026-08-21T01:59:26Z",
+  "turn": 2
+}

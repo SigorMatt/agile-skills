@@ -1,21 +1,19 @@
 # CHECKPOINT
 
-## Current unit — META-078
+## Current unit — META-079
 
-Driver restart, verified by execution.
+`harness/USAGE.md` — how the owner runs an iteration end to end.
 
 **Steps**
-1. Start a run against the scratch project, kill the driver mid-turn (SIGKILL to the driver and
-   its `claude` child), then rerun the same command.
-2. It must resume the same iteration from `state.json` — same run directory, turn numbering
-   continuing, no lost or duplicated log lines, the project trail intact.
-3. Record what the interrupted turn left behind and how the rerun reconciled it; if the toolkit
-   handles the half-finished turn badly, that is a finding, not a fix.
+1. Write it: prerequisites and quota, provision, run, the run directory's contents, how to read
+   a run (board → SIM-LOG planted-vs-organic → iteration log → item trail), how to adjust the
+   human between iterations, the contamination rules, what to do after an iteration, and the
+   failure modes with what each stop reason means.
+2. Then follow it literally for the mini run in META-080, and fix whatever it got wrong.
 
-**Done when** — the kill/rerun is demonstrated with the log to show for it, `./scripts/check`
-passes, tree clean.
+**Done when** — the document is committed, `./scripts/check` passes, tree clean.
 
-**Next unit** — META-079, `harness/USAGE.md`.
+**Next unit** — META-080, the mini end-to-end iteration on queue entry 1.
 
 ## Standing instructions (still in force)
 

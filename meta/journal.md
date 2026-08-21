@@ -1921,3 +1921,38 @@ reviewer's call.
   both turn prompts must carry a version and leave no `{{PLACEHOLDER}}` unfilled.
 - **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
 - **Result:** META-077 done.
+
+---
+
+## 2026-08-21 — META-078 — the restart, and the orphan it exposed
+
+- **Unit:** META-078
+- **Done by execution, not by reasoning:** started a run, `SIGKILL`ed the driver nine seconds
+  into the sim's opening turn, reran the same command. Evidence committed at
+  `meta/harness/evidence/restart-test/`.
+- **What the kill exposed, which I had not designed for:** `SIGKILL` on the driver does not
+  reach the `claude` process it started. The orphan kept running and kept writing into the
+  transcript of a turn nobody was waiting for, and a resumed run would then have had **two agent
+  sessions in the same project at once** — the one thing a pipeline whose entire state is on
+  disk cannot survive. Fixed three ways: each turn records its child's pid in `turn.pid` and a
+  resuming driver kills whatever is still breathing (`"reaped-pid": 220639` in the log);
+  `SIGINT`/`SIGTERM` now take the turn down with the driver; and a `driver.pid` lock refuses a
+  second driver on the same iteration outright.
+- **The resume itself behaved as designed:** it re-ran the interrupted turn rather than skipping
+  it, which is only safe because every pipeline skill reconciles with what it finds on disk —
+  the harness is a direct consumer of that guarantee, as `DESIGN.md` §2 claims. Turn 1 re-ran
+  (43s, $0.05), turn 2 ran (479s, $0.89), the run stopped at `turn-budget`, and the project
+  validated at **0 errors** with two honest warnings and two clean commits.
+- **A second thing the run proved early, on haiku of all models:** the async human protocol
+  works. `intake` created `EP-001`, filed `Q-001` addressed to `human`, committed the tracker,
+  and reported `stop_reason: human-question-open` in `HARNESS-STATUS.md` — the exact handshake
+  the harness is built on, from a model chosen for being cheap rather than good.
+- **A false-positive trap I closed while I was in there:** `W4` ("the repository changed during
+  a turn") originally fired on *any* new dirty line, so the owner editing `meta/` while a run was
+  in flight would have stopped the run for contamination. It is now scoped to the toolkit under
+  test — `methodology/`, `spec/`, `adapters/`, `scripts/`, `examples/`, `fixtures/` and the
+  consumer-facing documents. A turn reaching into `harness/` is still caught by W1/W2 from the
+  transcript, where that check belongs. A rule that fires on the owner's own typing is a rule
+  that gets switched off within one iteration.
+- **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
+- **Result:** META-078 done.
