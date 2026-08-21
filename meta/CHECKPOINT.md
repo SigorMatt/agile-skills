@@ -1,27 +1,23 @@
 # CHECKPOINT
 
-## Current unit — META-074
+## Current unit — META-075
 
-`harness/skills/simulated-human/` — the sim's behaviour, in versioned files.
+`harness/prompts/` — the two versioned turn prompts.
 
 **Steps**
-1. `SKILL.md` — how to be a human: terse, answers only what was asked, never volunteers, may be
-   vague, imperfect memory allowed but contradictions only when the persona says so. Plus the
-   mechanics: read the board and the open `addressed-to: human` questions, write the answer into
-   `## Answer` tagged `[human]`, change nothing else, append to `SIM-LOG.md`.
-2. `personas/` — `cooperative-pm.md`, `impatient-founder.md`, `contradictory-stakeholder.md`
-   (PROJECT-QUEUE names all three).
-3. `probes/` — one per queue entry, each carrying the idea as the human will state it and the
-   planted probes with their trigger conditions, and the instruction to tag every planted action
-   `[PLANTED: <probe>]` in SIM-LOG.
-4. The driver renders the active persona/probe to `persona.md` / `probe-script.md` inside the
-   discoverable skill directory (DESIGN §3's three files); source of truth stays in
-   `personas/` and `probes/`.
+1. `worker-turn.md` — points at the project's own `CONSUMER-PROMPT.md` (the real thing under
+   test) and states the async amendments: the human is not in the session and has no question
+   tool; questions go through the question mechanism addressed to `human`, item suspended, stop;
+   filled-in `## Answer` sections are consumed through `answer-questions` FIRST, before `/next`;
+   state on disk only, never chat; stop reason and open human questions to `HARNESS-STATUS.md`
+   with a fenced JSON block for the driver; never read outside the project.
+2. `sim-turn.md` — invoke `/simulated-human`, name the project path, the SIM-LOG path, the turn
+   number, and which job this is (open the engagement / answer).
+3. Both files carry a version line; the driver logs which version it used.
 
-**Done when** — the files exist, `scripts/check` passes, tree clean. (Execution evidence for the
-sim arrives with the driver, META-076.)
+**Done when** — both prompts exist, `scripts/check` passes, tree clean.
 
-**Next unit** — META-075, `harness/prompts/`.
+**Next unit** — META-076, `harness/run_iteration.py`.
 
 ## Standing instructions (still in force)
 

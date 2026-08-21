@@ -177,7 +177,7 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
 - [x] **META-073** — `harness/provision.py` — mechanical throwaway-project setup, idempotent,
       refuses a non-empty unexpected directory. Verified by provisioning a real project and
       running `validate-workspace` in it.
-- [ ] **META-074** — `harness/skills/simulated-human/` — `SKILL.md`, `personas/`, `probes/`
+- [x] **META-074** — `harness/skills/simulated-human/` — `SKILL.md`, `personas/`, `probes/`
       (queue entries 1–4), and the SIM-LOG protocol including planted-vs-organic tagging.
 - [ ] **META-075** — `harness/prompts/` — versioned worker and sim turn prompts, including the
       F-008 interim async protocol for the worker.

@@ -1786,3 +1786,33 @@ reviewer's call.
   toolkit. The finding carries the evidence.
 - **Gates:** `./scripts/check` — all 5 steps passed, no skips.
 - **Result:** META-073 done.
+
+---
+
+## 2026-08-21 — META-074 — the simulated-human skill
+
+- **Unit:** META-074
+- **Built:** `harness/skills/simulated-human/` — `SKILL.md`, three personas (`cooperative-pm`,
+  `impatient-founder`, `contradictory-stakeholder`) and four probe scripts, one per
+  PROJECT-QUEUE entry.
+- **The split that matters.** `SKILL.md` holds what is true of every human (answer only what was
+  asked; be terse; vagueness is legitimate; never contradict yourself unless the probe scripts
+  it; never write engineering; never touch the machinery) and the mechanics of a turn. The
+  persona holds character. The probe script holds this iteration's test plan. DESIGN §3's
+  argument for files over prompt text is that a fresh turn loses prompt-borne persona
+  instructions — so the turn prompt names the files and the skill reads them.
+- **The one instruction I expect to earn its place:** the sim writes `[human] <answer>` into
+  `## Answer` and changes *nothing else* — not `status`, not `answered-at`, not
+  `## Consequences`. Marking the question answered and propagating it into the artifacts is the
+  team's job, and whether they do it is one of the things the run measures. A helpful sim would
+  quietly delete the measurement.
+- **Planted-vs-organic tagging is in the skill, not only in the probes**, with the reason
+  written next to the rule: the owner reading the run afterwards has to separate "hit the trap I
+  set" (coverage) from "failed on its own" (defect), and an untagged answer makes that
+  distinction unrecoverable. `[PLANTED: <probe id>]` / `[ORGANIC]`, and withheld answers are
+  logged as actions in their own right.
+- **Iteration 4's probe script is mostly a warning**: it plants nothing, and says so, because the
+  boring run is the zero-bump gate rehearsal and a probe would destroy what it measures.
+- **Gates:** `./scripts/check` — all 5 steps passed, no skips. (The sim is exercised by
+  execution in META-076, when the driver can run a turn.)
+- **Result:** META-074 done.
