@@ -1,27 +1,25 @@
 # CHECKPOINT
 
-## Current unit — META-081
+## Phase H is complete. There is no next unit.
 
-Findings F-011+ and `meta/harness/FINAL-REPORT.md`.
+The two-session iteration harness is built and proven:
+[`meta/harness/FINAL-REPORT.md`](harness/FINAL-REPORT.md) — what was built, the decisions, the
+acceptance boxes with their evidence, what it does **not** test, and §6, the exact command
+sequence for full iteration 1.
 
-**Steps**
-1. Append to `meta/findings/FINDINGS.md`: F-011 (answer-questions precondition), F-012 (an
-   untrusted workspace's allow-list is discarded in headless runs), F-013 (a blocking question on
-   an epic is unrepresentable), F-014 (transition gates the pre-move workspace), F-015 (implement
-   must pass through a red validator), F-016 (epic-level record commits have no home branch),
-   F-017 (the restamp deadlock in journal.md, and invented timestamps), F-018 (the write guard
-   matches the command string). Update F-006 with the probe that settled it.
-2. Fix the two harness defects the run exposed (H-001): worker turn prompt v2 reconciling
-   amendments A and E, and a `turn-budget-exhausted` value in the `stop_reason` enum.
-3. `meta/harness/FINAL-REPORT.md` — what was built, key decisions, defects found, what the
-   harness does not test, and the exact command sequence for full iteration 1.
-4. Final sweep: `./scripts/check`, `git diff --stat` proving `methodology/` and `spec/`
-   untouched, tree clean, pushed.
+If you are a fresh session picking this up, the next piece of work is **running iteration 1**,
+not building anything:
 
-**Done when** — the report is committed and the acceptance checklist in
-`meta/harness/HARNESS-PROMPT.md` is answered box by box with evidence pointers.
+```bash
+./scripts/check
+harness/provision.py --iteration iteration-1-expenses
+harness/run_iteration.py --iteration iteration-1-expenses --fresh
+```
 
-**Next unit** — none. Stop and report.
+Then review with the owner per `harness/USAGE.md` §5 and §8, and append findings from F-019
+onward. `meta/findings/FINDINGS.md` now carries F-001 … F-018; F-006 is closed as rejected.
+
+Do not fix the toolkit inside a harness run. The harness must work against the toolkit as it is.
 
 ## Standing instructions (still in force)
 

@@ -52,7 +52,7 @@ DEFAULT_ROOT = os.path.expanduser(
 
 STATUS_FILE = "HARNESS-STATUS.md"
 WORKER_STOP_REASONS = ("human-question-open", "nothing-runnable", "epic-done",
-                       "validator-failed", "blocked", "error")
+                       "validator-failed", "blocked", "turn-budget-exhausted", "error")
 
 
 def now():

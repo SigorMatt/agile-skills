@@ -71,7 +71,14 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   mysterious permission prompts mid-run.
 - Evidence: evidence/2026-08-17-peer-setup-report.md §5.5
 - Direction: test both forms against Claude Code permission matching; fix doc.
-- Status: open
+- **Settled by execution, 2026-08-21** (harness build, META-080). In a provisioned throwaway
+  project that had been trusted: `claude -p "... python3 .claude/agile-skills/scripts/
+  validate-workspace ." --permission-mode dontAsk` → `permission_denials: []`, the command ran,
+  exit 0. Control in the same session shape, a command the allow-list does not cover
+  (`python3 -c "print(6*7)"`) → **denied**, one entry in `permission_denials`. So the suspected
+  entry matches correctly, and the control proves the test could have failed. The symptom F-006
+  predicted is real but has a different cause: see **F-012**.
+- Status: rejected (the entry is correct; superseded by F-012, which is the real defect)
 
 ## F-007 — No distribution/export path for consumer projects
 - Severity: enhancement
@@ -161,3 +168,155 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   (3) the F-001 fix (mechanical claim provenance / adversarial verification)
   has survived a real run.
 - Status: deferred (gated)
+
+## F-011 — `answer-questions` precondition excludes the case the protocol depends on
+- Severity: correctness (blocks the async human path; harness works around it in a prompt)
+- Component: methodology (answer-questions), spec/question.md
+- Symptom: `answer-questions`' precondition 1 reads "There is at least one open question
+  addressed to `architect`. If every open question is addressed to `human`, you have nothing to
+  do: report and stop." A question the **human has answered** is still `status: open` and still
+  `addressed-to: human` — the human writes the answer, and only `answer-questions` may propagate
+  it, mark it answered and resume the item (its own step 4 provides `answered-by: human`, and
+  `spec/question.md` §3 draws exactly that arrow). Read literally, the precondition tells the one
+  skill that can consume a human answer that it has nothing to do.
+- Consequence: the pipeline deadlocks. `next` step 2 stops the loop on any open human-addressed
+  question, so an answered-but-not-consumed question stops every subsequent turn forever.
+- Evidence: methodology/skills/answer-questions/process.md (Preconditions 1 vs Steps 4/7);
+  spec/question.md §3 diagram and rule 5; harness worker turn prompt amendment B, which exists
+  only to talk the worker past this sentence.
+- Direction: precondition 1 should read "at least one open question that is answerable —
+  addressed to `architect`, or addressed to `human` with `## Answer` filled in". The escalation
+  case it was written for is "addressed to human and *not* answered".
+- Status: open
+
+## F-012 — In headless runs, `permissions.allow` is ignored unless the project is trusted
+- Severity: correctness, consumer-facing (silently disables the setup USAGE recommends)
+- Component: USAGE.md §4, adapters/claude-code (installer docs)
+- Symptom: a `-p` session never shows the workspace-trust dialog, and Claude Code discards the
+  workspace's `permissions.allow` wholesale when the workspace has never been trusted:
+
+      Ignoring 8 permissions.allow entries from .claude/settings.json: this workspace has not
+      been trusted. Run Claude Code interactively here once and accept the trust dialog, or set
+      projects["<dir>"].hasTrustDialogAccepted: true in ~/.claude.json.
+
+  So the allow-list USAGE §4 recommends for "steady use" has no effect in any automated or
+  headless run of a project the owner has not opened interactively at least once. The failure is
+  silent apart from one stderr line, and it presents as unexplained permission prompts or
+  denials — which is also the symptom F-006 is chasing.
+- Evidence: a fresh `claude -p` in a project provisioned by `harness/provision.py`, stderr quoted
+  above (meta/harness/evidence/); `harness/provision.py --trust` exists because of it.
+- Direction: USAGE §4 gains the trust requirement and the two ways to satisfy it (open the
+  project interactively once, or set `hasTrustDialogAccepted`), plus the note that `--settings`
+  and `--allowedTools` are honoured regardless because they are supplied explicitly. F-006's
+  syntax question can only be answered *after* the entries are honoured at all.
+- Status: open
+
+## F-013 — A blocking question on an epic is unrepresentable
+- Severity: correctness, structural (an escalation path the methodology documents cannot execute)
+- Component: methodology/pipeline.yaml, spec/ids-and-statuses.md, scripts/validate-workspace,
+  methodology/skills/intake
+- Symptom: three rules that cannot all hold.
+  1. `pipeline.yaml` declares epic status `open` as `terminal: true`.
+  2. The only transitions into `awaiting-answer` and `blocked` are `from: any-non-terminal`, so
+     no legal transition suspends an open epic — proven by execution:
+     `transition EP-001 --to awaiting-answer --actor intake` →
+     `transition: open → awaiting-answer by 'intake' is not a transition in pipeline.yaml`.
+  3. `validate-workspace` (line ~515) errors with `question.blocking.not-suspended` whenever an
+     item — epic included — carries an open blocking question and is not at `awaiting-answer`
+     or `blocked`.
+  Meanwhile `awaiting-answer` and `blocked` both declare `applies_to: [work-item, bug, epic]`,
+  and `intake`'s own escalation instruction is "leave the rest as an open question addressed to
+  `human` on the epic, set the epic to `awaiting-answer`, and stop" — which is exactly the
+  sequence that cannot be executed.
+- Consequence: a skill that genuinely cannot proceed on an epic-level question has no honest
+  move. It must either mark a blocking question `blocking: false` (a lie the record carries
+  forever) or leave the workspace failing validation.
+- Evidence: found organically by the worker in the first real iteration — it filed
+  `EP-001/Q-001` as `blocking: false` and wrote a paragraph in the question's `## Context`
+  explaining precisely why it had to, citing `pipeline.yaml` and the validator. That paragraph
+  is in meta/harness/evidence/iteration-1-mini/. The transition refusal above was then
+  reproduced by hand.
+- Direction: decide which rule gives. Either epics may be suspended (add
+  `from: open → awaiting-answer` for epics, and stop calling `open` terminal for this purpose),
+  or they may not (then `applies_to` must drop `epic` from `awaiting-answer`, `intake`'s
+  escalation must be rewritten, and the validator must exempt epics — with `addressed-to: human`
+  alone doing the stopping, which `next` step 2 already does).
+- Status: open
+
+## F-014 — `transition` runs its gates against the pre-move workspace
+- Severity: correctness (a gate that reports FAIL on correct work)
+- Component: scripts/transition, scripts/run-gate
+- Symptom: `transition`'s pre-move gate run evaluates `workspace-valid` against the workspace as
+  it is *before* the move it is about to make. On every `answer-questions` resume this printed
+  FAIL — the questions are already `answered`, the item is still `awaiting-answer`, the board has
+  not been regenerated yet — while `transition` itself reported the gates as not blocking and its
+  own post-move validation came back clean. The gate is checking the wrong side of the
+  transition.
+- Consequence: a loud FAIL on correct work, every time, on the one path whose whole purpose is to
+  resume a suspended item. An agent that believes its gates learns to ignore this one.
+- Evidence: found organically by the worker in iteration 1 and journalled where it happened;
+  meta/harness/evidence/iteration-1-mini/.
+- Direction: either evaluate `workspace-valid` against the post-move state, or exclude from the
+  pre-move run the codes that the move itself resolves, and say which in the gate's output.
+- Status: open
+
+## F-015 — `implement` is required to pass through a red validator
+- Severity: correctness (the procedure guarantees a failing gate mid-execution)
+- Component: methodology/skills/implement, scripts/validate-workspace, spec/journal-and-history
+- Symptom: `implement`'s step 3 requires the item to move to `in-progress` before any code is
+  written, and its step 9 requires the journal entry at the end. Between the two,
+  `validate-workspace` reports `journal.execution.missing` — an actor appears in `history.md`
+  with no journal entry — on every single run. The procedure makes the failure mandatory.
+- Consequence: "the validator is red" stops meaning "something is wrong", which is the failure
+  mode `meta/findings` F-001 is about, in a machine-decidable gate this time.
+- Evidence: found organically by the worker in iteration 1;
+  meta/harness/evidence/iteration-1-mini/.
+- Direction: either the journal entry is written when the status moves (so the record is never
+  inconsistent), or `journal.execution.missing` is a warning while the item is at `in-progress`
+  with the acting skill still running. The first is better: it also makes an interrupted
+  `implement` recoverable, which is what `in-progress` exists for.
+- Status: open
+
+## F-016 — Epic-level record commits have no home branch
+- Severity: correctness (a gate fails for an item that did nothing wrong)
+- Component: methodology (answer-questions, review-close), spec/workspace-layout
+- Symptom: `answer-questions` working on an **epic**'s question commits the tracker record to
+  whatever branch happens to be checked out — which, mid-pipeline, is a work item's branch. The
+  commit then references the epic while sitting on `wi/WI-000n`, and `check-commit-refs` /
+  Definition of Done "commits reference the item" fails for the *unrelated* work item. Nothing in
+  the methodology says where an epic-level record commit belongs.
+- Evidence: found organically by the worker in iteration 1 (turn 6 report and
+  `tracker/items/WI-0001/artifacts/review.md`); meta/harness/evidence/iteration-1-mini/.
+- Direction: state the rule. Either epic-level record commits are made on the trunk branch (the
+  epic is not a branch-scoped unit of work), or an item's branch owns every commit made while it
+  is checked out and the gate must scope by item, not by branch.
+- Status: open
+
+## F-017 — The restamp deadlock exists in `journal.md` too, and skills invent timestamps
+- Severity: correctness (the record carries plausible-looking fabricated times)
+- Component: spec/journal-and-history.md, scripts/transition (--restamp-last)
+- Symptom: the monotonic-timestamp rule and its sanctioned repair (`--restamp-last`) cover
+  `history.md`. The identical deadlock occurs in `journal.md`, where there is no exception — and
+  the observed consequence is worse than a deadlock: skills write a *plausible* timestamp rather
+  than reading the clock, so the journal's times are invented where the history's are real.
+- Evidence: found organically by the worker in iteration 1 (turn 6 report);
+  meta/harness/evidence/iteration-1-mini/.
+- Direction: give `journal.md` the same treatment as `history.md`, and say explicitly in the spec
+  that a timestamp is read from the clock and never estimated — an invented timestamp is the one
+  kind of record entry that cannot be audited against anything.
+- Status: open
+
+## F-018 — The workspace-write guard hook matches the command, not the target
+- Severity: correctness (blocks legitimate commands; trains agents to work around the guard)
+- Component: adapters/claude-code/hooks/guard-workspace-writes.py
+- Symptom: the hook decides by looking for the guarded path inside the Bash *command string*, so
+  a command that merely mentions `tracker/board.md` — printing it, grepping it, naming it in a
+  commit message — is denied as though it were writing to it.
+- Consequence: the agent learns the guard is noise and starts phrasing commands to avoid it,
+  which is exactly the opposite of what a guard is for.
+- Evidence: found organically by the worker in iteration 1 (turn 6 report);
+  meta/harness/evidence/iteration-1-mini/.
+- Direction: decide on the write target, not on the mention: parse redirections and the known
+  mutating commands, or move the guard to the file-write tools where the target is a parameter
+  rather than prose.
+- Status: open

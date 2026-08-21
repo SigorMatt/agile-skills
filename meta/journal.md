@@ -2030,3 +2030,33 @@ reviewer's call.
   as H-001; fixed in META-081, not mid-run.
 - **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
 - **Result:** META-080 done.
+
+---
+
+## 2026-08-21 — META-081 — findings, the harness's own fixes, and the report
+
+- **Unit:** META-081
+- **Filed:** F-011, F-012, F-013, F-014, F-015, F-016, F-017, F-018 in
+  `meta/findings/FINDINGS.md`, each with the evidence that produced it. Seven of the eight came
+  out of the mini run, and all seven were found by the **worker**, not by me — which is the
+  clearest statement of what the harness is for.
+- **F-006 is now rejected, with its reason.** The suspected allow-list entry
+  `Bash(python3 .claude/agile-skills/scripts/*)` matches correctly: a `dontAsk` session ran the
+  command with `permission_denials: []`, and a control command the list does not cover was
+  denied in the same session shape — so the probe could have failed and did not. Its symptom was
+  F-012 (an untrusted workspace's allow-list is discarded) all along. A finding closed by
+  execution rather than by argument is worth more than one left open out of caution.
+- **Fixed the two defects in the harness itself**, both reported by the worker in its own status
+  file: the worker turn prompt is now **version 2**, reconciling "batch every question" with
+  "stop on the first open one" — file the escalations you can already state before you end the
+  turn, because filing a letter is not dispatching work — and the `stop_reason` enum has
+  `turn-budget-exhausted`, so a turn that ends cleanly at its spend cap stops having to report
+  `error` and explain in prose that nothing failed.
+- **Wrote `meta/harness/FINAL-REPORT.md`**, including the two things I would rather not have had
+  to write: the contamination audit stopped two real runs on false positives of my own making,
+  and the harness is not cheap ($48.51 for eight turns), with a per-turn spend cap being a false
+  economy because the next turn re-reads the whole project.
+- **Final verification:** `./scripts/check` — 6 steps, all passed, no skips.
+  `git diff --stat c9a62fb..HEAD -- methodology/ spec/` is **empty**: the toolkit was not touched,
+  which was the condition the mission put on the whole exercise.
+- **Result:** META-081 done. Phase H complete.

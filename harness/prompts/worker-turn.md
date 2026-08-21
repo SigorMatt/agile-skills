@@ -1,4 +1,4 @@
-<!-- harness-prompt: worker-turn, version 1 -->
+<!-- harness-prompt: worker-turn, version 2 -->
 # Worker turn
 
 The driver substitutes `{{PROJECT_DIR}}`, `{{TURN}}` and `{{STATUS_FILE}}` and passes everything
@@ -35,10 +35,17 @@ procedures already specify for a human who is not present:
   the `transition` script;
 - stop working that item.
 
-File **every** question you have for the stakeholder this turn, across every item you can
-legitimately reach, before you stop. Each round trip costs a turn, so ten questions in one turn
-is worth far more than ten turns of one question. Batch them the way `intake` and `refine` tell
-you to batch them.
+**Batching, and how it fits with stopping.** The orchestrator stops the loop on the *first* open
+human-addressed question (`next` step 2), so a turn that files one question and stops costs a
+whole round trip to ask one thing. Before you end the turn, therefore, look over the other items
+and file every question you can already state for the stakeholder — each one properly, with its
+own context, options and suspension. Filing an escalation is not advancing an item through the
+pipeline, so this does not conflict with one-action-per-`next`: you are not dispatching work, you
+are posting the letters you already know you have to write.
+
+What this does **not** license: inventing questions to fill the batch, asking about work you have
+not reached yet, or bypassing `next` to keep building while the loop is stopped. If you are
+unsure whether a question is real yet, it is not — leave it.
 
 Never guess in order to avoid asking, and never answer your own human-addressed question — the
 guess is exactly what the protocol exists to prevent.
@@ -116,7 +123,11 @@ single fenced `json` block, last thing in the file:
 ````
 
 `stop_reason` must be exactly one of: `human-question-open`, `nothing-runnable`, `epic-done`,
-`validator-failed`, `blocked`, `error`.
+`validator-failed`, `blocked`, `turn-budget-exhausted`, `error`.
+
+Use `turn-budget-exhausted` when you are ending because this turn's spend or turn cap ran out
+rather than because the pipeline reached a stopping point — nothing failed, nothing is blocked,
+and the next turn simply continues. Keep `error` for something that actually went wrong.
 
 The driver reads this file, and also checks the workspace itself. Report what happened, including
 what went wrong and anything you had to work around — a status file that disagrees with the
