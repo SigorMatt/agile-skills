@@ -1852,3 +1852,38 @@ reviewer's call.
   paths, and the job (`open` or `answer`).
 - **Gates:** `./scripts/check` — all 5 steps passed, no skips.
 - **Result:** META-075 done.
+
+---
+
+## 2026-08-21 — META-076 — the driver, and the audit it depends on
+
+- **Unit:** META-076
+- **Built:** `harness/run_iteration.py` (the driver) and `harness/audit.py` (the contamination
+  boundary, made observable). The audit is a separate module because META-077 has to be able to
+  feed it transcripts that must be *rejected*, and a check nested inside a driver loop cannot be
+  tested that way.
+- **The run directory is the deliverable of a run:** `state.json` (whose turn it is, and why it
+  stopped), `iteration-log.jsonl` (one line per turn: command, prompt version, model, duration,
+  tool count, cost, permission denials, the driver's observed status, the worker's self-report,
+  and any violations), `SIM-LOG.md`, and every turn's full `stream-json` transcript plus its
+  stderr. Rerunning the same command resumes from `state.json`; `--fresh` archives and restarts.
+- **The driver never takes the worker's word for anything.** `scan_project` parses
+  `tracker/items/*/item.md` and every question file itself, runs `validate-workspace`, and reads
+  `git rev-parse HEAD`. The worker's `HARNESS-STATUS.md` is recorded beside it and compared: a
+  disagreement prints a `!` line into the log rather than changing what the driver believes.
+- **Stop conditions, all computed from disk:** validator failure; epic complete; unanswered
+  human questions → the sim's turn; a `blocked` item with no question open to the human →
+  `blocked-no-recourse` (there is nothing another sim turn could contribute); three consecutive
+  turns with an identical workspace fingerprint → `stalled`; the turn budget; a failed turn; and
+  a contamination violation, which stops the run immediately with the offending tool input in
+  the log.
+- **Verified by execution:** the opening sim turn ran for real against the provisioned scratch
+  project — `exit=0, 22s, 5 tool calls, $0.04` on haiku. It read its persona and probe, wrote
+  `IDEA.md` containing exactly the probe script's sentence and nothing else, appended a SIM-LOG
+  entry, and the audit found no violations. The driver then stopped at `turn-budget` with
+  `--max-turns 1`, which is the correct reason.
+- **One defect the smoke test found in my own work:** the sim invented a timestamp
+  (`2026-08-21T00:00:00Z`) because a headless session has no clock and I had not given it one.
+  The sim turn prompt now passes `{{NOW}}` and says that a guessed timestamp is worse than none.
+- **Gates:** `./scripts/check` — all 5 steps passed, no skips.
+- **Result:** META-076 done.

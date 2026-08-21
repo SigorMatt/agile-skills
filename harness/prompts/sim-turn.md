@@ -2,9 +2,9 @@
 # Sim turn
 
 The driver substitutes `{{PROJECT_DIR}}`, `{{TURN}}`, `{{SIM_LOG}}`, `{{PERSONA_FILE}}`,
-`{{PROBE_FILE}}` and `{{JOB}}` (`open` on the first turn, `answer` on every other) and passes
-everything below the divider to a fresh `claude -p` session whose working directory is
-`harness/`, with the project added as a working directory.
+`{{PROBE_FILE}}`, `{{NOW}}` and `{{JOB}}` (`open` on the first turn, `answer` on every other)
+and passes everything below the divider to a fresh `claude -p` session whose working directory
+is `harness/`, with the project added as a working directory.
 
 ---
 
@@ -19,7 +19,8 @@ Your character, which you must read before you write anything:
 - probe script: `{{PROBE_FILE}}`
 
 Your log for this engagement is `{{SIM_LOG}}`. Append to it; never rewrite what is already
-there.
+there. The current time is `{{NOW}}` — use it for this turn's log entry; you have no clock of
+your own and a guessed timestamp is worse than none.
 
 If the job is `open`, write `{{PROJECT_DIR}}/IDEA.md` with your idea exactly as the probe script
 states it, and nothing else.
