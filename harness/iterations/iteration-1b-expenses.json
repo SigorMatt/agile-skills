@@ -1,0 +1,10 @@
+{
+  "id": "iteration-1b-expenses",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 1 — expenses (re-run 1b: blocked-probe tightened)",
+  "project": "expenses-1b",
+  "persona": "cooperative-pm",
+  "probe": "iteration-1b-expenses",
+  "max-turns": 24,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}
