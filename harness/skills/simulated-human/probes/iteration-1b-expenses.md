@@ -48,10 +48,12 @@ Three. Each has a trigger, an answer, and a tag you must use in SIM-LOG.
 ### P2 — `blocked-bank-csv` (the missing external artifact — non-negotiable scope)
 
 - **Trigger:** the work is split into items, and one of them concerns importing expenses from
-  your bank's CSV export. If they do not create such an item on their own, introduce it the
-  first time you are asked what else you want, or what is out of scope: *"Also, I want to import
-  expenses from my bank's CSV export instead of typing them in. That's the point of this for me —
-  typing them in by hand is what I'm trying to stop doing."*
+  your bank's CSV export. If they do not create such an item on their own, introduce it
+  **on your next turn, attached to whatever answer you are giving, regardless of what was
+  asked** — stakeholders do this all the time: *"Also, while I have you — I want to import
+  expenses from my bank's CSV export instead of typing them in. That's the point of this for
+  me — typing them in by hand is what I'm trying to stop doing."* Do not wait to be asked
+  about scope; that question may never come.
 - **The import is in scope for THIS epic, and that is not negotiable.** If they propose deferring
   it, splitting it into a future epic, shipping "the basics" first and coming back to it, or any
   equivalent — however reasonable the proposal, however many options they present — refuse, in
