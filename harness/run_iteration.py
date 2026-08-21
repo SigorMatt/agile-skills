@@ -513,6 +513,15 @@ class Run:
         write(self.driver_pid_path, f"{os.getpid()}\n")
 
         self.state = self.load_state()
+        if self.state and self.state.get("project") != self.project_dir:
+            sys.stderr.write(
+                f"run: the existing run for {self.iteration} is against\n"
+                f"       {self.state.get('project')}\n"
+                f"     but this invocation resolves to\n"
+                f"       {self.project_dir}\n"
+                "     Resuming would mix two projects in one log. Pass --fresh to archive the\n"
+                "     old run, or point --root at the project the run belongs to.\n")
+            return 2
         if self.state and self.state.get("status") == "stopped" and not self.args.fresh:
             say(f"this run already stopped: {self.state.get('stop-reason')}")
             say("pass --fresh to archive it and start a new one")

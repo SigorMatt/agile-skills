@@ -71,6 +71,11 @@ Useful flags:
 | `--fresh` | archive the existing run for this iteration and start over |
 | `--root DIR` | where the throwaway projects live |
 
+One run directory per iteration id. A finished run is not silently overwritten: rerunning after
+a stop says so and tells you to pass `--fresh`, which archives it to `<iteration>.N`. If the run
+directory belongs to a project at a different path — a new `--root`, a reprovisioned project —
+the driver refuses rather than mixing two projects into one log.
+
 **Stopping and resuming.** Rerun the same command. The run directory is derived from the
 iteration id and `state.json` says whose turn it is; a turn that was interrupted is simply run
 again, because every pipeline skill reconciles with what it finds on disk. If the driver was
