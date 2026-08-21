@@ -1,26 +1,27 @@
 # CHECKPOINT
 
-## Current unit — META-073
+## Current unit — META-074
 
-**Phase H, the two-session iteration harness.** Mission prompt:
-`meta/harness/HARNESS-PROMPT.md` (read it below its divider). Design: `meta/harness/DESIGN.md`.
-Queue: `meta/harness/PROJECT-QUEUE.md`. Plan units: `meta/plan.md` Phase H.
+`harness/skills/simulated-human/` — the sim's behaviour, in versioned files.
 
 **Steps**
-1. `harness/provision.py` — create the throwaway project directory (default root
-   `~/agile-skills-throwaway`, `--root`/`HARNESS_THROWAWAY_ROOT` override), `git init` with a
-   repo-local identity, initial commit, run `adapters/claude-code/install.py`, run
-   `workspace-init`, merge the USAGE §4 allow-list into `.claude/settings.json`, write
-   `SIMULATION-NOTICE.md` and the project `.gitignore`, commit.
-2. Idempotent on re-run; refuses to touch a non-empty directory that is not one of ours
-   (marker file `.harness/provision.json`).
-3. Verify by execution: provision a real project, run `validate-workspace` in it, re-run
-   provision to prove idempotence, and prove the refusal on a non-empty stranger directory.
+1. `SKILL.md` — how to be a human: terse, answers only what was asked, never volunteers, may be
+   vague, imperfect memory allowed but contradictions only when the persona says so. Plus the
+   mechanics: read the board and the open `addressed-to: human` questions, write the answer into
+   `## Answer` tagged `[human]`, change nothing else, append to `SIM-LOG.md`.
+2. `personas/` — `cooperative-pm.md`, `impatient-founder.md`, `contradictory-stakeholder.md`
+   (PROJECT-QUEUE names all three).
+3. `probes/` — one per queue entry, each carrying the idea as the human will state it and the
+   planted probes with their trigger conditions, and the instruction to tag every planted action
+   `[PLANTED: <probe>]` in SIM-LOG.
+4. The driver renders the active persona/probe to `persona.md` / `probe-script.md` inside the
+   discoverable skill directory (DESIGN §3's three files); source of truth stays in
+   `personas/` and `probes/`.
 
-**Done when** — the script is committed with its execution evidence quoted in the journal,
-`./scripts/check` passes, tree clean.
+**Done when** — the files exist, `scripts/check` passes, tree clean. (Execution evidence for the
+sim arrives with the driver, META-076.)
 
-**Next unit** — META-074, `harness/skills/simulated-human/`.
+**Next unit** — META-075, `harness/prompts/`.
 
 ## Standing instructions (still in force)
 

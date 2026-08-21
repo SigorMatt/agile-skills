@@ -1,0 +1,10 @@
+{
+  "id": "iteration-3-mdtab",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 3 — mdtab (markdown table formatter)",
+  "project": "mdtab",
+  "persona": "contradictory-stakeholder",
+  "probe": "iteration-3-mdtab",
+  "max-turns": 24,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}

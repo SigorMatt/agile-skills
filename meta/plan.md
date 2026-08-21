@@ -174,7 +174,7 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
 - [x] **META-072** — Phase H plan + `ADR-0005`: headless Claude Code specifics confirmed against
       the current docs and the installed CLI (flags, permission modes, model per invocation,
       transcript capture), and the harness's own architectural choices.
-- [ ] **META-073** — `harness/provision.py` — mechanical throwaway-project setup, idempotent,
+- [x] **META-073** — `harness/provision.py` — mechanical throwaway-project setup, idempotent,
       refuses a non-empty unexpected directory. Verified by provisioning a real project and
       running `validate-workspace` in it.
 - [ ] **META-074** — `harness/skills/simulated-human/` — `SKILL.md`, `personas/`, `probes/`

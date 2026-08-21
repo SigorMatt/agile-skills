@@ -1750,3 +1750,39 @@ reviewer's call.
   `/home/msi/git/CLAUDE.md` would otherwise be auto-loaded into every worker turn.
 - **Gates:** `./scripts/check` — all 5 steps passed, no skips.
 - **Result:** META-072 done.
+
+---
+
+## 2026-08-21 — META-073 — `harness/provision.py`, and the trust discovery
+
+- **Unit:** META-073
+- **Built:** `harness/provision.py` and `harness/iterations/*.json` (one config per PROJECT-QUEUE
+  entry: project name, persona, probe, turn budget, models). Provisioning is mechanical — git
+  init with a repo-local identity (`agile-skills harness worker <worker@harness.invalid>`, so a
+  worker commit is never mistaken for the owner's), the project `.gitignore` and
+  `SIMULATION-NOTICE.md`, a copy of the real `CONSUMER-PROMPT.md`, the installer, `workspace-init`,
+  the USAGE §4 allow-list, one commit.
+- **Verified by execution, all four paths:** dry run prints and writes nothing; a non-empty
+  stranger directory is refused with exit 2 and an explanation; the real run produced 55 files in
+  one commit and `validate-workspace: 0 errors, 2 warnings` (both warnings are the documented
+  post-init state — null test command, empty description); a second run committed nothing and
+  left the tree clean.
+- **Acceptance box "skills discoverable by a fresh session" — proved, not assumed.** A fresh
+  `claude -p` in the provisioned project, told to use no tools, answered: `answer-questions,
+  implement, intake, next, plan, refine, review-close, verify`. Eight for eight.
+- **What that probe also printed, which matters more:**
+
+      Ignoring 8 permissions.allow entries from .claude/settings.json: this workspace has not
+      been trusted.
+
+  A `-p` session never shows the workspace-trust dialog, and an untrusted workspace's
+  `permissions.allow` is discarded **wholesale**. So USAGE §4's allow-list — the one setup the
+  document recommends for "steady use" — has no effect in any headless run of a project the owner
+  has not opened interactively at least once. That is a consumer-facing gap, and it is upstream of
+  F-006: before asking whether one entry's syntax is right, the entries have to be honoured at
+  all. Filed properly in the findings unit; `provision.py` gains an opt-in `--trust` that
+  registers the project in `~/.claude.json`, and prints the caveat loudly when it is not passed.
+- **Not fixed here:** `USAGE.md` is toolkit documentation and this session does not touch the
+  toolkit. The finding carries the evidence.
+- **Gates:** `./scripts/check` — all 5 steps passed, no skips.
+- **Result:** META-073 done.

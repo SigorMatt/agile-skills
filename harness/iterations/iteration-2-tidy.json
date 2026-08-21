@@ -1,0 +1,10 @@
+{
+  "id": "iteration-2-tidy",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 2 — tidy (downloads-folder organizer CLI)",
+  "project": "tidy",
+  "persona": "impatient-founder",
+  "probe": "iteration-2-tidy",
+  "max-turns": 24,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}

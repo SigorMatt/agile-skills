@@ -1,0 +1,10 @@
+{
+  "id": "iteration-1-expenses",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 1 — expenses (expense splitter CLI)",
+  "project": "expenses",
+  "persona": "cooperative-pm",
+  "probe": "iteration-1-expenses",
+  "max-turns": 24,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}
