@@ -148,6 +148,20 @@ class WorkerBoundary(unittest.TestCase):
             exists=lambda path, source: source == "key")
         self.assertEqual(rules(found), ["W3"])
 
+    def test_a_bare_tilde_is_not_a_path(self):
+        """Both of these stopped a real run before the rule was tightened."""
+        self.assertEqual(worker_violations(
+            ("Bash", {"command": "echo \"$out\" | head -3 | tr '\\n' '~'"}),
+            exists=audit.plausible), [])
+        self.assertEqual(worker_violations(
+            ("Bash", {"command": "cat >> review.md <<'EOF'\n- **~~The two store paths~~** "
+                                 "struck out because the finding was closed.\nEOF"}),
+            exists=audit.plausible), [])
+        # `~/` still means home
+        self.assertEqual(rules(worker_violations(
+            ("Bash", {"command": "cat ~/secrets.txt"}),
+            exists=lambda path, source: True)), ["W3"])
+
     def test_the_agents_own_state_directory_is_tolerated(self):
         self.assertEqual(worker_violations(
             ("Bash", {"command": f"cat {HOME}/.claude/settings.json"})), [])

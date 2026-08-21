@@ -51,8 +51,10 @@ PATH_KEYS = ("file_path", "path", "notebook_path", "filePath")
 # Absolute paths appearing inside a Bash command string. Deliberately conservative: it matches
 # home-rooted paths, which is where everything interesting on this machine lives, and ignores
 # /usr, /bin, /tmp and friends. Markdown punctuation is excluded because a Bash command is very
-# often a heredoc writing a *document*, and a backtick or a comma is where the path ends.
-HOME_PATH_RE = re.compile(r"(?:~|/home/[^\s\"'`,<>;:|)&]+)[^\s\"'`,<>;:|)&]*")
+# often a heredoc writing a *document*, and a backtick or a comma is where the path ends. The
+# tilde form requires a following slash: a bare `~` is a separator (`tr '\n' '~'`) or markdown
+# strikethrough far more often than it is a home directory, and both stopped a real run.
+HOME_PATH_RE = re.compile(r"(?:~/|/home/)[^\s\"'`,<>;:|)&]+")
 
 
 def plausible(path, source):
