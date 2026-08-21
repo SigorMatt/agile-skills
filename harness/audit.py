@@ -50,8 +50,21 @@ PATH_KEYS = ("file_path", "path", "notebook_path", "filePath")
 
 # Absolute paths appearing inside a Bash command string. Deliberately conservative: it matches
 # home-rooted paths, which is where everything interesting on this machine lives, and ignores
-# /usr, /bin, /tmp and friends.
-HOME_PATH_RE = re.compile(r"(?:~|/home/[^\s\"';:|)&]+)[^\s\"';:|)&]*")
+# /usr, /bin, /tmp and friends. Markdown punctuation is excluded because a Bash command is very
+# often a heredoc writing a *document*, and a backtick or a comma is where the path ends.
+HOME_PATH_RE = re.compile(r"(?:~|/home/[^\s\"'`,<>;:|)&]+)[^\s\"'`,<>;:|)&]*")
+
+
+def plausible(path):
+    """Could this path be read or written at all?
+
+    A path that does not exist, and whose parent does not exist either, cannot leak anything —
+    it is prose that looks like a path. This distinction is not pedantry: the first real worker
+    turn wrote a question whose `## Context` quoted the stakeholder's own example folders
+    (`~/trips/ski`), and a rule without this filter stopped the run for contamination over a
+    sentence. A check that fires on quoted text gets switched off, and then it checks nothing.
+    """
+    return os.path.exists(path) or os.path.exists(os.path.dirname(path) or "/")
 
 
 def load_transcript(path):
@@ -146,13 +159,17 @@ def violation(rule, tool, detail, evidence):
             "evidence": evidence[:400]}
 
 
-def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None):
+def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None, exists=None):
     """Violations of "the worker never leaves the project".
 
     W1  named the harness directory or this repository by absolute path
     W2  named a token that only harness content contains
-    W3  named a home-rooted path outside the project (excluding the agent's own ~/.claude state)
+    W3  reached for a real path outside the project (excluding the agent's own ~/.claude state)
+
+    `exists` is injectable so the tests can audit a transcript from a machine that is not this
+    one; it defaults to `plausible`, which is what keeps W3 off quoted prose.
     """
+    exists = exists or plausible
     project_dir = os.path.normpath(os.path.abspath(project_dir))
     harness_dir = os.path.normpath(os.path.abspath(harness_dir))
     repo_dir = os.path.normpath(os.path.abspath(repo_dir))
@@ -181,8 +198,10 @@ def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None):
                 continue
             if any(_inside(resolved, allowed) for allowed in tolerated):
                 continue
+            if not exists(resolved):
+                continue
             found.append(violation(
-                "W3", tool, f"named {resolved}, which is outside the project", blob))
+                "W3", tool, f"reached for {resolved}, which is outside the project", blob))
     return found
 
 

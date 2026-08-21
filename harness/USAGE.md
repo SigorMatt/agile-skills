@@ -180,6 +180,18 @@ fails the gate instead of passing a run.
 `turns/NNN-<role>.stderr.txt` and the `result_text` in the log line. Authentication, an invalid
 flag and a spend cap all land here.
 
+**The run stops with `contamination`.** Read the rule and the evidence in the log line. If it is
+a real violation, the run is over and the finding is about whichever side crossed the boundary.
+If the rule was wrong — it matched a path quoted inside a document, say — fix the rule, then:
+
+```bash
+harness/run_iteration.py --iteration <id> --reaudit
+```
+
+which re-audits every stored transcript with the corrected rules and resumes **only** if they
+all come back clean. Editing `state.json` by hand is not the recovery; the evidence is still on
+disk and has to be re-examined.
+
 **`blocked-no-recourse`.** An item is `blocked` and nothing is open to the stakeholder, so no
 sim turn could help. This is a legitimate end to an iteration — check whether it was a planted
 probe (`SIM-LOG`) before treating it as a defect.

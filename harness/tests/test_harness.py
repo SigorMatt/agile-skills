@@ -58,9 +58,10 @@ def uses(*calls):
         os.unlink(path)
 
 
-def worker_violations(*calls):
+def worker_violations(*calls, exists=lambda path: True):
+    """`exists` defaults to "every path in the fixture is real"; W3's job is the boundary."""
     tool_uses, _ = uses(*calls)
-    return audit.audit_worker(tool_uses, PROJECT, HARNESS, REPO, home=HOME)
+    return audit.audit_worker(tool_uses, PROJECT, HARNESS, REPO, home=HOME, exists=exists)
 
 
 def sim_violations(*calls):
@@ -126,6 +127,18 @@ class WorkerBoundary(unittest.TestCase):
         found = worker_violations(
             ("Read", {"file_path": f"{HOME}/agile-skills-throwaway/tidy/IDEA.md"}))
         self.assertEqual(rules(found), ["W3"])
+
+    def test_a_path_that_is_only_prose_does_not_fire(self):
+        """The false positive that stopped a real run: a heredoc writing a question whose
+        context quoted the stakeholder's own example folders."""
+        command = ("cat > tracker/items/EP-001/questions/Q-001.md <<'EOF'\n"
+                   "## Context\n\nYou said you split costs on trips (`~/trips/ski`) and on "
+                   "the flat (`~/flat`).\nEOF")
+        self.assertEqual(worker_violations(("Bash", {"command": command}),
+                                           exists=lambda path: False), [])
+        # and the same shape, when the path is real, still fires
+        self.assertEqual(rules(worker_violations(("Bash", {"command": "cat ~/trips/ski"}),
+                                                 exists=lambda path: True)), ["W3"])
 
     def test_the_agents_own_state_directory_is_tolerated(self):
         self.assertEqual(worker_violations(

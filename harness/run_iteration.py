@@ -513,6 +513,10 @@ class Run:
         write(self.driver_pid_path, f"{os.getpid()}\n")
 
         self.state = self.load_state()
+        if self.state and self.args.reaudit:
+            code = self.reaudit()
+            if code:
+                return code
         if self.state and self.state.get("project") != self.project_dir:
             sys.stderr.write(
                 f"run: the existing run for {self.iteration} is against\n"
@@ -604,6 +608,43 @@ class Run:
             self.state["next-job"] = decision.get("next-job")
             self.save_state()
 
+    def reaudit(self):
+        """Re-run the contamination audit over every stored transcript, with today's rules.
+
+        A stop for contamination is either a real violation or a defect in a rule. The second
+        happens — the first real worker turn of iteration 1 was stopped by a rule that matched a
+        path quoted inside a document the worker was writing. The recovery must not be "edit
+        state.json by hand": it must be to fix the rule, re-audit the evidence that is still on
+        disk, and let the run continue only if the evidence is now clean. That is what this is.
+        """
+        say("re-auditing every stored transcript with the current rules")
+        remaining = []
+        for name in sorted(os.listdir(self.turns_dir)):
+            if not name.endswith(".stream.jsonl"):
+                continue
+            path = os.path.join(self.turns_dir, name)
+            uses = audit.tool_uses(audit.load_transcript(path))
+            if name.endswith("worker.stream.jsonl"):
+                found = audit.audit_worker(uses, self.project_dir, HERE, REPO)
+            else:
+                found = audit.audit_sim(uses, self.project_dir, HERE, self.sim_log)
+            say(f"  {name}: {len(found)} violation(s)")
+            for item in found:
+                say(f"    {item['rule']} {item['tool']}: {item['detail']}")
+            remaining.extend(found)
+        self.log({"event": "reaudit", "at": now(), "violations": remaining})
+        if remaining:
+            sys.stderr.write("run: the stored transcripts still violate the boundary; "
+                             "not resuming.\n")
+            return 2
+        if self.state.get("stop-reason") == "contamination":
+            self.state["status"] = "running"
+            self.state["stop-reason"] = None
+            self.state["stop-detail"] = "cleared by --reaudit: the rules that fired were fixed"
+            self.save_state()
+            say("the contamination stop is cleared; the run continues")
+        return 0
+
     def decide(self, role, observed, record):
         """What happens after a turn — the stop conditions of DESIGN §2, computed from disk."""
         if role == "sim":
@@ -662,6 +703,9 @@ def main() -> int:
     parser.add_argument("--worker-model", default=None)
     parser.add_argument("--sim-model", default=None)
     parser.add_argument("--worker-permission-mode", default="bypassPermissions")
+    parser.add_argument("--reaudit", action="store_true",
+                        help="re-run the contamination audit over the stored transcripts with "
+                             "the current rules; clears a contamination stop if they are clean")
     parser.add_argument("--fresh", action="store_true",
                         help="archive any existing run for this iteration and start over")
     args = parser.parse_args()
