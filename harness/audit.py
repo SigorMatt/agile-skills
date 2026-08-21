@@ -55,15 +55,25 @@ PATH_KEYS = ("file_path", "path", "notebook_path", "filePath")
 HOME_PATH_RE = re.compile(r"(?:~|/home/[^\s\"'`,<>;:|)&]+)[^\s\"'`,<>;:|)&]*")
 
 
-def plausible(path):
+def plausible(path, source):
     """Could this path be read or written at all?
 
-    A path that does not exist, and whose parent does not exist either, cannot leak anything —
-    it is prose that looks like a path. This distinction is not pedantry: the first real worker
-    turn wrote a question whose `## Context` quoted the stakeholder's own example folders
-    (`~/trips/ski`), and a rule without this filter stopped the run for contamination over a
-    sentence. A check that fires on quoted text gets switched off, and then it checks nothing.
+    A string that looks like a path but names nothing cannot leak anything — it is prose. The
+    distinction is not pedantry: the first real worker turn wrote a question whose `## Context`
+    quoted the stakeholder's own example folders (`~/trips/ski`, `~/flat`), and a rule without
+    this filter stopped the run for contamination over a sentence. A check that fires on quoted
+    text gets switched off, and then it checks nothing.
+
+    The two sources are treated differently, because the evidence differs:
+
+    - `key`  — the path is a tool's `file_path` argument. The session named it as a path and
+               meant it; a write to a file that does not exist yet is still a write, so the
+               parent existing is enough.
+    - `bash` — the path was scraped out of a command string, which is as likely to be a heredoc
+               writing a document as a command reading a file. Require the path itself to exist.
     """
+    if source == "bash":
+        return os.path.exists(path)
     return os.path.exists(path) or os.path.exists(os.path.dirname(path) or "/")
 
 
@@ -114,25 +124,23 @@ def _blob(tool_input):
         return str(tool_input)
 
 
+TRAILING = "\\.,;:)]}'\"`*_"
+
+
 def _paths_in(tool_name, tool_input):
-    """Filesystem paths this tool call names, as written."""
+    """[(path, source)] this tool call names, as written. `source` is "key" or "bash"."""
     found = []
-    for key in PATH_KEYS:
+    for key in PATH_KEYS + ("pattern", "glob"):
         value = tool_input.get(key)
-        if isinstance(value, str) and value:
-            found.append(value)
+        if isinstance(value, str) and value and (key in PATH_KEYS
+                                                 or value.startswith(("/", "~"))):
+            found.append((value, "key"))
     if tool_name == "Bash":
         command = tool_input.get("command")
         if isinstance(command, str):
-            found.extend(HOME_PATH_RE.findall(command))
-    for key in ("pattern", "glob"):
-        value = tool_input.get(key)
-        if isinstance(value, str) and value.startswith(("/", "~")):
-            found.append(value)
-    value = tool_input.get("path")
-    if isinstance(value, str) and value:
-        found.append(value)
-    return found
+            found.extend((match.rstrip(TRAILING), "bash")
+                         for match in HOME_PATH_RE.findall(command))
+    return [(path, source) for path, source in found if path]
 
 
 def _resolve(path, cwd, home=None):
@@ -190,7 +198,7 @@ def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None, exists=Non
                 found.append(violation(
                     "W2", tool, f"named {token!r}, which only harness content contains", blob))
                 break
-        for raw in _paths_in(tool, tool_input):
+        for raw, source in _paths_in(tool, tool_input):
             resolved = _resolve(raw, project_dir, home)
             if _inside(resolved, project_dir):
                 continue
@@ -198,7 +206,7 @@ def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None, exists=Non
                 continue
             if any(_inside(resolved, allowed) for allowed in tolerated):
                 continue
-            if not exists(resolved):
+            if not exists(resolved, source):
                 continue
             found.append(violation(
                 "W3", tool, f"reached for {resolved}, which is outside the project", blob))
@@ -231,7 +239,7 @@ def audit_sim(uses, project_dir, harness_dir, sim_log):
             continue
         if tool not in WRITE_TOOLS:
             continue
-        for raw in _paths_in(tool, tool_input):
+        for raw, _source in _paths_in(tool, tool_input):
             resolved = _resolve(raw, harness_dir)
             if resolved == idea or resolved == log or question_re.match(resolved):
                 continue

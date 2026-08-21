@@ -58,7 +58,7 @@ def uses(*calls):
         os.unlink(path)
 
 
-def worker_violations(*calls, exists=lambda path: True):
+def worker_violations(*calls, exists=lambda path, source: True):
     """`exists` defaults to "every path in the fixture is real"; W3's job is the boundary."""
     tool_uses, _ = uses(*calls)
     return audit.audit_worker(tool_uses, PROJECT, HARNESS, REPO, home=HOME, exists=exists)
@@ -135,10 +135,18 @@ class WorkerBoundary(unittest.TestCase):
                    "## Context\n\nYou said you split costs on trips (`~/trips/ski`) and on "
                    "the flat (`~/flat`).\nEOF")
         self.assertEqual(worker_violations(("Bash", {"command": command}),
-                                           exists=lambda path: False), [])
+                                           exists=audit.plausible), [])
         # and the same shape, when the path is real, still fires
-        self.assertEqual(rules(worker_violations(("Bash", {"command": "cat ~/trips/ski"}),
-                                                 exists=lambda path: True)), ["W3"])
+        self.assertEqual(rules(worker_violations(
+            ("Bash", {"command": f"cat {HOME}/trips/ski"}),
+            exists=lambda path, source: True)), ["W3"])
+
+    def test_a_write_to_a_file_that_does_not_exist_yet_still_fires(self):
+        """A `file_path` argument is a path the session meant; the file need not exist."""
+        found = worker_violations(
+            ("Write", {"file_path": f"{HOME}/notes/new-file.md", "content": "x"}),
+            exists=lambda path, source: source == "key")
+        self.assertEqual(rules(found), ["W3"])
 
     def test_the_agents_own_state_directory_is_tolerated(self):
         self.assertEqual(worker_violations(
