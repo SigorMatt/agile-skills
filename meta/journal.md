@@ -1981,3 +1981,52 @@ reviewer's call.
   document written after the run describes what happened, not what the reader must do.
 - **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
 - **Result:** META-079 done.
+
+---
+
+## 2026-08-21 — META-080 — the mini end-to-end iteration
+
+- **Unit:** META-080. Evidence: `meta/harness/evidence/iteration-1-mini/`.
+- **Eight turns, $48.51, stopped deliberately at the turn budget** once the acceptance targets
+  were met. Two of three work items are still open; the rest of iteration 1 belongs to the owner.
+- **Every acceptance target met:** intake and refinement completed through the async protocol
+  (16 questions filed to the human across three worker turns, every one answered in the question
+  file by the sim and propagated by `answer-questions`); **WI-0001 reached `done`** and merged;
+  **both** planted probes consumed and tagged; and all eight transcripts audit clean. The
+  workspace ends at **0 errors, 0 warnings**.
+- **The result I did not expect:** `in-review → in-progress` — the review send-back, listed in
+  `meta/FINAL-REPORT.md` as never executed — fired **three times, organically**. `review-close`
+  rejected WI-0001 for a dead function and a duplicated rule, and later for an AC8 violation that
+  **two `verify` passes had missed**: a store whose people list held a non-string parsed cleanly
+  and then raised `AttributeError` past `cli.main`'s `except ExpensesError`. The reject → fix →
+  re-verify loop did real work rather than ceremony. That single fact justifies the harness more
+  than anything I built into it.
+- **Six toolkit findings, every one found by the worker rather than by me** (F-011, F-013 through
+  F-018). The worker journalled each where it happened and repeated them in its status report;
+  I reproduced F-013 (an epic cannot be suspended: `transition: open → awaiting-answer by
+  'intake' is not a transition in pipeline.yaml`) and confirmed F-014 by reading the code. That
+  is the harness working exactly as `DESIGN.md` intends: I did not have to notice anything.
+- **Two contamination false positives, both mine, both fixed with a regression test:**
+  1. `W3` matched paths quoted *inside a document the worker was writing* — a question whose
+     `## Context` repeated the stakeholder's own example folders (`~/trips/ski`, `~/flat`). Fixed
+     by distinguishing a path given as a tool *argument* (the session meant it; the parent
+     existing is enough) from one *scraped out of a command string* (require the path itself to
+     exist).
+  2. `W3` then matched a bare `~` — `tr '\n' '~'` — and a markdown `~~strikethrough~~`. The
+     tilde form now requires a following slash.
+  Both cost a stopped run. The lesson is in the code comment: a check that fires on quoted text
+  gets switched off, and then it checks nothing.
+- **`--reaudit` exists because of the first one.** The recovery from a contamination stop must
+  not be "edit `state.json` by hand": it is to fix the rule, re-audit the transcripts still on
+  disk, and resume **only** if they come back clean — and to re-derive the next turn from the
+  workspace, because a contamination stop happens before the turn's decision is taken and
+  resuming without that repeats a worker turn that already ran, at full price. I learned that the
+  expensive way, once.
+- **A defect in my own worker prompt, reported by the worker:** amendments A ("batch every
+  question before you stop") and E ("stop when a human question is open") cannot both be obeyed
+  literally, because the orchestrator stops on the first question filed. The worker resolved it
+  correctly on its own and journalled why. Also, `stop_reason` has no value for "the per-turn
+  budget ran out", so two clean turns had to report `error` and explain in prose. Both recorded
+  as H-001; fixed in META-081, not mid-run.
+- **Gates:** `./scripts/check` — 6 steps, all passed, no skips.
+- **Result:** META-080 done.

@@ -1,0 +1,17 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: expenses
+  trunk-branch: main
+  description: "A command-line tool that records the people in a friend group and the expenses they pay on each other's behalf, and reports who owes whom. Python, local file storage, no external services."
+
+commands:
+  test: "python3 -m unittest discover -s tests -t ."
+  lint: null   # no linter in the standard library; ADR-0001 section 4. The no-lint-errors gate is skipped, citing that ADR.
+  build: null  # nothing to build; the tool is run from source as `python3 -m expenses`. ADR-0001 section 5.
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

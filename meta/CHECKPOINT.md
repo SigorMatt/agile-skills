@@ -1,24 +1,27 @@
 # CHECKPOINT
 
-## Current unit — META-080
+## Current unit — META-081
 
-The mini end-to-end iteration, on PROJECT-QUEUE entry 1 (`expenses`).
+Findings F-011+ and `meta/harness/FINAL-REPORT.md`.
 
 **Steps**
-1. Follow `harness/USAGE.md` literally, at the default throwaway root
-   (`~/agile-skills-throwaway`), correcting the document wherever it is wrong.
-2. `harness/provision.py --iteration iteration-1-expenses`, then
-   `harness/run_iteration.py --iteration iteration-1-expenses --max-turns 16` with the default
-   models (worker opus, sim sonnet).
-3. Target: intake + refinement completed through the async protocol, one work item at `done`,
-   at least one planted probe consumed — or a stop condition correctly reported.
-4. Copy the whole run plus a copy of the project trail into
-   `meta/harness/evidence/iteration-1-mini/` and commit it.
+1. Append to `meta/findings/FINDINGS.md`: F-011 (answer-questions precondition), F-012 (an
+   untrusted workspace's allow-list is discarded in headless runs), F-013 (a blocking question on
+   an epic is unrepresentable), F-014 (transition gates the pre-move workspace), F-015 (implement
+   must pass through a red validator), F-016 (epic-level record commits have no home branch),
+   F-017 (the restamp deadlock in journal.md, and invented timestamps), F-018 (the write guard
+   matches the command string). Update F-006 with the probe that settled it.
+2. Fix the two harness defects the run exposed (H-001): worker turn prompt v2 reconciling
+   amendments A and E, and a `turn-budget-exhausted` value in the `stop_reason` enum.
+3. `meta/harness/FINAL-REPORT.md` — what was built, key decisions, defects found, what the
+   harness does not test, and the exact command sequence for full iteration 1.
+4. Final sweep: `./scripts/check`, `git diff --stat` proving `methodology/` and `spec/`
+   untouched, tree clean, pushed.
 
-**Done when** — the evidence is committed with an honest account of how far the run got,
-`./scripts/check` passes, tree clean.
+**Done when** — the report is committed and the acceptance checklist in
+`meta/harness/HARNESS-PROMPT.md` is answered box by box with evidence pointers.
 
-**Next unit** — META-081, findings F-011+ and `meta/harness/FINAL-REPORT.md`.
+**Next unit** — none. Stop and report.
 
 ## Standing instructions (still in force)
 

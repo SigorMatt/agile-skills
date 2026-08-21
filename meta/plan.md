@@ -188,6 +188,6 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
 - [x] **META-078** — driver restart: resume an interrupted run from `state.json`; verified by
       killing a run mid-turn and rerunning.
 - [x] **META-079** — `harness/USAGE.md`, verified by following it literally.
-- [ ] **META-080** — the mini end-to-end iteration on queue entry 1 (`expenses`), artefacts
+- [x] **META-080** — the mini end-to-end iteration on queue entry 1 (`expenses`), artefacts
       committed under `meta/harness/evidence/`.
 - [ ] **META-081** — findings F-011+ from the run, and `meta/harness/FINAL-REPORT.md`.
