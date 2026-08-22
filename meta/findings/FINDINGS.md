@@ -338,7 +338,18 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: decide on the write target, not on the mention: parse redirections and the known
   mutating commands, or move the guard to the file-write tools where the target is a parameter
   rather than prose.
-- Status: open
+- Status: fixed (commit 84a11a2). The Bash branch now resolves **write targets**:
+  the command is lexed keeping its operators, split into simple commands, and each one yields
+  its redirection destinations plus the argument positions of the mutating programs it knows
+  (`tee`, `sed -i`/`perl -i`, `dd of=`, `cp`/`mv`/`install`/`ln`, `rm`/`shred`/`truncate`,
+  `patch`, `ed`), through `sudo`/`env`/`xargs` wrappers. Input redirection and heredoc sources
+  are not targets. Anything unparseable is still allowed — the module's standing policy.
+  New gate step in `./scripts/check`: `adapters/claude-code/hooks/test_guard.py`, 30 cases,
+  15 must-deny and 15 must-allow, and the table refuses to run if either side is empty.
+  The negative is demonstrated: the same table against the **previous** guard fails 7 cases —
+  `cat tracker/board.md > /tmp/x`, `grep -n WI-0003 tracker/items/*/history.md > /tmp/out`,
+  `diff`, and an unbalanced quote all denied as writes; `cp`/`mv`/`rm` onto a protected file all
+  allowed.
 
 ## F-019 — A failed transition mid-chain leaves record and status divergent, undetectably
 - Severity: correctness, enforcement-integrity (top cluster with F-001, F-018)

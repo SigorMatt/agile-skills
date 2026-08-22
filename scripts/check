@@ -9,7 +9,10 @@ Steps, in order:
                                                EXPECTED-CODES.txt exactly
   4. rendered adapter output is current      — re-render and compare with the committed dist
   5. must-pass workspace                     — validate-workspace over examples/toy-project
-  6. harness self-test                       — harness/tests/test_harness.py: the contamination
+  6. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+                                               guard denies every way of writing a protected
+                                               file and allows every way of reading or naming one
+  7. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -122,6 +125,15 @@ def check_example(runner: Runner) -> None:
                [sys.executable, os.path.join(SCRIPTS, "validate-workspace"), example])
 
 
+def check_guard(runner: Runner) -> None:
+    tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
+    if not os.path.isfile(tests):
+        runner.skip("write-guard self-test",
+                    "adapters/claude-code/hooks/test_guard.py does not exist yet")
+        return
+    runner.run("write-guard self-test", [sys.executable, tests])
+
+
 def check_harness(runner: Runner) -> None:
     tests = os.path.join(ROOT, "harness", "tests", "test_harness.py")
     if not os.path.isfile(tests):
@@ -137,6 +149,7 @@ def main() -> int:
     check_fixture(runner)
     check_render(runner)
     check_example(runner)
+    check_guard(runner)
     check_harness(runner)
 
     print()

@@ -2172,3 +2172,29 @@ Seven patch bumps: intake 0.1.2, refine 0.1.2, plan 0.1.2, implement 0.1.1, veri
 review-close 0.1.3, answer-questions 0.1.2.
 
 Evidence: `./scripts/check` green after re-render.
+
+## META-085 — F-018: the guard decides on the target, not the sentence
+
+The old Bash branch asked two questions — does the command string contain a guarded path, and
+does it contain anything redirect-shaped — and denied when both were true. That denies
+`cat tracker/board.md > /tmp/x` and `grep -n WI-0003 tracker/items/*/history.md > /tmp/out`,
+which are reads, and it misses `cp /tmp/fake.md tracker/board.md`, which is a write. Both errors
+come from the same place: it was matching prose.
+
+It now lexes the command with `shlex` keeping punctuation, splits on the operators, and asks each
+simple command what it *writes to* — redirection destinations, and the argument positions of the
+mutating programs it knows, following `sudo`/`env`/`xargs` through to the real one. `sed` and
+`perl` count only with an in-place flag; input redirection and heredoc sources are not targets.
+
+The policy that anything unparseable is allowed is unchanged and is now covered by a test, because
+it is the rule most likely to be "tidied" later by someone who reads it as a hole. It is not: a
+guard that blocks on confusion is a guard the agent routes around, which is the same failure F-018
+describes by a different door.
+
+`adapters/claude-code/hooks/test_guard.py` is a new step in `./scripts/check` — 30 cases, 15
+must-deny and 15 must-allow, and it fails outright if either side of the table is empty (a
+must-allow-only table would pass against a guard that does nothing). The must-allow side is seeded
+with F-018's own examples. Run against the **previous** guard the table fails 7 cases, in both
+directions, which is the evidence that the fix is a fix and not a rewording.
+
+Evidence: `./scripts/check` — 7 steps, all passed.

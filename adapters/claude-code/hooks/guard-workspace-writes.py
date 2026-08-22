@@ -28,15 +28,37 @@ to the documented convention, which is where we would have been anyway.
 from __future__ import annotations
 
 import json
+import os
 import re
+import shlex
 import sys
 
 HISTORY_RE = re.compile(r"(^|/)tracker/items/[^/]+/history\.md$")
 BOARD_RE = re.compile(r"(^|/)tracker/board\.md$")
 
 WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
-# A shell command that rewrites one of these files in place is the same act by another route.
-REDIRECT_RE = re.compile(r">>?|\btee\b|\bsed\b\s+-i|\bpatch\b|\bdd\b")
+
+# A shell command that rewrites one of these files in place is the same act by another route —
+# but only if the file is the command's *target*. The first version of this guard searched the
+# command string for a guarded path and for anything redirect-shaped, which denied
+# `cat tracker/board.md > /tmp/x`, `grep -n WI-0003 tracker/items/*/history.md > out`, and a
+# commit whose message merely names the board. F-018: a guard that fires on mentions teaches the
+# agent to phrase around it, which is the exact opposite of what a guard is for. So: parse.
+REDIRECT_TOKEN_RE = re.compile(r"^(?:\d*|&)>>?$")
+ATTACHED_REDIRECT_RE = re.compile(r"^(?:\d*|&)>>?(?P<target>.+)$")
+
+# argv[0] -> which of its arguments it writes to.
+#   "all"   every non-flag argument
+#   "last"  the final non-flag argument (cp/mv/install semantics)
+#   "of"    the value of an `of=` assignment (dd)
+WRITERS = {
+    "tee": "all", "sed": "all", "perl": "all", "patch": "all", "rm": "all", "shred": "all",
+    "truncate": "all", "unlink": "all", "ed": "all",
+    "cp": "last", "mv": "last", "install": "last", "ln": "last",
+    "dd": "of",
+}
+# `sed` and `perl` only write with an in-place flag; without it they are readers.
+IN_PLACE_REQUIRED = {"sed": ("-i",), "perl": ("-i",)}
 
 HISTORY_REASON = (
     "Blocked: tracker/items/*/history.md is append-only and is written by "
@@ -54,6 +76,82 @@ BOARD_REASON = (
     "with the tracker while looking authoritative, and validate-workspace will report it as "
     "board.stale."
 )
+
+
+def write_targets(command: str):
+    """Every path this shell command would write to, as best as it can be read.
+
+    Deliberately incomplete and deliberately quiet about it: a construct this cannot parse is
+    not a target, because the module's standing policy is that a guard which blocks on confusion
+    becomes a guard the agent routes around. What it must get right is the common ways a file is
+    actually written — redirection, `tee`, an in-place edit — and it must not mistake a path that
+    is being *read* or *named* for one being written.
+    """
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+        lexer.whitespace_split = True
+        tokens = list(lexer)
+    except ValueError:
+        return []
+
+    targets = []
+    segment = []
+    for token in tokens + [";"]:
+        if token in (";", "|", "||", "&&", "&", "\n"):
+            targets.extend(segment_targets(segment))
+            segment = []
+            continue
+        segment.append(token)
+    return targets
+
+
+def segment_targets(tokens: list):
+    """Write targets of one simple command (no operators)."""
+    found = []
+    words = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if REDIRECT_TOKEN_RE.match(token):
+            if index + 1 < len(tokens):
+                found.append(tokens[index + 1])
+            index += 2
+            continue
+        attached = ATTACHED_REDIRECT_RE.match(token)
+        if attached and not token.startswith("<"):
+            found.append(attached.group("target"))
+            index += 1
+            continue
+        if token.startswith("<"):          # input redirection and heredocs write nothing —
+            index += 2                     # skip the operator and its source
+            continue
+        words.append(token)
+        index += 1
+
+    while words and "=" in words[0] and not words[0].startswith("-") \
+            and words[0].split("=")[0].isidentifier():
+        words.pop(0)                        # leading VAR=value assignments
+    if not words:
+        return found
+    program = os.path.basename(words[0])
+    if program in ("sudo", "command", "env", "nice", "time", "xargs"):
+        return found + segment_targets(words[1:])
+    rule = WRITERS.get(program)
+    if rule is None:
+        return found
+    flags = IN_PLACE_REQUIRED.get(program)
+    if flags and not any(word.startswith(flag) for word in words[1:] for flag in flags):
+        return found
+    arguments = [word for word in words[1:] if not word.startswith("-")]
+    if program in ("sed", "perl") and arguments:
+        arguments = arguments[1:]           # the script itself is not a file
+    if rule == "all":
+        found.extend(arguments)
+    elif rule == "last" and arguments:
+        found.append(arguments[-1])
+    elif rule == "of":
+        found.extend(word.split("=", 1)[1] for word in words[1:] if word.startswith("of="))
+    return found
 
 
 def deny(reason: str) -> None:
@@ -90,14 +188,12 @@ def main() -> int:
         return 0
 
     if tool == "Bash":
-        command = str(tool_input.get("command") or "")
-        if not REDIRECT_RE.search(command):
-            return 0
-        # Only object when the command both mentions a protected file and looks like it writes.
-        if re.search(r"tracker/items/[^\s]*history\.md", command):
-            deny(HISTORY_REASON)
-        if re.search(r"tracker/board\.md", command):
-            deny(BOARD_REASON)
+        for target in write_targets(str(tool_input.get("command") or "")):
+            normalised = target.replace("\\", "/").strip("\"'")
+            if HISTORY_RE.search(normalised):
+                deny(HISTORY_REASON)
+            if BOARD_RE.search(normalised):
+                deny(BOARD_REASON)
     return 0
 
 
