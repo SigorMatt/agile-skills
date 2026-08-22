@@ -2347,3 +2347,43 @@ is a file. So this is a channel the sim can actually use, which questions-only n
 
 Versions: pipeline 0.3.0, next 0.2.0, intake 0.2.0. Evidence: `./scripts/check` — 10 steps, all
 passed, 62 fixture codes.
+
+## META-090 — cluster 3: four defects the worker found by running into them
+
+**F-011** was a sentence. `answer-questions`' precondition 1 said "there is at least one open
+question addressed to `architect`; if every open question is addressed to `human`, you have
+nothing to do" — which told the only skill that can consume a human's answer that it had nothing
+to do, because an answered human question is still `open` and still `addressed-to: human`. `next`
+stops on any open human-addressed question, so one unconsumed answer stopped every subsequent turn
+forever. The precondition now defines *answerable* and names both shapes. The harness prompt's
+amendment B existed solely to talk the worker past that sentence; it is deleted, and in its place
+a note says that if a future run gets stuck there, the contract regressed. Deleting a workaround
+is the part of a fix that is easy to skip and that proves it landed.
+
+**F-014** — I took the finding's second option and its "say which" literally. `transition` tells
+its gate run which move is pending, and the validator downgrades to *warnings* the findings that
+move resolves, scoped to the moving item, printing how many and why. Downgrading rather than
+suppressing matters: the findings are still in the output, still readable, and a run that
+downgrades something surprising is visible. The set is deliberately tiny — board staleness for any
+move, the two suspension codes for moves in and out of suspension — because a generous list would
+turn the gate into a rubber stamp on exactly the path where the record is most fragile.
+
+I did not take the first option (validate the post-move state) because applying the move to
+validate it and rolling back on failure means truncating an append-only file, which is the act the
+write guard exists to forbid. Choosing the weaker-looking option to preserve a stronger invariant
+is worth recording.
+
+**F-015** dissolved into META-084b's mechanism: `implement` step 3 now moves to `in-progress` and
+writes its opening entry in one command. The skill legitimately writes two entries because it
+makes two transitions, and saying so in the contract removes the ambiguity that made "journal at
+the end" look correct.
+
+**F-016** needed a decision, not a mechanism. Epic-level record commits go on the trunk: an epic
+has no branch, outlives every item under it, and is changed by executions that are not about any
+one child. `check-commit-refs` now *diagnoses* the case instead of merely reporting it — an
+offending commit naming a different item is called out as an epic commit on the wrong branch, with
+the sentence the worker who found this most needed: this gate is failing for an item that did
+nothing wrong.
+
+Versions: answer-questions 0.1.4, implement 0.2.1, review-close 0.3.1, worker-turn prompt 3.
+Evidence: `./scripts/check` — 10 steps, all passed.

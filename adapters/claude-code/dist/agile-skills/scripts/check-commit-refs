@@ -20,8 +20,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
+import re  # noqa: E402
 import miniyaml  # noqa: E402
 from workspace import resolve_root  # noqa: E402
+
+
+OTHER_ID_RE = re.compile(r"\b(EP-\d{3}|WI-\d{4}|BUG-\d{4})\b")
 
 
 def git(args, root):
@@ -102,8 +106,23 @@ def main(argv: list) -> int:
     if offenders:
         print(f"check-commit-refs: {len(offenders)} of {total} commit(s) on {rev_range} do not "
               f"name {item_id}:", file=sys.stderr)
+        epic_level = []
         for sha, subject in offenders:
+            other = OTHER_ID_RE.search(subject)
             print(f"  {sha}  {subject}", file=sys.stderr)
+            if other and other.group(0) != item_id:
+                epic_level.append((sha, other.group(0)))
+        if epic_level:
+            print("", file=sys.stderr)
+            print("  Some of these name a different item. A record commit for another item — "
+                  "most often an", file=sys.stderr)
+            print("  epic — does not belong on this branch: an epic is not a branch-scoped "
+                  "unit of work, so its", file=sys.stderr)
+            print("  record commits are made on the trunk (spec/workspace-layout.md \u00a75). "
+                  "This gate is failing for", file=sys.stderr)
+            print(f"  {item_id}, which did nothing wrong. Move "
+                  + ", ".join(f"{sha} ({named})" for sha, named in epic_level)
+                  + f" to {trunk}.", file=sys.stderr)
         print("  fix with: git rebase -i --exec 'git commit --amend' "
               f"{trunk}   (or amend the offending commits individually)", file=sys.stderr)
         return 1

@@ -1,4 +1,4 @@
-# Contract — implement v0.2.0
+# Contract — implement v0.2.1
 
 Rendered from `methodology/skills/implement/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 

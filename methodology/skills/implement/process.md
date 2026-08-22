@@ -42,9 +42,22 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    doc — re-read those. Do not read the answer out of the question file and act on it directly;
    the artifacts are authoritative, and if they were not updated, that is itself a question.
 
-3. **Create or check out the branch.** `{{conventions.branch-prefix}}{{item.id}}`, branched from
-   `{{trunk}}`. Set `branch:` in `item.md` if it is not set. Move the item to `in-progress` now,
-   with a history row — before writing code, so an interruption leaves a truthful status.
+3. **Create or check out the branch, and open the execution in the record.**
+   `{{conventions.branch-prefix}}{{item.id}}`, branched from `{{trunk}}`. Move the item to
+   `in-progress` now — before writing code, so an interruption leaves a truthful status — and
+   write the opening journal entry **in the same command**, with `--journal-body-file` and
+   `--branch` (see Journaling).
+
+   Both halves matter. Moving first is what makes an interrupted `implement` recoverable, which
+   is what `in-progress` is for. Journalling in the same command is what stops the move from
+   creating a workspace that fails its own validator: an actor in `history.md` with no journal
+   entry is `journal.execution.missing`, and doing the move at step 3 while journalling at step 9
+   guaranteed that finding on every single run. A validator that is legitimately red in the
+   middle of every execution stops meaning anything (F-015).
+
+   The opening entry is short and honest: what you read, the branch you created, `**Gates:**`
+   recording that the completion gates have not run yet, and a `**Result:**` saying
+   implementation has started. Step 9's entry is the one that reports the work.
 
 4. **Work the plan's steps in order.** For each:
    - Make the change the step describes.
@@ -113,6 +126,11 @@ On the item's `journal.md`:
 - `**Gates:**` — all six by name, each pass/fail/skipped with evidence. A gate whose command
   resolved to null is `skipped` **with the reason**, never passed.
 - `**Artifacts:**` — `impl-report.md`, the branch, and the commit range.
+
+This skill writes **two** entries, because it makes two transitions. The opening one, at step 3,
+records the branch and says the work has started; its `**Gates:**` bullet lists every gate as
+not-yet-run, which is the truth at that moment. The closing one, at step 9, is the report. Both
+go through the transition that causes them, so neither move can exist without its entry.
 
 
 **How the entry is written.** You do not type an entry heading. Write the bullets to a file, and

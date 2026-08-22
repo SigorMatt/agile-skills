@@ -188,6 +188,17 @@ Rules:
 - Workspace changes (tracker and docs) are committed **with** the code change that caused them,
   not separately. A commit that changes only the tracker is legitimate for `intake`, `refine`
   and `answer-questions`, which produce no code.
+- **An epic-level record commit belongs on the trunk**, not on whichever item branch happens to
+  be checked out. An epic is not a branch-scoped unit of work: it has no branch of its own, it
+  outlives every item under it, and its record — `tracker/items/EP-###/` — is changed by
+  executions that are not about any one child. A skill writing an epic's record while an item
+  branch is checked out MUST commit it on the trunk (check out the trunk, commit, return),
+  before or after the item's own commits but never inside them.
+
+  This is a rule because breaking it fails a gate for an item that did nothing wrong: an
+  epic-level commit sitting on `wi/WI-0003` names `EP-001`, and `check-commit-refs WI-0003`
+  reports it as a commit on the item's branch that does not name the item. The worker that hit
+  it had no way to know where the commit should have gone, because nothing said (F-016).
 - `review-close` merges the branch into `{{trunk}}`. The workspace never depends on a remote
   existing: everything here works in a purely local repository.
 
@@ -199,3 +210,4 @@ Rules:
 |---|------|--------|
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | `tracker/requests/` added — the stakeholder-initiated channel (F-021, `spec/request.md`). |
+| 3 | 2026-08-22 | §5: an epic-level record commit is made on the trunk, not on the item branch that happens to be checked out (F-016). |

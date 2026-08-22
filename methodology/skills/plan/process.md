@@ -126,21 +126,6 @@ On the item's `journal.md`:
 - `**Artifacts:**` — `plan.md`, every ADR created, docs updated with their new versions.
 
 
-### Commit what you wrote
-
-The record belongs in version control, not only on disk. When you have journalled and
-transitioned, commit the workspace files this execution produced, using the project's
-`conventions.commit-subject` with this item's ID:
-
-```
-tracker: the plan, any ADRs, and the documents you updated (refs <ITEM-ID>)
-```
-
-A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
-code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
-the item's whole story rather than only its code.
-
-
 **How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
 let the tool stamp the heading — the timestamp from the clock, the version and persona from this
 skill's installed `skill.yaml`:
@@ -161,6 +146,21 @@ scripts/transition <ITEM-ID> --to <status> --actor plan --reason "..." \
 `scripts/journal-entry --template --skill plan` prints the shape. A heading you write yourself
 is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
 clock produced (`spec/journal-and-history.md` §0).
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the plan, any ADRs, and the documents you updated (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
+
 
 ---
 

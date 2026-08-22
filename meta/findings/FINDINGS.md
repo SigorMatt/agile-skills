@@ -217,7 +217,11 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: precondition 1 should read "at least one open question that is answerable —
   addressed to `architect`, or addressed to `human` with `## Answer` filled in". The escalation
   case it was written for is "addressed to human and *not* answered".
-- Status: open
+- Status: fixed (commit 78fd525) — precondition 1 rewritten as filed, naming both
+  answerable shapes and stating the escalated-and-unanswered case it was actually written for.
+  `answer-questions` → 0.1.4. The harness worker-turn prompt's amendment B, which existed only
+  to talk the worker past that sentence, is deleted (prompt → version 3) and replaced by a note
+  saying that if a future run gets stuck there, the contract regressed.
 
 ## F-012 — In headless runs, `permissions.allow` is ignored unless the project is trusted
 - Severity: correctness, consumer-facing (silently disables the setup USAGE recommends)
@@ -302,7 +306,17 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   meta/harness/evidence/iteration-1-mini/.
 - Direction: either evaluate `workspace-valid` against the post-move state, or exclude from the
   pre-move run the codes that the move itself resolves, and say which in the gate's output.
-- Status: open
+- Status: fixed (commit 78fd525) — the second option, with the "say which" taken
+  literally. `transition` now tells its gate run which move is pending
+  (`run-gate --resolving ITEM:from->to` → `validate-workspace --resolving ...`), and the
+  validator **downgrades to warnings** exactly the findings that move resolves: `board.stale` /
+  `board.missing` for any move (the script regenerates the board immediately after),
+  `question.awaiting.none-open` when leaving `awaiting-answer`/`blocked`, and
+  `question.blocking.not-suspended` when entering one — the last two scoped to the moving item
+  only. It prints a note saying how many were downgraded and why, so nothing is silently
+  forgiven. Demonstrated in a scratch workspace on the exact path the finding names: the
+  `answer-questions` resume prints `FAIL workspace-valid` without the pending move declared and
+  `PASS` with it.
 
 ## F-015 — `implement` is required to pass through a red validator
 - Severity: correctness (the procedure guarantees a failing gate mid-execution)
@@ -319,7 +333,12 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   inconsistent), or `journal.execution.missing` is a warning while the item is at `in-progress`
   with the acting skill still running. The first is better: it also makes an interrupted
   `implement` recoverable, which is what `in-progress` exists for.
-- Status: open
+- Status: fixed (commit 78fd525) — the first option, which META-084b had already built
+  the mechanism for. `implement` step 3 now moves to `in-progress` **and** writes an opening
+  journal entry in the same command (`transition --journal-body-file --branch`). The skill
+  writes two entries because it makes two transitions: the opening one records the branch and
+  lists every gate as not-yet-run, which is the truth at that moment; step 9's is the report.
+  `implement` → 0.2.1. `journal.execution.missing`'s hint now names the one-command fix.
 
 ## F-016 — Epic-level record commits have no home branch
 - Severity: correctness (a gate fails for an item that did nothing wrong)
@@ -334,7 +353,14 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: state the rule. Either epic-level record commits are made on the trunk branch (the
   epic is not a branch-scoped unit of work), or an item's branch owns every commit made while it
   is checked out and the gate must scope by item, not by branch.
-- Status: open
+- Status: fixed (commit 78fd525) — the first option. `spec/workspace-layout.md` §5
+  (revision 3): an epic-level record commit is made on the trunk, because an epic has no branch,
+  outlives every item under it, and is changed by executions that are not about any one child.
+  `answer-questions` (0.1.4) and `review-close` (0.3.1) carry the step. `check-commit-refs` now
+  diagnoses the shape rather than only reporting it: an offending commit whose subject names a
+  *different* item is called out as an epic-level commit on the wrong branch, with the note that
+  the gate is failing for an item that did nothing wrong — which is exactly what the worker who
+  found this could not tell.
 
 ## F-017 — The restamp deadlock exists in `journal.md` too, and skills invent timestamps
 - Severity: correctness (the record carries plausible-looking fabricated times)

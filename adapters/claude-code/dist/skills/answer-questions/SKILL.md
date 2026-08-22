@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question and the answer must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.1.2
+  methodology-version: 0.1.4
   persona: architect
   human-interaction: direct
 ---
@@ -42,8 +42,18 @@ information.
 
 ## Preconditions
 
-1. There is at least one open question addressed to `architect`. If every open question is
-   addressed to `human`, you have nothing to do: report and stop.
+1. There is at least one open question you can act on. A question is **answerable** when it is
+   `status: open` and either
+   - `addressed-to: architect` — you answer it; or
+   - `addressed-to: human` **with `## Answer` filled in** — the human has replied and you are
+     the only skill that may propagate that reply, mark the question answered, and resume the
+     item.
+
+   If every open question is addressed to `human` and none has an answer, you have nothing to do:
+   report and stop. That case — escalated and not yet answered — is the one this precondition was
+   written for, and stating it as "addressed to human" instead deadlocked the pipeline: `next`
+   stops on any open human-addressed question, so an answered-but-unconsumed one stopped every
+   subsequent turn forever (F-011).
 2. The item's `history.md` records a `resume-to` on the row that suspended it. If it does not,
    that is a defect in the suspending skill — determine the correct return status from the
    history chain, record that you had to, and note the defect in the journal.
@@ -136,21 +146,6 @@ on the epic's journal — otherwise a scope decision lives only on a child item 
 looking at the epic will find it.
 
 
-### Commit what you wrote
-
-The record belongs in version control, not only on disk. When you have journalled and
-transitioned, commit the workspace files this execution produced, using the project's
-`conventions.commit-subject` with this item's ID:
-
-```
-tracker: the answered questions and every artifact you propagated into (refs <ITEM-ID>)
-```
-
-A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
-code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
-the item's whole story rather than only its code.
-
-
 **How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
 let the tool stamp the heading — the timestamp from the clock, the version and persona from this
 skill's installed `skill.yaml`:
@@ -171,6 +166,27 @@ scripts/transition <ITEM-ID> --to <status> --actor answer-questions --reason "..
 `scripts/journal-entry --template --skill answer-questions` prints the shape. A heading you write yourself
 is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
 clock produced (`spec/journal-and-history.md` §0).
+
+### Commit what you wrote
+
+The record belongs in version control, not only on disk. When you have journalled and
+transitioned, commit the workspace files this execution produced, using the project's
+`conventions.commit-subject` with this item's ID:
+
+```
+tracker: the answered questions and every artifact you propagated into (refs <ITEM-ID>)
+```
+
+A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
+code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
+the item's whole story rather than only its code.
+
+
+**Where the epic's record commit goes.** If this execution changed anything under
+`tracker/items/EP-###/` while an item branch is checked out, that commit belongs on the trunk,
+not on the branch: check out `{{trunk}}`, commit the epic's files, and return. An epic is not a
+branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
+`check-commit-refs` for a work item that did nothing wrong (`spec/workspace-layout.md` §5).
 
 ---
 

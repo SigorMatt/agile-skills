@@ -1,4 +1,4 @@
-<!-- harness-prompt: worker-turn, version 2 -->
+<!-- harness-prompt: worker-turn, version 3 -->
 # Worker turn
 
 The driver substitutes `{{PROJECT_DIR}}`, `{{TURN}}` and `{{STATUS_FILE}}` and passes everything
@@ -61,14 +61,14 @@ into the artifacts it affects, list those files under `## Consequences`, set
 `answered-by: human`, `answered-at`, `status: answered`, and return the item to its recorded
 `resume-to`. `spec/question.md` §3 specifies exactly this path.
 
-`answer-questions`' first precondition reads as though it only applies to questions addressed to
-`architect`. It is written for the case where the human has *not* answered. A human-addressed
-question whose `## Answer` the human has filled in is squarely that skill's job — its own step 4
-provides for `answered-by: human` — and nothing else in the pipeline can do it. Do that job, and
-say in the journal that you did.
-
 An answered question that is left open blocks the whole pipeline: the orchestrator stops on any
 open human-addressed question, so a turn that fails to consume answers accomplishes nothing.
+
+(This section used to carry a paragraph talking the worker past `answer-questions`' first
+precondition, which read as though it excluded human-addressed questions. That was F-011, and the
+skill contract was fixed at v0.1.3 — the precondition now says "answerable" and names this case
+explicitly. The paragraph is gone; if a future run gets stuck here again, the contract regressed
+and that is the thing to fix.)
 
 ## C. Everything you know must be on disk
 

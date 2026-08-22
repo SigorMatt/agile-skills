@@ -4,6 +4,12 @@
 Usage:
   scripts/run-gate --skill implement --item WI-0001 --gate tests-pass [--root .]
   scripts/run-gate --skill implement --item WI-0001 --all [--root .]
+  scripts/run-gate --skill implement --item WI-0001 --all --resolving WI-0001:planned->in-progress
+
+`--resolving <ITEM>:<from>-><to>` says a transition is pending. `workspace-valid` then judges the
+state that move produces rather than the one it is leaving — otherwise every `answer-questions`
+resume reports FAIL on correct work, because the questions are already answered while the item is
+still `awaiting-answer` (F-014).
 
 Exit 0 when every gate asked for passed or was skipped for a declared reason. Exit 1 when a
 gate with `enforcement: hard` failed. Exit 2 for a usage error.
@@ -97,7 +103,7 @@ class Resolver:
         return PLACEHOLDER_RE.sub(replace, text), missing
 
 
-def run_one(gate: dict, resolver: Resolver, root: str) -> tuple:
+def run_one(gate: dict, resolver: Resolver, root: str, resolving=None) -> tuple:
     """Return (outcome, detail). Outcome is PASS, FAIL, SKIP or MANUAL."""
     if gate.get("manual_check"):
         return "MANUAL", gate["manual_check"]
@@ -119,7 +125,12 @@ def run_one(gate: dict, resolver: Resolver, root: str) -> tuple:
     if parts and parts[0].startswith("scripts/"):
         candidate = os.path.join(HERE, os.path.basename(parts[0]))
         if os.path.isfile(candidate):
-            command = shlex.join([sys.executable, candidate] + parts[1:] + ["--root", root])
+            extra = ["--root", root]
+            # A gate run on behalf of a transition that has not happened yet must judge the
+            # workspace the move produces, not the one it is leaving (F-014).
+            if resolving and os.path.basename(parts[0]) == "validate-workspace":
+                extra += ["--resolving", resolving]
+            command = shlex.join([sys.executable, candidate] + parts[1:] + extra)
 
     result = subprocess.run(command, shell=True, cwd=root, capture_output=True, text=True)
     expected_zero = gate.get("expect", "exit-zero") == "exit-zero"
@@ -175,7 +186,7 @@ def main(argv: list) -> int:
     resolver = Resolver(root, options["item"])
     failures = []
     for gate in selected:
-        outcome, detail = run_one(gate, resolver, root)
+        outcome, detail = run_one(gate, resolver, root, options.get("resolving"))
         print(f"{outcome:6} {gate['name']}  ({gate['enforcement']})")
         for line in detail.split("\n"):
             print(f"       {line.strip() if not line.startswith('      ') else line}")

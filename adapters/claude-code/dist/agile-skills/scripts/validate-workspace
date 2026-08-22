@@ -182,6 +182,22 @@ def find_pipeline(explicit=None):
     return None
 
 
+# F-014: `transition` runs the workspace validator *before* it makes a move, so it sees a
+# workspace the move is about to repair — most visibly on every `answer-questions` resume, where
+# the questions are already answered, the item is still `awaiting-answer`, and the board has not
+# been regenerated. That printed a loud FAIL on correct work, every time, on the one path whose
+# whole purpose is to resume a suspended item; an agent that believes its gates learns to ignore
+# that one. These are the findings a move legitimately resolves, and only for the item moving.
+def resolved_by_move(from_status, to_status):
+    """Finding codes this pending transition will fix, so they are not this move's fault."""
+    codes = {"board.stale", "board.missing"}          # transition regenerates the board after
+    if from_status in ("awaiting-answer", "blocked"):
+        codes.add("question.awaiting.none-open")      # the answered question released the item
+    if to_status in ("awaiting-answer", "blocked"):
+        codes.add("question.blocking.not-suspended")  # this move is the suspension
+    return codes
+
+
 class Validator:
     def __init__(self, root: str, pipeline_path) -> None:
         self.workspace = Workspace(root).load()
@@ -197,6 +213,7 @@ class Validator:
         self.installed_versions = find_installed_versions()
         self.latest_stamp = datetime.datetime.now(datetime.timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ")
+        self.resolving = None      # (item-id, from, to) when a transition is about to be made
 
     # ---- setup ---------------------------------------------------------------------
 
@@ -604,7 +621,9 @@ class Validator:
                               f"{skill!r} appears as an actor in history.md but wrote no "
                               f"journal entry",
                               hint="an execution with no entry is indistinguishable from one "
-                                   "that never happened")
+                                   "that never happened; pass --journal-body-file to "
+                                   "scripts/transition so the move and its entry are one "
+                                   "command")
 
     # ---- questions -----------------------------------------------------------------
 
@@ -974,6 +993,32 @@ class Validator:
                         self.report.error(path, 0, "request.handled.field",
                                           f"a request that is {status!r} must record {field}")
 
+    def apply_pending_move(self) -> None:
+        """Downgrade findings a pending transition resolves, and say that it happened."""
+        if not self.resolving:
+            return
+        item_id, from_status, to_status = self.resolving
+        codes = resolved_by_move(from_status, to_status)
+        item = self.workspace.items.get(item_id)
+        item_paths = {item.path, os.path.join(item.root, "history.md")} if item else set()
+        downgraded = 0
+        for finding in self.findings_list():
+            if finding.level != "ERROR" or finding.code not in codes:
+                continue
+            if finding.code.startswith("question.") and finding.path not in item_paths:
+                continue
+            finding.level = "WARNING"
+            finding.hint = (f"downgraded: {item_id} {from_status} \u2192 {to_status} resolves "
+                            f"this. " + (finding.hint or "")).strip()
+            downgraded += 1
+        if downgraded:
+            self.report.note(f"{downgraded} finding(s) downgraded because the pending move "
+                             f"{item_id} {from_status} \u2192 {to_status} resolves them; "
+                             f"everything else below is this workspace's own state")
+
+    def findings_list(self):
+        return self.report.findings
+
     def check_claim_citations(self) -> None:
         """Rule 1 of claim provenance (F-001): a citation must resolve.
 
@@ -1012,6 +1057,7 @@ class Validator:
         self.check_board()
         self.check_requests()
         self.check_claim_citations()
+        self.apply_pending_move()
         self.report.note(f"checked {len(self.workspace.items)} item(s), "
                          f"{len(self.workspace.docs)} document(s)")
         return self.report.emit()
@@ -1019,6 +1065,7 @@ class Validator:
 
 def main(argv: list) -> int:
     pipeline = None
+    resolving = None
     positional = []
     index = 1
     while index < len(argv):
@@ -1030,10 +1077,24 @@ def main(argv: list) -> int:
             positional.insert(0, argv[index + 1])
             index += 2
             continue
+        if argv[index] == "--resolving":
+            resolving = argv[index + 1]
+            index += 2
+            continue
         positional.append(argv[index])
         index += 1
     root = resolve_root(positional[0] if positional else None, tool="validate-workspace")
-    return Validator(root, find_pipeline(pipeline)).run()
+    validator = Validator(root, find_pipeline(pipeline))
+    if resolving:
+        # --resolving ITEM:from->to — see resolved_by_move().
+        try:
+            item_id, move = resolving.split(":", 1)
+            from_status, to_status = move.split("->", 1)
+        except ValueError:
+            print("validate-workspace: --resolving takes ITEM-ID:from->to", file=sys.stderr)
+            return 2
+        validator.resolving = (item_id.strip(), from_status.strip() or None, to_status.strip())
+    return validator.run()
 
 
 if __name__ == "__main__":

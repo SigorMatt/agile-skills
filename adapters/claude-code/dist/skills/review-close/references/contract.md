@@ -1,4 +1,4 @@
-# Contract — review-close v0.3.0
+# Contract — review-close v0.3.1
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 

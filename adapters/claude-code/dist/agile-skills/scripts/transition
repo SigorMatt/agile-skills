@@ -11,7 +11,9 @@ Usage:
 What it does, in order:
   1. checks the transition is legal from the item's current status, for this actor, against
      pipeline.yaml;
-  2. runs the actor skill's hard, command-backed gates. They REFUSE the move only when it is
+  2. runs the actor skill's hard, command-backed gates, telling them which move is pending so
+     that `workspace-valid` judges the state the move produces rather than the one it is leaving
+     (F-014). They REFUSE the move only when it is
      the skill's completion transition — the move to its own `next_status`. On any other move
      (a send-back, a question, an impasse, or an intermediate step such as
      `planned -> in-progress`) the gates are still run and reported, but they do not block:
@@ -353,7 +355,8 @@ def main(argv: list) -> int:
     else:
         gate_result = subprocess.run(
             [sys.executable, os.path.join(HERE, "run-gate"), "--skill", actor,
-             "--item", item_id, "--all", "--root", root],
+             "--item", item_id, "--all", "--root", root,
+             "--resolving", f"{item_id}:{from_status or ''}->{to_status}"],
             capture_output=True, text=True)
         print(gate_result.stdout.rstrip())
         if gate_result.stderr.strip():
