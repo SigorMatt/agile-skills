@@ -19,7 +19,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 import board as board_lib  # noqa: E402
-from workspace import Workspace  # noqa: E402
+from workspace import Workspace, resolve_root  # noqa: E402
 
 
 def main(argv: list) -> int:
@@ -34,7 +34,7 @@ def main(argv: list) -> int:
         if not argv[index].startswith("-"):
             positional.append(argv[index])
         index += 1
-    root = os.path.abspath(positional[0] if positional else ".")
+    root = resolve_root(positional[0] if positional else None, tool="board-gen")
 
     workspace = Workspace(root).load()
     fatal = [entry for entry in workspace.load_errors

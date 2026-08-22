@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.join(HERE, "lib"))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
+from workspace import resolve_root  # noqa: E402
 
 PLACEHOLDER_RE = re.compile(r"\{\{\s*([^}]*?)\s*\}\}")
 
@@ -131,7 +132,7 @@ def run_one(gate: dict, resolver: Resolver, root: str) -> tuple:
 
 
 def main(argv: list) -> int:
-    options = {"root": "."}
+    options = {}
     flags = set()
     index = 1
     while index < len(argv):
@@ -154,7 +155,7 @@ def main(argv: list) -> int:
         print("run-gate: pass --gate <name> or --all", file=sys.stderr)
         return 2
 
-    root = os.path.abspath(options["root"])
+    root = resolve_root(options.get("root"), tool="run-gate")
     contract_path = find_contract(options["skill"])
     if not contract_path:
         print(f"run-gate: no contract found for skill {options['skill']!r}", file=sys.stderr)

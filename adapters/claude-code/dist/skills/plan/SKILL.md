@@ -22,7 +22,7 @@ At a glance:
 - Hard gates: `workspace-valid`, `every-criterion-is-addressed`, `project-commands-resolved`, `decisions-recorded`
 - On success: `planned`
 
-Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them.
+Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
 
 ---
 

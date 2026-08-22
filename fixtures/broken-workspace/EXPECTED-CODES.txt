@@ -36,6 +36,7 @@ item.updated.stale
 journal.bullet.missing
 journal.execution.missing
 journal.item
+journal.status.unmatched
 project.conventions.commit-subject
 question.answered.field
 question.blocking.not-suspended

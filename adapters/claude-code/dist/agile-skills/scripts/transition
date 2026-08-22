@@ -52,6 +52,7 @@ sys.path.insert(0, os.path.join(HERE, "lib"))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
+from workspace import resolve_root  # noqa: E402
 
 
 def now() -> str:
@@ -186,7 +187,7 @@ def restamp_last(options: dict, item_id: str) -> int:
               file=sys.stderr)
         return 2
 
-    root = os.path.abspath(options["root"])
+    root = resolve_root(options.get("root"), tool="transition")
     history_path = os.path.join(root, "tracker", "items", item_id, "history.md")
     if not os.path.isfile(history_path):
         print(f"transition: {history_path} does not exist", file=sys.stderr)
@@ -237,7 +238,7 @@ def main(argv: list) -> int:
         print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
         return 2
     item_id = argv[1]
-    options = {"root": "."}
+    options = {}
     flags = set()
     index = 2
     while index < len(argv):
@@ -260,7 +261,7 @@ def main(argv: list) -> int:
             print(f"transition: --{required} is required", file=sys.stderr)
             return 2
 
-    root = os.path.abspath(options["root"])
+    root = resolve_root(options.get("root"), tool="transition")
     item_dir = os.path.join(root, "tracker", "items", item_id)
     item_path = os.path.join(item_dir, "item.md")
     history_path = os.path.join(item_dir, "history.md")

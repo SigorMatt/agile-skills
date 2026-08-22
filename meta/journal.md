@@ -2060,3 +2060,44 @@ reviewer's call.
   `git diff --stat c9a62fb..HEAD -- methodology/ spec/` is **empty**: the toolkit was not touched,
   which was the condition the mission put on the whole exercise.
 - **Result:** META-081 done. Phase H complete.
+
+## META-083 — F-019: the record can no longer diverge from the status undetectably
+
+The finding named three mechanical fixes and all three shipped.
+
+**Root resolution.** `scripts/lib/workspace.py` gains `find_workspace_root()` (walk up to
+`tracker/project.yaml`) and `resolve_root()`. Every script defaults its root to it. The decision
+worth recording is what an *explicit* path now means: it is used verbatim, never walked up from.
+`workspace-init` and the "you have not initialised this yet" validator run both need to name a
+directory that is not a workspace yet, and a helpful walk-up would turn "this directory is
+empty" into "here is your parent's workspace, silently". Only the implicit case searches. When
+the search lands somewhere other than the working directory the script says so on stderr —
+resolving quietly would trade one invisible behaviour for another.
+
+**The checkpoint rule.** `spec/skill-contract.md` §2.3. Two rules, both written because a run
+broke them: a transition is issued alone and its exit code read before the journal entry that
+asserts the move; commands are invoked by a path that does not depend on CWD, and you never
+`cd` to run one. The adapter renders both into every SKILL.md, because the spec is the file a
+worker reads least and the SKILL.md is the one it reads first.
+
+**The cross-check.** `journal.status.unmatched`: every transition a journal entry claims under
+`**Status:**` must exist as a row in `history.md`. Parsing that bullet is the interesting part —
+it is deliberately prose, and the toy project alone contains chained claims
+(`planned` → `in-progress` → `verifying`), parentheticals (`(unchanged)`, `(outcome delivered)`)
+and epic-level entries that speak about two items in one line. `status_claims()` reads backticked
+tokens from the head of each `;`-separated clause, skips clauses naming a different item, and
+consumes history rows so a repeated transition needs a repeated row. The toy project — 7 items,
+every one of those shapes — stays at 0 errors, which is the evidence the parser is not simply
+lenient.
+
+Direction not taken: the reverse check (a history row with no journal entry declaring it) is
+*already* covered per-skill by `journal.execution.missing`, and per-row it would fire on every
+legitimate multi-transition entry. F-019's direction is the one the record could not see, and
+that is the one now checked.
+
+Spec files carry no version header, so rule 2 of the session mission has no literal target. Each
+spec file this session changes gains a `## Revisions` table instead, appended to, and the
+mission's intent — a spec change is dated and attributed to a finding — is met. Recorded here
+rather than as an ADR because it changes no behaviour.
+
+Evidence: `./scripts/check` green — 45 fixture codes, 183 selftest cases.

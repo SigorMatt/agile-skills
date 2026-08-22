@@ -393,6 +393,39 @@ def run_workspace(results: Results) -> None:
                       {"project.missing", "items.missing"} <= codes, True)
 
 
+def run_root_resolution(results: Results) -> None:
+    """F-019: a script run from inside a workspace must find the workspace, not a fragment."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as base:
+        root = build_workspace(base)
+        deep = os.path.join(root, "tracker", "items", "WI-0001", "questions")
+        os.makedirs(deep, exist_ok=True)
+        results.check("root/from-deep", workspace_lib.find_workspace_root(deep), root)
+        results.check("root/from-root", workspace_lib.find_workspace_root(root), root)
+        results.check("root/explicit-wins",
+                      workspace_lib.resolve_root(deep, announce=False), deep)
+        cwd = os.getcwd()
+        try:
+            os.chdir(deep)
+            results.check("root/implicit-walks-up",
+                          os.path.realpath(workspace_lib.resolve_root(announce=False)),
+                          os.path.realpath(root))
+        finally:
+            os.chdir(cwd)
+    # Outside any workspace, resolution falls back to the working directory rather than
+    # reaching for someone else's tracker.
+    with tempfile.TemporaryDirectory() as stranger:
+        cwd = os.getcwd()
+        try:
+            os.chdir(stranger)
+            results.check("root/no-workspace-falls-back",
+                          os.path.realpath(workspace_lib.resolve_root(announce=False)),
+                          os.path.realpath(stranger))
+        finally:
+            os.chdir(cwd)
+
+
 def repo_yaml_files() -> list:
     found = []
     for base, dirs, files in os.walk(REPO_ROOT):
@@ -445,6 +478,7 @@ def main() -> int:
     run_frontmatter(results)
     run_report(results)
     run_workspace(results)
+    run_root_resolution(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

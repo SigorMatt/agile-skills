@@ -22,8 +22,49 @@ import miniyaml  # noqa: E402
 
 __all__ = [
     "Workspace", "Item", "Question", "HistoryRow", "JournalEntry", "Doc",
-    "TIMESTAMP_RE", "ID_PATTERNS", "id_kind",
+    "TIMESTAMP_RE", "ID_PATTERNS", "id_kind", "find_workspace_root", "resolve_root",
+    "WORKSPACE_MARKER",
 ]
+
+# The one file whose presence means "this directory is a workspace root". Scripts walk up to it
+# rather than trusting the working directory: F-019 is a `cd` that changed what `.` meant
+# mid-command, and the record then disagreed with the status in the one direction it could not
+# detect.
+WORKSPACE_MARKER = ("tracker", "project.yaml")
+
+
+def find_workspace_root(start=None):
+    """Return the nearest ancestor of `start` (default: CWD) that holds tracker/project.yaml."""
+    current = os.path.abspath(start or os.getcwd())
+    if os.path.isfile(current):
+        current = os.path.dirname(current)
+    while True:
+        if os.path.isfile(os.path.join(current, *WORKSPACE_MARKER)):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+def resolve_root(explicit=None, announce=True, tool=""):
+    """The root a script should act on.
+
+    An explicit path is used verbatim — a caller who names a directory means that directory,
+    even when it is not (yet) a workspace, which is what `workspace-init` and the
+    not-yet-initialised validator run both need. With no explicit path the root is *found*,
+    never assumed: walking up from CWD means running a script from inside `tracker/items/WI-0007`
+    acts on the workspace, not on a fragment of it.
+    """
+    if explicit:
+        return os.path.abspath(explicit)
+    found = find_workspace_root()
+    if found is None:
+        return os.path.abspath(os.getcwd())
+    if announce and found != os.path.abspath(os.getcwd()):
+        print(f"{tool or 'agile-skills'}: workspace root resolved to {found} "
+              f"(current directory is {os.getcwd()})", file=sys.stderr)
+    return found
 
 TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 

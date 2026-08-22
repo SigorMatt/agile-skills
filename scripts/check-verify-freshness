@@ -22,6 +22,10 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+
+from workspace import resolve_root  # noqa: E402
+
 VERIFIED_RE = re.compile(r"^Verified-commit:\s*([0-9a-f]{7,40})\s*$", re.MULTILINE)
 
 
@@ -44,7 +48,7 @@ def main(argv: list) -> int:
         return 2
 
     item_id, branch = positional[0], positional[1]
-    root = os.path.abspath(options.get("root", "."))
+    root = resolve_root(options.get("root"), tool="check-verify-freshness")
     report = os.path.join(root, "tracker", "items", item_id, "artifacts", "verify-report.md")
 
     if not os.path.isfile(report):

@@ -236,6 +236,21 @@ of a skill is that worker's first day.
 - Cross-references to `spec/` are by filename and section, so a reader can open exactly one
   more file rather than the whole spec.
 
+### 2.3 Running the toolkit's own commands
+
+These two rules exist because a run broke both of them and the record could not tell.
+
+- **A transition is a checkpoint, never a link in a chain.** The command that appends a history
+  row MUST be issued on its own and its exit code MUST be read before anything that depends on
+  it runs. It MUST NOT be joined to another command with `&&`, `;`, `|`, or a newline inside one
+  invocation, and the journal entry asserting the move MUST be written only after the command
+  has reported success. Chained, a failure in the middle still lets the rest run — and what
+  follows is a journal entry and a commit both claiming a status change that never happened.
+- **Invoke a command by a path that does not depend on the working directory**, and do not
+  change directory in order to run one. The tools find the workspace root themselves by walking
+  up to `tracker/project.yaml`, so they may be run from anywhere in the workspace; a relative
+  path to the *tool* is what breaks when the working directory moves.
+
 ---
 
 ## 3. Versioning
@@ -250,3 +265,12 @@ Skills carry semantic versions so the iterate-and-deepen loop is trackable:
 A change to `skill.yaml` or `process.md` MUST bump the version in the same commit. The rendered
 skills carry the version, so a paper trail names the exact contract that produced it — which is
 what makes "the toy run used skill X v0.1.0, and it went wrong here" an actionable report.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | §2.3 added: a transition is a checkpoint, never chained; commands are invoked by a CWD-independent path (F-019). |

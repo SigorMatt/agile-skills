@@ -231,7 +231,12 @@ def render_skill_body(contract: dict, process: str) -> str:
                              else "no transition of its own"),
         "",
         "Gate commands, when this skill runs them, live under "
-        f"`{SHARED_DIR}/scripts/`. Run them; do not simulate them.",
+        f"`{SHARED_DIR}/scripts/`. Run them; do not simulate them. They find the workspace "
+        "root themselves, so run them from wherever you are — never `cd` in order to run one, "
+        "and never join one to another command with `&&` or `;`. "
+        f"**`{SHARED_DIR}/scripts/transition` is a checkpoint:** issue it alone, read its exit "
+        "code, and journal the move only after it has reported success (spec/skill-contract.md "
+        "\u00a72.3).",
         "",
         "---",
         "",

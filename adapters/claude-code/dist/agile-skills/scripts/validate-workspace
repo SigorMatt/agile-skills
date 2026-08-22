@@ -25,7 +25,7 @@ import board as board_lib  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
-                       Workspace, id_kind)
+                       Workspace, id_kind, resolve_root)
 
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
 ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "depends-on", "blocks",
@@ -62,6 +62,31 @@ ARTIFACT_BY_STATUS = [
 
 ADR_SECTIONS = ["## Context", "## Options considered", "## Decision", "## Consequences",
                 "## Change log"]
+
+
+STATUS_TOKEN_RE = re.compile(r"`([^`]+)`")
+STATUS_ID_RE = re.compile(r"\b(EP-\d{3}|WI-\d{4}|BUG-\d{4})\b")
+
+
+def status_claims(text: str, identifier: str):
+    """Read a journal '**Status:**' value as the transitions it claims for `identifier`.
+
+    The bullet is prose by design — it carries parentheticals ("unchanged", an outcome), it may
+    chain (`planned` \u2192 `in-progress` \u2192 `verifying`), and an epic-level entry may speak
+    about two items separated by ';'. Only claims about this item are returned; a clause naming
+    another item is that item's journal's business.
+    """
+    claims = []
+    for clause in text.split(";"):
+        named = STATUS_ID_RE.search(clause)
+        if named and named.group(1) != identifier:
+            continue
+        head = clause.split("(")[0]
+        tokens = [token.strip() for token in STATUS_TOKEN_RE.findall(head)]
+        tokens = [None if token in ("\u2014", "-", "--") else token for token in tokens]
+        for first, second in zip(tokens, tokens[1:]):
+            claims.append((first, second))
+    return claims
 
 
 def find_pipeline(explicit=None):
@@ -438,6 +463,8 @@ class Validator:
                                   f"entry names item {entry.bullets['Item']!r} but is filed "
                                   f"under {item.identifier}")
 
+        self.check_journal_against_history(item, path)
+
         # Every row, including creation: intake's creation of an item is a skill execution and
         # journals like any other.
         acting = {row.actor for row in item.history}
@@ -450,6 +477,41 @@ class Validator:
                                    "that never happened")
 
     # ---- questions -----------------------------------------------------------------
+
+    def check_journal_against_history(self, item, path) -> None:
+        """Every transition a journal entry claims must exist as a row in history.md.
+
+        F-019: a chained command whose `transition` never ran left a journal entry and a commit
+        both asserting `in-progress → verifying` while the item was still `in-progress`. The
+        history was correct and the journal was not, and nothing could see the disagreement —
+        the one direction the record could not detect. It can now.
+        """
+        rows = [(row.normalised(row.from_status), row.normalised(row.to_status))
+                for row in item.history]
+        used = set()
+        for entry in item.journal:
+            claimed = entry.bullets.get("Status")
+            if not claimed:
+                continue
+            for from_status, to_status in status_claims(claimed, item.identifier):
+                if from_status == to_status:
+                    continue          # "(unchanged)" — an execution that moved nothing
+                match = None
+                for index, (row_from, row_to) in enumerate(rows):
+                    if index in used:
+                        continue
+                    if row_from == from_status and row_to == to_status:
+                        match = index
+                        break
+                if match is None:
+                    self.report.error(
+                        path, entry.line, "journal.status.unmatched",
+                        f"entry claims {from_status or '—'} \u2192 {to_status} but history.md "
+                        f"has no such row",
+                        hint="the transition was journalled and never made — the record and "
+                             "the status disagree in the direction only this check sees")
+                else:
+                    used.add(match)
 
     def check_questions(self, item) -> None:
         seen_blocking_open = False
@@ -739,7 +801,7 @@ def main(argv: list) -> int:
             continue
         positional.append(argv[index])
         index += 1
-    root = positional[0] if positional else "."
+    root = resolve_root(positional[0] if positional else None, tool="validate-workspace")
     return Validator(root, find_pipeline(pipeline)).run()
 
 

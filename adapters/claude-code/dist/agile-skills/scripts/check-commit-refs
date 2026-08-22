@@ -21,6 +21,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 import miniyaml  # noqa: E402
+from workspace import resolve_root  # noqa: E402
 
 
 def git(args, root):
@@ -52,7 +53,7 @@ def main(argv: list) -> int:
         return 2
 
     item_id, branch = positional[0], positional[1]
-    root = os.path.abspath(options.get("root", "."))
+    root = resolve_root(options.get("root"), tool="check-commit-refs")
     trunk = options.get("trunk") or trunk_from_project(root)
 
     if git(["rev-parse", "--git-dir"], root).returncode != 0:

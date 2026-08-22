@@ -341,7 +341,21 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   exit code gates everything after it. (c) validate-workspace gains a cross-check: every
   journal `**Status:**` line must have a matching history row — the undetectable direction
   becomes detectable.
-- Status: open
+- Status: fixed (commit add02cb) — all three, as filed.
+  (a) `scripts/lib/workspace.py` gains `find_workspace_root()` / `resolve_root()`; every
+  script (`validate-workspace`, `transition`, `board-gen`, `new-item`, `run-gate`,
+  `check-commit-refs`, `check-verify-freshness`) walks up to `tracker/project.yaml` when no
+  root is given, and says on stderr when the root it found is not the working directory.
+  Proven: `validate-workspace` run from `examples/toy-project/tracker/items/WI-0001` reports
+  `0 errors, 0 warnings` for the whole workspace. Covered by four selftest cases including the
+  outside-any-workspace fallback.
+  (b) `spec/skill-contract.md` §2.3 (revision 2) — the transition is a checkpoint, never
+  chained, exit code read before the journal entry is written; and commands are invoked by a
+  path that does not depend on CWD. Rendered into every `SKILL.md` by the adapter.
+  (c) `validate-workspace` gains `journal.status.unmatched`. Must-fail fixture: a second
+  BUG-0001 journal entry claiming `in-progress → verifying` with no such history row — the
+  exact shape of the original failure — plus a pre-existing fixture divergence the rule also
+  caught (WI-0001's `— → draft`). `fixtures/broken-workspace/EXPECTED-CODES.txt` is at 45 codes.
 
 ## F-020 — refine files several separate questions for one item in one round
 - Severity: UX/enhancement, low priority
