@@ -2424,3 +2424,42 @@ USAGE §3 now carries the two-row table that would have prevented the confusion:
 new run over whatever the last one built, `--wipe` then `--fresh` for a genuinely fresh start.
 
 Evidence: `./scripts/check` — 10 steps, all passed; harness self-test 38 tests.
+
+## META-096 — harness H-004…H-007: the turn loop
+
+Four findings, one unit, because all four live in twenty lines of the driver's loop and its two
+prompts.
+
+**H-004** turned out to be about *where* the check goes, not what it checks. `decide()` already
+routed a sim turn when human questions were unanswered — but `next-role` comes from `state.json`
+on a start or a resume, so no decision had run, and iteration 1's turn 2 walked a worker into
+three unanswered questions and produced nothing. The check now sits at the top of the loop, where
+it catches the scheduled case as well as the decided one, and logs a `reschedule` event saying
+what it saw.
+
+**H-005**, two halves, both about a killed turn lying. Cost: a turn with no result event now
+records `null` plus `cost-unknown` and a note with its duration and tool count, and the summary
+line prints `cost=unknown`. Zero is a number a reader adds up; unknown is not — iteration 1's
+economics understated a full Opus-hour as $0.00. Status: `worker_report()` takes the turn's start
+time and returns nothing when the file predates it, and the driver says out loud that the turn
+wrote no status, instead of silently attributing a two-hour-old one to it.
+
+**H-006** is the one with a judgement call in it. Three skills per turn, configurable. Too low and
+every run is mostly context re-reading; too high and the bound does nothing. Three is roughly one
+item's worth of forward motion, which makes a turn a unit a reader can hold. The prompt is
+explicit that the skill in flight is finished first — a bound that could interrupt a skill
+mid-execution would be worse than no bound — and that `next` does not count.
+
+**H-007** self-heals most of the way now that F-022 opens a sign-off question at closure, but
+"usually" is not the property worth having. The driver grants exactly one `closing` sim turn
+before accepting `epic-done`, and the sim prompt gains that job: answer what is addressed to you,
+then say whether you got what you asked for and name anything you expected that is not there.
+
+Two changes rode along because they are the same mechanism. The sim prompt now tells the
+stakeholder it may speak first at any turn by writing a request (F-021), the contamination audit
+permits `tracker/requests/R-###.md` and nothing else new — a misnamed file in that directory is
+still `S1` — and `decide()` refuses `epic-done` while any request is open. Without those three,
+F-021's channel exists in the toolkit and is unreachable from the harness, which is where the
+finding came from in the first place.
+
+Prompts: worker-turn 4, sim-turn 2. Evidence: harness self-test 47 tests; `./scripts/check` green.

@@ -536,7 +536,12 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: before dispatching a worker turn, the driver checks its own observed state
   for unanswered human-addressed questions; if any exist, dispatch a sim "answer" turn
   first. The observed fields already exist in the log schema.
-- Status: open
+- Status: fixed (commit d170ac7), as filed. At the top of each iteration of the turn
+  loop, a scheduled worker turn re-scans the project; if any human-addressed question is open
+  and unanswered, the turn goes to the sim with job `answer` and a `reschedule` event is logged
+  saying why. The check costs one filesystem scan and saves a full round trip. The reason this
+  needed fixing at the loop rather than in `decide()` is that `next-role` comes from `state.json`
+  on a start or a resume, so no decision had run.
 
 ## H-005 — A killed turn loses its cost and inherits a stale worker-report
 - Severity: harness, evidence integrity
@@ -551,7 +556,12 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: mark killed turns' cost as unknown (or derive a floor from the transcript);
   compare HARNESS-STATUS.md's mtime against turn start and record "no status written"
   instead of a stale one.
-- Status: open
+- Status: fixed (commit d170ac7), both halves as filed. A turn with no result event
+  records `cost_usd: null`, `cost-unknown: true`, and a note carrying its duration and tool
+  count — zero is a number a reader adds up, unknown is not; the run summary line prints
+  `cost=unknown`. `worker_report()` takes the turn's start time and returns nothing when
+  `HARNESS-STATUS.md` predates it, and the driver says out loud that the turn wrote no status
+  rather than attributing a two-hour-old one to it. Five tests.
 
 ## H-006 — Turn granularity: one turn may pack many skill executions, defeating the timeout
 - Severity: harness, design
@@ -566,7 +576,14 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   turns comparable and timeouts meaningful), or the timeout is documented as
   worst-single-skill × N with a generous default. Prefer the former: bounded turns also
   bound the blast radius of every kill.
-- Status: open
+- Status: fixed (commit d170ac7) — the former. Worker prompt version 4 stops after
+  `{{SKILLS_PER_TURN}}` skill executions and reports `turn-budget-exhausted`, an enum value that
+  already existed for exactly this shape. An execution counts when a skill *finishes* — journal
+  written, transition made — and the prompt is explicit that the skill in flight is finished
+  first, never left half-done. `next` does not count; it is the dispatcher. The bound is
+  `--skills-per-turn`, or the iteration config's `worker-skills-per-turn`, default 3. The status
+  block gains `skills_run`, so a turn that overran is visible in the log rather than inferred
+  from the tool count.
 
 ---
 
@@ -692,7 +709,17 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
 - Direction: partially self-heals when F-022's sign-off question lands (closure always
   opens a human question). Belt-and-suspenders: the driver grants the sim one turn before
   accepting any epic-done stop as final, logged as job "closing".
-- Status: open
+- Status: fixed (commit d170ac7), both halves. F-022 lands the sign-off, and the driver
+  additionally grants one `closing` sim turn before accepting `epic-done`, tracked by
+  `closing-turn-given` in `state.json` so it happens exactly once. The sim prompt (version 2)
+  gains the `closing` job: answer whatever is addressed to you, then say in your own words
+  whether you got what you asked for and name anything you expected that is not there — the only
+  turn at which the sim sees the finished thing.
+  Two further changes make the channel real rather than nominal: the sim prompt tells the
+  stakeholder it may **speak first** at any turn by writing `tracker/requests/R-###.md` (F-021),
+  the contamination audit permits exactly that path and nothing else new (`S1` still refuses a
+  misnamed file under the same directory), and `decide()` refuses to accept `epic-done` while any
+  request is still open.
 
 ---
 

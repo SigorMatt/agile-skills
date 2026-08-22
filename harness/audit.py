@@ -216,22 +216,32 @@ def audit_worker(uses, project_dir, harness_dir, repo_dir, home=None, exists=Non
 
 
 def sim_permitted_writes(project_dir, sim_log):
-    """(absolute IDEA.md, question-file matcher, absolute SIM-LOG) — the only writable paths."""
+    """(absolute IDEA.md, path matcher, absolute SIM-LOG) — the only writable paths.
+
+    The matcher covers a question's answer file and a stakeholder request. A request is a file
+    the stakeholder writes unprompted (`spec/request.md`, F-021), so it is the one thing the sim
+    may create rather than only fill in — which is the point of the artifact.
+    """
     project_dir = os.path.normpath(os.path.abspath(project_dir))
-    question_re = re.compile(
-        re.escape(os.path.join(project_dir, "tracker", "items")) +
-        r"/[A-Za-z]+-\d+/questions/Q-\d+\.md$")
-    return (os.path.join(project_dir, "IDEA.md"), question_re,
+    writable_re = re.compile(
+        "(?:"
+        + re.escape(os.path.join(project_dir, "tracker", "items"))
+        + r"/[A-Za-z]+-\d+/questions/Q-\d+\.md"
+        + "|"
+        + re.escape(os.path.join(project_dir, "tracker", "requests"))
+        + r"/R-\d+\.md"
+        + ")$")
+    return (os.path.join(project_dir, "IDEA.md"), writable_re,
             os.path.normpath(os.path.abspath(sim_log)))
 
 
 def audit_sim(uses, project_dir, harness_dir, sim_log):
     """Violations of "the sim writes only what a stakeholder could".
 
-    S1  wrote to a path outside {IDEA.md, a question file, its own log}
+    S1  wrote to a path outside {IDEA.md, a question file, a request, its own log}
     S2  used a tool it is not supposed to have at all (a shell, an agent, the network)
     """
-    idea, question_re, log = sim_permitted_writes(project_dir, sim_log)
+    idea, writable_re, log = sim_permitted_writes(project_dir, sim_log)
     harness_dir = os.path.normpath(os.path.abspath(harness_dir))
     found = []
     for tool, tool_input in uses:
@@ -243,7 +253,7 @@ def audit_sim(uses, project_dir, harness_dir, sim_log):
             continue
         for raw, _source in _paths_in(tool, tool_input):
             resolved = _resolve(raw, harness_dir)
-            if resolved == idea or resolved == log or question_re.match(resolved):
+            if resolved == idea or resolved == log or writable_re.match(resolved):
                 continue
             found.append(violation(
                 "S1", tool, f"wrote to {resolved}, which a stakeholder may not touch",

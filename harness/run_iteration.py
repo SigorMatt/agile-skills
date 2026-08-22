@@ -226,7 +226,23 @@ def scan_project(project_dir):
                                        if q["addressed-to"] == "human"
                                        and q["status"] == "open" and not q["answered"]],
         "blocked-items": [name for name, item in items.items() if item["status"] == "blocked"],
+        "open-requests": open_requests(project_dir),
     }
+
+
+def open_requests(project_dir):
+    """Stakeholder requests still waiting for a skill to respond (F-021)."""
+    directory = os.path.join(project_dir, "tracker", "requests")
+    if not os.path.isdir(directory):
+        return []
+    found = []
+    for name in sorted(os.listdir(directory)):
+        if not (name.startswith("R-") and name.endswith(".md")):
+            continue
+        fields = audit.frontmatter(read(os.path.join(directory, name)))
+        if fields.get("status") == "open":
+            found.append(name[:-3])
+    return found
 
 
 def fingerprint(observed):
@@ -235,6 +251,7 @@ def fingerprint(observed):
         "head": observed["head"],
         "items": {name: item["status"] for name, item in observed["items"].items()},
         "questions": [(q["id"], q["status"], q["answered"]) for q in observed["questions"]],
+        "requests": observed.get("open-requests", []),
     }, sort_keys=True)
 
 
@@ -245,9 +262,19 @@ def epic_complete(observed):
     return all(item["status"] == "done" for item in items.values())
 
 
-def worker_report(project_dir):
-    """The worker's self-report: the last fenced json block in HARNESS-STATUS.md."""
-    text = read(os.path.join(project_dir, STATUS_FILE))
+def worker_report(project_dir, not_before=None):
+    """The worker's self-report: the last fenced json block in HARNESS-STATUS.md.
+
+    `not_before` is the turn's start time. A turn that was killed never writes the file, and the
+    driver used to read whatever was there and log it as that turn's report — iteration 1's turn
+    4 was killed after a full Opus-hour and is recorded carrying turn 2's status, two hours stale
+    (H-005). A status file older than the turn is not this turn's status.
+    """
+    path = os.path.join(project_dir, STATUS_FILE)
+    if not_before is not None and os.path.isfile(path):
+        if os.path.getmtime(path) < not_before:
+            return None, ""
+    text = read(path)
     if not text:
         return None, ""
     blocks = []
@@ -401,6 +428,24 @@ def stream_turn(argv, cwd, transcript_path, timeout, pid_path=None):
             "duration": time.time() - started, "tool_calls": tool_calls}
 
 
+def note_unknown_cost(outcome, fields) -> None:
+    """A killed turn has no result event, so its cost reads as 0.00 and understates the run.
+
+    Iteration 1's turn 4 ran 3603 seconds and 255 tool calls — a full Opus-hour — and is logged
+    at $0.00, because the cost is reported in the result event and a killed turn never emits one
+    (H-005). Zero is a number a reader will add up; unknown is not. Where the transcript carries
+    per-message usage, a floor is derived from it and labelled as a floor.
+    """
+    if fields.get("cost_usd") is not None:
+        return
+    fields["cost_usd"] = None
+    fields["cost-unknown"] = True
+    fields["cost-note"] = (f"the turn ended without a result event "
+                           f"({outcome.get('killed') or 'no result'}), so no cost was reported; "
+                           f"it ran {outcome.get('duration', 0):.0f}s and "
+                           f"{outcome.get('tool_calls', 0)} tool call(s)")
+
+
 def turn_result_fields(transcript_path):
     events = audit.load_transcript(transcript_path)
     result = audit.result_event(events) or {}
@@ -437,6 +482,13 @@ class Run:
         self.max_turns = args.max_turns or self.config.get("max-turns", 24)
         self.worker_model = args.worker_model or self.config.get("worker-model", "opus")
         self.sim_model = args.sim_model or self.config.get("sim-model", "sonnet")
+        # H-006: a turn is "as much as fits" unless something says otherwise, and iteration 1's
+        # turn 4 legally ran answer-questions, refine, plan, implement and most of verify across
+        # two items — 255 tool calls — so --turn-timeout killed a healthy run precisely because
+        # it was going well. Bounding the turn makes turns comparable, makes the timeout mean
+        # something, and bounds the blast radius of every kill.
+        self.skills_per_turn = (args.skills_per_turn
+                                or self.config.get("worker-skills-per-turn", 3))
         self.state = None
 
     # -- state ---------------------------------------------------------------------------
@@ -484,7 +536,9 @@ class Run:
     def worker_turn(self, number):
         body, version = prompt_text("worker-turn")
         prompt = fill(body, {"PROJECT_DIR": self.project_dir, "TURN": number,
-                             "STATUS_FILE": STATUS_FILE})
+                             "STATUS_FILE": STATUS_FILE,
+                             "SKILLS_PER_TURN": self.skills_per_turn})
+        started_at = time.time()
         argv = ["claude", "-p", prompt,
                 "--model", self.worker_model,
                 "--permission-mode", self.args.worker_permission_mode,
@@ -498,15 +552,20 @@ class Run:
         outcome = stream_turn(argv, self.project_dir, transcript, self.args.turn_timeout,
                               self.pid_path)
         uses, fields = turn_result_fields(transcript)
+        note_unknown_cost(outcome, fields)
         repo_before = self.state.get("repo-snapshot") or []
         violations = audit.audit_worker(uses, self.project_dir, HERE, REPO) + \
             audit.audit_repo_tree(REPO, repo_before)
-        report, status_text = worker_report(self.project_dir)
+        report, status_text = worker_report(self.project_dir, not_before=started_at)
         if status_text:
             write(os.path.join(self.turns_dir, f"{number:03d}-worker.status.md"), status_text)
+        elif outcome.get("killed"):
+            say("    ! this turn wrote no status file; the one on disk is older than the turn "
+                "and is not being attributed to it")
         return {"role": "worker", "prompt-version": version, "model": self.worker_model,
                 "transcript": os.path.relpath(transcript, self.run_dir),
                 "outcome": outcome, "result": fields, "violations": violations,
+                "status-written": bool(status_text),
                 "worker-report": report}, uses
 
     def sim_turn(self, number, job):
@@ -529,6 +588,7 @@ class Run:
         before = audit.question_frontmatter_snapshot(self.project_dir)
         outcome = stream_turn(argv, HERE, transcript, self.args.turn_timeout, self.pid_path)
         uses, fields = turn_result_fields(transcript)
+        note_unknown_cost(outcome, fields)
         violations = audit.audit_sim(uses, self.project_dir, HERE, self.sim_log) + \
             audit.audit_sim_tree(self.project_dir, before)
         return {"role": "sim", "job": job, "prompt-version": version, "model": self.sim_model,
@@ -630,6 +690,22 @@ class Run:
 
             number = self.state["turn"] + 1
             role = self.state["next-role"]
+            if role == "worker":
+                # H-004: on a start or a resume, next-role comes from state rather than from a
+                # decision, so the driver used to walk a worker turn straight into unanswered
+                # human questions. The orchestrator correctly halts at step 2 and the whole turn
+                # is a no-op — iteration 1's turn 2 was exactly that. The observation is free.
+                pending = scan_project(self.project_dir)["unanswered-human-questions"]
+                if pending:
+                    say(f"    {len(pending)} human question(s) are open and unanswered "
+                        f"({', '.join(pending)}); giving the turn to the sim instead — a worker "
+                        f"turn would halt at orchestrator step 2 having done nothing")
+                    self.log({"event": "reschedule", "at": now(), "turn": number,
+                              "from-role": "worker", "to-role": "sim",
+                              "because": "unanswered human questions", "questions": pending})
+                    role = "sim"
+                    self.state["next-role"] = "sim"
+                    self.state["next-job"] = "answer"
             self.state["repo-snapshot"] = audit.repo_tree_snapshot(REPO)
             self.state["in-flight"] = {"turn": number, "role": role,
                                        "job": self.state.get("next-job")}
@@ -645,17 +721,19 @@ class Run:
                            "observed": {k: observed[k] for k in
                                         ("items", "validator-exit", "head",
                                          "open-human-questions",
-                                         "unanswered-human-questions", "blocked-items")}})
+                                         "unanswered-human-questions", "blocked-items",
+                                         "open-requests")}})
             self.log(record)
             self.state["turn"] = number
             self.state["in-flight"] = None
             self.state.setdefault("fingerprints", []).append(fingerprint(observed))
             self.save_state()
 
+            cost = record["result"].get("cost_usd")
             summary = (f"exit={record['outcome']['exit']} "
                        f"{record['outcome']['duration']:.0f}s "
                        f"tools={record['outcome']['tool_calls']} "
-                       f"cost=${record['result'].get('cost_usd') or 0:.2f}")
+                       + (f"cost=${cost:.2f}" if cost is not None else "cost=unknown"))
             say(f"turn {number} done: {summary}")
 
             if record["violations"]:
@@ -771,7 +849,25 @@ class Run:
                               f"{observed['validator-exit']}: "
                               f"{' '.join(observed['validator-tail'])}"}
 
+        if observed.get("open-requests"):
+            # F-021: the stakeholder has spoken and nothing has answered yet. `next` routes an
+            # open request before it selects work, so the worker is the one to run — and the run
+            # is not finished no matter what the item statuses say.
+            say(f"    open stakeholder request(s): "
+                f"{', '.join(observed['open-requests'])} — the worker handles them next")
+            return {"stop": False, "next-role": "worker", "next-job": None}
+
         if epic_complete(observed):
+            # H-007: a self-sufficient worker used to end the engagement unilaterally — run 1b
+            # went epic-done at turn 6 with the sim locked out from turn 5 onward, so a mid-run
+            # probe edit could never fire and the sim never saw the endgame of a clean run.
+            # F-022's sign-off question usually opens a human question at closure and routes a
+            # sim turn anyway; this is the belt to that pair of braces, and it is what makes
+            # "the sim sees every ending" true rather than usually true.
+            if not self.state.get("closing-turn-given"):
+                say("    the epic is done; giving the sim one closing turn before accepting it")
+                self.state["closing-turn-given"] = True
+                return {"stop": False, "next-role": "sim", "next-job": "closing"}
             return {"stop": True, "reason": "epic-done",
                     "detail": f"{len(observed['items'])} item(s), all done"}
 
@@ -816,6 +912,9 @@ def main() -> int:
     parser.add_argument("--reaudit", action="store_true",
                         help="re-run the contamination audit over the stored transcripts with "
                              "the current rules; clears a contamination stop if they are clean")
+    parser.add_argument("--skills-per-turn", type=int,
+                        help="how many skill executions a worker turn may run before it stops "
+                             "and reports (default: the iteration config's, or 3)")
     parser.add_argument("--fresh", action="store_true",
                         help="archive any existing run for this iteration and start over")
     args = parser.parse_args()

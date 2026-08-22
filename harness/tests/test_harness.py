@@ -21,6 +21,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 HARNESS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -384,7 +385,7 @@ class Configuration(unittest.TestCase):
             self.assertNotIn("{{", run_iteration.fill(body, {
                 "PROJECT_DIR": "/p", "TURN": 1, "STATUS_FILE": "S.md", "SIM_LOG": "/l",
                 "PERSONA_FILE": "/p.md", "PROBE_FILE": "/q.md", "JOB": "answer",
-                "NOW": "2026-08-21T00:00:00Z"}), name)
+                "SKILLS_PER_TURN": 3, "NOW": "2026-08-21T00:00:00Z"}), name)
 
 
 class StopClassification(unittest.TestCase):
@@ -455,6 +456,79 @@ class WipeSafety(unittest.TestCase):
             handle.write("{}")
         self.assertEqual(provision.wipe(target, self.root, True), 0)
         self.assertTrue(os.path.isdir(target))
+
+
+class TurnAccounting(unittest.TestCase):
+    """H-005: a killed turn must not be logged with someone else's status or with $0.00."""
+
+    def setUp(self):
+        self.project = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.project, True)
+        self.status = os.path.join(self.project, run_iteration.STATUS_FILE)
+
+    def write_status(self, stop_reason):
+        with open(self.status, "w", encoding="utf-8") as handle:
+            handle.write("# status\n\n```json\n"
+                         + json.dumps({"stop_reason": stop_reason}) + "\n```\n")
+
+    def test_a_status_older_than_the_turn_is_not_this_turns_status(self):
+        self.write_status("human-question-open")
+        old_time = time.time() - 7200
+        os.utime(self.status, (old_time, old_time))
+        report, text = run_iteration.worker_report(self.project, not_before=time.time() - 60)
+        self.assertIsNone(report)
+        self.assertEqual(text, "")
+
+    def test_a_status_written_during_the_turn_is_read(self):
+        started = time.time() - 60
+        self.write_status("epic-done")
+        report, text = run_iteration.worker_report(self.project, not_before=started)
+        self.assertEqual(report["stop_reason"], "epic-done")
+        self.assertTrue(text)
+
+    def test_without_a_start_time_the_old_behaviour_is_kept(self):
+        self.write_status("blocked")
+        report, _ = run_iteration.worker_report(self.project)
+        self.assertEqual(report["stop_reason"], "blocked")
+
+    def test_a_killed_turn_has_an_unknown_cost_not_a_zero_one(self):
+        fields = {"cost_usd": None}
+        run_iteration.note_unknown_cost({"killed": "timeout", "duration": 3603.0,
+                                         "tool_calls": 255}, fields)
+        self.assertIsNone(fields["cost_usd"])
+        self.assertTrue(fields["cost-unknown"])
+        self.assertIn("255", fields["cost-note"])
+
+    def test_a_reported_cost_is_left_alone(self):
+        fields = {"cost_usd": 7.5}
+        run_iteration.note_unknown_cost({"duration": 900.0, "tool_calls": 30}, fields)
+        self.assertEqual(fields["cost_usd"], 7.5)
+        self.assertNotIn("cost-unknown", fields)
+
+
+class SimChannel(unittest.TestCase):
+    """F-021: a request is the one file a stakeholder may create, so the audit must allow it."""
+
+    def setUp(self):
+        self.project = "/tmp/proj"
+        self.log = "/tmp/SIM-LOG.md"
+
+    def violations(self, path):
+        return rules(audit.audit_sim([("Write", {"file_path": path})], self.project,
+                                     HARNESS, self.log))
+
+    def test_writing_a_request_is_permitted(self):
+        self.assertEqual(self.violations("/tmp/proj/tracker/requests/R-001.md"), [])
+
+    def test_answering_a_question_is_still_permitted(self):
+        self.assertEqual(
+            self.violations("/tmp/proj/tracker/items/WI-0001/questions/Q-001.md"), [])
+
+    def test_writing_an_item_is_still_refused(self):
+        self.assertEqual(self.violations("/tmp/proj/tracker/items/WI-0001/item.md"), ["S1"])
+
+    def test_a_misnamed_request_is_refused(self):
+        self.assertEqual(self.violations("/tmp/proj/tracker/requests/notes.md"), ["S1"])
 
 
 if __name__ == "__main__":

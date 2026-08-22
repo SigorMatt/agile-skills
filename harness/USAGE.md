@@ -56,6 +56,15 @@ harness/run_iteration.py --iteration iteration-1-expenses
 ```
 
 Turn order: the sim opens the engagement by writing `IDEA.md`, then worker and sim alternate.
+The driver does not simply alternate, though — before a worker turn it checks whether any human
+question is open and unanswered, and gives the turn to the sim instead (a worker turn there would
+halt at orchestrator step 2 having done nothing). And before it accepts `epic-done` as final, it
+gives the sim one `closing` turn, so the stakeholder sees the finished thing on every run rather
+than only on the runs that happen to end with a question open.
+
+A worker turn stops after `--skills-per-turn` skill executions and reports
+`turn-budget-exhausted`; the next turn reads the workspace and carries on. That bound is what
+makes turns comparable and `--turn-timeout` meaningful.
 The driver prints each turn's tool calls as they happen, and after every turn prints the exit
 code, duration, tool count and cost.
 
@@ -67,6 +76,7 @@ Useful flags:
 | `--worker-model` / `--sim-model` | default `opus` and `sonnet` |
 | `--max-budget-usd X` | per-turn spend cap, passed to `claude` |
 | `--turn-timeout S` | kill a single turn after this many seconds (default 3600) |
+| `--skills-per-turn N` | how many skill executions a worker turn may run before it stops and reports (default: the config's, or 3) |
 | `--worker-permission-mode` | default `bypassPermissions`; the project is a throwaway |
 | `--fresh` | archive this iteration's **run** — logs, state, transcripts — and start a new one |
 | `--root DIR` | where the throwaway projects live |

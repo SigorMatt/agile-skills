@@ -1,4 +1,4 @@
-<!-- harness-prompt: worker-turn, version 3 -->
+<!-- harness-prompt: worker-turn, version 4 -->
 # Worker turn
 
 The driver substitutes `{{PROJECT_DIR}}`, `{{TURN}}` and `{{STATUS_FILE}}` and passes everything
@@ -86,7 +86,7 @@ the workspace, the code. Do not go looking for the machinery that is running you
 write anywhere above this directory, and do not search the filesystem for context about this
 project. There is none, and looking for it would corrupt the experiment you are part of.
 
-## E. Work until you actually stop
+## E. Work until you stop, and stop after {{SKILLS_PER_TURN}} skills
 
 Run the loop the consumer prompt describes — `board-gen`, `/next`, do the one thing it
 dispatches, repeat — and keep going until one of these is true:
@@ -95,10 +95,23 @@ dispatches, repeat — and keep going until one of these is true:
 - nothing is runnable;
 - every item is `done` and the epic is closed;
 - the workspace fails validation and you cannot fix it inside the skill you are running;
-- an item is `blocked` and no skill can resolve it.
+- an item is `blocked` and no skill can resolve it;
+- **you have completed {{SKILLS_PER_TURN}} skill executions this turn.**
 
-Do not stop to report progress, to ask whether to continue, or because a milestone feels like a
-good place to pause. There is nobody to report to mid-turn; the report is `{{STATUS_FILE}}`.
+That last one is a budget, not a failure. Count an execution when a skill finishes — its journal
+entry is written and its transition is made. `next` does not count; it is the dispatcher. When
+you reach the limit, finish the skill you are inside (never leave one half-done), write
+`{{STATUS_FILE}}` with `stop_reason: turn-budget-exhausted`, and stop. The next turn is a fresh
+session that will read the workspace and carry on, which is exactly what the record exists for.
+
+The bound is here because a turn used to mean "as much as fits". One real turn ran five skills
+across two items and 255 tool calls, and the per-turn timeout killed it — punishing the run for
+going well, and losing an hour of work with it. Bounded turns are comparable to each other, make
+the timeout mean something, and keep the cost of any single kill small.
+
+Do not stop for any other reason — not to report progress, not to ask whether to continue, not
+because a milestone feels like a good place to pause. There is nobody to report to mid-turn; the
+report is `{{STATUS_FILE}}`.
 
 ## F. Write `{{STATUS_FILE}}` before you finish
 
@@ -110,10 +123,12 @@ single fenced `json` block, last thing in the file:
 
 - what you did, in a few lines
 - what you filed, what you finished, what refused to pass
+- which skills you ran, in order (`skills_run` below must match)
 
 ```json
 {
   "stop_reason": "human-question-open",
+  "skills_run": ["answer-questions", "refine"],
   "open_human_questions": ["WI-0002/Q-001", "WI-0003/Q-001"],
   "items_touched": ["WI-0002"],
   "last_action": "refine filed two questions on WI-0002 and suspended it",
