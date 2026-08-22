@@ -121,7 +121,25 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   profiles: product-only / product+architecture (default; ADRs ship) / full
   record. Machine-check that no workspace files leak; handle WI-#### refs in
   commit messages for product-only.
-- Status: open
+- Status: fixed (commit 70fb275), all four parts as filed. `scripts/export <destination>` selects
+  from `git ls-files` (so ignored build output never travels), copies into a **new** directory and
+  initialises a repository there with one commit and no ancestry — the original is not touched,
+  rewritten or rebased. Profiles `product` / `architecture` (default) / `full`; `product` strips
+  `(refs WI-0007)` from the commit subject, because an ID that resolves to nothing is worse than
+  no ID.
+  **The machine-check turned out to be two checks, and separating them is the interesting part.**
+  Run against iteration 1d's real project it reported eight "leaks" that were nothing of the kind:
+  ADRs carrying `[src: tracker/items/WI-0001/artifacts/plan.md]`, which is F-001's
+  claim-provenance rule working exactly as intended. No content escapes — the reference simply
+  does not resolve in the copy. So a **workspace file** in the export is an error, always; a
+  **citation naming a workspace path** is reported, listed and allowed, because the alternative is
+  asking authors to choose between citing their evidence and being able to publish. `--strict`
+  refuses on those too, for anyone who disagrees. It also found and now excludes the engagement
+  files that sit at a project root without being part of the software: `CONSUMER-PROMPT.md`,
+  `SIMULATION-NOTICE.md`, `IDEA.md`, `HARNESS-STATUS.md`.
+  `./scripts/check` step **export profiles** proves the product profile ships no workspace, that
+  the result is a one-commit repository, and that a second export over the same directory refuses
+  without `--force`. USAGE §4 documents it.
 ## F-008 — Asynchronous file-based human interaction as a first-class mode
 - Severity: enhancement (blocks automated iteration harness; also serves real async stakeholders)
 - Component: methodology (intake, refine, plan, answer-questions), spec, adapters
