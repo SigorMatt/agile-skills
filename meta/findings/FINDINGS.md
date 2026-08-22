@@ -19,7 +19,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   an artifact (test output, command result, requirement line); a linter fails
   unsourced justifications. Where judgement is unavoidable, judge is a fresh
   subagent with a narrow rubric and access only to cited evidence, not the prose.
-- Status: fixed (commit 02a417a) — the provenance half is mechanical; the judging half
+- Status: fixed (commit 77c8f64) — the provenance half is mechanical; the judging half
   is narrowed but still instruction-shaped, said plainly below.
   **Mechanical.** `spec/doc-header.md` §4a (revision 2) defines the convention: a paragraph
   making an absolute claim (`no`/`never`/`only`/`every`/`cannot`/`exactly`/…) about something
@@ -217,7 +217,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: precondition 1 should read "at least one open question that is answerable —
   addressed to `architect`, or addressed to `human` with `## Answer` filled in". The escalation
   case it was written for is "addressed to human and *not* answered".
-- Status: fixed (commit 78fd525) — precondition 1 rewritten as filed, naming both
+- Status: fixed (commit 565076a) — precondition 1 rewritten as filed, naming both
   answerable shapes and stating the escalated-and-unanswered case it was actually written for.
   `answer-questions` → 0.1.4. The harness worker-turn prompt's amendment B, which existed only
   to talk the worker past that sentence, is deleted (prompt → version 3) and replaced by a note
@@ -275,7 +275,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   or they may not (then `applies_to` must drop `epic` from `awaiting-answer`, `intake`'s
   escalation must be rewritten, and the validator must exempt epics — with `addressed-to: human`
   alone doing the stopping, which `next` step 2 already does).
-- Status: fixed (commit 33eb48c) — epics may be suspended, and the reason the rule was
+- Status: fixed (commit 48e4fff) — epics may be suspended, and the reason the rule was
   wrong is named rather than patched around. `terminal` was carrying two questions: *does the
   pipeline advance an item out of this status by itself* (an epic at `open` does not — it
   advances through its children) and *may a blocking question or an impasse stop an item here*
@@ -306,7 +306,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   meta/harness/evidence/iteration-1-mini/.
 - Direction: either evaluate `workspace-valid` against the post-move state, or exclude from the
   pre-move run the codes that the move itself resolves, and say which in the gate's output.
-- Status: fixed (commit 78fd525) — the second option, with the "say which" taken
+- Status: fixed (commit 565076a) — the second option, with the "say which" taken
   literally. `transition` now tells its gate run which move is pending
   (`run-gate --resolving ITEM:from->to` → `validate-workspace --resolving ...`), and the
   validator **downgrades to warnings** exactly the findings that move resolves: `board.stale` /
@@ -333,7 +333,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   inconsistent), or `journal.execution.missing` is a warning while the item is at `in-progress`
   with the acting skill still running. The first is better: it also makes an interrupted
   `implement` recoverable, which is what `in-progress` exists for.
-- Status: fixed (commit 78fd525) — the first option, which META-084b had already built
+- Status: fixed (commit 565076a) — the first option, which META-084b had already built
   the mechanism for. `implement` step 3 now moves to `in-progress` **and** writes an opening
   journal entry in the same command (`transition --journal-body-file --branch`). The skill
   writes two entries because it makes two transitions: the opening one records the branch and
@@ -353,7 +353,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: state the rule. Either epic-level record commits are made on the trunk branch (the
   epic is not a branch-scoped unit of work), or an item's branch owns every commit made while it
   is checked out and the gate must scope by item, not by branch.
-- Status: fixed (commit 78fd525) — the first option. `spec/workspace-layout.md` §5
+- Status: fixed (commit 565076a) — the first option. `spec/workspace-layout.md` §5
   (revision 3): an epic-level record commit is made on the trunk, because an epic has no branch,
   outlives every item under it, and is changed by executions that are not about any one child.
   `answer-questions` (0.1.4) and `review-close` (0.3.1) carry the step. `check-commit-refs` now
@@ -374,7 +374,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: give `journal.md` the same treatment as `history.md`, and say explicitly in the spec
   that a timestamp is read from the clock and never estimated — an invented timestamp is the one
   kind of record entry that cannot be audited against anything.
-- Status: fixed (commit 8549fca for the mechanism; adoption in commit 78abb5b).
+- Status: fixed (commit 4672b1c for the mechanism; adoption in commit d4b80e9).
   `scripts/journal-entry` is the only sanctioned writer of an entry: it stamps the heading from
   the clock and from the acting skill's installed `skill.yaml` (version **and** persona), so no
   header field is authored by the model. `transition --journal-body-file` writes the row and the
@@ -408,7 +408,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: decide on the write target, not on the mention: parse redirections and the known
   mutating commands, or move the guard to the file-write tools where the target is a parameter
   rather than prose.
-- Status: fixed (commit 84a11a2). The Bash branch now resolves **write targets**:
+- Status: fixed (commit dd1fb3c). The Bash branch now resolves **write targets**:
   the command is lexed keeping its operators, split into simple commands, and each one yields
   its redirection destinations plus the argument positions of the mutating programs it knows
   (`tee`, `sed -i`/`perl -i`, `dd of=`, `cp`/`mv`/`install`/`ln`, `rm`/`shred`/`truncate`,
@@ -441,7 +441,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   exit code gates everything after it. (c) validate-workspace gains a cross-check: every
   journal `**Status:**` line must have a matching history row — the undetectable direction
   becomes detectable.
-- Status: fixed (commit add02cb) — all three, as filed.
+- Status: fixed (commit bee3a3c) — all three, as filed.
   (a) `scripts/lib/workspace.py` gains `find_workspace_root()` / `resolve_root()`; every
   script (`validate-workspace`, `transition`, `board-gen`, `new-item`, `run-gate`,
   `check-commit-refs`, `check-verify-freshness`) walks up to `tracker/project.yaml` when no
@@ -486,7 +486,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   terminal (epic-done, blocked-no-recourse, budget, contamination); resumable stops resume
   on plain rerun, exactly as §9 already promises. Fix the --fresh hint text to say what it
   actually does (see H-003).
-- Status: fixed (commit 4f2ebea), as filed. `RESUMABLE_STOPS` = `turn-timeout`,
+- Status: fixed (commit f7af8f9), as filed. `RESUMABLE_STOPS` = `turn-timeout`,
   `api-rejected`, `turn-failed`; `TERMINAL_STOPS` = `epic-done`, `blocked-no-recourse`,
   `turn-budget`, `contamination`, `validator-failed`, `stalled`. A resumable stop clears on a
   plain rerun, logs a `resume-after-stop` event, and re-runs the interrupted turn; nothing is
@@ -514,7 +514,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: provision gains --wipe (or --fresh re-provisions the workspace too, behind an
   explicit confirmation); whichever way, one flag means one thing and USAGE says which.
   Needed anyway for iteration 1b's true-fresh start.
-- Status: fixed (commit 4f2ebea). `provision.py --wipe` deletes the project directory
+- Status: fixed (commit f7af8f9). `provision.py --wipe` deletes the project directory
   and re-provisions from nothing. Two refusals, because the flag deletes: the directory must
   carry `.harness/provision.json` (so a wipe cannot land on something this tool did not create)
   and it must be strictly inside the throwaway root (so a mistyped `--root` cannot make this a
@@ -536,7 +536,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: before dispatching a worker turn, the driver checks its own observed state
   for unanswered human-addressed questions; if any exist, dispatch a sim "answer" turn
   first. The observed fields already exist in the log schema.
-- Status: fixed (commit d170ac7), as filed. At the top of each iteration of the turn
+- Status: fixed (commit 65923da), as filed. At the top of each iteration of the turn
   loop, a scheduled worker turn re-scans the project; if any human-addressed question is open
   and unanswered, the turn goes to the sim with job `answer` and a `reschedule` event is logged
   saying why. The check costs one filesystem scan and saves a full round trip. The reason this
@@ -556,7 +556,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: mark killed turns' cost as unknown (or derive a floor from the transcript);
   compare HARNESS-STATUS.md's mtime against turn start and record "no status written"
   instead of a stale one.
-- Status: fixed (commit d170ac7), both halves as filed. A turn with no result event
+- Status: fixed (commit 65923da), both halves as filed. A turn with no result event
   records `cost_usd: null`, `cost-unknown: true`, and a note carrying its duration and tool
   count — zero is a number a reader adds up, unknown is not; the run summary line prints
   `cost=unknown`. `worker_report()` takes the turn's start time and returns nothing when
@@ -576,7 +576,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   turns comparable and timeouts meaningful), or the timeout is documented as
   worst-single-skill × N with a generous default. Prefer the former: bounded turns also
   bound the blast radius of every kill.
-- Status: fixed (commit d170ac7) — the former. Worker prompt version 4 stops after
+- Status: fixed (commit 65923da) — the former. Worker prompt version 4 stops after
   `{{SKILLS_PER_TURN}}` skill executions and reports `turn-budget-exhausted`, an enum value that
   already existed for exactly this shape. An execution counts when a skill *finishes* — journal
   written, transition made — and the prompt is explicit that the skill in flight is finished
@@ -584,6 +584,32 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   `--skills-per-turn`, or the iteration config's `worker-skills-per-turn`, default 3. The status
   block gains `skills_run`, so a turn that overran is visible in the log rather than inferred
   from the tool count.
+
+
+## F-024 — A finding's commit citation is not checked, and every one of mine was wrong
+- Severity: correctness, record integrity (found in this file, by this session)
+- Component: meta/findings/FINDINGS.md, scripts/check
+- Symptom: builder session two recorded ten `fixed (commit <sha>)` citations, and **all ten
+  pointed at commits that are not in the pushed history.** The unit cycle was: commit the work,
+  read `git rev-parse --short HEAD`, `sed` that sha into FINDINGS.md, `git commit --amend`. The
+  amend rewrites the commit, so the sha written into the file is always the pre-amend one. It
+  survives in the local object database via the reflog, so `git cat-file -e` succeeds and
+  `git log -1 <sha>` prints the right subject — the citation looks valid on the machine that
+  made it and is dangling everywhere else, and would vanish at the next `git gc`.
+- Why it matters beyond the typo: this is F-001's failure class in the file that tracks F-001 —
+  a citation that appears to resolve and does not. The toolkit now enforces claim provenance on
+  a consumer's `docs/` (`claim.citation.unresolved`) and enforces nothing on its own findings
+  ledger.
+- Evidence: `git merge-base --is-ancestor <sha> HEAD` returned non-zero for all ten
+  (02a417a, 33eb48c, 4f2ebea, 76dcaf1, 78abb5b, 78fd525, 84a11a2, 8549fca, add02cb, ae25f6c,
+  d170ac7); each was mapped to the surviving commit with the same subject and corrected in
+  META-099.
+- Direction: two parts. (a) Stop the practice: record the sha in a **follow-up** commit, never by
+  amending the commit being cited. (b) Mechanise it: `scripts/check` gains a step asserting that
+  every `commit <sha>` cited in `meta/findings/FINDINGS.md` is an ancestor of `HEAD` in this
+  repository — with an exemption list for shas that legitimately belong to a throwaway project's
+  repository, of which F-019's `234f170` is the only current example.
+- Status: (a) fixed in practice from META-099 onward; (b) open.
 
 ---
 
@@ -623,7 +649,7 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
   at turn 6 with zero further human questions.
 - Direction: a stakeholder-initiated request artifact (spec'd like a question in reverse)
   that `next` detects and routes to intake/refine before building the candidate set.
-- Status: fixed (commit 76dcaf1). New artifact and new spec file: `spec/request.md` —
+- Status: fixed (commit 5de4fd2). New artifact and new spec file: `spec/request.md` —
   `tracker/requests/R-###.md`, `from: human` (the only author a request may have),
   `status: open | accepted | declined`, an optional `about`, `## Request` in the stakeholder's
   own words which a skill **never edits**, and `## Response` / `## Consequences` the handling
@@ -659,7 +685,7 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
   human-addressed sign-off question (goal restated, delivered vs. deferred listed) and the
   epic cannot transition to done until it is answered. Also gives the harness a guaranteed
   final sim turn (see H-007).
-- Status: fixed (commit ae25f6c). `spec/question.md` §2 (revision 2) adds the optional
+- Status: fixed (commit 1c2f8ca). `spec/question.md` §2 (revision 2) adds the optional
   `kind` field and specifies `kind: sign-off`: addressed to `human`, blocking, `## Context`
   restating the goal in the stakeholder's own terms, `## Question` listing delivered vs not with
   a line of why for each, and `## Options considered` offering accept / accept-with-follow-ups /
@@ -709,7 +735,7 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
 - Direction: partially self-heals when F-022's sign-off question lands (closure always
   opens a human question). Belt-and-suspenders: the driver grants the sim one turn before
   accepting any epic-done stop as final, logged as job "closing".
-- Status: fixed (commit d170ac7), both halves. F-022 lands the sign-off, and the driver
+- Status: fixed (commit 65923da), both halves. F-022 lands the sign-off, and the driver
   additionally grants one `closing` sim turn before accepting `epic-done`, tracked by
   `closing-turn-given` in `state.json` so it happens exactly once. The sim prompt (version 2)
   gains the `closing` job: answer whatever is addressed to you, then say in your own words

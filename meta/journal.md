@@ -2524,3 +2524,23 @@ the record describes the impasse it is actually in or reads as giving up.
 
 `worker-skills-per-turn: 3` is set explicitly in the config rather than left to the default, so
 the run's turn shape is in the record rather than in a default that may change.
+
+## META-099 (cont.) — F-024: every commit citation I had written was dangling
+
+Filed against myself. The unit cycle this session used was: commit the work, read
+`git rev-parse --short HEAD`, `sed` that sha into `FINDINGS.md`, `git commit --amend`. The amend
+rewrites the commit, so the sha in the file is always the *pre-amend* one. It stays in the local
+object database through the reflog, which is why it looked fine every time I spot-checked it:
+`git cat-file -e` succeeds and `git log -1 <sha>` prints the right subject. `git merge-base
+--is-ancestor <sha> HEAD` is the check that fails, and it fails for all ten.
+
+That is F-001's failure class, in the file that tracks F-001. The toolkit now refuses an
+unresolvable citation in a consumer's `docs/` and applies no such rule to its own ledger. All ten
+are corrected by mapping each orphan to the surviving commit with the same subject; `234f170`
+stays untouched because it is a commit in a throwaway project's repository, cited in F-019's
+original filed text, and filed text is not rewritten.
+
+The practice changes from here: the sha goes in a follow-up commit, never by amending the commit
+being cited. The mechanical half — a `scripts/check` step asserting every cited sha is an ancestor
+of HEAD — is F-024(b) and waits until iteration 1d finishes, because a change under `scripts/`
+while a turn is in flight trips the harness's own W4 contamination rule.
