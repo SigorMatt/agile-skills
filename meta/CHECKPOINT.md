@@ -1,28 +1,25 @@
 # CHECKPOINT
 
-## Current unit: META-095 — harness H-002 and H-003: resume means resume, fresh means fresh
+## Current unit: META-096 — harness H-004, H-005, H-006, H-007: the turn loop
 
-H-002: a turn killed by `--turn-timeout` records `stop-reason: turn-failed`, and a plain rerun
-says "pass --fresh to archive it and start a new one" — while `harness/USAGE.md` §9 promises
-"resume with the same command". The documented recovery did not exist; the only offered exit
-archives four turns of good work. Recovery required hand-editing `state.json`.
-
-H-003: `--fresh` archives the run logs and not the project workspace, so iteration 1 silently
-resumed the mini run's epic. Acceptable outcome, wrong expectation.
+Four findings, one unit, because all four are the driver's turn loop and its worker prompt.
 
 Steps:
-1. `harness/run_iteration.py` — stop reasons are classified `resumable` (a killed turn, a
-   limit/auth rejection) or `terminal` (epic-done, blocked-no-recourse, turn-budget,
-   contamination, validator-failed, stalled). A resumable stop clears on a plain rerun and the
-   run continues, exactly as USAGE §9 already promises. A terminal stop says what `--fresh`
-   actually does.
-2. `harness/provision.py --wipe` — delete and re-create the project workspace, with an explicit
-   confirmation and a refusal outside the throwaway root.
-3. `harness/USAGE.md` §3 and §9 — one flag, one meaning, and the two of them stated together.
-4. `harness/tests/test_harness.py` — the classification, both directions.
-5. Check green; FINDINGS; journal; commit; push. **Harness commit prefix.**
+1. **H-004** — before dispatching a worker turn, the driver checks its own observed state; if
+   unanswered human-addressed questions exist, it dispatches a sim `answer` turn instead. One
+   full round trip was wasted per occurrence.
+2. **H-005** — a killed turn records `cost_usd: null` with `cost-unknown: true` rather than
+   `0.00`, and a `HARNESS-STATUS.md` whose mtime predates the turn's start is recorded as "no
+   status written" instead of being silently attributed to the killed turn.
+3. **H-006** — the worker prompt bounds a turn to N skill executions (config
+   `worker-skills-per-turn`, substituted into the prompt), so turns are comparable and
+   `--turn-timeout` stops punishing progress.
+4. **H-007** — the sim gets one closing turn before any `epic-done` stop is accepted, logged as
+   job `closing`. Partly self-healing now that F-022 opens a sign-off question at closure, but
+   belt and braces.
+5. Tests for each; check green; FINDINGS; journal; commit; push. **Harness prefix.**
 
-Next unit: **META-096** — H-004, H-005, H-006, H-007 (one unit; all four are the turn loop).
+Next unit: **META-098** — re-render and the full regression gate, then **META-099** (iteration 1d).
 
 ## Standing instructions (still in force)
 
