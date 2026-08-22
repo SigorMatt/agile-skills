@@ -1,21 +1,23 @@
 # CHECKPOINT
 
-## Current unit: META-098 — the regression gate, part 1: everything is rendered and installable
+## Current unit: META-099 — iteration 1d: configure, then run
 
-Clusters 1, 2, 3 and 6 are done. Before iteration 1d runs against this toolkit, prove that what
-*ships* works — the harness installs the adapter's `dist/` into a throwaway project, so a script
-that exists in `scripts/` and not in `dist/` would surface as a mid-run failure with no
-explanation.
+The regression gate. 1c's setup, fresh project `expenses-1d`, with the probe extended so the
+stakeholder also refuses every alternative to the sample — including the one 1c escaped through
+(a design that needs no sample).
 
 Steps:
-1. `./scripts/check` green (10 steps).
-2. Provision a scratch throwaway project through the real installer and confirm: every new
-   script is present and runs from the installed location (`journal-entry`, `lint-claims`,
-   `check-epic-signoff`), `spec/request.md` shipped, `tracker/requests/` created, the pipeline
-   carries `suspendable`, and the validator is green on the fresh workspace.
-3. Fix anything that does not ship; commit; push.
+1. `harness/skills/simulated-human/probes/iteration-1d-expenses.md` — 1c's probe with P2 extended:
+   no name-the-columns version, no interactive mapping, no format guessing, no "wait for the
+   sample" workaround. Everything else identical.
+2. `harness/iterations/iteration-1d-expenses.json` — project `expenses-1d`.
+3. Amend H-007's fix: the sim also gets a closing turn before `blocked-no-recourse` is accepted.
+   1d is expected to end there, and an impasse is an ending the stakeholder should see. Filed as
+   an addendum to H-007.
+4. `provision.py --iteration iteration-1d-expenses`, then run it.
+5. Findings pass (META-100), then FINAL-REPORT-2 (META-101).
 
-Next unit: **META-099** — configure and run iteration 1d.
+Done when: the run has stopped and its trail is banked under `meta/harness/evidence/`.
 
 ## Standing instructions (still in force)
 
