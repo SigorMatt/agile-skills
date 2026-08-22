@@ -1,0 +1,17 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: demo-088
+  trunk-branch: main
+  description: null
+
+commands:
+  test: null
+  lint: null
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

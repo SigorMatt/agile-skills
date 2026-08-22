@@ -49,3 +49,5 @@ question.blocking.not-suspended
 question.consequences.files
 question.id.mismatch
 question.item.mismatch
+question.kind
+question.signoff.addressed

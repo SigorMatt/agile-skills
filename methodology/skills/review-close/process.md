@@ -117,11 +117,25 @@ You cannot ask the human. You may reject, and rejection is a normal outcome, not
     not a pass. `scripts/lint-claims` has already proved the citations *resolve*; only a reader
     can say whether they *support* the sentence.
 
-10. **Check the epic.** If this item was the epic's last child not at `done`, apply the epic
-    Definition of Done (`spec/dor-dod.md` §4) and close the epic — or leave it open and record
-    why. Closing an epic while a success measure went unmet is allowed; saying so is mandatory.
-    This is the only moment in the pipeline where every sibling's state is already in hand, which
-    is why epic closure lives here.
+10. **Check the epic, and ask the stakeholder before closing it.** If this item was the epic's
+    last child not at `done`, apply the epic Definition of Done (`spec/dor-dod.md` §4). This is
+    the only moment in the pipeline where every sibling's state is already in hand, which is why
+    epic closure lives here.
+
+    DE7 comes before the others in time: **the epic cannot close until the stakeholder has been
+    asked whether they accept it, and has answered.** If no answered `kind: sign-off` question
+    exists on the epic, file one now (`spec/question.md` §2) — restate the goal in the
+    stakeholder's own words, list what was delivered and what was not with one line of why for
+    each, and offer the real choices: accept, accept with named follow-up items, or do not accept
+    and say what is missing. Then transition the **epic** to `awaiting-answer` with
+    `resume-to: open`, and stop. You are not stalling; you are at the one gate in this pipeline
+    that belongs to a person.
+
+    On a later execution the answer will be in the file and the epic will be back at `open`.
+    Then close it — or leave it open and record why. A stakeholder who declines closes the epic
+    just as legitimately, with the outcome saying so; what is not allowed is closing while never
+    having asked. Closing while a success measure went unmet is likewise allowed, and saying so
+    is mandatory.
 
 11. **Journal and transition, in one command** (`--journal-body-file`; see Journaling).
 

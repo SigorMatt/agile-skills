@@ -85,6 +85,7 @@ question.
 | `created` | always | UTC ISO-8601 |
 | `answered-at` | when answered | UTC ISO-8601, ≥ `created` |
 | `answered-by` | when answered | `answer-questions`, or `human` when escalated |
+| `kind` | optional | `decision` (the default when absent) \| `sign-off` |
 
 ### Body rules
 
@@ -98,6 +99,36 @@ question.
   consequence; "`artifacts/plan.md` step 3 rewritten; `item.md` AC2 amended; `docs/architecture/
   adr/ADR-0004.md` created" is. This is what makes the rule "downstream skills re-read
   artifacts, never the Q&A" actually enforceable.
+
+### `kind: sign-off` — the acceptance question
+
+Almost every question is a `decision`: something the pipeline cannot settle by itself. One is
+not. A **sign-off** is the moment the stakeholder is asked whether what was built is what they
+wanted, and it is filed by `review-close` before an epic may close (`dor-dod.md` DE7).
+
+It obeys every rule above and adds four:
+
+- `addressed-to` MUST be `human` and `blocking` MUST be `true`. Nobody accepts on the
+  stakeholder's behalf, and an acceptance question that does not stop the epic is a formality.
+- `## Context` MUST restate **the goal in the stakeholder's own terms** — from the epic's
+  `## Goal` and the vision, not from the tracker's vocabulary — so the answer is about the
+  outcome rather than about the tickets.
+- `## Question` MUST list **what was delivered and what was not**, each with one line of why,
+  and then ask plainly whether the stakeholder accepts the epic as complete.
+- `## Options considered` MUST offer at least: accept as complete; accept with named follow-up
+  items; do not accept, with what is missing. That is a real choice, and a sign-off that offers
+  only "yes" is theatre.
+
+The epic goes to `awaiting-answer` with `resume-to: open` and the run stops. An epic can be
+closed *without* acceptance — a stakeholder may decline, or go quiet — but only through the
+recorded route: the question is answered "not accepted", and the epic closes with an outcome
+that says so, or stays open. What is no longer possible is closing while never having asked.
+
+Why this is a rule rather than good manners: two consecutive automated runs closed an epic with
+no question ever addressed to the human. Every Definition of Done gate passed, correctly — they
+check the record, and the record only holds what the stakeholder said when last consulted. In one
+of those runs a mid-epic redesign had received explicit consent three items earlier; closure
+itself still asked nothing (F-022).
 
 ---
 
@@ -157,3 +188,12 @@ Rules:
 It MUST NOT escalate merely because answering is effortful. An architect who forwards every
 question is not doing the job, and the human's attention is the scarcest resource in the loop.
 Every escalation MUST state, in `## Context`, which of the four conditions above applies.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | §2: the optional `kind` field, and `kind: sign-off` — the stakeholder acceptance question an epic cannot close without (F-022). |

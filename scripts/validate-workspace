@@ -37,7 +37,8 @@ OUTCOMES = {"delivered", "dropped", "duplicate"}
 
 QUESTION_FIELDS_REQUIRED = ["id", "item", "from-skill", "addressed-to", "blocking", "status",
                             "created"]
-QUESTION_FIELDS_OPTIONAL = ["answered-at", "answered-by"]
+QUESTION_FIELDS_OPTIONAL = ["answered-at", "answered-by", "kind"]
+QUESTION_KINDS = {"decision", "sign-off"}
 ADDRESSED_TO = {"architect", "human"}
 QUESTION_STATUS = {"open", "answered"}
 
@@ -664,6 +665,18 @@ class Validator:
             if not isinstance(question.fields.get("blocking"), bool):
                 self.report.error(path, 0, "question.blocking",
                                   "blocking must be true or false")
+            kind = question.fields.get("kind", "decision")
+            if kind not in QUESTION_KINDS:
+                self.report.error(path, 0, "question.kind",
+                                  f"kind must be one of {sorted(QUESTION_KINDS)}, found "
+                                  f"{kind!r}")
+            elif kind == "sign-off" and (question.fields.get("addressed-to") != "human"
+                                         or question.fields.get("blocking") is not True):
+                self.report.error(path, 0, "question.signoff.addressed",
+                                  "a sign-off must be addressed-to human and blocking",
+                                  hint="nobody accepts an epic on the stakeholder's behalf, and "
+                                       "an acceptance question that does not stop the epic is a "
+                                       "formality (spec/question.md §2)")
             status = question.fields.get("status")
             if status not in QUESTION_STATUS:
                 self.report.error(path, 0, "question.status",

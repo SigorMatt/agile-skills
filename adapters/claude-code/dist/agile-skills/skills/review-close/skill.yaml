@@ -1,5 +1,5 @@
 name: review-close
-version: 0.2.1
+version: 0.3.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -99,6 +99,12 @@ quality_gates:
   - name: claims-are-sourced
     description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
     command: scripts/lint-claims --changed-since {{trunk}}
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: epic-sign-off
+    description: An epic does not close until the stakeholder has been asked to accept it, after the last child closed, and has answered.
+    command: scripts/check-epic-signoff {{item.id}}
     expect: exit-zero
     enforcement: hard
     on_failure: stay

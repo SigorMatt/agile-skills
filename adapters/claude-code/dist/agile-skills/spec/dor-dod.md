@@ -128,6 +128,7 @@ to `done` with a note.
 | DE4 | `docs/product/` reflects what was actually built, not what was proposed | [skill] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
 | DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written. Every citation in the workspace resolves | [skill] + [auto] |
+| DE7 | The stakeholder was **asked** whether the epic is accepted, after the last child closed, and answered | [auto] |
 
 DE6 is the epic-level counterpart of D12, and it is where a claim that no single item touched
 gets caught. Treat it the way a regression pass treats behaviour: the run that found three real
@@ -139,6 +140,22 @@ DE3 is the criterion that stops a pipeline from mistaking "all the tickets are c
 "the goal was achieved". If a success measure was not met, closing the epic is still allowed —
 saying so is what is mandatory.
 
+### DE7 is about asking, not about being told yes
+
+DE3 and DE4 both ask whether the record says the goal was met. DE7 asks something the record
+cannot answer on its own: whether the person who wanted it agrees. A record only holds what the
+stakeholder said when last consulted, so an epic can satisfy every other criterion while nobody
+has spoken to them since refinement — which is what happened, twice, in consecutive runs.
+
+`review-close` files a `kind: sign-off` question on the epic (`question.md` §2), suspends the
+epic to `awaiting-answer`, and stops. `scripts/check-epic-signoff` is the gate, and it requires
+the sign-off to have been filed **after the last child item closed** — an acceptance obtained
+halfway through is an acceptance of something else.
+
+A "no" closes the epic just as legitimately as a "yes": the outcome records that it was not
+accepted, or the epic stays open with follow-up items. The criterion is that the question was
+asked and answered, never that the answer was favourable.
+
 ---
 
 ## Revisions
@@ -147,3 +164,4 @@ saying so is what is mandatory.
 |---|------|--------|
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | D12 and DE6 gain their mechanical half: claim provenance, enforced by `scripts/lint-claims` (F-001). |
+| 3 | 2026-08-22 | DE7 added: the stakeholder is asked to accept the epic, after the last child closed, and answers (F-022). |

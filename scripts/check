@@ -12,10 +12,12 @@ Steps, in order:
   6. claim-provenance fixtures              — scripts/lint-claims must find both defects in
                                                fixtures/broken-workspace and nothing at all in
                                                fixtures/sourced-claims
-  7. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+  7. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
+                                               fixture's epic and passes the sourced-claims one
+  8. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
-  8. harness self-test                       — harness/tests/test_harness.py: the contamination
+  9. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -149,6 +151,20 @@ def check_claims(runner: Runner) -> None:
                [sys.executable, linter, "--root", clean, "--all"])
 
 
+def check_signoff(runner: Runner) -> None:
+    """DE7 both ways: an epic with no usable sign-off is refused, one with a real one passes."""
+    gate = os.path.join(SCRIPTS, "check-epic-signoff")
+    broken = os.path.join(ROOT, "fixtures", "broken-workspace")
+    clean = os.path.join(ROOT, "fixtures", "signed-off-epic")
+    if not os.path.isfile(gate) or not os.path.isdir(clean):
+        runner.skip("epic sign-off gate", "scripts/check-epic-signoff or its fixtures are absent")
+        return
+    runner.run("epic sign-off gate refuses an unaccepted epic",
+               [sys.executable, gate, "EP-001", "--root", broken], expect_zero=False)
+    runner.run("epic sign-off gate",
+               [sys.executable, gate, "EP-001", "--root", clean])
+
+
 def check_guard(runner: Runner) -> None:
     tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
     if not os.path.isfile(tests):
@@ -174,6 +190,7 @@ def main() -> int:
     check_render(runner)
     check_example(runner)
     check_claims(runner)
+    check_signoff(runner)
     check_guard(runner)
     check_harness(runner)
 

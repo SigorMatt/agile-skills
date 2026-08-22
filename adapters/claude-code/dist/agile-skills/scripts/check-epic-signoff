@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Gate: an epic does not close until the stakeholder has accepted it.
+
+Usage: scripts/check-epic-signoff <ITEM-ID> [--root .]
+
+Epic Definition of Done DE7. On anything that is not an epic this passes and says so — the gate
+runs on every `review-close` execution and only epic closure is its business.
+
+On an epic it requires a question on the epic with:
+
+  * `kind: sign-off`
+  * `addressed-to: human`  — nobody else can accept on the stakeholder's behalf
+  * `status: answered` with a non-empty `## Answer`
+  * `created` no earlier than the last child item's move to `done`
+
+The last condition is the one that does the work. Without it, a sign-off obtained halfway through
+the epic would satisfy the gate for work the stakeholder had not seen, which is the same failure
+by a slower route. The acceptance has to be of the finished thing.
+
+F-022: two consecutive runs closed an epic with no sign-off ever addressed to the human. The
+Definition of Done gates all held — they check the record, and the record only holds what the
+stakeholder said when last consulted. One of those runs had, three items earlier, negotiated a
+redesign with explicit consent; closure itself still asked nothing, so a stakeholder with one
+more concern had no gate at which to raise it.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import frontmatter  # noqa: E402
+from workspace import Workspace, resolve_root  # noqa: E402
+
+
+def answer_text(body: str) -> str:
+    """The text under `## Answer`, up to the next level-2 heading."""
+    lines = body.split("\n")
+    collecting, collected = False, []
+    for line in lines:
+        if line.startswith("## "):
+            if collecting:
+                break
+            collecting = line.strip().lower() == "## answer"
+            continue
+        if collecting:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("<!--"):
+                collected.append(stripped)
+    return "\n".join(collected).strip()
+
+
+def last_child_done(workspace, epic_id: str):
+    """The timestamp of the most recent child transition to `done`, or None."""
+    latest = None
+    for identifier, item in workspace.items.items():
+        if item.fields.get("epic") != epic_id:
+            continue
+        for row in item.history:
+            if row.normalised(row.to_status) == "done":
+                if latest is None or row.when > latest:
+                    latest = row.when
+    return latest
+
+
+def main(argv: list) -> int:
+    positional, options = [], {}
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"check-epic-signoff: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+    if not positional:
+        print("check-epic-signoff: usage: check-epic-signoff <ITEM-ID> [--root .]",
+              file=sys.stderr)
+        return 2
+    item_id = positional[0]
+    root = resolve_root(options.get("root"), tool="check-epic-signoff")
+
+    workspace = Workspace(root).load()
+    item = workspace.items.get(item_id)
+    if item is None:
+        print(f"check-epic-signoff: {item_id} is not an item in {root}", file=sys.stderr)
+        return 2
+    if item.fields.get("type") != "epic":
+        print(f"check-epic-signoff: {item_id} is a {item.fields.get('type')!r}, not an epic — "
+              f"the stakeholder sign-off gate applies to epic closure only. PASS.")
+        return 0
+
+    directory = os.path.join(item.root, "questions")
+    sign_offs = []
+    if os.path.isdir(directory):
+        for name in sorted(os.listdir(directory)):
+            if not name.endswith(".md"):
+                continue
+            path = os.path.join(directory, name)
+            fields, body, _ = frontmatter.load_file(path)
+            if (fields or {}).get("kind") == "sign-off":
+                sign_offs.append((path, fields or {}, body or ""))
+
+    if not sign_offs:
+        print(f"check-epic-signoff: FAIL — {item_id} has no sign-off question.\n"
+              f"  Epic Definition of Done DE7: before an epic closes, file a question on it with\n"
+              f"  kind: sign-off, addressed-to: human, blocking: true — restating the goal, "
+              f"listing\n"
+              f"  what was delivered and what was deferred, and asking plainly whether the "
+              f"stakeholder\n"
+              f"  accepts it. Then suspend the epic to awaiting-answer and stop.",
+              file=sys.stderr)
+        return 1
+
+    boundary = last_child_done(workspace, item_id)
+    problems = []
+    accepted = None
+    for path, fields, body in sign_offs:
+        relative = os.path.relpath(path, root)
+        if fields.get("addressed-to") != "human":
+            problems.append(f"{relative} is addressed to {fields.get('addressed-to')!r}; "
+                            f"only the stakeholder can accept the epic")
+            continue
+        if fields.get("status") != "answered":
+            problems.append(f"{relative} is still {fields.get('status')!r} — the epic waits on "
+                            f"the stakeholder, which is the point of the gate")
+            continue
+        if not answer_text(body):
+            problems.append(f"{relative} says answered but its '## Answer' is empty")
+            continue
+        if boundary and str(fields.get("created") or "") < boundary:
+            problems.append(f"{relative} was filed at {fields.get('created')}, before the last "
+                            f"child item closed at {boundary}; the stakeholder accepted "
+                            f"something other than the finished epic")
+            continue
+        accepted = relative
+
+    if accepted is None:
+        print(f"check-epic-signoff: FAIL — {item_id} has no usable sign-off:", file=sys.stderr)
+        for problem in problems:
+            print(f"  - {problem}", file=sys.stderr)
+        return 1
+
+    print(f"check-epic-signoff: PASS — {accepted} carries the stakeholder's answer"
+          + (f", filed after the last child closed at {boundary}" if boundary else ""))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

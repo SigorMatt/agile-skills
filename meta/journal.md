@@ -2277,3 +2277,37 @@ opened one door and not the corridor. A fixture row carries the still-illegal ca
 change. It was correct all along; it was the machinery that could not carry it out.
 
 Evidence: `./scripts/check` — 8 steps, all passed, 51 fixture codes.
+
+## META-088 — F-022: an epic cannot close without having asked
+
+The finding is short and the fix is mostly spec, so the interesting parts are the two decisions
+that could have gone the other way.
+
+**The gate checks that the question was asked, not that the answer was yes.** A stakeholder who
+declines still closes the epic — with an outcome recording that it was not accepted, or by leaving
+it open with follow-up items. Requiring a favourable answer would turn the acceptance moment into
+a formality with only one legal outcome, which is what it was already. What is now impossible is
+closing while never having asked.
+
+**The sign-off must be filed after the last child closed.** This is the condition that does the
+real work, and it comes straight from 1c: that run *did* obtain explicit consent for a mid-epic
+redesign, three items before closure. Without the recency condition, that consent would satisfy
+the gate for work the stakeholder had not seen — the same failure by a slower route. So
+`check-epic-signoff` reads the children's histories for the latest transition to `done` and
+refuses anything filed before it.
+
+Mechanically: `spec/question.md` gains an optional `kind` field with `sign-off` as its one
+non-default value, and specifies the shape — the goal restated in the stakeholder's words, what
+was and was not delivered with a line of why for each, and three real options rather than "yes".
+`spec/dor-dod.md` DE7 is `[auto]`. `scripts/check-epic-signoff` is a hard gate on `review-close`,
+so `transition` refuses the epic's completion move. `review-close` step 10 files the question,
+suspends the epic to `awaiting-answer` with `resume-to: open`, and stops — a move that was
+impossible until META-087, which is why F-013 and F-022 are the same cluster.
+
+Two fixtures. The broken one carries both near-misses: a sign-off with its `kind` misspelled
+(which sails past a `kind == "sign-off"` check) and a correctly spelled one that the *architect*
+answered on the stakeholder's behalf. The passing one is a captured scratch run rather than
+hand-authored prose, so its history rows and timestamps are ones the tools actually produced.
+Both are steps in `./scripts/check`, one expecting failure and one expecting success.
+
+`review-close` → 0.3.0. Evidence: `./scripts/check` — 10 steps, all passed, 53 fixture codes.

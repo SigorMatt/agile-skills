@@ -579,7 +579,27 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
   human-addressed sign-off question (goal restated, delivered vs. deferred listed) and the
   epic cannot transition to done until it is answered. Also gives the harness a guaranteed
   final sim turn (see H-007).
-- Status: open
+- Status: fixed (commit ae25f6c). `spec/question.md` §2 (revision 2) adds the optional
+  `kind` field and specifies `kind: sign-off`: addressed to `human`, blocking, `## Context`
+  restating the goal in the stakeholder's own terms, `## Question` listing delivered vs not with
+  a line of why for each, and `## Options considered` offering accept / accept-with-follow-ups /
+  do-not-accept. `spec/dor-dod.md` DE7 (revision 3) is the criterion, marked `[auto]`.
+  `scripts/check-epic-signoff` is the gate — hard, on `review-close` (0.3.0), so `transition`
+  refuses the epic's move to `done`. It also refuses a **stale** sign-off: one filed before the
+  last child reached `done` is an acceptance of something other than the finished epic.
+  `review-close` step 10 files the sign-off, suspends the epic to `awaiting-answer` with
+  `resume-to: open` (possible only because of F-013) and stops.
+  Deliberately *not* a requirement that the answer be "yes": a stakeholder who declines closes
+  the epic just as legitimately, with the outcome saying so. What is no longer possible is
+  closing while never having asked.
+  Proven by execution in a scratch workspace: with the only child at `done` and no sign-off,
+  `transition EP-001 --to done --actor review-close` is refused with `epic-sign-off (hard)`
+  among the failing gates; with a real answered sign-off it passes; with the same sign-off
+  back-dated before the child's close it is refused as stale.
+  Fixtures both ways, and both are `./scripts/check` steps: `fixtures/broken-workspace`'s EP-001
+  carries a misspelled `kind: signoff` and a correctly-spelled sign-off answered by the architect
+  (`question.kind`, `question.signoff.addressed`), and `fixtures/signed-off-epic/` is the
+  captured scratch run that passes.
 
 ## F-023 — refine over-escalates technical trivia to the stakeholder
 - Severity: UX (mirror image of F-020)

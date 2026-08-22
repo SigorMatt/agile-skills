@@ -1,4 +1,4 @@
-# Contract — review-close v0.2.1
+# Contract — review-close v0.3.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -47,6 +47,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `record-is-reconstructible` | hard | Answer, using only those sources - what was built and why, which decisions were made and by which skill, what questions arose and how they were resolved, what verification found. Any answer you cannot give is a defect in the record, not in the reader. | stay |
 | `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}}`, expect exit-zero | stay |
+| `epic-sign-off` | hard | run `.claude/agile-skills/scripts/check-epic-signoff {{item.id}}`, expect exit-zero | stay |
 
 ## Escalation
 
