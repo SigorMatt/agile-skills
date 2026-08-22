@@ -1,29 +1,28 @@
 # CHECKPOINT
 
-## Phase H is complete. There is no next unit.
+## Current unit: META-082 — Phase I plan + checkpoint
 
-The two-session iteration harness is built and proven:
-[`meta/harness/FINAL-REPORT.md`](harness/FINAL-REPORT.md) — what was built, the decisions, the
-acceptance boxes with their evidence, what it does **not** test, and §6, the exact command
-sequence for full iteration 1.
+Builder session two. Mission: `meta/BUILDER-2-PROMPT.md`. Backlog: `meta/findings/FINDINGS.md`.
 
-If you are a fresh session picking this up, the next piece of work is **running iteration 1**,
-not building anything:
+Steps:
+1. Append Phase I (META-082 … META-101) to `meta/plan.md`.
+2. Overwrite this checkpoint with the unit cycle for Phase I.
+3. Commit; push.
 
-```bash
-./scripts/check
-harness/provision.py --iteration iteration-1-expenses
-harness/run_iteration.py --iteration iteration-1-expenses --fresh
-```
+Done when: `meta/plan.md` carries the Phase I unit list and this file names META-083 next.
 
-Then review with the owner per `harness/USAGE.md` §5 and §8, and append findings from F-019
-onward. `meta/findings/FINDINGS.md` now carries F-001 … F-018; F-006 is closed as rejected.
-
-Do not fix the toolkit inside a harness run. The harness must work against the toolkit as it is.
+Next unit: **META-083** — F-019 (root-resolving scripts, no chained transitions,
+journal-status ↔ history cross-check).
 
 ## Standing instructions (still in force)
 
-- **The unit cycle ends with `git push`, not `git commit`.** Instructed by the human on
-  2026-08-16; `origin` is `git@github.com:SigorMatt/agile-skills.git` and `main` tracks it.
-- This session must NOT modify `methodology/` or `spec/`. Toolkit defects found while building
-  the harness are filed as findings (F-011 onward), not fixed here.
+- **The unit cycle ends with `git push`, not `git commit`.** `origin` is
+  `git@github.com:SigorMatt/agile-skills.git`; `main` tracks it.
+- This session MAY modify `methodology/`, `spec/`, `scripts/`, `adapters/`, `harness/`.
+  It may NOT touch `meta/harness/evidence/**` (read-only history) and may not rewrite filed
+  finding text (append corrections instead).
+- Every change traces to an F-### or H-###. Anything unfiled gets filed first.
+- Behavioural skill change ⇒ version bump in `skill.yaml` (patch for a fix, minor for a contract
+  change). Spec change ⇒ bump the spec's version header. Re-render after any of it.
+- Every enforcement fix ships a must-fail fixture proving the old failure is now blocked.
+- Toolkit commits and harness commits stay separate (two ledgers, two prefixes).

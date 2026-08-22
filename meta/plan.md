@@ -191,3 +191,63 @@ Mission: `meta/harness/HARNESS-PROMPT.md`, design: `meta/harness/DESIGN.md`, que
 - [x] **META-080** — the mini end-to-end iteration on queue entry 1 (`expenses`), artefacts
       committed under `meta/harness/evidence/`.
 - [x] **META-081** — findings F-011+ from the run, and `meta/harness/FINAL-REPORT.md`.
+
+---
+
+## Phase I — builder session two: work the findings ledger
+
+Mission: `meta/BUILDER-2-PROMPT.md`. Backlog: `meta/findings/FINDINGS.md`. Same unit discipline.
+Every unit names the finding(s) it closes; a finding is `fixed` only when execution proves it,
+with a must-fail fixture for every enforcement change. Toolkit and harness commits stay separate.
+
+### Cluster 1 — enforcement integrity
+- [ ] **META-082** — Phase I plan + checkpoint (this unit).
+- [ ] **META-083** — F-019: every script resolves the workspace root itself; process contracts
+      forbid chaining `transition`; validator cross-checks journal `**Status:**` lines against
+      `history.md` rows. Must-fail fixture for the divergence.
+- [ ] **META-084** — F-017: mechanical entry provenance. `scripts/journal-entry` emits the entry
+      header from a clock read + the skill's own version; spec forbids estimated timestamps;
+      validator rejects entries dated outside the workspace's git activity window. Must-fail
+      fixture.
+- [ ] **META-085** — F-018: the write guard decides on the write target, not the command string.
+      Fixtures both ways (mention allowed, write denied).
+- [ ] **META-086** — F-001: claim-provenance lint — factual justifications in ADRs/reviews/docs
+      must cite an artifact; `validate-workspace` fails unsourced ones. Must-fail fixture.
+
+### Cluster 2 — the acceptance loop
+- [ ] **META-087** — F-013: an epic becomes suspendable; pipeline.yaml terminal-status
+      contradiction resolved; validator and intake agree. Must-fail fixture.
+- [ ] **META-088** — F-022: epic sign-off gate — `review-close` files a blocking human-addressed
+      acceptance question; the epic cannot reach `done` until it is answered. Must-fail fixture.
+- [ ] **META-089** — F-021: stakeholder-initiated request artifact, detected and routed by `next`.
+
+### Cluster 3 — pipeline/spec correctness
+- [ ] **META-090** — F-011 (`answer-questions` precondition), F-014 (gates run against the
+      post-move state), F-015 (journal written with the status move), F-016 (epic-level record
+      commits have a stated home).
+
+### Cluster 4 — refine calibration
+- [ ] **META-091** — F-020 (grouped presentation per item per round) and F-023 (routing test:
+      product-stake to the human, implementation-only decided and recorded, standing deferrals
+      honoured by category).
+
+### Cluster 5 — consumer readiness
+- [ ] **META-092** — F-002 (.gitkeep), F-003 (.gitignore), F-005 (uninitialised state),
+      F-004 + F-012 (USAGE corrections).
+- [ ] **META-093** — F-007: `scripts/export` with profiles.
+- [ ] **META-094** — F-009: README positioning.
+
+### Cluster 6 — harness
+- [ ] **META-095** — H-002 (resumable vs terminal stop classes; honest `--fresh` hint) and
+      H-003 (`provision.py --wipe` / true-fresh semantics, documented).
+- [ ] **META-096** — H-004 (answers-pending schedules a sim turn first) and H-007 (the sim gets
+      a closing turn before any epic-done stop is accepted).
+- [ ] **META-097** — H-005 (killed-turn cost + stale-status handling) and H-006 (bounded skill
+      executions per worker turn).
+
+### The regression gate
+- [ ] **META-098** — re-render, `./scripts/check` green including every new must-fail fixture.
+- [ ] **META-099** — iteration 1d configured (`iteration-1d-expenses`, fresh project
+      `expenses-1d`, 1c's setup plus a stakeholder who refuses every alternative) and run.
+- [ ] **META-100** — findings pass over 1d's trail; anything new filed as F-024+/H-008+.
+- [ ] **META-101** — FINDINGS.md statuses current; `meta/FINAL-REPORT-2.md`.
