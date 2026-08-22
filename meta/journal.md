@@ -2634,3 +2634,30 @@ Also: **F-040** (a repeated `src:` prefix is stripped and named in the message),
 where to write), and **F-026** (`--help` on all ten entry points).
 
 `./scripts/check` is at 12 steps, 63 fixture codes, 195 selftest cases.
+
+## META-092 — cluster 5a: the workspace a consumer actually gets
+
+Five findings from the peer setup report, plus F-047 from 1d, and the interesting part is that
+F-002 and F-047 are one rule seen from two ends. F-002 predicted the symptom — commit the
+workspace, clone it, watch it fail validation. 1d found it failing something worse: an item with
+no questions had its empty `questions/` deleted by the trial merge `review-close` is *required* to
+perform, so the item failed `questions.missing` while being closed. Same missing `.gitkeep`, and
+the rule that covers both is **the tool that creates a directory the schema requires also creates
+its `.gitkeep`** — `workspace-init` and `new-item`. Demonstrated the whole way: init, add, commit,
+clone, 0 errors.
+
+`.gitignore` is written at init rather than at install, so a project that puts the toolkit
+somewhere unusual still gets it, and it appends only missing lines to an existing file rather than
+assuming it owns it.
+
+F-005 gave me the one design decision worth recording. The uninitialised state is not an error and
+was being reported as two of them, moments after the installer said "ready" — so it reads as a
+broken install. It now has its own exit code: 0 clean, 1 a workspace that exists and is wrong, 2
+usage, **3 not started yet**. A caller can tell them apart without parsing prose, which is the
+whole point of an exit code.
+
+USAGE §2 was not just wrong about verification, it was wrong in the order it offered the checks.
+The discovery check *cannot* work in the installing session — skills load at session start — so
+the file-level check comes first and is labelled as the one that works now. §4 gains F-012's trust
+requirement with the stderr line quoted verbatim, so someone who hits it can search for the words
+they actually saw.
