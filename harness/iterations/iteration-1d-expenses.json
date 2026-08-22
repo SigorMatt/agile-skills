@@ -1,0 +1,11 @@
+{
+  "id": "iteration-1d-expenses",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 1 — expenses (re-run 1d: the post-fix regression run; no alternative to the sample is accepted)",
+  "project": "expenses-1d",
+  "persona": "cooperative-pm",
+  "probe": "iteration-1d-expenses",
+  "max-turns": 24,
+  "worker-model": "opus",
+  "sim-model": "sonnet",
+  "worker-skills-per-turn": 3
+}

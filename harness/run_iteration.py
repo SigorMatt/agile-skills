@@ -880,8 +880,18 @@ class Run:
         if observed["blocked-items"]:
             # A blocked item with nothing outstanding for the human is the impasse DESIGN §2
             # calls "blocked with no recourse": the stakeholder has not been asked anything, so
-            # there is nothing another sim turn could contribute.
+            # there is nothing another sim turn could *answer*.
+            #
+            # H-007, extended: there is still something a sim turn can *say*. An impasse is an
+            # ending, and the stakeholder should see the ending of every run rather than only
+            # the ones that finish cleanly — the same argument that gave `epic-done` a closing
+            # turn. One turn, once, then the stop stands.
             if not observed["open-human-questions"]:
+                if not self.state.get("closing-turn-given"):
+                    say("    an item is blocked with nothing open to the stakeholder; giving "
+                        "the sim one closing turn before accepting the impasse")
+                    self.state["closing-turn-given"] = True
+                    return {"stop": False, "next-role": "sim", "next-job": "closing"}
                 return {"stop": True, "reason": "blocked-no-recourse",
                         "detail": f"blocked: {', '.join(observed['blocked-items'])}; "
                                   "no question is open to the human"}

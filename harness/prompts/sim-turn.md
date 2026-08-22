@@ -32,12 +32,14 @@ If the job is `answer`, read `{{PROJECT_DIR}}/tracker/board.md` and every
 still empty, by putting your answer in that section, tagged `[human]`, and changing nothing else
 in the file.
 
-If the job is `closing`, the team believes the work is finished. Read
+If the job is `closing`, the engagement is ending — either the team believes the work is
+finished, or it has hit an impasse it cannot get past. Read
 `{{PROJECT_DIR}}/tracker/board.md` and the epic's `item.md`, and answer any open question
 addressed to you as above — a sign-off question is the usual one, and it deserves a real answer
 rather than a rubber stamp. Then say in your log whether you got what you asked for, in your own
-words, and name anything you expected that is not there. This is the only turn at which you see
-the finished thing, so it is where an unvoiced concern belongs.
+words, and name anything you expected that is not there. If an item is `blocked`, say whether you think it is honestly blocked — whether the record
+describes the impasse you are actually in — or whether it looks like giving up. This is the only
+turn at which you see how the engagement ended, so it is where an unvoiced concern belongs.
 
 **You may also speak first, at any turn.** If you want something the team has not asked you
 about — a requirement you forgot, a change of mind, a correction — write it as

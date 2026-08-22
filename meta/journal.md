@@ -2495,3 +2495,32 @@ sign-off gate passes on a work item with a reason and fails on an unaccepted epi
 Both fixes trace to the findings whose implementations they are: F-001 and F-017.
 
 Evidence: `./scripts/check` — 11 steps, all passed.
+
+## META-099 — iteration 1d, configured
+
+1c's probe with one change, in P2, and it is the change the whole run exists for. Four runs have
+now escaped `blocked` and every escape was legitimate: run 1's sim accepted a deferral, 1b's team
+never opened a channel, and 1c — the good one — found a design that needed no sample at all and
+got explicit consent for it. That was correct engineering. It also means the `blocked` status and
+its recovery path are still untested code.
+
+So 1d's stakeholder refuses every alternative to the sample, and the probe enumerates them rather
+than gesturing: a configurable or name-the-columns reader, auto-detection, "the common bank
+formats", a made-up row to confirm, a stub to finish later, building against an invented format,
+and anything framed as "so we are not blocked on you". One sentence answers all of them. Ordering
+is still conceded — building it last is fine — because the thing being tested is an impasse, not
+a tantrum.
+
+P4 is new: the sign-off question. The sim answers it honestly, and honestly is "no" — the import
+was in the original idea and it is not there. The probe also asks the sim to record whether the
+question arrived at all, and to judge whether it listed what was and was not delivered. If the
+run ends without one, that is the finding.
+
+Setting this up exposed a gap in H-007's fix, now filed as an addendum and closed. The closing
+turn only covered `epic-done`, and 1d is expected to end at `blocked-no-recourse` — so the run
+built to test the acceptance loop would have ended with the stakeholder never hearing how it
+finished. An impasse is an ending; it gets a closing turn too, once, and the sim is asked whether
+the record describes the impasse it is actually in or reads as giving up.
+
+`worker-skills-per-turn: 3` is set explicitly in the config rather than left to the default, so
+the run's turn shape is in the record rather than in a default that may change.

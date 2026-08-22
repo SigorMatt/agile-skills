@@ -748,3 +748,12 @@ Iteration 1d (post-fix regression): the stakeholder additionally refuses all alt
 ("just wait for my file") — an immovable stakeholder with no legitimate exit is the
 blocked case. 1d also serves as the regression test for the F-021/F-022 acceptance-loop
 fixes and the F-013 epic-suspension fix.
+
+### Addendum to H-007 (2026-08-22, META-099) — the closing turn covers an impasse too
+The fix as filed gave the sim a closing turn before `epic-done`. Setting up iteration 1d made the
+gap obvious: 1d is *expected* to end at `blocked-no-recourse`, and that stop had no closing turn,
+so the run designed to test the acceptance loop would have ended with the stakeholder never
+hearing how it finished. An impasse is an ending. The driver now gives one closing turn before
+accepting `blocked-no-recourse` as well — once, tracked by the same `closing-turn-given` flag —
+and the sim prompt's `closing` job asks, when an item is blocked, whether the record describes
+the impasse the stakeholder is actually in or whether it reads as giving up.
