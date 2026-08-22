@@ -609,7 +609,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   every `commit <sha>` cited in `meta/findings/FINDINGS.md` is an ancestor of `HEAD` in this
   repository — with an exemption list for shas that legitimately belong to a throwaway project's
   repository, of which F-019's `234f170` is the only current example.
-- Status: (a) fixed in practice from META-099 onward; (b) open.
+- Status: fixed (commit 418eb9e). (a) the practice changed from META-099 onward. (b) `scripts/check` step **findings citations resolve**: every `commit <sha>` cited here must be an ancestor of HEAD, with `FOREIGN_SHAS` naming the ones belonging to a throwaway project's repository. Proven to fail by restoring one orphan.
 
 ---
 
@@ -808,7 +808,7 @@ is not a ledger.
   `journal.execution.missing` for the moving item **when the transition is what will write the
   entry** — i.e. when `--journal-body-file` was passed — and not otherwise, because without it the
   finding is real. Extend `--resolving` to carry that fact rather than downgrading unconditionally.
-- Status: open
+- Status: fixed (commit 418eb9e). `--resolving` gained a `+journal` suffix that `transition` sets when `--journal-body-file` is passed; `resolved_by_move()` downgrades `journal.execution.missing` for the moving item only then. Without the flag the finding is real and is left alone.
 
 ## F-026 — `--help` is broken across the script suite
 - Severity: UX
@@ -819,7 +819,7 @@ is not a ledger.
 - Direction: every entry point answers `--help` (and `-h`) with its docstring's usage block. Check
   `transition`, `run-gate`, `journal-entry`, `lint-claims`, `check-epic-signoff`, `board-gen`,
   `validate-workspace`, `check-commit-refs`, `check-verify-freshness`.
-- Status: open
+- Status: fixed (commit 418eb9e). All ten entry points answer `--help` and `-h` with their usage block: new-item, transition, run-gate, board-gen, validate-workspace, check-commit-refs, check-verify-freshness, journal-entry, lint-claims, check-epic-signoff.
 
 ## F-027 — a question can bundle two decisions, and the record loses one
 - Severity: UX, low
@@ -903,7 +903,7 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/SIM-LOG.md turn 5
 - Direction: both headings must exist from the moment a question is filed — empty is fine, absent
   is not — enforced by the validator and stated in `question.md`'s body rules.
-- Status: open
+- Status: fixed (commit 418eb9e). `question.section.missing`: a filed question must carry `## Answer` and `## Consequences` from the moment it exists, empty until answered. `spec/question.md` §2 revision 3 says so; fixture case added.
 
 ## F-033 — `lint-claims` exits 0 having checked nothing when handed a file path
 - Severity: **correctness, severe** — a gate that reports success when it could not look
@@ -923,7 +923,7 @@ is not a ledger.
   argument that is not a workspace, naming `--root`. Never exit 0 having examined nothing, and
   never print a scope line that is not what was scoped. Must-fail fixture: `lint-claims <file with
   an unsourced absolute claim>` exits non-zero.
-- Status: open
+- Status: fixed (commit 418eb9e). Files named on the command line are linted as files; one directory is a workspace root; a path that does not exist is an error; passing both is an error. The scope line reports what was actually examined, including "no documents changed since <ref>". Demonstrated: `lint-claims fixtures/broken-workspace/docs/architecture/overview.md` exits 1 with both rules firing.
 
 ## F-034 — `plan` writes source files so that its own gates can run
 - Severity: contract/spec conflict
@@ -981,7 +981,7 @@ is not a ledger.
   the absolute-claim rule; the citation scan skips nothing, and neither does
   `validate-workspace.check_claim_citations`. Must-fail fixture both ways: a bare malformed marker
   still fails, the same marker in backticks does not.
-- Status: open
+- Status: fixed (commit 418eb9e). `mask_code()` blanks inline code spans preserving lines and columns; `masked_lines()` also blanks fenced blocks; `lint-claims` (both rules) and `validate-workspace.check_claim_citations` read through it. Fixtures both ways: `fixtures/sourced-claims` now contains a paragraph describing a malformed marker **by quoting it** — a paragraph that could not have existed before this fix — and `fixtures/broken-workspace` carries the same marker bare, which still fails.
 
 ## F-038 — a transition can leave the tracker committed-invalid
 - Severity: correctness, minor (documented behaviour, undocumented window)
@@ -1005,7 +1005,7 @@ is not a ledger.
 - Direction: validate the body before touching `history.md`, then write the row, then append the
   entry. `journal-entry.check_body()` is already a pure function; call it early. Nothing about the
   ordering needs to change.
-- Status: open
+- Status: fixed (commit 418eb9e). `transition` reads and checks the journal body before it touches `history.md`, using `journal-entry.check_body()`. The row-first ordering chosen in META-090 is unchanged. Demonstrated: a body missing `**Result:**` leaves `history.md` byte-identical.
 
 ## F-040 — a repeated `src:` prefix is rejected and the message blames the citation
 - Severity: UX
@@ -1016,7 +1016,7 @@ is not a ledger.
   repeated.
 - Evidence: evidence/iteration-1d/run/011-worker.status.md
 - Direction: strip a leading `src:` from each part; if it still fails, say which part and why.
-- Status: open
+- Status: fixed (commit 418eb9e). A leading `src:` is stripped from each `;`-separated part, and if the part still fails the message says the prefix was repeated and how the syntax works.
 
 ## F-041 — `validate-workspace` lints files the workspace does not track
 - Severity: correctness (scope)
@@ -1027,7 +1027,7 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/011-worker.status.md
 - Direction: skip paths git ignores, falling back to current behaviour outside a repository. F-037's
   code-span rule is the more general half of the same answer.
-- Status: open
+- Status: fixed (commit 418eb9e). Both `lint-claims` and `validate-workspace` skip paths git ignores, falling back to the old behaviour outside a repository.
 
 ## F-042 — see F-029
 Merged into F-029; both occurrences of "a skill is told to create an item it may not create" are
@@ -1055,7 +1055,7 @@ filed there.
 - Evidence: evidence/iteration-1d/run/014-worker.status.md
 - Direction: escape `|` when writing the reason cell (check `journal-entry` for the same class),
   and make the validator's row-shape error name an unescaped pipe as the likely cause.
-- Status: open
+- Status: fixed (commit 418eb9e) — **and it needed two halves.** `transition` escapes `|` and backslashes in the reason cell, *and* `scripts/lib/workspace.split_row()` splits history rows on unescaped pipes and unescapes as it goes; `transition`'s four private copies of that split now use it. Escaping without a reader is decoration: the first attempt produced a row that rendered correctly and parsed into seven columns, which is exactly how the corruption stayed invisible in 1d. Selftest covers both.
 
 ## F-045 — the epic sign-off gate does not fire on a run that ends in an impasse
 - Severity: methodology gap (the acceptance loop, incomplete — F-022's fix is half a fix)
