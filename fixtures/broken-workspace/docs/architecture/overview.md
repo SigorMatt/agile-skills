@@ -20,6 +20,9 @@ to `tracker/board.md`.
 The paragraph above is the shape the audit found — an absolute claim about a named identifier,
 carrying no citation at all.
 
+And a marker in a form the gate does not define: [src: WI-0001 ## Acceptance criteria]. Bare, so
+it must still fail — the code-span exemption is for quoting one, not for writing one.
+
 ## Change log
 
 | version | when | by | for | what changed |

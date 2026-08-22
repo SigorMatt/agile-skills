@@ -143,6 +143,9 @@ def next_id(items_dir: str, kind: str) -> str:
 
 
 def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
     options = parse_args(argv)
     root = resolve_root(options.get("root"), tool="new-item")
     items_dir = os.path.join(root, "tracker", "items")

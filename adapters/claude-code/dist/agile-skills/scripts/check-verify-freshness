@@ -34,6 +34,9 @@ def git(args, root):
 
 
 def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
     positional, options = [], {}
     index = 1
     while index < len(argv):

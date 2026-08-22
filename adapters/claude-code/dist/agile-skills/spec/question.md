@@ -90,6 +90,11 @@ question.
 ### Body rules
 
 - `## Context` and `## Question` MUST be non-empty when the question is filed.
+- `## Answer` and `## Consequences` MUST **exist** from the moment the question is filed, even
+  though both are empty until it is answered. A question filed without them leaves the answerer
+  with nowhere to write: a stakeholder in a real run received five questions that stopped at
+  `## Options considered` and had to invent the structure of the record in order to reply
+  (F-032).
 - `## Options considered` MUST list at least two options **or** state explicitly why the
   question is not a choice between options (e.g. a missing fact). A question filed without
   having thought about the answer pushes the whole cost of the thinking upstream, which is how
@@ -197,3 +202,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 |---|------|--------|
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §2: the optional `kind` field, and `kind: sign-off` — the stakeholder acceptance question an epic cannot close without (F-022). |
+| 3 | 2026-08-22 | §2: `## Answer` and `## Consequences` must exist from the moment a question is filed (F-032). |

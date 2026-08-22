@@ -51,6 +51,7 @@ Standard library only (ADR-0002).
 from __future__ import annotations
 
 import datetime
+import importlib.machinery
 import os
 import re
 import subprocess
@@ -61,7 +62,23 @@ sys.path.insert(0, os.path.join(HERE, "lib"))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
-from workspace import resolve_root  # noqa: E402
+from workspace import resolve_root, split_row  # noqa: E402
+
+
+def escape_cell(text: str) -> str:
+    """Make a value safe for a markdown table cell (F-044)."""
+    return str(text).replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").strip()
+
+
+def journal_entry_module():
+    """scripts/journal-entry as a module — the '-' in the name blocks a plain import."""
+    import importlib.util
+    path = os.path.join(HERE, "journal-entry")
+    spec = importlib.util.spec_from_loader(
+        "journal_entry", importlib.machinery.SourceFileLoader("journal_entry", path))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def now() -> str:
@@ -75,7 +92,7 @@ def last_when(history_text: str):
         stripped = line.strip()
         if not stripped.startswith("|"):
             continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        cells = split_row(stripped)
         if len(cells) != 6 or cells[0] == "when":
             continue
         if all(set(cell) <= set("-: ") and cell for cell in cells):
@@ -168,7 +185,7 @@ def last_resume_to(history_text: str):
         stripped = line.strip()
         if not stripped.startswith("|"):
             continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        cells = split_row(stripped)
         if len(cells) != 6 or cells[0] == "when":
             continue
         if all(set(cell) <= set("-: ") and cell for cell in cells):
@@ -184,7 +201,7 @@ def current_status(history_text: str):
         stripped = line.strip()
         if not stripped.startswith("|"):
             continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        cells = split_row(stripped)
         if len(cells) != 6 or cells[0] == "when":
             continue
         if all(set(cell) <= set("-: ") and cell for cell in cells):
@@ -217,7 +234,7 @@ def restamp_last(options: dict, item_id: str) -> int:
         stripped = line.strip()
         if not stripped.startswith("|"):
             continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        cells = split_row(stripped)
         if len(cells) != 6 or cells[0] == "when":
             continue
         if all(set(cell) <= set("-: ") and cell for cell in cells):
@@ -251,6 +268,9 @@ def restamp_last(options: dict, item_id: str) -> int:
 
 
 def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
     if len(argv) < 2 or argv[1].startswith("--"):
         print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
         return 2
@@ -349,6 +369,31 @@ def main(argv: list) -> int:
             completion_status = None
     gating = completion_status is not None and to_status == completion_status
 
+    # F-039: the body is checked here, before a single byte is written. It used to be checked
+    # after the history row had been appended, so a missing bullet cost a manual repair of an
+    # append-only file. The row-first ordering below is deliberate and unchanged; only the point
+    # at which the body is inspected has moved.
+    entry_body = None
+    if options.get("journal-body-file"):
+        source = options["journal-body-file"]
+        if source == "-":
+            entry_body = sys.stdin.read()
+        else:
+            try:
+                with open(source, "r", encoding="utf-8") as handle:
+                    entry_body = handle.read()
+            except OSError as exc:
+                print(f"transition: cannot read {source}: {exc.strerror}", file=sys.stderr)
+                return 1
+        problems = journal_entry_module().check_body(entry_body, item_id)
+        if problems:
+            for problem in problems:
+                print(f"transition: the journal body is not a legal entry — {problem}",
+                      file=sys.stderr)
+            print("transition: nothing was written. Fix the body and run this again; "
+                  "scripts/journal-entry --template shows the shape.", file=sys.stderr)
+            return 1
+
     reason = options["reason"]
     if "force" in flags:
         reason = f"{reason} [gates forced]"
@@ -356,7 +401,8 @@ def main(argv: list) -> int:
         gate_result = subprocess.run(
             [sys.executable, os.path.join(HERE, "run-gate"), "--skill", actor,
              "--item", item_id, "--all", "--root", root,
-             "--resolving", f"{item_id}:{from_status or ''}->{to_status}"],
+             "--resolving", f"{item_id}:{from_status or ''}->{to_status}"
+             + ("+journal" if options.get("journal-body-file") else "")],
             capture_output=True, text=True)
         print(gate_result.stdout.rstrip())
         if gate_result.stderr.strip():
@@ -397,8 +443,13 @@ def main(argv: list) -> int:
         print(f"transition: cleared outcome (the item is no longer done)")
     if options.get("branch"):
         fields["branch"] = options["branch"]
+    # F-044: history.md is a markdown table, so a '|' anywhere in a cell splits the row into
+    # extra cells. A reason naming a union type did exactly that, and the corruption landed
+    # *after* the tool had reported success — the validator then failed on a row nobody could see
+    # was mis-shaped. Escape it here rather than forbidding it in the reason: the reason is prose
+    # and prose contains pipes.
     row = (f"| {timestamp} | {from_status} | {to_status} | {actor} "
-           f"| {resume_to or '—'} | {reason} |\n")
+           f"| {resume_to or '—'} | {escape_cell(reason)} |\n")
 
     if "dry-run" in flags:
         print(f"transition: would move {item_id} {from_status} → {to_status}")
@@ -410,13 +461,11 @@ def main(argv: list) -> int:
     with open(history_path, "a", encoding="utf-8") as handle:
         handle.write(row)
 
-    if options.get("journal-body-file"):
-        source = options["journal-body-file"]
-        entry_body = sys.stdin.read() if source == "-" else None
+    if entry_body is not None:
         argv = [sys.executable, os.path.join(HERE, "journal-entry"), item_id,
                 "--skill", actor, "--root", root,
                 "--status", f"`{from_status or '—'}` → `{to_status}`",
-                "--body-file", "-" if entry_body is not None else source]
+                "--body-file", "-"]
         entry = subprocess.run(argv, input=entry_body, capture_output=True, text=True)
         print(entry.stdout.rstrip())
         if entry.stderr.strip():

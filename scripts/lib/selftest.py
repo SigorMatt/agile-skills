@@ -426,6 +426,35 @@ def run_root_resolution(results: Results) -> None:
             os.chdir(cwd)
 
 
+def run_escaping(results: Results) -> None:
+    """F-044 and F-037: the two escapes, both of which need a reader as well as a writer."""
+    import claims as claims_lib
+
+    # A reason containing a union type used to split its history row into extra cells.
+    row = r"| 2026-01-01T00:00:00Z | draft | ready | refine | \u2014 | accepts str \| None |"
+    cells = workspace_lib.split_row(row)
+    results.check("escape/row-cell-count", len(cells), 6)
+    results.check("escape/row-reason", cells[5], "accepts str | None")
+    results.check("escape/row-plain",
+                  workspace_lib.split_row("| a | b | c |"), ["a", "b", "c"])
+    results.check("escape/row-backslash",
+                  workspace_lib.split_row(r"| a | back\\slash |"), ["a", r"back\slash"])
+
+    # A citation inside code is a quotation. Masking preserves line numbers.
+    masked = claims_lib.mask_code("one `[src: bogus]` two")
+    results.check("escape/mask-keeps-length", len(masked), len("one `[src: bogus]` two"))
+    results.check("escape/mask-removes-marker", "[src:" in masked, False)
+    results.check("escape/mask-keeps-newlines",
+                  claims_lib.mask_code("a\n`x`\nb").count("\n"), 2)
+    # The fence itself is a backtick run, so mask_code blanks it first and the line arrives as
+    # spaces rather than as an empty string. Column positions are preserved on purpose, so the
+    # property to assert is that no marker survives — not the exact whitespace.
+    results.check("escape/masked-lines-fence",
+                  "[src:" in claims_lib.masked_lines("a\n```\n[src: bogus]\n```\nb")[2], False)
+    results.check("escape/masked-lines-prose",
+                  claims_lib.masked_lines("a [src: WI-0001] b")[0], "a [src: WI-0001] b")
+
+
 def repo_yaml_files() -> list:
     found = []
     for base, dirs, files in os.walk(REPO_ROOT):
@@ -479,6 +508,7 @@ def main() -> int:
     run_report(results)
     run_workspace(results)
     run_root_resolution(results)
+    run_escaping(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

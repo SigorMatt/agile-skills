@@ -17,7 +17,9 @@ Steps, in order:
   8. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
-  9. harness self-test                       — harness/tests/test_harness.py: the contamination
+  9. findings citations resolve             — every `commit <sha>` cited in
+                                               meta/findings/FINDINGS.md is an ancestor of HEAD
+ 10. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -179,6 +181,46 @@ def check_guard(runner: Runner) -> None:
     runner.run("write-guard self-test", [sys.executable, tests])
 
 
+# Shas that legitimately belong to a *throwaway project's* repository rather than to this one.
+# F-019 cites one; a finding may cite more. Anything not listed here must resolve in this repo.
+FOREIGN_SHAS = {"234f170"}
+
+
+def check_findings_citations(runner: Runner) -> None:
+    """F-024: a citation that looks valid and is not is the failure F-001 is about.
+
+    All ten commit citations written during builder session two pointed at orphaned pre-amend
+    commits: the unit cycle was commit, read the sha, edit the ledger, `--amend`, so the sha
+    recorded was always the one the amend replaced. They survived locally through the reflog, so
+    every spot-check passed. `git merge-base --is-ancestor` is the check that fails.
+    """
+    ledger = os.path.join(ROOT, "meta", "findings", "FINDINGS.md")
+    if not os.path.isfile(ledger):
+        runner.skip("findings citations resolve", f"{ledger} does not exist")
+        return
+    with open(ledger, "r", encoding="utf-8") as handle:
+        text = handle.read()
+    import re
+    cited = sorted(set(re.findall(r"commit ([0-9a-f]{7,40})\b", text)) - FOREIGN_SHAS)
+    if not cited:
+        runner.skip("findings citations resolve", "the ledger cites no commits")
+        return
+    dangling = []
+    for sha in cited:
+        result = subprocess.run(["git", "merge-base", "--is-ancestor", sha, "HEAD"],
+                                capture_output=True, text=True, cwd=ROOT)
+        if result.returncode != 0:
+            dangling.append(sha)
+    if dangling:
+        detail = ["these shas are cited in FINDINGS.md and are not in this repository's history:"]
+        detail += [f"  - {sha}" for sha in dangling]
+        detail.append("a commit recorded by amending the commit being cited is always orphaned;")
+        detail.append("record the sha in a follow-up commit instead (F-024).")
+        runner.emit("findings citations resolve", False, detail="\n".join(detail))
+        return
+    runner.emit(f"findings citations resolve ({len(cited)} cited)", True)
+
+
 def check_harness(runner: Runner) -> None:
     tests = os.path.join(ROOT, "harness", "tests", "test_harness.py")
     if not os.path.isfile(tests):
@@ -197,6 +239,7 @@ def main() -> int:
     check_claims(runner)
     check_signoff(runner)
     check_guard(runner)
+    check_findings_citations(runner)
     check_harness(runner)
 
     print()

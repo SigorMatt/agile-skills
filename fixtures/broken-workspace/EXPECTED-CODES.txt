@@ -50,6 +50,7 @@ question.consequences.files
 question.id.mismatch
 question.item.mismatch
 question.kind
+question.section.missing
 question.signoff.addressed
 request.about.dangling
 request.created

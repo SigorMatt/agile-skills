@@ -98,6 +98,19 @@ def shift(stamp: str, delta):
     return (parsed + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def git_ignored(root: str) -> set:
+    """Paths git ignores under `root`. Empty outside a repository, which keeps old behaviour."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", root, "ls-files", "--others", "--ignored", "--exclude-standard",
+             "--directory"], capture_output=True, text=True)
+    except OSError:
+        return set()
+    if result.returncode != 0:
+        return set()
+    return {line.strip().rstrip("/") for line in result.stdout.split("\n") if line.strip()}
+
+
 def git_activity_window(root: str):
     """(first, last) commit timestamps in the workspace's repository, or None."""
     try:
@@ -188,13 +201,19 @@ def find_pipeline(explicit=None):
 # been regenerated. That printed a loud FAIL on correct work, every time, on the one path whose
 # whole purpose is to resume a suspended item; an agent that believes its gates learns to ignore
 # that one. These are the findings a move legitimately resolves, and only for the item moving.
-def resolved_by_move(from_status, to_status):
+def resolved_by_move(from_status, to_status, writes_journal=False):
     """Finding codes this pending transition will fix, so they are not this move's fault."""
     codes = {"board.stale", "board.missing"}          # transition regenerates the board after
     if from_status in ("awaiting-answer", "blocked"):
         codes.add("question.awaiting.none-open")      # the answered question released the item
     if to_status in ("awaiting-answer", "blocked"):
         codes.add("question.blocking.not-suspended")  # this move is the suspension
+    if writes_journal:
+        # F-025: with --journal-body-file the transition writes the entry itself, so the gate run
+        # that precedes it sees an actor with no entry and reports a gap the move is about to
+        # close. Only then: without the flag the finding is real, and downgrading it
+        # unconditionally would hide the case the rule exists for.
+        codes.add("journal.execution.missing")
     return codes
 
 
@@ -536,7 +555,10 @@ class Validator:
                                   hint="the actor column names a skill, never a person")
             if not row.reason.strip():
                 self.report.error(path, row.line, "history.reason",
-                                  "reason is empty; it must say what caused the change")
+                                  "reason is empty; it must say what caused the change",
+                                  hint="if the reason you wrote contained a '|', it split this "
+                                       "row into extra cells — escape it as '\\|' "
+                                       "(scripts/transition now does)")
 
             suspending = to_status in ("awaiting-answer", "blocked")
             if suspending and resume_to is None:
@@ -713,6 +735,17 @@ class Validator:
                 if not text.strip():
                     self.report.error(path, question.body_line, "question.section.empty",
                                       f"{section} is empty")
+            # F-032: the answerer needs somewhere to write. A stakeholder in iteration 1d found
+            # five questions with no `## Answer` heading at all and had to invent the structure
+            # of the record to reply — which is the protocol's first impression, made by the
+            # protocol failing to lay a place for them. Empty is fine; absent is not.
+            for section in ("## Answer", "## Consequences"):
+                if section not in question.sections:
+                    self.report.error(path, question.body_line, "question.section.missing",
+                                      f"{section} is missing",
+                                      hint="a filed question carries both headings from the "
+                                           "moment it exists, empty until answered "
+                                           "(spec/question.md §2)")
 
             if status == "answered":
                 for field in ("answered-at", "answered-by"):
@@ -997,15 +1030,17 @@ class Validator:
         """Downgrade findings a pending transition resolves, and say that it happened."""
         if not self.resolving:
             return
-        item_id, from_status, to_status = self.resolving
-        codes = resolved_by_move(from_status, to_status)
+        item_id, from_status, to_status, writes_journal = self.resolving
+        codes = resolved_by_move(from_status, to_status, writes_journal)
         item = self.workspace.items.get(item_id)
-        item_paths = {item.path, os.path.join(item.root, "history.md")} if item else set()
+        item_paths = {item.path, os.path.join(item.root, "history.md"),
+                      os.path.join(item.root, "journal.md")} if item else set()
         downgraded = 0
         for finding in self.findings_list():
             if finding.level != "ERROR" or finding.code not in codes:
                 continue
-            if finding.code.startswith("question.") and finding.path not in item_paths:
+            if finding.code.startswith(("question.", "journal.")) \
+                    and finding.path not in item_paths:
                 continue
             finding.level = "WARNING"
             finding.hint = (f"downgraded: {item_id} {from_status} \u2192 {to_status} resolves "
@@ -1028,6 +1063,7 @@ class Validator:
         permanently invalid, which is a demand to rewrite a record rather than to improve one.
         A citation that does not resolve is different: it is wrong today, wherever it came from.
         """
+        ignored = git_ignored(self.workspace.root)
         for base, dirs, files in os.walk(self.workspace.root):
             dirs[:] = [entry for entry in dirs
                        if entry not in (".git", "__pycache__", ".claude", "node_modules")]
@@ -1035,11 +1071,20 @@ class Validator:
                 if not name.endswith(".md"):
                     continue
                 path = os.path.join(base, name)
+                # F-041: a git-ignored file is not part of the record, and holding one to the
+                # citation rule left a worker unable to quote a malformed citation in the very
+                # status file it was reporting the problem in.
+                relative = os.path.relpath(path, self.workspace.root)
+                parts = relative.split(os.sep)
+                if any(os.sep.join(parts[:n]) in ignored for n in range(1, len(parts) + 1)):
+                    continue
                 try:
                     with open(path, "r", encoding="utf-8") as handle:
                         text = handle.read()
                 except OSError:
                     continue
+                # problems_in() masks code spans and fenced blocks, so a *quoted* marker is not
+                # read as a citation (F-037).
                 for line, problem in self.citations.problems_in(text):
                     self.report.error(path, line, "claim.citation.unresolved", problem,
                                       hint="a citation that does not resolve is the appearance "
@@ -1064,6 +1109,9 @@ class Validator:
 
 
 def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
     pipeline = None
     resolving = None
     positional = []
@@ -1091,9 +1139,15 @@ def main(argv: list) -> int:
             item_id, move = resolving.split(":", 1)
             from_status, to_status = move.split("->", 1)
         except ValueError:
-            print("validate-workspace: --resolving takes ITEM-ID:from->to", file=sys.stderr)
+            print("validate-workspace: --resolving takes ITEM-ID:from->to[+journal]",
+                  file=sys.stderr)
             return 2
-        validator.resolving = (item_id.strip(), from_status.strip() or None, to_status.strip())
+        to_status = to_status.strip()
+        writes_journal = to_status.endswith("+journal")
+        if writes_journal:
+            to_status = to_status[:-len("+journal")].strip()
+        validator.resolving = (item_id.strip(), from_status.strip() or None, to_status,
+                               writes_journal)
     return validator.run()
 
 

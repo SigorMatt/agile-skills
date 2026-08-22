@@ -261,6 +261,9 @@ def parse_args(argv: list):
 
 
 def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
     parsed = parse_args(argv)
     positional, options, flags, error = parsed
     if error:

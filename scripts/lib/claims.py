@@ -14,9 +14,10 @@ import re
 import subprocess
 
 __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
-           "looks_like_code", "paragraphs", "is_prose"]
+           "looks_like_code", "paragraphs", "is_prose", "mask_code", "masked_lines"]
 
 CITATION_RE = re.compile(r"\[src:\s*(?P<body>[^\]]+)\]")
+CODE_SPAN_RE = re.compile(r"(`+)(?:(?!\1).)*?\1", re.DOTALL)
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 # The words that turn a description into a claim nothing can hedge.
@@ -39,6 +40,32 @@ ADR_RE = re.compile(r"^ADR-(\d{4})$")
 COMMIT_RE = re.compile(r"^commit\s+([0-9a-f]{7,40})$")
 RUN_RE = re.compile(r"^run:\s*(?P<command>.+?)\s*(?:→|->)\s*(?P<outcome>.+)$")
 AC_LINE_RE = re.compile(r"^\s*-\s+\[( |x|X)\]\s+(AC\d+)\b")
+
+
+
+def mask_code(text: str) -> str:
+    """Blank out inline code spans, preserving length and newlines.
+
+    Replacing rather than deleting keeps every line number and every column intact, so a finding
+    still points at the right place.
+    """
+    def blank(match):
+        return "".join("\n" if character == "\n" else " " for character in match.group(0))
+    return CODE_SPAN_RE.sub(blank, text)
+
+
+def masked_lines(text: str):
+    """Lines of `text` with code spans and fenced blocks blanked out."""
+    lines = mask_code(text).split("\n")
+    fenced = False
+    out = []
+    for line in lines:
+        if FENCE_RE.match(line):
+            fenced = not fenced
+            out.append("")
+            continue
+        out.append("" if fenced else line)
+    return out
 
 
 def looks_like_code(token: str) -> bool:
@@ -119,9 +146,24 @@ class CitationResolver:
 
     def resolve(self, citation: str) -> str:
         """An error message, or '' when the citation resolves."""
+        raw = citation
         citation = citation.strip().strip("`")
+        # F-040: several sources are separated by ';' inside one marker, so the second part
+        # arrives without the prefix. Writing it anyway is the obvious mistake, and reporting it
+        # as an unrecognised citation sends the author looking at the wrong thing.
+        repeated_prefix = False
+        if citation.lower().startswith("src:"):
+            citation = citation[4:].strip()
+            repeated_prefix = True
         if not citation:
             return "an empty citation"
+        message = self._resolve(citation)
+        if message and repeated_prefix:
+            return (f"{message} — note that {raw.strip()!r} repeats the 'src:' prefix; inside one "
+                    f"marker, sources are separated by ';' and only the first carries it")
+        return message
+
+    def _resolve(self, citation: str) -> str:
 
         match = RUN_RE.match(citation)
         if match:
@@ -178,9 +220,16 @@ class CitationResolver:
                 f"(spec/doc-header.md, the citation forms table)")
 
     def problems_in(self, text: str):
-        """(line, message) for every citation in `text` that does not resolve."""
+        """(line, message) for every citation in `text` that does not resolve.
+
+        A marker inside an inline code span or a fenced block is a **quotation**, not a citation,
+        and is skipped. F-037: without this, a journal entry could not describe a malformed
+        citation without reproducing it — and since `journal.md` is append-only, the only way to
+        satisfy the linter was to rewrite an entry, which is the one thing the audit trail forbids.
+        A rule that forces a record to break the append-only invariant is worse than no rule.
+        """
         found = []
-        for index, line in enumerate(text.split("\n"), start=1):
+        for index, line in enumerate(masked_lines(text), start=1):
             for match in CITATION_RE.finditer(line):
                 for part in match.group("body").split(";"):
                     problem = self.resolve(part)

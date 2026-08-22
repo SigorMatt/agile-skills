@@ -2586,3 +2586,51 @@ so it is filed and cross-referenced rather than folded away.
 F-027 is filed with its own counter-evidence attached: the stakeholder complained on turn 3 that a
 question bundled two decisions, and praised the team on turn 9 for splitting one that would have.
 One question, not a habit, and the finding says so.
+
+## META-097 — fixing what 1d found in this session's own work
+
+Nine findings, worst first. The two that mattered are the two where a rule I added made something
+else worse.
+
+**F-037 — the citation rule made the append-only rule unsatisfiable.** A `[src: ...]` inside an
+inline code span or a fenced block is now a quotation, not a citation, in both `lint-claims` and
+`validate-workspace`. `mask_code()` blanks code spans while preserving every line and column, so a
+finding still points at the right place. The fixture is deliberately in both directions and in
+both fixtures: the must-pass workspace now contains a paragraph that *describes* a malformed
+marker by quoting it — a paragraph that could not have existed before this fix — and the must-fail
+workspace contains the same marker bare, which still fails. The exemption is for quoting one, not
+for writing one.
+
+**F-033 — a gate that reported success having examined nothing.** `lint-claims` treated the first
+positional as the workspace root, so a file path became a root, found no `docs/` beneath it, and
+exited 0 while printing "checked the whole tree". Now: files are linted as files, one directory is
+a root, a path that does not exist is an error, and the scope line says what was actually scoped —
+including "no documents changed since main" rather than a cheerful whole-tree claim. The detail
+that decided the priority is that a worker built a working rule of thumb on top of the false pass.
+
+**F-044 needed two halves and I only wrote one at first.** Escaping `|` in the reason cell makes
+the row *render* correctly; the parser still split on every pipe, so the first demonstration
+produced a row that looked right and parsed into seven columns. `split_row()` in the shared
+library now splits on unescaped pipes and unescapes as it goes, and `transition`'s four private
+copies of that split use it. An escape without a reader is decoration, and this is exactly how the
+corruption stayed invisible in 1d: the row looked fine and the validator failed somewhere else.
+
+**F-039** moves the journal-body check to before anything is written — the row-first ordering that
+META-090 chose is unchanged, only the inspection point moved. Demonstrated: a body missing a
+bullet now leaves `history.md` byte-identical.
+
+**F-025** extends `--resolving` with `+journal`, so `journal.execution.missing` is downgraded only
+when the transition is the thing that will write the entry. Downgrading it unconditionally would
+have hidden the case the rule exists for.
+
+**F-024(b)** is the check that would have caught my own mistake: `scripts/check` now asserts every
+`commit <sha>` in FINDINGS.md is an ancestor of HEAD, with a named exemption list for shas
+belonging to a throwaway project's repository. Proven by putting one of the orphans back and
+watching it fail.
+
+Also: **F-040** (a repeated `src:` prefix is stripped and named in the message), **F-041**
+(git-ignored files are not held to the citation rule), **F-032** (a filed question must carry
+`## Answer` and `## Consequences` from the moment it exists — the stakeholder in 1d had to invent
+where to write), and **F-026** (`--help` on all ten entry points).
+
+`./scripts/check` is at 12 steps, 63 fixture codes, 195 selftest cases.

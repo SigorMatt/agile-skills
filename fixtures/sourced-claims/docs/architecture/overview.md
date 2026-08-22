@@ -19,6 +19,11 @@ Recursion was deferred by the author, so adding it later is a change of scope ra
 natural extension. No citation is required for that sentence: it hedges, and hedged prose is not
 what goes wrong.
 
+An earlier draft of this page carried `[src: WI-0001 ## Acceptance criteria]`, which is not one of
+the seven forms, and the correction is recorded here rather than by rewriting the draft. A marker
+inside backticks is a quotation, not a citation — without that rule this paragraph could not exist
+and the record could not describe its own defect (F-037) [src: ADR-0001].
+
 ## Change log
 
 | version | when | by | for | what changed |

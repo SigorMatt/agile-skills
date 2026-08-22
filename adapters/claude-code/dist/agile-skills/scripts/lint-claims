@@ -40,17 +40,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
 from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
-                    CitationResolver, is_prose, looks_like_code, paragraphs)
+                    CitationResolver, is_prose, looks_like_code, masked_lines,
+                    paragraphs)
 from report import Report  # noqa: E402
 from workspace import resolve_root  # noqa: E402
 
 class ClaimLinter:
-    def __init__(self, root: str, changed_since=None, everything=False) -> None:
+    def __init__(self, root: str, changed_since=None, everything=False, only=None) -> None:
         self.root = os.path.abspath(root)
         self.report = Report("lint-claims", self.root)
         self.changed_since = changed_since
         self.everything = everything
+        self.only = [os.path.abspath(name) for name in (only or [])]
         self.citations = CitationResolver(self.root)
+        self._ignored = None
 
     # ---- workspace facts -------------------------------------------------------------
 
@@ -71,8 +74,34 @@ class ClaimLinter:
                     names.add(line[3:].strip().strip('"'))
         return {name for name in names if name.endswith(".md")}
 
+    def ignored(self, path: str) -> bool:
+        """Does git ignore this path? (F-041)
+
+        `check_citations` walks every markdown file under the root, which swept in a git-ignored
+        status file and left a worker unable to quote a malformed citation in order to report it.
+        Outside a repository, nothing is ignored and the old behaviour stands.
+        """
+        if self._ignored is None:
+            result = self.git(["ls-files", "--others", "--ignored", "--exclude-standard",
+                               "--directory"])
+            if result is None or result.returncode != 0:
+                self._ignored = set()
+            else:
+                self._ignored = {line.strip().rstrip("/")
+                                 for line in result.stdout.split("\n") if line.strip()}
+        relative = os.path.relpath(path, self.root)
+        parts = relative.split(os.sep)
+        return any(os.sep.join(parts[:n]) in self._ignored
+                   for n in range(1, len(parts) + 1))
+
     def documents(self):
         """(relative-path, text) for every document rule 2 applies to."""
+        if self.only:
+            found = []
+            for path in self.only:
+                with open(path, "r", encoding="utf-8") as handle:
+                    found.append((os.path.relpath(path, self.root), handle.read()))
+            return found
         docs_dir = os.path.join(self.root, "docs")
         if not os.path.isdir(docs_dir):
             return []
@@ -95,6 +124,8 @@ class ClaimLinter:
 
     def all_markdown(self):
         """Every markdown file in the workspace — rule 1 applies everywhere a citation appears."""
+        if self.only:
+            return self.documents()
         found = []
         for base, dirs, files in os.walk(self.root):
             dirs[:] = [entry for entry in dirs
@@ -103,6 +134,8 @@ class ClaimLinter:
                 if not name.endswith(".md"):
                     continue
                 path = os.path.join(base, name)
+                if self.ignored(path):
+                    continue
                 relative = os.path.relpath(path, self.root)
                 with open(path, "r", encoding="utf-8") as handle:
                     found.append((relative, handle.read()))
@@ -126,7 +159,10 @@ class ClaimLinter:
                 if not is_prose(block):
                     continue
                 joined = "\n".join(block)
-                if CITATION_RE.search(joined):
+                # A real citation anywhere in the paragraph satisfies the rule. A *quoted* one
+                # does not, so the same masking F-037 introduced applies here too — otherwise a
+                # paragraph could satisfy the rule by talking about citations.
+                if CITATION_RE.search("\n".join(masked_lines(joined))):
                     continue
                 absolute = ABSOLUTE_RE.search(joined)
                 if not absolute:
@@ -146,14 +182,20 @@ class ClaimLinter:
     def run(self) -> int:
         self.check_citations()
         self.check_absolutes()
-        scope = "the whole tree" if (self.everything or not self.changed_since) \
-            else f"documents changed since {self.changed_since}"
+        if self.only:
+            scope = f"{len(self.only)} file(s) named on the command line"
+        elif self.everything or not self.changed_since:
+            scope = f"the whole tree under {self.root}"
+        else:
+            examined = len(self.documents())
+            scope = (f"{examined} document(s) changed since {self.changed_since}"
+                     if examined else f"no documents changed since {self.changed_since}")
         self.report.note(f"checked {scope}")
         return self.report.emit()
 
 
 def main(argv: list) -> int:
-    options, flags = {}, set()
+    options, flags, positional = {}, set(), []
     index = 1
     while index < len(argv):
         token = argv[index]
@@ -161,6 +203,9 @@ def main(argv: list) -> int:
             flags.add(token[2:])
             index += 1
             continue
+        if token in ("--help", "-h"):
+            print(__doc__.strip())
+            return 0
         if token.startswith("--"):
             if index + 1 >= len(argv):
                 print(f"lint-claims: {token} needs a value", file=sys.stderr)
@@ -168,9 +213,34 @@ def main(argv: list) -> int:
             options[token[2:]] = argv[index + 1]
             index += 2
             continue
-        options.setdefault("root", token)
+        positional.append(token)
         index += 1
-    root = resolve_root(options.get("root"), tool="lint-claims")
+
+    # F-033. A positional used to become the workspace root, so `lint-claims docs/overview.md`
+    # set the root to a *file*, found no docs/ beneath it, and exited 0 while printing "checked
+    # the whole tree" — a gate reporting success when it could not look, which is the one thing
+    # this toolkit exists to prevent. A worker in iteration 1d built a rule of thumb on top of
+    # that false pass. Now: a directory is a root, files are linted as files, and neither path
+    # can report success having examined nothing.
+    files = [name for name in positional if os.path.isfile(name)]
+    directories = [name for name in positional if os.path.isdir(name)]
+    missing = [name for name in positional if name not in files and name not in directories]
+    if missing:
+        for name in missing:
+            print(f"lint-claims: {name} does not exist", file=sys.stderr)
+        return 2
+    if len(directories) > 1:
+        print("lint-claims: pass at most one directory (the workspace root)", file=sys.stderr)
+        return 2
+    if files and (directories or options.get("root")):
+        print("lint-claims: pass file paths, or a workspace root — not both", file=sys.stderr)
+        return 2
+
+    if files:
+        root = resolve_root(None, announce=False)
+        return ClaimLinter(root, None, False, only=files).run()
+    root = resolve_root(options.get("root") or (directories[0] if directories else None),
+                        tool="lint-claims")
     return ClaimLinter(root, options.get("changed-since"), "all" in flags).run()
 
 
