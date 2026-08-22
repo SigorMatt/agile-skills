@@ -1,27 +1,24 @@
 # CHECKPOINT
 
-## Current unit: META-088 — F-022: an epic cannot close without stakeholder acceptance
+## Current unit: META-089 — F-021: the stakeholder can speak without being spoken to
 
-F-022: both 1b and 1c closed EP-001 with no sign-off ever addressed to the human. The DE gates
-check the record, and the record only holds what the stakeholder said when last consulted. Every
-real agile process has a product-owner acceptance moment; this one had none.
+F-021: the human can only speak when spoken to. Run 1b's sim held a new requirement across two
+turns and logged that no question gave it a vehicle; the run then ended `epic-done` with the
+requirement never voiced. Real stakeholders volunteer things constantly.
 
 Steps:
-1. `spec/question.md` — optional frontmatter `kind`: `decision` (default) | `sign-off`, and the
-   shape a sign-off must have (goal restated, delivered vs deferred, the explicit ask).
-2. `spec/dor-dod.md` — epic Definition of Done gains **DE7**: an answered sign-off question,
-   filed after the last child closed.
-3. `scripts/check-epic-signoff` — the mechanical half: on an epic, require a `kind: sign-off`
-   question addressed to `human`, answered, with a non-empty `## Answer`, `created` no earlier
-   than the last child's move to `done`. On anything that is not an epic, pass and say why.
-4. `review-close` — hard gate `epic-sign-off`; step 10 files the sign-off, suspends the epic to
-   `awaiting-answer` (possible since META-087) and stops; the next pass closes it. Minor bump.
-5. `scripts/validate-workspace` — `question.kind` and `question.signoff.addressed`.
-6. Fixtures both ways; prove by execution that a `done` move is refused before sign-off and
-   allowed after.
-7. Re-render; check green; FINDINGS; journal; commit; push.
+1. `spec/request.md` — a new artifact: `tracker/requests/R-###.md`, a question in reverse. The
+   stakeholder writes it at any time; a skill responds and records what changed.
+2. `scripts/workspace-init` — creates `tracker/requests/`.
+3. `scripts/validate-workspace` — the request schema, and the rule that an open request has a
+   response or is still open with nothing else claiming to have handled it.
+4. `methodology/pipeline.yaml` — orchestrator step 2a: an open request outranks building the
+   candidate set; `next` dispatches `intake` on it. Pipeline minor bump.
+5. `methodology/skills/next/process.md` and `intake/process.md` — the routing and the handling.
+6. `spec/workspace-layout.md`, `spec/README.md` — the directory and the index.
+7. Fixture both ways; re-render; check green; FINDINGS; journal; commit; push.
 
-Next unit: **META-089** — F-021 (a stakeholder-initiated request, routed by `next`).
+Next unit: **META-090** — cluster 3 (F-011, F-014, F-015, F-016).
 
 ## Standing instructions (still in force)
 
