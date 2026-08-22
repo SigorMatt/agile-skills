@@ -1,33 +1,31 @@
 # CHECKPOINT
 
-## Current unit: META-086 — F-001: claim provenance, mechanized
+## Current unit: META-087 — F-013: an epic can be suspended
 
-F-001 is the thesis finding: every machine-decidable gate held in the toy run, every gate resting
-on a human-style read did not, and a wrong justification propagated to a seventh document. D12
-and DE6 were the response and are `[skill]` checks — the kind that does not hold. This unit turns
-the class into a program.
+F-013: three rules that cannot all hold. `open` is `terminal: true`; the only transitions into
+`awaiting-answer`/`blocked` are `from: any-non-terminal`; and the validator demands an item with
+an open blocking question be suspended — epics included. A skill with a genuine epic-level
+impasse has to either lie in the record (`blocking: false`) or leave the workspace invalid. Both
+happened, in two separate runs.
+
+Diagnosis: `terminal` is carrying two meanings — "no skill owns this status" and "this status
+may not be suspended". `open` is the first and not the second. Separate them.
 
 Steps:
-1. `spec/doc-header.md` — the citation convention: `[src: ...]` with a closed set of **resolvable**
-   forms (a workspace path, an item ID, an item's AC, a question, an ADR number, a commit sha, a
-   command with its recorded outcome).
-2. `scripts/lint-claims` — two rules. (a) every `[src: ...]` must resolve. (b) a paragraph in
-   `docs/**` that makes an **absolute** claim about a named code object (`no`/`never`/`only`/
-   `every`/`cannot`… together with a backticked identifier or a path) must carry at least one
-   citation. `--changed-since <ref>` scopes rule (b) to what this execution actually touched,
-   the same scoping D7 and D12 already use.
-3. `validate-workspace` — `claim.citation.unresolved` over the whole workspace (rule (a) only;
-   rule (b) belongs to the gate, not to the resting state of a historical record).
-4. New hard gate `claims-are-sourced` on `plan`, `implement`, `review-close`; minor bumps.
-   A hard gate makes `transition` refuse the completion move, which is what "unskippable" means
-   here — `--force` remains, and remains recorded forever.
-5. `spec/dor-dod.md` — D12 and DE6 gain the mechanical half.
-6. Must-fail fixture: an unresolvable citation, and an unsourced absolute claim.
-7. Re-render; `./scripts/check` green; FINDINGS; journal; commit; push.
+1. `methodology/pipeline.yaml` — every status declares `suspendable`; the two escalation
+   transitions read `from: any-suspendable`. `open` stays `terminal: true` (it genuinely has no
+   owning skill) and becomes `suspendable: true`. Pipeline version → 0.2.0.
+2. `scripts/lint-skills` — `suspendable` is required and must be a boolean; a status that is
+   both terminal and suspendable is legal and a status neither owned nor suspendable is the
+   real dead end.
+3. `scripts/transition`, `scripts/validate-workspace` — `any-suspendable` replaces
+   `any-non-terminal`.
+4. `spec/ids-and-statuses.md` §4 — the table and a note saying which meaning is which.
+5. Prove by execution: the exact command F-013 quotes as refused now succeeds; suspending a
+   `done` epic is still refused. Must-fail fixture row for the still-illegal case.
+6. Re-render; check green; FINDINGS; journal; commit; push.
 
-Done when: check green, and both new rules demonstrated firing and passing.
-
-Next unit: **META-087** — F-013 (an epic becomes suspendable).
+Next unit: **META-088** — F-022 (epic sign-off gate).
 
 ## Standing instructions (still in force)
 
