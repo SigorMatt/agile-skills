@@ -188,7 +188,18 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Constraint: "BMad"/"BMAD-METHOD" are trademarks of BMad Code, LLC. Any derived
   content requires our own name and MIT attribution; "derived from" is the only
   permitted relationship claim.
-- Status: open
+- Status: fixed (commit 3e1b0a2). `README.md` gains **"Prior art, and where this sits"**: what
+  BMAD-METHOD is, said without hedging (established, far broader, tens of thousands of stars, and
+  the thing anything here should be measured against); a five-row table of the actual difference —
+  collaborate-and-facilitate versus delegate-and-verify, instructions versus a program, planning
+  documents versus a reconstructable record; a concrete paragraph on what "enforcement as a
+  program" means in practice; and a **"which one you want"** section that sends readers who want
+  facilitation to them, in those words. Their convergence ("Dev Loop Automation") is named rather
+  than ignored.
+  Trademark: attributed, and no relationship claimed — we derived nothing, so "derived from"
+  would itself be an overclaim. `## What this is not` also gains an entry pointing at
+  `meta/ROADMAP.md` §2, the findings ledger and the run evidence, because a positioning section
+  that does not say "this is not proven yet, here is the bar" is marketing.
 
 ## F-010 — BMAD-derived content imports, gated on a proven kernel
 - Severity: roadmap (deliberately deferred — do not schedule into cycle 2)
