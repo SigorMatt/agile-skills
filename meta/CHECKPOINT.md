@@ -1,31 +1,23 @@
 # CHECKPOINT
 
-## Current unit: META-084 — F-017: a journal header no skill can invent
+## Current unit: META-084b — F-017 adoption: every skill journals through the tool
 
-F-017 + its two addenda: skills write *plausible* timestamps instead of reading a clock (run 1c
-stamped eleven entries across a next-morning half-day for work done in minutes), and they invent
-version strings too (run 1b's "review-close v0.1.0" against an installed 0.1.2). The class fix is
-that no self-reported header field is authored by the model.
+META-084 built the mechanism (`scripts/journal-entry`, `transition --journal-body-file`,
+`spec/journal-and-history.md` §0). This unit makes the skills use it.
 
 Steps:
-1. `scripts/journal-entry` — the only sanctioned writer of a `journal.md` entry. It stamps the
-   heading itself: clock for the timestamp, the installed `skill.yaml` for version and persona.
-   The caller supplies only the bullets. Monotonic clamp announced, as `transition` does.
-   `--restamp-last` is the journal's counterpart of the history repair.
-2. `scripts/transition --journal-body-file` — history row and journal entry from **one** clock
-   read, with the `**Status:**` bullet written by the script from the move it just made.
-3. `spec/journal-and-history.md` — a timestamp is read from a clock and never estimated; header
-   fields come from a mechanical source; the restamp exception now covers `journal.md`.
-4. `scripts/validate-workspace` — `journal.timestamp.future`, `history.timestamp.future`,
-   `journal.timestamp.outside-activity`, `history.timestamp.outside-activity`,
-   `journal.version.impossible`.
-5. Must-fail fixture cases for each; EXPECTED-CODES updated.
-6. Ship the new script in the adapter; re-render; `./scripts/check` green; FINDINGS, journal,
-   commit, push.
+1. Each skill's `## Journaling` section gains the same short "how to write it" block: the body
+   is written to a file, the entry is appended by `journal-entry`, and an entry that accompanies
+   a status change goes through `transition --journal-body-file`. `next` is exempt (it journals
+   nothing).
+2. `intake`'s "then append `— → open` to history.md" instruction is replaced by the tool.
+3. Patch-bump every skill whose `process.md` changed; re-render.
+4. `./scripts/check` green; FINDINGS F-017 note updated with the adoption commit; journal;
+   commit; push.
 
-Done when: check green, and a demonstration that an entry stamped in 1c's shape is rejected.
+Done when: check green and no skill still describes writing a journal heading by hand.
 
-Next unit: **META-084b** — every skill's `## Journaling` section adopts the script; version bumps.
+Next unit: **META-085** — F-018 (the write guard matches the target, not the command string).
 
 ## Standing instructions (still in force)
 
