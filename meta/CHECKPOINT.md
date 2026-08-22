@@ -1,21 +1,21 @@
 # CHECKPOINT
 
-## Current unit: META-091 — cluster 4: refine calibration (F-020, F-023)
+## Current unit: META-092 — cluster 5a: the workspace a consumer actually gets
 
-- **F-020** — `refine` files several separate questions for one item in one round; the protocol
-  batches per round-trip but presents per-file. Keep one artifact per decision (provenance needs
-  it), add a grouped presentation per item per round.
-- **F-023** — `refine` over-escalates technical trivia; a stakeholder's standing deferral on a
-  category should be honoured for that category. Add a routing test before filing to the human.
-- Also fold in **F-027** (a question must not bundle two decisions) — same section, same skill,
-  and 1d gave it both evidence and counter-evidence.
+- **F-002 + F-047** — every directory the schema requires gets a `.gitkeep` from the tool that
+  creates it: `workspace-init` **and** `new-item`. 1d found the sharper form: an item's empty
+  `questions/` is deleted by the trial merge `review-close` performs, so the item fails
+  `questions.missing` while being closed.
+- **F-003** — the consumer workspace needs a `.gitignore` (`__pycache__` from the validator).
+- **F-005** — the uninitialised state is not a hard failure; distinct exit code and a next step.
+- **F-004 + F-012** — USAGE §2 (skills load at session start) and §4 (the trust requirement).
 
-Then: **META-092/093/094** (cluster 5), **META-101** (FINAL-REPORT-2 §4–§6).
+Then **META-093** (F-007 export), **META-094** (F-009 README), **META-101** (FINAL-REPORT-2).
 
 ## Standing instructions (still in force)
 
 - **The unit cycle ends with `git push`, not `git commit`.**
-- **Never record a commit sha by amending the commit being cited** (F-024); `scripts/check` now
+- **Never record a commit sha by amending the commit being cited** (F-024); `scripts/check`
   enforces it.
 - `meta/harness/evidence/**` is read-only; filed finding text is appended to, never rewritten.
 - Every change traces to an F-### or H-###. Behavioural skill change ⇒ version bump. Spec change
