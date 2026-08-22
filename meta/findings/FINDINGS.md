@@ -60,7 +60,11 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Evidence: evidence/2026-08-17-peer-setup-report.md §5.1
 - Direction: workspace-init writes .gitkeep in each dir; validator message for
   the fresh-clone case.
-- Status: open
+- Status: fixed (commit 20fc6a7), together with F-047 — the rule is that **the tool that creates a
+  directory the schema requires also creates its `.gitkeep`**, which means `workspace-init` and
+  `new-item` both. `tracker/` and `docs/` are excluded because they always end up holding
+  something. Demonstrated end to end: `workspace-init` in an empty repo, `git add -A`,
+  `git commit`, `git clone`, and the clone reports **0 errors** — F-002's exact symptom, gone.
 
 ## F-003 — Consumer workspace lacks .gitignore; __pycache__ committed
 - Severity: correctness (every consumer hits it)
@@ -69,7 +73,10 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   git add -A sweeps .pyc files into the consumer's history.
 - Evidence: evidence/2026-08-17-peer-setup-report.md §5.6
 - Direction: ship a .gitignore entry at install or init time.
-- Status: open
+- Status: fixed (commit 20fc6a7). `workspace-init` writes `.gitignore` when there is none and
+  appends only the missing lines when there is one, covering `__pycache__/`, `*.py[cod]` and
+  `HARNESS-STATUS.md`. Init time rather than install time, so a project that installs the toolkit
+  somewhere unusual still gets it.
 
 ## F-004 — USAGE §2 verify step impossible in the installing session
 - Severity: doc error
@@ -80,7 +87,11 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: §2 must say verification of discovery requires a NEW session;
   offer the file-level check (ls .claude/skills/ + frontmatter) as the
   same-session alternative.
-- Status: open
+- Status: fixed (commit 20fc6a7), as filed, and ordered so the check that works comes first: the
+  file-level check (`ls .claude/skills/`, the frontmatter, `validate-workspace`) is "now, in this
+  session", and the discovery check is "in a NEW session". §2 also says why — asking the
+  installing session lists what it loaded *before* the install, which is wrong in a way that
+  looks like a broken install. It now also explains exit 3.
 
 ## F-005 — Pre-init validator state reads as hard failure
 - Severity: UX
@@ -91,7 +102,11 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Evidence: evidence/2026-08-17-peer-setup-report.md §5.2
 - Direction: distinct exit code / UNINITIALISED state with explicit next-step
   message.
-- Status: open
+- Status: fixed (commit 20fc6a7), as filed. A directory whose only findings are `project.missing`
+  and `items.missing`, with no items and no documents, is not a fault: `validate-workspace`
+  reports it as the expected pre-initialisation state, prints the exact `workspace-init` command,
+  and exits **3**. 0 clean, 1 a workspace that exists and is wrong, 2 usage, 3 not started.
+  Verified all three.
 
 ## F-006 — Allow-list entry inconsistent with the other seven
 - Severity: UX, unverified
@@ -1145,7 +1160,9 @@ filed there.
 - Direction: fold into F-002. Every directory the schema requires gets a `.gitkeep` from the tool
   that creates it — `workspace-init` **and** `new-item`. F-002 predicted the fresh-clone symptom;
   1d found it failing a close instead, which is worse.
-- Status: open (fix with F-002)
+- Status: fixed (commit 20fc6a7) with F-002. `new-item` writes `.gitkeep` into both `questions/`
+  and `artifacts/`, so an item with neither still survives a clone and, more to the point,
+  survives the trial merge `review-close` performs while closing it.
 
 ## F-048 — `plan` wrote a step instructing `implement` to break a spec rule
 - Severity: correctness, low (the enforcement held)
