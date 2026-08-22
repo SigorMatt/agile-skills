@@ -290,11 +290,14 @@ def main(argv: list) -> int:
     if source == "-":
         body = sys.stdin.read()
     else:
-        if not os.path.isfile(source):
-            print(f"journal-entry: {source} does not exist", file=sys.stderr)
+        # Not os.path.isfile: a caller may reasonably pass /dev/stdin or a process
+        # substitution, neither of which is a regular file. What matters is whether it reads.
+        try:
+            with open(source, "r", encoding="utf-8") as handle:
+                body = handle.read()
+        except OSError as exc:
+            print(f"journal-entry: cannot read {source}: {exc.strerror}", file=sys.stderr)
             return 1
-        with open(source, "r", encoding="utf-8") as handle:
-            body = handle.read()
 
     return append_entry(root, item_id, options["skill"], body,
                         status_line=options.get("status"),

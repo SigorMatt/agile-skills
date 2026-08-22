@@ -149,6 +149,11 @@ def check_claims(runner: Runner) -> None:
     # A rule nobody can satisfy is not a rule: prose that cites its sources must pass cleanly.
     runner.run("claim-provenance fixtures",
                [sys.executable, linter, "--root", clean, "--all"])
+    # And the form the GATE actually runs. `--all` and `--changed-since` take different code
+    # paths, and a preflight caught the second one crashing while the first was green — the
+    # fixtures proved the rules and never proved the invocation.
+    runner.run("claim-provenance as the gate invokes it",
+               [sys.executable, linter, "--root", clean, "--changed-since", "HEAD"])
 
 
 def check_signoff(runner: Runner) -> None:

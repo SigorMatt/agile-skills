@@ -54,6 +54,10 @@ class ClaimLinter:
 
     # ---- workspace facts -------------------------------------------------------------
 
+    def git(self, args: list):
+        """One git runner, shared with the citation resolver so both see the same repository."""
+        return self.citations.git(args)
+
     def changed_docs(self):
         """Documents this execution touched: differing from the ref, or dirty in the tree."""
         result = self.git(["diff", "--name-only", self.changed_since, "--", "docs"])

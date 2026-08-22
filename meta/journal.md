@@ -2463,3 +2463,35 @@ F-021's channel exists in the toolkit and is unreachable from the harness, which
 finding came from in the first place.
 
 Prompts: worker-turn 4, sim-turn 2. Evidence: harness self-test 47 tests; `./scripts/check` green.
+
+## META-098 — the regression gate, part 1: prove what ships, before 1d runs on it
+
+`./scripts/check` was green and two things were broken anyway. Both were caught by provisioning a
+throwaway project through the real installer and using the new scripts the way a worker will —
+which is the check the toolkit does not have, and which iteration 1d would otherwise have
+performed for me at Opus prices.
+
+**`lint-claims --changed-since` crashed** (`AttributeError: 'ClaimLinter' object has no attribute
+'git'`), left over from META-086's refactor onto `scripts/lib/claims.py`. The fixtures exercised
+`--all` and the *gate* runs `--changed-since {{trunk}}`, so every test passed while the only
+invocation that matters in a real run raised. `scripts/check` now runs the linter the way the gate
+invokes it, in its own step, with that reason written next to it: fixtures prove the rules, not
+the invocation.
+
+**`journal-entry --body-file /dev/stdin` was refused**, because the guard was `os.path.isfile` and
+a character device is not a regular file. An agent reaching for a heredoc or a process
+substitution is entirely reasonable, and being told the file "does not exist" would send it
+looking for the wrong problem. The check is now "does it read", and the error reports the actual
+OS reason. `--body-file -` was always fine and now both are.
+
+What the preflight confirmed positively: all three new scripts ship and run from
+`.claude/agile-skills/scripts/`, `spec/request.md` ships, `workspace-init` creates
+`tracker/requests/`, the installed `pipeline.yaml` carries `suspendable`, the installed VERSION
+reads pipeline 0.3.0 with every bumped skill, `transition --journal-body-file` works by path and
+by stdin and stamps headings from the installed contract (`plan v0.2.0 — architect`), the epic
+sign-off gate passes on a work item with a reason and fails on an unaccepted epic, and no
+`journal.status.unmatched` appeared anywhere — every entry the tools wrote matches its row.
+
+Both fixes trace to the findings whose implementations they are: F-001 and F-017.
+
+Evidence: `./scripts/check` — 11 steps, all passed.
