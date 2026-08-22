@@ -236,15 +236,15 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
 > drop if the session runs short, per the mission's own priority order.
 
 ### Cluster 4 — refine calibration
-- [ ] **META-091** — F-020 (grouped presentation per item per round) and F-023 (routing test:
+- [x] **META-091** — F-020 (grouped presentation per item per round) and F-023 (routing test:
       product-stake to the human, implementation-only decided and recorded, standing deferrals
       honoured by category).
 
 ### Cluster 5 — consumer readiness
-- [ ] **META-092** — F-002 (.gitkeep), F-003 (.gitignore), F-005 (uninitialised state),
+- [x] **META-092** — F-002 (.gitkeep), F-003 (.gitignore), F-005 (uninitialised state),
       F-004 + F-012 (USAGE corrections).
-- [ ] **META-093** — F-007: `scripts/export` with profiles.
-- [ ] **META-094** — F-009: README positioning.
+- [x] **META-093** — F-007: `scripts/export` with profiles.
+- [x] **META-094** — F-009: README positioning.
 
 ### Cluster 6 — harness
 - [x] **META-095** — H-002 (resumable vs terminal stop classes; honest `--fresh` hint) and
@@ -259,5 +259,5 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
 - [x] **META-098** — re-render, `./scripts/check` green including every new must-fail fixture.
 - [x] **META-099** — iteration 1d configured (`iteration-1d-expenses`, fresh project
       `expenses-1d`, 1c's setup plus a stakeholder who refuses every alternative) and run.
-- [ ] **META-100** — findings pass over 1d's trail; anything new filed as F-024+/H-008+.
-- [ ] **META-101** — FINDINGS.md statuses current; `meta/FINAL-REPORT-2.md`.
+- [x] **META-100** — findings pass over 1d's trail; anything new filed as F-024+/H-008+.
+- [x] **META-101** — FINDINGS.md statuses current; `meta/FINAL-REPORT-2.md`.
