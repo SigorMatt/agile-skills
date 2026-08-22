@@ -243,7 +243,9 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   project interactively once, or set `hasTrustDialogAccepted`), plus the note that `--settings`
   and `--allowedTools` are honoured regardless because they are supplied explicitly. F-006's
   syntax question can only be answered *after* the entries are honoured at all.
-- Status: open
+- Status: fixed (commit 20fc6a7), as filed, with the stderr line quoted verbatim so a reader who
+  hits it can search for the words they actually saw, and with the consequence stated: the setup
+  §4 recommends is silently off, presenting as unexplained prompts or denials mid-run.
 
 ## F-013 — A blocking question on an epic is unrepresentable
 - Severity: correctness, structural (an escalation path the methodology documents cannot execute)
