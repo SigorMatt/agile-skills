@@ -195,8 +195,15 @@ def main(argv: list) -> int:
     if "found-in" in options:
         fields["found-in"] = options["found-in"]
 
-    os.makedirs(os.path.join(directory, "questions"))
-    os.makedirs(os.path.join(directory, "artifacts"))
+    # Both directories are required by the schema and both are usually empty, so both need a
+    # `.gitkeep` or git will not carry them. F-047 is what that costs: an item with no questions
+    # had its empty `questions/` deleted by the trial merge `review-close` is required to
+    # perform, and the item then failed `questions.missing` *at the moment of closing*.
+    for name in ("questions", "artifacts"):
+        path = os.path.join(directory, name)
+        os.makedirs(path)
+        with open(os.path.join(path, ".gitkeep"), "w", encoding="utf-8") as handle:
+            handle.write("")
 
     write(os.path.join(directory, "item.md"),
           "---\n" + miniyaml.dump_frontmatter(fields) + "---\n" + BODY[kind])

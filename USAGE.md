@@ -48,14 +48,28 @@ replaceable, the record is not.
 
 ### Verify the install
 
-In the project, start your agent session and ask what skills are available. You should see the
-eight: `intake`, `refine`, `plan`, `implement`, `verify`, `review-close`, `answer-questions`,
-`next`. Then check the tooling runs:
+**Skills are discovered when a session starts, so the session that ran the installer cannot see
+them.** Asking it what skills are available will list whatever it loaded before the install, and
+the answer will be wrong in a way that looks like a broken install (F-004). Two checks, in this
+order:
+
+**Now, in this session — the file-level check.** This is the one that tells you the install
+worked:
 
 ```bash
 cd /path/to/your/project
+ls .claude/skills/                                        # eight directories
+head -3 .claude/skills/intake/SKILL.md                    # frontmatter with name: intake
 python3 .claude/agile-skills/scripts/validate-workspace .
 ```
+
+`validate-workspace` on a project you have not initialised yet exits **3** and says so. That is
+the expected answer at this point, not a failure — exit 1 means a workspace that exists and is
+wrong, and exit 0 means a clean one.
+
+**In a NEW session — the discovery check.** Start a fresh agent session in the project and ask
+what skills are available. You should see the eight: `intake`, `refine`, `plan`, `implement`,
+`verify`, `review-close`, `answer-questions`, `next`.
 
 Before the workspace exists it will tell you so, which is the correct answer.
 
@@ -119,6 +133,26 @@ build:
 ```
 
 Add your project's test and lint commands once you trust the loop.
+
+**These entries do nothing until the project is trusted.** A `-p` / headless session never shows
+the workspace-trust dialog, and Claude Code discards a `permissions.allow` block wholesale from a
+workspace that has never been trusted:
+
+```
+Ignoring 8 permissions.allow entries from .claude/settings.json: this workspace has not been
+trusted. Run Claude Code interactively here once and accept the trust dialog, or set
+projects["<dir>"].hasTrustDialogAccepted: true in ~/.claude.json.
+```
+
+One stderr line, and then the setup recommended above is silently off — which presents as
+unexplained permission prompts or denials in the middle of a long run (F-012). Two ways to
+satisfy it, and you need one of them **before** the first headless run:
+
+- open the project interactively once and accept the trust dialog; or
+- set `projects["<absolute path>"].hasTrustDialogAccepted: true` in `~/.claude.json`.
+
+`--settings` and `--allowedTools` are honoured either way, because they are supplied explicitly
+on the command line rather than read out of the workspace.
 
 ---
 

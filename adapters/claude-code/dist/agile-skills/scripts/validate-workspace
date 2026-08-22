@@ -78,6 +78,10 @@ ADR_SECTIONS = ["## Context", "## Options considered", "## Decision", "## Conseq
 # off, and nothing like the nine hours a real run once invented. The git window is one day wider
 # than the repository's own activity at each end, because a workspace is initialised and written
 # to before its first commit.
+# Exit 3 separates 'you have not initialised this yet' from 'this workspace is wrong'
+# (F-005). 0 clean, 1 findings, 2 usage, 3 uninitialised.
+UNINITIALISED_EXIT = 3
+
 CLOCK_SLACK = datetime.timedelta(minutes=2)
 GIT_WINDOW_SLACK = datetime.timedelta(days=1)
 
@@ -1090,7 +1094,30 @@ class Validator:
                                       hint="a citation that does not resolve is the appearance "
                                            "of evidence, which is worse than none")
 
+    def uninitialised(self) -> bool:
+        """Is this simply a directory nobody has initialised yet? (F-005)
+
+        Answering "you have not started" with two hard ERRORs and exit 1, moments after the
+        installer reported success, reads as a fault in the install. It is not a fault at all —
+        it is the documented next step, and it deserves its own exit code so a caller can tell
+        the two apart without parsing prose.
+        """
+        codes = {code for _, _, code, _, _ in self.workspace.load_errors}
+        return bool(codes) and codes <= {"project.missing", "items.missing"} \
+            and not self.workspace.items and not self.workspace.docs
+
     def run(self) -> int:
+        if self.uninitialised():
+            self.report.note(f"{self.workspace.root} is not a workspace yet — "
+                             f"tracker/project.yaml and tracker/items/ do not exist.")
+            self.report.note("This is the expected state before initialisation, not a fault. "
+                             "Create the workspace with:")
+            self.report.note(f"    scripts/workspace-init {self.workspace.root}")
+            self.report.note("Then run this again. (Exit 3 means uninitialised; exit 1 means a "
+                             "workspace that exists and is wrong.)")
+            self.report.emit()
+            return UNINITIALISED_EXIT
+
         for path, line, code, message, hint in self.workspace.load_errors:
             self.report.error(path, line, code, message, hint)
         if not self.load_pipeline():
