@@ -12,12 +12,40 @@ by a later entry that says what was wrong; a rewritten entry destroys the only e
 anything went wrong at all.
 
 There is exactly **one** sanctioned exception, and it exists because appending genuinely cannot
-fix the situation it addresses: when an earlier row was stamped with a wrong clock, the last row
-is legitimately earlier than the one before it, the item can never move again, and no later row
-can repair the pair. The tool that owns the file may restamp that single `when`, to a value not
-earlier than the previous row, and the caller MUST journal it as a correction naming the old
-value, the new value, and the reason. Nothing else in a row may be changed, and no other row may
-be touched. If you find yourself wanting a second exception, you want a journal entry instead.
+fix the situation it addresses: when an earlier entry was stamped with a wrong clock, the last
+one is legitimately earlier than the one before it, the item can never move again, and no later
+entry can repair the pair. The tool that owns the file may restamp that single `when`, to a value
+not earlier than its predecessor, and the caller MUST journal it as a correction naming the old
+value, the new value, and the reason. Nothing else may be changed, and nothing else may be
+touched. The exception applies to **both** files — `history.md`'s last row and `journal.md`'s
+last entry heading — and each has one tool that may perform it. If you find yourself wanting a
+second exception, you want a journal entry instead.
+
+---
+
+## 0. Every self-reported field comes from a machine
+
+A record is auditable because each claim in it can be checked against something. A test result
+has an exit code behind it; a decision has an artifact; a commit has a sha. **Timestamps,
+skill versions and personas have nothing behind them** — which is exactly why, in four real
+runs, they were the fields that got invented. One run stamped its final eleven entries across a
+leisurely next morning for work that had finished in minutes the night before; another recorded
+a skill version two patches below the one that was installed. Both records would pass a reading;
+neither describes what happened.
+
+So, normatively:
+
+- A timestamp MUST be **read from a clock at the moment it is written**. It MUST NOT be
+  estimated, inferred from surrounding entries, or chosen to look plausible. An agent that
+  cannot run a clock cannot write a record entry — that is a stop, not a licence to guess.
+- The heading fields of a journal entry — timestamp, skill name, version, persona — MUST come
+  from a mechanical source: the clock, and the acting skill's own installed contract. They are
+  not fields a worker types.
+- The tools exist so that this is cheap rather than disciplined: the entry heading is written by
+  the journal-entry tool, and the tool that appends a history row writes the matching entry when
+  asked to, so the row and the entry cannot disagree about what moved or when.
+- A validator MUST reject a recorded time that no clock could have produced — one in the future,
+  or one outside the window in which the workspace's repository shows any activity at all.
 
 ---
 
@@ -142,6 +170,11 @@ Rules:
   auditing the run needs to know whether the reasoning was sound, not merely what happened.
 - A failed execution still writes an entry, with the failing gate, what was tried, and the
   status it moved the item to (`blocked`, `awaiting-answer`, or unchanged).
+- The entry MUST be written by the journal-entry tool, which owns the heading (§0). An entry
+  that accompanies a status change is written by the transition tool in the same invocation, so
+  that `**Status:**` states the move that was actually made rather than the move that was
+  intended. An entry that accompanies no status change is written on its own, and its
+  `**Status:**` says `X` → `X` (unchanged).
 
 ### 2.3 Journals on epics
 
@@ -163,3 +196,12 @@ Given only these files, a reader who was not present MUST be able to answer:
 
 If any of those cannot be answered from the record, the record is defective — not the reader.
 That is the test `examples/toy-project/AUDIT.md` applies to a real run.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | §0 added: every self-reported header field comes from a machine, timestamps are read from a clock and never estimated, and the restamp exception now covers `journal.md` as well as `history.md` (F-017). |

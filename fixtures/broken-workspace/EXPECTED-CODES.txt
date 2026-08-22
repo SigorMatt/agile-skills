@@ -15,6 +15,7 @@ history.reason
 history.resume-to.missing
 history.status
 history.tail-mismatch
+history.timestamp.future
 history.transition.illegal
 item.branch.missing
 item.criteria.numbering
@@ -36,7 +37,11 @@ item.updated.stale
 journal.bullet.missing
 journal.execution.missing
 journal.item
+journal.order
 journal.status.unmatched
+journal.timestamp.future
+journal.timestamp.outside-activity
+journal.version.impossible
 project.conventions.commit-subject
 question.answered.field
 question.blocking.not-suspended

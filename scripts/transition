@@ -3,6 +3,7 @@
 
 Usage:
   scripts/transition <ITEM-ID> --to <status> --actor <skill> --reason "..." \\
+                     [--journal-body-file <path|->] \\
                      [--resume-to <status>] [--outcome delivered] [--branch wi/WI-0001] \\
                      [--root .] [--dry-run] [--force]
   scripts/transition <ITEM-ID> --restamp-last <UTC-timestamp> --reason "..." [--root .]
@@ -18,8 +19,14 @@ What it does, in order:
      question about its own failing gate is trapped;
   3. writes the new status (and outcome/branch if given) into item.md and bumps `updated`;
   4. appends the history row;
-  5. regenerates the board;
-  6. runs validate-workspace and reports.
+  5. with --journal-body-file, appends the matching journal entry through
+     scripts/journal-entry — which stamps the heading from the clock and the actor's installed
+     contract, and writes the `**Status:**` bullet from the move just made, so the entry cannot
+     claim a transition that did not happen (F-017, F-019). The history row is written first on
+     purpose: a row with no entry is caught by `journal.execution.missing`, while an entry with
+     no row is the direction the record used to be blind to;
+  6. regenerates the board;
+  7. runs validate-workspace and reports.
 
 This exists so that "the gates must pass before the status changes" is a property of a program
 rather than of an agent's discipline. Editing `history.md` by hand bypasses every check here,
@@ -391,6 +398,23 @@ def main(argv: list) -> int:
         handle.write(frontmatter.render(fields, body))
     with open(history_path, "a", encoding="utf-8") as handle:
         handle.write(row)
+
+    if options.get("journal-body-file"):
+        source = options["journal-body-file"]
+        entry_body = sys.stdin.read() if source == "-" else None
+        argv = [sys.executable, os.path.join(HERE, "journal-entry"), item_id,
+                "--skill", actor, "--root", root,
+                "--status", f"`{from_status or '—'}` → `{to_status}`",
+                "--body-file", "-" if entry_body is not None else source]
+        entry = subprocess.run(argv, input=entry_body, capture_output=True, text=True)
+        print(entry.stdout.rstrip())
+        if entry.stderr.strip():
+            print(entry.stderr.rstrip(), file=sys.stderr)
+        if entry.returncode != 0:
+            print(f"transition: {item_id} moved {from_status} → {to_status}, but the journal "
+                  f"entry was refused (above). The row exists and the entry does not: write it "
+                  f"with scripts/journal-entry before the next skill runs.", file=sys.stderr)
+            return 1
 
     subprocess.run([sys.executable, os.path.join(HERE, "board-gen"), root],
                    capture_output=True, text=True)

@@ -1,0 +1,305 @@
+#!/usr/bin/env python3
+"""Append an entry to an item's journal.md — the only sanctioned way to write one.
+
+Usage:
+  scripts/journal-entry <ITEM-ID> --skill <name> --body-file <path|-> [--root .]
+                        [--status "`from` → `to`"] [--dry-run]
+  scripts/journal-entry <ITEM-ID> --restamp-last <UTC-timestamp> --reason "..." [--root .]
+  scripts/journal-entry --template --skill <name> [--item <ITEM-ID>]
+
+The caller supplies the *bullets*. This script writes the heading:
+
+    ## <timestamp> — <skill> v<version> — <persona>
+
+and every field in it comes from a mechanical source — the timestamp from this machine's clock,
+the version and the persona from the acting skill's installed `skill.yaml`. None of them is
+something a worker types.
+
+That is the whole point (finding F-017). Across four real runs, journal headings were the one
+part of the record that was routinely fabricated: a run stamped its last eleven entries across a
+leisurely next morning for work that had finished in minutes the night before, and another
+reported a skill version two patches below the one that was installed. An invented timestamp is
+the single kind of record entry that cannot be audited against anything — every other claim has
+an artifact behind it — so a timeline audit of a journal would have "proved" that work happened
+while nothing at all was running.
+
+`--restamp-last` is the journal's counterpart of `transition --restamp-last`, and exists for the
+identical deadlock: entries must be non-decreasing, an earlier entry was stamped with a wrong
+clock, and no *later* entry can repair the pair. It changes exactly one thing — the `when` in the
+last entry's heading — and the caller MUST journal the correction in the next entry.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import datetime
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import miniyaml  # noqa: E402
+from workspace import resolve_root  # noqa: E402
+
+TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+HEADING_RE = re.compile(r"^##\s+(?P<when>\S+)\s+—\s+(?P<skill>[a-z0-9-]+)\s+v(?P<version>\S+)"
+                        r"\s+—\s+(?P<persona>.+?)\s*$")
+
+REQUIRED_BULLETS = ["Item", "Trigger", "Inputs read", "Decisions", "Questions raised",
+                    "Commands", "Gates", "Artifacts", "Status", "Result"]
+
+
+def now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def find_contract(skill: str) -> str:
+    """The acting skill's contract, wherever it was installed. Mirrors scripts/transition."""
+    for candidate in (os.path.join(HERE, "skills", skill, "skill.yaml"),
+                      os.path.join(HERE, "..", "skills", skill, "skill.yaml"),
+                      os.path.join(HERE, "..", "methodology", "skills", skill, "skill.yaml")):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return ""
+
+
+def contract_header(skill: str):
+    """(version, persona) read off the installed contract, or (None, message)."""
+    path = find_contract(skill)
+    if not path:
+        return None, (f"cannot find the contract for {skill!r}. The version and persona in a "
+                      f"journal heading are read from skill.yaml, never typed — if the skill is "
+                      f"not installed, the entry cannot be written honestly.")
+    try:
+        contract = miniyaml.load_file(path) or {}
+    except miniyaml.YamlError as exc:
+        return None, f"{path} does not parse at line {exc.line}: {exc.message}"
+    version, persona = contract.get("version"), contract.get("persona")
+    if not version or not persona:
+        return None, f"{path} is missing 'version' or 'persona'"
+    return (str(version), str(persona)), ""
+
+
+def read_entries(text: str):
+    """(when, line-index) for every heading in the journal, in file order."""
+    found = []
+    for index, line in enumerate(text.split("\n")):
+        match = HEADING_RE.match(line)
+        if match:
+            found.append((match.group("when"), index))
+    return found
+
+
+def monotonic_now(journal_text: str):
+    """A timestamp never earlier than the last entry's. See scripts/transition.monotonic_now."""
+    stamp = now()
+    entries = read_entries(journal_text)
+    if not entries:
+        return stamp, None
+    previous = entries[-1][0]
+    if previous >= stamp:
+        try:
+            parsed = datetime.datetime.strptime(previous, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            return stamp, None
+        return (parsed + datetime.timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ"), previous
+    return stamp, None
+
+
+def template(skill: str, item_id: str) -> str:
+    return "\n".join([
+        f"- **Item:** {item_id or '<ITEM-ID>'}",
+        "- **Trigger:** <the status that made this skill runnable, and what dispatched it>",
+        "- **Inputs read:**",
+        "  - <every artifact actually read>",
+        "- **Decisions:**",
+        "  - <the choice, and the rationale — 'none' is legal only as the literal word>",
+        "- **Questions raised:** <Q-### ids, or none>",
+        "- **Commands:**",
+        "  - <command> → <exit code / outcome>",
+        "- **Gates:**",
+        "  - <gate> → **pass|fail|skipped** (<evidence>)",
+        "- **Artifacts:**",
+        "  - <every file created or updated, and any commit produced>",
+        "- **Status:** `<from>` → `<to>`",
+        "- **Result:** <one or two sentences a reader can stop at>",
+        "",
+        f"# heading is written by scripts/journal-entry --skill {skill or '<skill>'}; do not "
+        f"write one yourself",
+    ]) + "\n"
+
+
+def check_body(body: str, item_id: str):
+    """Reject a body that is not a legal entry, before it reaches the file."""
+    problems = []
+    for line in body.split("\n"):
+        if line.startswith("## "):
+            problems.append("the body must not contain an entry heading — this script writes "
+                            "the heading, with the clock and the installed contract behind it")
+            break
+    labels = set(re.findall(r"^-\s+\*\*([^*]+?):\*\*", body, re.MULTILINE))
+    for required in REQUIRED_BULLETS:
+        if required not in labels:
+            problems.append(f"missing the '**{required}:**' bullet")
+    named = re.search(r"^-\s+\*\*Item:\*\*\s*(\S+)", body, re.MULTILINE)
+    if named and item_id and named.group(1).strip() != item_id:
+        problems.append(f"the '**Item:**' bullet says {named.group(1)!r} but the entry is being "
+                        f"filed under {item_id}")
+    return problems
+
+
+def force_status_bullet(body: str, status_line: str) -> str:
+    """Replace the caller's `**Status:**` bullet with the one the transition actually made."""
+    replacement = f"- **Status:** {status_line}"
+    if re.search(r"^-\s+\*\*Status:\*\*", body, re.MULTILINE):
+        return re.sub(r"^-\s+\*\*Status:\*\*.*$", replacement, body, count=1, flags=re.MULTILINE)
+    return body.rstrip("\n") + "\n" + replacement + "\n"
+
+
+def append_entry(root: str, item_id: str, skill: str, body: str, status_line=None,
+                 dry_run=False, quiet=False) -> int:
+    """Write one entry. Returns a process exit code."""
+    path = os.path.join(root, "tracker", "items", item_id, "journal.md")
+    if not os.path.isfile(path):
+        print(f"journal-entry: {path} does not exist", file=sys.stderr)
+        return 1
+
+    header, message = contract_header(skill)
+    if header is None:
+        print(f"journal-entry: {message}", file=sys.stderr)
+        return 1
+    version, persona = header
+
+    if status_line is not None:
+        body = force_status_bullet(body, status_line)
+    problems = check_body(body, item_id)
+    if problems:
+        for problem in problems:
+            print(f"journal-entry: {problem}", file=sys.stderr)
+        print("journal-entry: run with --template to see the shape an entry must have "
+              "(spec/journal-and-history.md §2.2)", file=sys.stderr)
+        return 1
+
+    with open(path, "r", encoding="utf-8") as handle:
+        existing = handle.read()
+    stamp, clamped_after = monotonic_now(existing)
+    if clamped_after and not quiet:
+        print(f"journal-entry: the previous entry is stamped {clamped_after}, which is not "
+              f"earlier than this machine's clock ({now()}). Using {stamp} so the record stays "
+              f"orderable; say so in this entry's **Result:**.")
+
+    heading = f"## {stamp} — {skill} v{version} — {persona}"
+    entry = "\n" + heading + "\n\n" + body.strip("\n") + "\n"
+    if dry_run:
+        print(f"journal-entry: would append to {path}:")
+        print(entry.rstrip("\n"))
+        return 0
+    with open(path, "a", encoding="utf-8") as handle:
+        if not existing.endswith("\n"):
+            handle.write("\n")
+        handle.write(entry)
+    if not quiet:
+        print(f"journal-entry: appended {heading}")
+    return 0
+
+
+def restamp_last(root: str, item_id: str, new_when: str, reason: str) -> int:
+    """Repair the `when` of the last journal entry. The journal half of F-017's deadlock."""
+    if not TIMESTAMP_RE.match(new_when):
+        print(f"journal-entry: {new_when!r} is not a UTC timestamp like 2026-08-17T01:30:01Z",
+              file=sys.stderr)
+        return 2
+    if not reason:
+        print("journal-entry: --restamp-last requires --reason", file=sys.stderr)
+        return 2
+    path = os.path.join(root, "tracker", "items", item_id, "journal.md")
+    if not os.path.isfile(path):
+        print(f"journal-entry: {path} does not exist", file=sys.stderr)
+        return 1
+    with open(path, "r", encoding="utf-8") as handle:
+        lines = handle.read().split("\n")
+    entries = read_entries("\n".join(lines))
+    if not entries:
+        print(f"journal-entry: {path} has no entries to restamp", file=sys.stderr)
+        return 1
+    old_when, index = entries[-1]
+    if len(entries) > 1 and new_when < entries[-2][0]:
+        print(f"journal-entry: refused — {new_when} is earlier than the entry before it "
+              f"({entries[-2][0]}); the file must stay non-decreasing", file=sys.stderr)
+        return 1
+    lines[index] = lines[index].replace(old_when, new_when, 1)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines))
+    print(f"journal-entry: restamped the last entry of {item_id}: {old_when} → {new_when}")
+    print(f"journal-entry: reason recorded to the caller: {reason}")
+    print("journal-entry: this repair MUST be named in the next entry as a correction "
+          "(spec/journal-and-history.md, the sanctioned exception)")
+    return 0
+
+
+def parse_args(argv: list):
+    positional, options, flags = [], {}, set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--dry-run", "--template", "--quiet"):
+            flags.add(token[2:])
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                return None, None, None, f"--{token[2:]} needs a value"
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+    return positional, options, flags, ""
+
+
+def main(argv: list) -> int:
+    parsed = parse_args(argv)
+    positional, options, flags, error = parsed
+    if error:
+        print(f"journal-entry: {error}", file=sys.stderr)
+        return 2
+    if "template" in flags:
+        print(template(options.get("skill", ""), options.get("item", "")), end="")
+        return 0
+    if not positional:
+        print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
+        return 2
+    item_id = positional[0]
+    root = resolve_root(options.get("root"), tool="journal-entry")
+
+    if "restamp-last" in options:
+        return restamp_last(root, item_id, options["restamp-last"], options.get("reason", ""))
+
+    if "skill" not in options:
+        print("journal-entry: --skill is required — the version and persona in the heading are "
+              "read from that skill's contract", file=sys.stderr)
+        return 2
+    if "body-file" not in options:
+        print("journal-entry: --body-file is required (use '-' for stdin, or --template to see "
+              "the shape)", file=sys.stderr)
+        return 2
+    source = options["body-file"]
+    if source == "-":
+        body = sys.stdin.read()
+    else:
+        if not os.path.isfile(source):
+            print(f"journal-entry: {source} does not exist", file=sys.stderr)
+            return 1
+        with open(source, "r", encoding="utf-8") as handle:
+            body = handle.read()
+
+    return append_entry(root, item_id, options["skill"], body,
+                        status_line=options.get("status"),
+                        dry_run="dry-run" in flags, quiet="quiet" in flags)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

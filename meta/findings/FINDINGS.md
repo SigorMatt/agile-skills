@@ -304,7 +304,21 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: give `journal.md` the same treatment as `history.md`, and say explicitly in the spec
   that a timestamp is read from the clock and never estimated — an invented timestamp is the one
   kind of record entry that cannot be audited against anything.
-- Status: open
+- Status: fixed — mechanism in commit 8549fca, adopted by every skill in META-084b.
+  `scripts/journal-entry` is the only sanctioned writer of an entry: it stamps the heading from
+  the clock and from the acting skill's installed `skill.yaml` (version **and** persona), so no
+  header field is authored by the model. `transition --journal-body-file` writes the row and the
+  entry together and overwrites the caller's `**Status:**` bullet with the move it actually made.
+  `journal-entry --restamp-last` is the journal's half of the sanctioned repair.
+  `spec/journal-and-history.md` §0 (revision 2) states the rule normatively.
+  Validator: `journal.timestamp.future`, `history.timestamp.future`,
+  `journal.timestamp.outside-activity`, `history.timestamp.outside-activity`,
+  `journal.version.impossible`. Demonstrated both ways in a scratch workspace — a real
+  transition produced `## 2026-08-22T00:41:10Z — refine v0.1.1 — product-analyst` with the
+  clock agreeing to the second and a deliberately wrong `**Status:** draft → banana` corrected
+  to `draft → ready`; a hand-written entry in run 1c's exact shape (a plausible later-that-day
+  12:55 for a transition that never happened) was rejected by
+  `journal.timestamp.future` **and** `journal.status.unmatched` at once.
 
 ## F-018 — The workspace-write guard hook matches the command, not the target
 - Severity: correctness (blocks legitimate commands; trains agents to work around the guard)

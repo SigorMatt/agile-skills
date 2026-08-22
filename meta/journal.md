@@ -2101,3 +2101,49 @@ mission's intent — a spec change is dated and attributed to a finding — is m
 rather than as an ADR because it changes no behaviour.
 
 Evidence: `./scripts/check` green — 45 fixture codes, 183 selftest cases.
+
+## META-084 — F-017: a journal header no skill can invent
+
+The finding's addenda are three specimens of one class: the fields with nothing behind them get
+made up. A test result has an exit code, a decision has an artifact, a commit has a sha — a
+timestamp, a version and a persona have only the honesty of whoever typed them, and across four
+runs that turned out not to be enough. Run 1c's eleven entries narrating a next-morning half-day
+for work done the previous night is the sharpest specimen: a timeline audit of that journal would
+have "proved" work happened while nothing was running.
+
+**`scripts/journal-entry`.** The caller supplies bullets; the script writes the heading. The
+timestamp is this machine's clock, the version and persona are read from the acting skill's
+installed `skill.yaml`. It refuses a body that contains a heading of its own, refuses one missing
+any of the ten required bullets, and refuses one whose `**Item:**` names a different item.
+`--template` prints the shape. `--restamp-last` is the journal's half of the sanctioned repair
+`history.md` already had — F-017's first sentence, and the reason it is a *deadlock* rather than
+merely untidy.
+
+**`transition --journal-body-file`.** The row and the entry are written by one command, and the
+script writes the `**Status:**` bullet itself from the move it just made. A caller cannot
+mis-state it — demonstrated by handing it `draft → banana` and getting `draft → ready` in the
+file. Ordering inside the command is history row first, then entry: a row with no entry is caught
+by `journal.execution.missing`, while an entry with no row is precisely the direction the record
+was blind to until META-083.
+
+**The validator.** `check_clock` applies to both files. A stamp later than now (plus two minutes
+for a skewed clock) is `*.timestamp.future`; a stamp outside the workspace's own git activity,
+widened a day at each end, is `*.timestamp.outside-activity`. The git window is deliberately
+generous — a workspace is written to before its first commit — because the failure being caught
+is nine hours out, not nine minutes. Separately, `journal.version.impossible` fires when a
+heading claims a version higher than the installed contract.
+
+The version rule is asymmetric on purpose, and this is the one place the fix is weaker than the
+finding. Run 1b recorded `review-close v0.1.0` while 0.1.2 was installed — *lower*, not higher —
+and a validator cannot tell that apart from a legitimate old entry written before an upgrade,
+because the record is meant to span versions. So the low-version case is prevented at the point
+of writing (the script reads the file) rather than detected at rest, and only the impossible
+direction — a version that does not exist yet — is an error. Said plainly rather than papered
+over: a worker that ignores the script and hand-writes an old version string is not caught by
+this check.
+
+Fixtures: three new entries, each the shape of a real specimen — a 2099 heading with v9.9.9, a
+1999 heading from before the repository existed, and a 2099 history row. The fixture also
+started firing `journal.order`, a rule that had no coverage before; it is now listed. 50 codes.
+
+Evidence: `./scripts/check` green; the scratch-workspace demonstration recorded in FINDINGS.

@@ -15,8 +15,10 @@ Standard library only (ADR-0002), so it runs in a consumer project with nothing 
 
 from __future__ import annotations
 
+import datetime
 import os
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
@@ -62,6 +64,76 @@ ARTIFACT_BY_STATUS = [
 
 ADR_SECTIONS = ["## Context", "## Options considered", "## Decision", "## Consequences",
                 "## Change log"]
+
+
+# F-017: the clock a record claims must be a clock that was running. `now + CLOCK_SLACK` is the
+# latest an entry may be stamped — a couple of minutes of tolerance for a machine whose clock is
+# off, and nothing like the nine hours a real run once invented. The git window is one day wider
+# than the repository's own activity at each end, because a workspace is initialised and written
+# to before its first commit.
+CLOCK_SLACK = datetime.timedelta(minutes=2)
+GIT_WINDOW_SLACK = datetime.timedelta(days=1)
+
+
+def to_utc_z(stamp: str):
+    """An ISO-8601 timestamp with an offset, as the UTC 'Z' form the record uses."""
+    try:
+        parsed = datetime.datetime.fromisoformat(stamp.strip())
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def shift(stamp: str, delta):
+    parsed = datetime.datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ")
+    return (parsed + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def git_activity_window(root: str):
+    """(first, last) commit timestamps in the workspace's repository, or None."""
+    try:
+        result = subprocess.run(["git", "-C", root, "log", "--format=%cI"],
+                                capture_output=True, text=True)
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    stamps = sorted(filter(None, (to_utc_z(line) for line in result.stdout.split("\n")
+                                  if line.strip())))
+    return (stamps[0], stamps[-1]) if stamps else None
+
+
+def find_installed_versions():
+    """skill -> version, read off the contracts shipped beside the scripts. Mirrors transition."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for base in (os.path.join(here, "skills"),
+                 os.path.join(here, "..", "skills"),
+                 os.path.join(here, "..", "methodology", "skills")):
+        if not os.path.isdir(base):
+            continue
+        versions = {}
+        for name in sorted(os.listdir(base)):
+            path = os.path.join(base, name, "skill.yaml")
+            if not os.path.isfile(path):
+                continue
+            try:
+                contract = miniyaml.load_file(path) or {}
+            except miniyaml.YamlError:
+                continue
+            if contract.get("version"):
+                versions[name] = str(contract["version"])
+        if versions:
+            return versions
+    return {}
+
+
+def version_tuple(value: str):
+    try:
+        return tuple(int(part) for part in str(value).split("."))
+    except (TypeError, ValueError):
+        return None
 
 
 STATUS_TOKEN_RE = re.compile(r"`([^`]+)`")
@@ -113,6 +185,10 @@ class Validator:
         self.priorities = set()
         self.skills = set()
         self.transitions = []
+        self.window = git_activity_window(self.workspace.root)
+        self.installed_versions = find_installed_versions()
+        self.latest_stamp = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
 
     # ---- setup ---------------------------------------------------------------------
 
@@ -150,6 +226,37 @@ class Validator:
                               f"2026-08-16T21:04:33Z")
             return False
         return True
+
+    def check_clock(self, path, line, prefix, value, label) -> None:
+        """A recorded time must be one that a clock could have produced (F-017).
+
+        The two addenda to F-017 are the argument for this check: one run stamped its last
+        eleven entries across a next morning for work that finished the previous night, and
+        another spaced invented times to look like separate sittings. Every other claim in the
+        record has an artifact behind it; a timestamp has only the clock, so if it is never read
+        the record carries a timeline that is pure fiction and audits clean.
+        """
+        if not TIMESTAMP_RE.match(value or ""):
+            return
+        ceiling = shift(self.latest_stamp, CLOCK_SLACK)
+        if value > ceiling:
+            self.report.error(path, line, f"{prefix}.timestamp.future",
+                              f"{label} {value} is in the future (now is {self.latest_stamp})",
+                              hint="a timestamp is read from a clock, never estimated — this "
+                                   "one records work that has not happened yet")
+            return
+        if not self.window:
+            return
+        earliest, latest = self.window
+        lower = shift(earliest, -GIT_WINDOW_SLACK)
+        upper = shift(max(latest, self.latest_stamp), GIT_WINDOW_SLACK)
+        if value < lower or value > upper:
+            self.report.error(path, line, f"{prefix}.timestamp.outside-activity",
+                              f"{label} {value} falls outside this workspace's git activity "
+                              f"({lower} … {upper})",
+                              hint="nothing was running when this claims to have happened; "
+                                   "stamp entries with scripts/journal-entry and "
+                                   "scripts/transition, which read the clock")
 
     def check_fields(self, path, fields, required, optional, prefix):
         for name in required:
@@ -371,6 +478,7 @@ class Validator:
 
             if not self.check_timestamp(path, row.line, "history.timestamp", row.when, "when"):
                 continue
+            self.check_clock(path, row.line, "history", row.when, "when")
             if row.when < previous_when:
                 self.report.error(path, row.line, "history.order",
                                   f"timestamp {row.when} is earlier than the previous row "
@@ -444,6 +552,7 @@ class Validator:
         previous_when = ""
         for entry in item.journal:
             if self.check_timestamp(path, entry.line, "journal.timestamp", entry.when, "entry timestamp"):
+                self.check_clock(path, entry.line, "journal", entry.when, "entry timestamp")
                 if entry.when < previous_when:
                     self.report.error(path, entry.line, "journal.order",
                                       f"entry timestamp {entry.when} is earlier than the "
@@ -452,6 +561,15 @@ class Validator:
             if entry.skill not in self.skills:
                 self.report.error(path, entry.line, "journal.skill",
                                   f"{entry.skill!r} is not a skill in pipeline.yaml")
+            installed = self.installed_versions.get(entry.skill)
+            recorded, current = version_tuple(entry.version), version_tuple(installed)
+            if installed and recorded and current and recorded > current:
+                self.report.error(path, entry.line, "journal.version.impossible",
+                                  f"entry claims {entry.skill} v{entry.version}, but the "
+                                  f"installed contract is v{installed}",
+                                  hint="the version in a heading is read from skill.yaml by "
+                                       "scripts/journal-entry; a version that does not exist "
+                                       "yet cannot have run")
             for label in JOURNAL_BULLETS:
                 if label not in entry.bullets:
                     self.report.error(path, entry.line, "journal.bullet.missing",
