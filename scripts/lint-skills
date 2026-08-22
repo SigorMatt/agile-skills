@@ -4,7 +4,8 @@
 Usage: scripts/lint-skills [repo-root]
 
 Checks, in order:
-  * pipeline.yaml is well formed, and its skills list matches methodology/skills/ exactly
+  * pipeline.yaml is well formed, its skills list matches methodology/skills/ exactly, and
+    every status an item can wait in is suspendable
   * every skill.yaml conforms to the contract schema (required fields, types, enums, no
     unknown keys)
   * dispatch.on_status and pipeline statuses agree in BOTH directions: an unclaimed
@@ -124,6 +125,24 @@ class Linter:
             if not isinstance(entry.get("terminal"), bool):
                 self.report.error(self.pipeline_path, 0, "pipeline.status.terminal",
                                   f"status {entry['name']!r} must declare terminal as a boolean")
+            if not isinstance(entry.get("suspendable"), bool):
+                self.report.error(
+                    self.pipeline_path, 0, "pipeline.status.suspendable",
+                    f"status {entry['name']!r} must declare suspendable as a boolean",
+                    hint="terminal answers 'does the pipeline advance out of this status by "
+                         "itself'; suspendable answers 'may a blocking question stop an item "
+                         "here'. Conflating them made an epic-level escalation unrepresentable "
+                         "(F-013)")
+            if entry.get("suspendable") is False and entry["name"] not in (
+                    "awaiting-answer", "blocked", "done"):
+                self.report.error(
+                    self.pipeline_path, 0, "pipeline.status.unsuspendable",
+                    f"status {entry['name']!r} is not suspendable, and is not an escalation "
+                    f"target or a closed status",
+                    hint="an item can sit here with work outstanding, so a blocking question "
+                         "or an impasse must have a legal move out of it — otherwise the "
+                         "skill's only options are to mis-record the question or to leave the "
+                         "workspace invalid (F-013)")
             if entry.get("owner") is None and entry.get("terminal") is False:
                 self.report.error(
                     self.pipeline_path, 0, "pipeline.status.stalled",

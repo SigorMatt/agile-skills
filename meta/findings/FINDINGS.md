@@ -271,7 +271,21 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   or they may not (then `applies_to` must drop `epic` from `awaiting-answer`, `intake`'s
   escalation must be rewritten, and the validator must exempt epics — with `addressed-to: human`
   alone doing the stopping, which `next` step 2 already does).
-- Status: open
+- Status: fixed (commit 33eb48c) — epics may be suspended, and the reason the rule was
+  wrong is named rather than patched around. `terminal` was carrying two questions: *does the
+  pipeline advance an item out of this status by itself* (an epic at `open` does not — it
+  advances through its children) and *may a blocking question or an impasse stop an item here*
+  (an epic-level question is exactly the case that must). Statuses now declare **`suspendable`**
+  separately, the two escalation transitions read `from: any-suspendable`, and `open` is
+  `terminal: true, suspendable: true`. `pipeline.yaml` → 0.2.0;
+  `spec/ids-and-statuses.md` §4 revision 2.
+  New lint rule `pipeline.status.unsuspendable`: a status that is not suspendable must be an
+  escalation target or a closed status — the F-013 defect stated as an invariant. Proven to fire
+  by flipping `open` back to the pre-fix value.
+  Proven by execution, in a scratch workspace: the exact command the finding quotes as refused,
+  `transition EP-001 --to awaiting-answer --actor intake --resume-to open`, now succeeds and
+  writes the row; `awaiting-answer → open` resumes it; and `done → awaiting-answer` is still
+  refused with the same message. Fixture row added for the still-illegal case.
 
 ## F-014 — `transition` runs its gates against the pre-move workspace
 - Severity: correctness (a gate that reports FAIL on correct work)

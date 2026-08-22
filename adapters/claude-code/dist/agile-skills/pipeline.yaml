@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.1.0
+version: 0.2.0
 
 item_types:
   - epic
@@ -37,69 +37,86 @@ priorities:
 
 # Every status. `owner` is the single skill the orchestrator dispatches for an item in this
 # status; `null` means no skill advances it and the orchestrator reports it instead.
+#
+# `terminal` and `suspendable` are two different questions, and conflating them cost a run
+# (F-013). `terminal` answers "does the pipeline advance an item out of this status by itself?"
+# — an epic at `open` advances only through its children, so it is terminal in that sense.
+# `suspendable` answers "may a blocking question or an impasse suspend an item here?" — and an
+# epic-level question is exactly the case that must be able to. `done` and `blocked` are neither.
 statuses:
   - name: draft
     applies_to: [work-item, bug]
     owner: refine
     terminal: false
+    suspendable: true
     description: Created, not yet proven to meet the Definition of Ready.
 
   - name: ready
     applies_to: [work-item, bug]
     owner: plan
     terminal: false
+    suspendable: true
     description: Meets the Definition of Ready. Needs a design and a plan.
 
   - name: planned
     applies_to: [work-item, bug]
     owner: implement
     terminal: false
+    suspendable: true
     description: A plan exists. No branch or code yet, so restarting is free.
 
   - name: in-progress
     applies_to: [work-item, bug]
     owner: implement
     terminal: false
+    suspendable: true
     description: A branch exists with partial work. Resuming must reconcile with it.
 
   - name: verifying
     applies_to: [work-item, bug]
     owner: verify
     terminal: false
+    suspendable: true
     description: Implementation reports itself complete. Needs independent validation.
 
   - name: in-review
     applies_to: [work-item, bug]
     owner: review-close
     terminal: false
+    suspendable: true
     description: Verified. Needs Definition of Done review, merge, and closing.
 
   - name: awaiting-answer
     applies_to: [work-item, bug, epic]
     owner: answer-questions
     terminal: false
+    suspendable: false
     description: A blocking question is open. No engineering may proceed.
 
   - name: blocked
     applies_to: [work-item, bug, epic]
     owner: null
     terminal: true
+    suspendable: false
     description: A documented impasse. Only a human can move it.
 
   - name: open
     applies_to: [epic]
     owner: null
     terminal: true
-    description: An epic with children not yet all done. Advances only through its children.
+    suspendable: true
+    description: An epic with children not yet all done. Advances only through its children, but a blocking question or an impasse may suspend it.
 
   - name: done
     applies_to: [work-item, bug, epic]
     owner: null
     terminal: true
+    suspendable: false
     description: Closed, with an outcome recorded.
 
-# Every legal transition. `from: null` means item creation. `resume_to` records whether the
-# transition must carry the status it suspends (see spec/ids-and-statuses.md §4).
+# Every legal transition. `from: null` means item creation. `from: any-suspendable` means any
+# status whose `suspendable` is true — including an epic's `open`. `resume_to` records whether
+# the transition must carry the status it suspends (see spec/ids-and-statuses.md §4).
 transitions:
   - from: null
     to: draft
@@ -179,7 +196,7 @@ transitions:
     resume_to: forbidden
     condition: Epic only. A defect was filed against the epic's delivered behaviour after it closed, so the goal is no longer met. The reopening row records which item reopened it.
 
-  - from: any-non-terminal
+  - from: any-suspendable
     to: awaiting-answer
     actor: any
     resume_to: required
@@ -191,7 +208,7 @@ transitions:
     resume_to: forbidden
     condition: The blocking question is answered and its consequences are propagated into artifacts.
 
-  - from: any-non-terminal
+  - from: any-suspendable
     to: blocked
     actor: any
     resume_to: required

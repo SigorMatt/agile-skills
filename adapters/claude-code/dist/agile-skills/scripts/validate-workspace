@@ -219,6 +219,10 @@ class Validator:
     def is_terminal(self, status: str) -> bool:
         return bool((self.statuses.get(status) or {}).get("terminal"))
 
+    def is_suspendable(self, status: str) -> bool:
+        """May a blocking question or an impasse suspend an item at this status? (F-013)"""
+        return bool((self.statuses.get(status) or {}).get("suspendable"))
+
     # ---- helpers -------------------------------------------------------------------
 
     def check_timestamp(self, path, line, code, value, label):
@@ -443,8 +447,8 @@ class Validator:
             if rule_from is None:
                 if from_status is not None:
                     continue
-            elif rule_from == "any-non-terminal":
-                if from_status is None or self.is_terminal(from_status):
+            elif rule_from == "any-suspendable":
+                if from_status is None or not self.is_suspendable(from_status):
                     continue
             elif rule_from != from_status:
                 continue

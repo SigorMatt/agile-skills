@@ -129,14 +129,22 @@ def is_terminal(pipeline, status) -> bool:
     return False
 
 
+def is_suspendable(pipeline, status) -> bool:
+    """May a blocking question or an impasse suspend an item at this status? (F-013)"""
+    for entry in pipeline.get("statuses") or []:
+        if entry["name"] == status:
+            return bool(entry.get("suspendable"))
+    return False
+
+
 def legal(pipeline, from_status, to_status, actor, suspended_from) -> bool:
     for rule in pipeline.get("transitions") or []:
         rule_from, rule_to, rule_actor = rule.get("from"), rule.get("to"), rule.get("actor")
         if rule_from is None:
             if from_status is not None:
                 continue
-        elif rule_from == "any-non-terminal":
-            if from_status is None or is_terminal(pipeline, from_status):
+        elif rule_from == "any-suspendable":
+            if from_status is None or not is_suspendable(pipeline, from_status):
                 continue
         elif rule_from != from_status:
             continue

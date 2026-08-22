@@ -2247,3 +2247,33 @@ Version bumps: plan 0.2.0, implement 0.2.0, review-close 0.2.1 (a new gate is mi
 the patch on top).
 
 Evidence: `./scripts/check` — 8 steps, all passed, 51 fixture codes.
+
+## META-087 — F-013: an epic can be suspended, because `terminal` was two questions
+
+The finding lays out three rules that cannot all hold and asks which gives. The answer turned out
+to be none of them: the contradiction was in a field name. `terminal` was being asked to answer
+"does the pipeline advance an item out of this status by itself?" — which for an epic at `open` is
+no, it advances through its children — and separately "may a blocking question or an impasse stop
+an item here?", which for an epic is emphatically yes. One boolean, two questions, and the answers
+differ.
+
+So statuses now declare `suspendable` as well, and the two escalation transitions read
+`from: any-suspendable`. `open` stays `terminal: true` — it genuinely has no owning skill, and
+`lint-skills`' "every non-terminal status needs an owner" rule stays intact, which is the
+give-away that the original flag was measuring ownership rather than suspendability all along.
+
+`pipeline.status.unsuspendable` is the new lint rule, and it is the finding written as an
+invariant: a status that is not suspendable must be an escalation target (`awaiting-answer`,
+`blocked`) or a closed status (`done`). Anything else is a place an item can sit with work
+outstanding and no legal way to stop. Flipping `open` back to `suspendable: false` makes it fire,
+which is how I know it would have caught this.
+
+Proven by execution rather than by reading. In a scratch workspace, the exact command F-013 quotes
+as refused now writes its row; `awaiting-answer → open` resumes the epic to the recorded
+`resume-to`; and `done → awaiting-answer` is still refused with the identical message, so the fix
+opened one door and not the corridor. A fixture row carries the still-illegal case.
+
+`intake`'s escalation instruction — "set the epic to `awaiting-answer` and stop" — needed no
+change. It was correct all along; it was the machinery that could not carry it out.
+
+Evidence: `./scripts/check` — 8 steps, all passed, 51 fixture codes.

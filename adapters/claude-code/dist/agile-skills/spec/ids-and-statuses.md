@@ -127,16 +127,25 @@ Every row is the only legal way to reach that status. Any other transition is in
 | `verifying` | `in-progress` | `verify` | verification fails on this item's own acceptance criteria |
 | `in-review` | `done` | `review-close` | Definition of Done passes and the change is merged |
 | `in-review` | `in-progress` | `review-close` | review rejects the change with recorded reasons |
-| *any non-terminal* | `awaiting-answer` | `implement`, `verify`, `plan`, `review-close` | that skill filed a blocking question |
+| *any suspendable* | `awaiting-answer` | `implement`, `verify`, `plan`, `review-close` | that skill filed a blocking question |
 | `awaiting-answer` | *the status it came from* | `answer-questions` | the blocking question is answered and its consequences are propagated |
-| *any non-terminal* | `blocked` | any skill | a documented impasse no skill can resolve |
+| *any suspendable* | `blocked` | any skill | a documented impasse no skill can resolve |
 | `blocked` | *the status it came from* | any skill | a human recorded a resolution in the item |
 | `open` | `done` | `review-close` | epic only: every child item is `done` |
 | `done` | `open` | any skill | epic only: a defect was filed against the epic's delivered behaviour after it closed (§3.4) |
-| *any* | `blocked` | any skill | epic only, or as above |
+
 
 Notes:
 
+- **Terminal and suspendable are different questions.** `terminal` asks whether the pipeline
+  advances an item out of this status by itself; `suspendable` asks whether a blocking question
+  or an impasse may stop an item here. An epic at `open` is terminal — it advances only through
+  its children — and suspendable, because an epic-level question is precisely the case that must
+  be able to stop it. `done` and `blocked` are neither. Conflating the two made the escalation
+  path the methodology documents impossible to execute: `intake`'s own instruction is "set the
+  epic to `awaiting-answer` and stop", and two separate runs found that the transition was
+  refused, leaving a skill to choose between recording a blocking question as non-blocking — a
+  lie the record carries forever — and leaving the workspace failing validation (F-013).
 - **`awaiting-answer` remembers where it came from.** The history entry MUST record the status
   being suspended, and `answer-questions` MUST restore exactly that status. Otherwise an item
   interrupted during `verify` would silently restart at `implement`, and the verification
@@ -163,3 +172,12 @@ oldest `created` timestamp, and after that the lexicographically smallest ID —
 fully deterministic and two runs over the same workspace pick the same item. Randomness here
 would make an interrupted run unreproducible, which is the one thing the whole design is
 protecting.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | §4: statuses declare `suspendable` separately from `terminal`, so an epic at `open` can be suspended by a blocking question or an impasse (F-013). |
