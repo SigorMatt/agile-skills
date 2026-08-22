@@ -1,25 +1,21 @@
 # CHECKPOINT
 
-## Current unit: META-096 — harness H-004, H-005, H-006, H-007: the turn loop
+## Current unit: META-098 — the regression gate, part 1: everything is rendered and installable
 
-Four findings, one unit, because all four are the driver's turn loop and its worker prompt.
+Clusters 1, 2, 3 and 6 are done. Before iteration 1d runs against this toolkit, prove that what
+*ships* works — the harness installs the adapter's `dist/` into a throwaway project, so a script
+that exists in `scripts/` and not in `dist/` would surface as a mid-run failure with no
+explanation.
 
 Steps:
-1. **H-004** — before dispatching a worker turn, the driver checks its own observed state; if
-   unanswered human-addressed questions exist, it dispatches a sim `answer` turn instead. One
-   full round trip was wasted per occurrence.
-2. **H-005** — a killed turn records `cost_usd: null` with `cost-unknown: true` rather than
-   `0.00`, and a `HARNESS-STATUS.md` whose mtime predates the turn's start is recorded as "no
-   status written" instead of being silently attributed to the killed turn.
-3. **H-006** — the worker prompt bounds a turn to N skill executions (config
-   `worker-skills-per-turn`, substituted into the prompt), so turns are comparable and
-   `--turn-timeout` stops punishing progress.
-4. **H-007** — the sim gets one closing turn before any `epic-done` stop is accepted, logged as
-   job `closing`. Partly self-healing now that F-022 opens a sign-off question at closure, but
-   belt and braces.
-5. Tests for each; check green; FINDINGS; journal; commit; push. **Harness prefix.**
+1. `./scripts/check` green (10 steps).
+2. Provision a scratch throwaway project through the real installer and confirm: every new
+   script is present and runs from the installed location (`journal-entry`, `lint-claims`,
+   `check-epic-signoff`), `spec/request.md` shipped, `tracker/requests/` created, the pipeline
+   carries `suspendable`, and the validator is green on the fresh workspace.
+3. Fix anything that does not ship; commit; push.
 
-Next unit: **META-098** — re-render and the full regression gate, then **META-099** (iteration 1d).
+Next unit: **META-099** — configure and run iteration 1d.
 
 ## Standing instructions (still in force)
 
