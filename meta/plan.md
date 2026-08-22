@@ -230,6 +230,11 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
       post-move state), F-015 (journal written with the status move), F-016 (epic-level record
       commits have a stated home).
 
+> **Order change, 2026-08-22 (META-090):** cluster 6 runs before clusters 4 and 5. Iteration 1d
+> is the regression gate for clusters 1, 2 **and** 6, and its expected shape — the sign-off gate
+> fires and the sim answers it — depends on H-004 and H-007. Clusters 4 and 5 are the ones to
+> drop if the session runs short, per the mission's own priority order.
+
 ### Cluster 4 — refine calibration
 - [ ] **META-091** — F-020 (grouped presentation per item per round) and F-023 (routing test:
       product-stake to the human, implementation-only decided and recorded, standing deferrals
