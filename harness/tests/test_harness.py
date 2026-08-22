@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -383,6 +385,76 @@ class Configuration(unittest.TestCase):
                 "PROJECT_DIR": "/p", "TURN": 1, "STATUS_FILE": "S.md", "SIM_LOG": "/l",
                 "PERSONA_FILE": "/p.md", "PROBE_FILE": "/q.md", "JOB": "answer",
                 "NOW": "2026-08-21T00:00:00Z"}), name)
+
+
+class StopClassification(unittest.TestCase):
+    """H-002: a stop is either an interruption you resume or a verdict you do not."""
+
+    def test_an_interrupted_turn_is_resumable(self):
+        for reason in ("turn-failed", "turn-timeout", "api-rejected"):
+            self.assertTrue(run_iteration.stop_is_resumable(reason), reason)
+
+    def test_a_verdict_is_not_resumable(self):
+        for reason in ("epic-done", "blocked-no-recourse", "turn-budget", "contamination",
+                       "validator-failed", "stalled"):
+            self.assertFalse(run_iteration.stop_is_resumable(reason), reason)
+
+    def test_every_stop_reason_the_driver_emits_is_classified(self):
+        """A stop nobody classified would silently fall through to 'terminal'."""
+        source = open(os.path.join(HARNESS, "run_iteration.py"), encoding="utf-8").read()
+        emitted = set(re.findall(r'self\.stop\(\s*"([a-z-]+)"', source))
+        known = set(run_iteration.RESUMABLE_STOPS) | set(run_iteration.TERMINAL_STOPS)
+        self.assertEqual(emitted - known, set(),
+                         "stop reasons the driver emits but neither table names")
+
+    def test_an_unknown_reason_is_treated_as_terminal(self):
+        self.assertFalse(run_iteration.stop_is_resumable("something-new"))
+
+    def test_a_limit_rejection_is_recognised_and_ordinary_output_is_not(self):
+        self.assertTrue(run_iteration.looks_api_rejected(
+            "API Error: 429 rate_limit_error: usage limit reached"))
+        self.assertTrue(run_iteration.looks_api_rejected("Authentication failed"))
+        self.assertFalse(run_iteration.looks_api_rejected(
+            "the worker reported: tests failed, 3 of 14"))
+        self.assertFalse(run_iteration.looks_api_rejected(""))
+
+
+class WipeSafety(unittest.TestCase):
+    """H-003: --wipe deletes a directory, so it refuses everything it did not create."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+    def test_a_stranger_directory_is_refused(self):
+        target = os.path.join(self.root, "not-ours")
+        os.makedirs(target)
+        open(os.path.join(target, "important.txt"), "w").close()
+        self.assertEqual(provision.wipe(target, self.root, False), 2)
+        self.assertTrue(os.path.isdir(target))
+
+    def test_the_throwaway_root_itself_is_refused(self):
+        os.makedirs(os.path.join(self.root, ".harness"), exist_ok=True)
+        with open(os.path.join(self.root, provision.MARKER), "w") as handle:
+            handle.write("{}")
+        self.assertEqual(provision.wipe(self.root, self.root, False), 2)
+        self.assertTrue(os.path.isdir(self.root))
+
+    def test_a_provisioned_directory_is_wiped(self):
+        target = os.path.join(self.root, "ours")
+        os.makedirs(os.path.join(target, os.path.dirname(provision.MARKER)), exist_ok=True)
+        with open(os.path.join(target, provision.MARKER), "w") as handle:
+            handle.write("{}")
+        self.assertEqual(provision.wipe(target, self.root, False), 0)
+        self.assertFalse(os.path.exists(target))
+
+    def test_a_dry_run_deletes_nothing(self):
+        target = os.path.join(self.root, "ours")
+        os.makedirs(os.path.join(target, os.path.dirname(provision.MARKER)), exist_ok=True)
+        with open(os.path.join(target, provision.MARKER), "w") as handle:
+            handle.write("{}")
+        self.assertEqual(provision.wipe(target, self.root, True), 0)
+        self.assertTrue(os.path.isdir(target))
 
 
 if __name__ == "__main__":

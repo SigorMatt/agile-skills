@@ -486,7 +486,17 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   terminal (epic-done, blocked-no-recourse, budget, contamination); resumable stops resume
   on plain rerun, exactly as §9 already promises. Fix the --fresh hint text to say what it
   actually does (see H-003).
-- Status: open
+- Status: fixed (commit 4f2ebea), as filed. `RESUMABLE_STOPS` = `turn-timeout`,
+  `api-rejected`, `turn-failed`; `TERMINAL_STOPS` = `epic-done`, `blocked-no-recourse`,
+  `turn-budget`, `contamination`, `validator-failed`, `stalled`. A resumable stop clears on a
+  plain rerun, logs a `resume-after-stop` event, and re-runs the interrupted turn; nothing is
+  archived. A killed turn is now recorded as `turn-timeout` rather than `turn-failed`, and a
+  turn the API refused as `api-rejected`, so the log answers "why did this stop" without
+  opening a transcript. The terminal message now states exactly what `--fresh` archives (the
+  run) and what it does not (the project), and points at `provision.py --wipe`.
+  Five tests, including one that reads the driver's source for every `self.stop("...")` it emits
+  and fails if either table has missed one — the way this regresses is a new stop reason nobody
+  classifies, silently defaulting to terminal.
 
 ## H-003 — --fresh archives the run logs but not the project workspace
 - Severity: harness, correctness of semantics + misleading docs
@@ -504,7 +514,15 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: provision gains --wipe (or --fresh re-provisions the workspace too, behind an
   explicit confirmation); whichever way, one flag means one thing and USAGE says which.
   Needed anyway for iteration 1b's true-fresh start.
-- Status: open
+- Status: fixed (commit 4f2ebea). `provision.py --wipe` deletes the project directory
+  and re-provisions from nothing. Two refusals, because the flag deletes: the directory must
+  carry `.harness/provision.json` (so a wipe cannot land on something this tool did not create)
+  and it must be strictly inside the throwaway root (so a mistyped `--root` cannot make this a
+  general-purpose delete). `--dry-run` deletes nothing. Four tests cover both refusals, the
+  success, and the dry run.
+  `--fresh` keeps its meaning and now states it: `harness/USAGE.md` §3 carries a two-row table —
+  a new run over whatever the last one built, versus a genuinely fresh start — and names H-003's
+  symptom as the reason the distinction is written down.
 
 ## H-004 — After a start/resume, the driver runs a worker turn into unanswered human questions
 - Severity: harness, scheduling (one full round trip wasted per occurrence)

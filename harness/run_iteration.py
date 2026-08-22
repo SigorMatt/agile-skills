@@ -54,6 +54,48 @@ STATUS_FILE = "HARNESS-STATUS.md"
 WORKER_STOP_REASONS = ("human-question-open", "nothing-runnable", "epic-done",
                        "validator-failed", "blocked", "turn-budget-exhausted", "error")
 
+# H-002: a stop is either the run finishing or the run being interrupted, and the two need
+# opposite recoveries. A killed turn, or a turn the API refused, says nothing about the work —
+# the workspace is intact, the trail is intact, and rerunning the same command is exactly what
+# should happen (harness/USAGE.md §9 has always promised this). Everything else is a verdict on
+# the run, and rerunning it would paper over the verdict.
+RESUMABLE_STOPS = {
+    "turn-failed": "the turn was killed or errored; the workspace and the trail are intact",
+    "turn-timeout": "the turn hit --turn-timeout and was killed",
+    "api-rejected": "the model API refused the turn (limit, auth, or transport)",
+}
+TERMINAL_STOPS = {
+    "epic-done": "the run reached its end",
+    "blocked-no-recourse": "the run reached an impasse with nothing left to ask",
+    "turn-budget": "the configured turn budget is spent",
+    "contamination": "a turn read or wrote outside the boundary; --reaudit is the recovery",
+    "validator-failed": "the workspace no longer validates; fix it, then --fresh or --reaudit",
+    "stalled": "three turns changed nothing",
+}
+
+
+def stop_is_resumable(reason) -> bool:
+    return reason in RESUMABLE_STOPS
+
+
+API_REJECTION_MARKERS = (
+    "rate limit", "rate_limit", "usage limit", "overloaded", "quota",
+    "authentication", "unauthorized", "invalid api key", "credit balance",
+    "connection error", "network error", "503", "529",
+)
+
+
+def looks_api_rejected(text: str) -> bool:
+    """Did the model API refuse this turn, rather than the turn going wrong?
+
+    Deliberately a text match, and deliberately generous: the cost of a false positive is that a
+    genuinely broken turn is offered a resume it will fail again immediately and visibly, while
+    the cost of a false negative is the run being declared finished because a subscription limit
+    was reached at minute forty.
+    """
+    lowered = (text or "").lower()
+    return any(marker in lowered for marker in API_REJECTION_MARKERS)
+
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -347,7 +389,8 @@ def stream_turn(argv, cwd, transcript_path, timeout, pid_path=None):
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
             except (OSError, ProcessLookupError):
                 process.kill()
-            return {"exit": -1, "stderr": "turn exceeded the timeout and was killed",
+            return {"exit": -1, "killed": "timeout",
+                    "stderr": "turn exceeded the timeout and was killed",
                     "duration": time.time() - started, "tool_calls": tool_calls}
         finally:
             for sig, handler in previous.items():
@@ -527,9 +570,35 @@ class Run:
                 "     old run, or point --root at the project the run belongs to.\n")
             return 2
         if self.state and self.state.get("status") == "stopped" and not self.args.fresh:
-            say(f"this run already stopped: {self.state.get('stop-reason')}")
-            say("pass --fresh to archive it and start a new one")
-            return 0
+            reason = self.state.get("stop-reason")
+            if stop_is_resumable(reason):
+                say(f"the previous run stopped on {reason!r} — {RESUMABLE_STOPS[reason]}")
+                say("resuming: the interrupted turn runs again, and every skill reconciles "
+                    "with what it finds on disk")
+                self.log({"event": "resume-after-stop", "at": now(), "stop-reason": reason,
+                          "stop-detail": self.state.get("stop-detail")})
+                self.state["status"] = "running"
+                for field in ("stop-reason", "stop-detail", "stopped"):
+                    self.state.pop(field, None)
+                self.state["resumed-after"] = reason
+                self.save_state()
+            else:
+                say(f"this run already stopped: {reason} — "
+                    f"{TERMINAL_STOPS.get(reason, 'a terminal stop')}")
+                say("that is a verdict on the run, not an interruption, so rerunning will not "
+                    "continue it.")
+                say(f"  --fresh   archives {os.path.basename(self.run_dir)} (the driver's logs, "
+                    f"state and transcripts) and starts a new run")
+                say(f"            against the SAME project workspace at {self.project_dir},")
+                say("            which keeps whatever the last run built. To start from an "
+                    "empty project as well,")
+                say(f"            run  harness/provision.py --iteration {self.iteration} --wipe "
+                    f" first.")
+                if reason == "contamination":
+                    say("  --reaudit re-runs the contamination rules over the stored "
+                        "transcripts and clears")
+                    say("            the stop if today's rules find them clean")
+                return 0
         if self.state is None:
             self.state = {"iteration": self.iteration, "project": self.project_dir,
                           "started": now(), "turn": 0, "next-role": "sim", "next-job": "open",
@@ -595,11 +664,22 @@ class Run:
                 return self.stop("contamination", detail)
 
             if record["outcome"]["exit"] != 0 or record["result"].get("is_error"):
-                return self.stop("turn-failed",
+                text = (f"{record['outcome']['stderr'][-400:] or ''}"
+                        f"{record['result'].get('result_text', '')[-400:]}")
+                # All three are interruptions rather than verdicts, so all three are resumable
+                # (H-002). Naming them apart is what makes the iteration log answer "why did
+                # this run stop" without opening a transcript.
+                if record["outcome"].get("killed") == "timeout":
+                    reason = "turn-timeout"
+                elif looks_api_rejected(text):
+                    reason = "api-rejected"
+                else:
+                    reason = "turn-failed"
+                return self.stop(reason,
                                  f"turn {number} ({role}) exited "
-                                 f"{record['outcome']['exit']}: "
-                                 f"{record['outcome']['stderr'][-400:] or ''}"
-                                 f"{record['result'].get('result_text', '')[-400:]}")
+                                 f"{record['outcome']['exit']}: {text}\n"
+                                 f"This stop is resumable: rerun the same command and the "
+                                 f"interrupted turn runs again.")
 
             decision = self.decide(role, observed, record)
             if decision["stop"]:

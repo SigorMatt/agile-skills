@@ -68,13 +68,27 @@ Useful flags:
 | `--max-budget-usd X` | per-turn spend cap, passed to `claude` |
 | `--turn-timeout S` | kill a single turn after this many seconds (default 3600) |
 | `--worker-permission-mode` | default `bypassPermissions`; the project is a throwaway |
-| `--fresh` | archive the existing run for this iteration and start over |
+| `--fresh` | archive this iteration's **run** — logs, state, transcripts — and start a new one |
 | `--root DIR` | where the throwaway projects live |
 
-One run directory per iteration id. A finished run is not silently overwritten: rerunning after
-a stop says so and tells you to pass `--fresh`, which archives it to `<iteration>.N`. If the run
-directory belongs to a project at a different path — a new `--root`, a reprovisioned project —
-the driver refuses rather than mixing two projects into one log.
+One run directory per iteration id. If the run directory belongs to a project at a different
+path — a new `--root`, a reprovisioned project — the driver refuses rather than mixing two
+projects into one log.
+
+**`--fresh` and `--wipe` are two different things, and you usually want both.**
+
+| You want | Command |
+|----------|---------|
+| a new run over whatever the last run built | `run_iteration.py --iteration X --fresh` |
+| a genuinely fresh start, empty project included | `provision.py --iteration X --wipe` then `run_iteration.py --iteration X --fresh` |
+
+`--fresh` archives `harness/runs/<iteration>/` to `<iteration>.N`. It does **not** touch the
+project workspace, so the next run opens on a project that already has an epic, items and
+answered questions. That is occasionally what you want and it is never what you expect: it is
+how iteration 1 silently resumed the mini run's epic, with turn 1's sim finding `IDEA.md`
+already present (H-003). `provision.py --wipe` is the other half — it deletes the project
+directory and re-provisions from nothing, and it refuses any directory that does not carry
+`.harness/provision.json` or that is not inside the throwaway root.
 
 **Stopping and resuming.** Rerun the same command. The run directory is derived from the
 iteration id and `state.json` says whose turn it is; a turn that was interrupted is simply run
@@ -176,9 +190,32 @@ fails the gate instead of passing a run.
 
 ## 9. When something goes wrong
 
+**First, is the stop resumable?** A stop is either an interruption or a verdict, and the two need
+opposite responses. The driver says which when you rerun.
+
+| Stop | Kind | What to do |
+|------|------|-----------|
+| `turn-timeout` | resumable | rerun the same command — the killed turn runs again |
+| `api-rejected` | resumable | wait for the limit or fix the credentials, then rerun |
+| `turn-failed` | resumable | read the transcript, fix the cause, then rerun |
+| `epic-done` | terminal | the run finished |
+| `blocked-no-recourse` | terminal | the run reached an impasse; that is a result |
+| `turn-budget` | terminal | raise `--max-turns` and `--fresh`, or accept it |
+| `stalled` | terminal | read the worker's status files in order; this is a finding |
+| `validator-failed` | terminal | the workspace is broken; that is a finding about the toolkit |
+| `contamination` | terminal | `--reaudit`, below |
+
+A **resumable** stop clears itself on a plain rerun: the driver says which stop it is clearing,
+logs a `resume-after-stop` event, and runs the interrupted turn again. Nothing is archived and
+nothing is lost. This is what §3 has always promised and, until H-002 was fixed, did not deliver —
+a killed turn was terminal in code, and the only offered exit archived four turns of good work.
+
+A **terminal** stop is a verdict on the run, so rerunning will not continue it. The driver prints
+what `--fresh` will and will not do (see §3: it archives the run, not the project).
+
 **The run stops immediately with `turn-failed`.** Read
-`turns/NNN-<role>.stderr.txt` and the `result_text` in the log line. Authentication, an invalid
-flag and a spend cap all land here.
+`turns/NNN-<role>.stderr.txt` and the `result_text` in the log line. An invalid flag and a spend
+cap land here; authentication and rate limits are recognised separately as `api-rejected`.
 
 **The run stops with `contamination`.** Read the rule and the evidence in the log line. If it is
 a real violation, the run is over and the finding is about whichever side crossed the boundary.
@@ -203,5 +240,5 @@ stopping without doing anything: read its `HARNESS-STATUS.md` files in order.
 tracker. It is a finding about the worker prompt or about the toolkit, not something to fix by
 hand in the project.
 
-**A turn hangs.** `--turn-timeout` kills it; the driver records `exit=-1` and stops. Resume with
-the same command.
+**A turn hangs.** `--turn-timeout` kills it; the driver records `exit=-1`, stops with
+`turn-timeout`, and says the stop is resumable. Rerun the same command and the turn runs again.

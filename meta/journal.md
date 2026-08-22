@@ -2387,3 +2387,40 @@ nothing wrong.
 
 Versions: answer-questions 0.1.4, implement 0.2.1, review-close 0.3.1, worker-turn prompt 3.
 Evidence: `./scripts/check` — 10 steps, all passed.
+
+## META-095 — harness H-002 and H-003: resume means resume, fresh means fresh
+
+Correction to META-090, recorded here because the rule was explicit: the worker-turn prompt edit
+that deleted F-011's workaround went into the toolkit commit rather than a harness one. It was
+inseparable from the contract fix — the workaround exists only because the contract was wrong —
+but the two-ledger rule said otherwise and I did not split it. Noting rather than rewriting.
+
+**H-002.** The driver treated every stop the same, so a turn killed by `--turn-timeout` was as
+final as a finished epic, and the only offered exit archived four turns of good work. The
+distinction that was missing is not "which reasons are bad" but *what a stop is a statement
+about*: a killed turn or an API refusal says nothing about the work — the workspace is intact,
+the trail is intact — while `epic-done` and `stalled` are verdicts on the run. So the tables are
+`RESUMABLE_STOPS` and `TERMINAL_STOPS`, a resumable stop clears itself on a plain rerun with a
+logged `resume-after-stop` event, and the terminal message finally says what `--fresh` archives.
+
+Two smaller things fell out. A killed turn is now `turn-timeout` and an API refusal is
+`api-rejected`, instead of everything being `turn-failed` — the iteration log can now answer "why
+did this stop" without opening a transcript. And `looks_api_rejected` is deliberately a generous
+text match: a false positive offers a resume to a turn that will fail again immediately and
+visibly, while a false negative declares the run finished because a subscription limit was
+reached at minute forty.
+
+The test I care about most is the one that greps the driver's own source for every
+`self.stop("...")` and fails if either table has missed one. The way this regresses is not a
+mis-classified reason; it is a *new* reason nobody classifies, silently defaulting to terminal.
+
+**H-003.** `provision.py --wipe`. The flag deletes a directory, so it refuses twice: the target
+must carry `.harness/provision.json`, and it must be strictly inside the throwaway root. Neither
+refusal is theoretical — the first stops a wipe landing on a directory somebody else made, the
+second stops a mistyped `--root` turning this into a general-purpose delete. `--dry-run` deletes
+nothing, and there is a test for that too.
+
+USAGE §3 now carries the two-row table that would have prevented the confusion: `--fresh` for a
+new run over whatever the last one built, `--wipe` then `--fresh` for a genuinely fresh start.
+
+Evidence: `./scripts/check` — 10 steps, all passed; harness self-test 38 tests.

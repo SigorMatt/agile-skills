@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -127,6 +128,44 @@ def directory_state(project_dir):
     if os.path.isfile(os.path.join(project_dir, MARKER)):
         return "ours", "carries .harness/provision.json"
     return "stranger", f"contains {len(entries)} entry/entries and no provisioning marker"
+
+
+def wipe(project_dir, root, dry_run) -> int:
+    """Delete a provisioned project so the next provision starts from nothing (H-003).
+
+    `--fresh` on the driver archives the *run* — logs, state, transcripts — and leaves the
+    project workspace exactly as the last run left it. That is a reasonable thing for it to do
+    and it was not what anyone expected: iteration 1 silently resumed the mini run's epic, so
+    turn 1's sim found IDEA.md already present and turn 2's worker found thirteen of sixteen
+    questions already answered. One flag, one meaning. This is the other meaning.
+
+    Two refusals, both deliberate. The directory must carry this tool's own marker, so a wipe
+    cannot land on a directory somebody else made; and it must sit under the throwaway root, so
+    a mistyped --root cannot turn this into a general-purpose delete.
+    """
+    state, detail = directory_state(project_dir)
+    if state == "empty":
+        print(f"provision: nothing to wipe at {project_dir} ({detail})")
+        return 0
+    if state != "ours":
+        sys.stderr.write(
+            f"provision: refusing to wipe {project_dir}\n"
+            f"           it {detail}, so this tool did not create it.\n"
+            f"           --wipe deletes a directory; it will only ever delete one that carries\n"
+            f"           {MARKER}.\n")
+        return 2
+    if os.path.commonpath([os.path.abspath(project_dir), root]) != root \
+            or os.path.abspath(project_dir) == root:
+        sys.stderr.write(
+            f"provision: refusing to wipe {project_dir}\n"
+            f"           it is not a directory *inside* the throwaway root {root}.\n")
+        return 2
+    if dry_run:
+        print(f"  would delete {project_dir} and everything under it")
+        return 0
+    shutil.rmtree(project_dir)
+    print(f"provision: wiped {project_dir} — the next provision starts from nothing")
+    return 0
 
 
 def write_file(path, content, dry_run):
@@ -307,6 +346,10 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true",
                         help="provision into a non-empty directory that is not ours")
+    parser.add_argument("--wipe", action="store_true",
+                        help="delete the project directory first, so provisioning starts from "
+                             "nothing. Only works on a directory this tool provisioned, and "
+                             "only under the throwaway root")
     parser.add_argument("--trust", action="store_true",
                         help="mark the project trusted in ~/.claude.json, so that the "
                              "allow-list in .claude/settings.json is honoured in headless runs")
@@ -319,8 +362,12 @@ def main() -> int:
         config = load_iteration(args.iteration)
         project_name = args.project or config["project"]
     root = os.path.abspath(os.path.expanduser(args.root))
-    return provision(os.path.join(root, project_name), project_name, args.dry_run,
-                     args.force, args.trust)
+    project_dir = os.path.join(root, project_name)
+    if args.wipe:
+        code = wipe(project_dir, root, args.dry_run)
+        if code:
+            return code
+    return provision(project_dir, project_name, args.dry_run, args.force, args.trust)
 
 
 if __name__ == "__main__":
