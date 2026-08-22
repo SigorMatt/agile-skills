@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.2.0
+version: 0.3.0
 
 item_types:
   - epic
@@ -228,15 +228,18 @@ orchestrator:
       action: validate
       description: Run the workspace validator. If it fails, report and stop; a broken workspace makes every later step unsound.
     - id: 2
+      action: route-stakeholder-requests
+      description: If any request under tracker/requests/ has status open, dispatch intake on the oldest one and stop. The stakeholder speaking outranks selecting work; a request handled after the current item finishes is a request answered against a plan they already tried to change.
+    - id: 3
       action: surface-human-questions
       description: If any question with addressed-to human and status open exists, surface it with its item and stop.
-    - id: 3
+    - id: 4
       action: dispatch-answer-questions
       description: Else if any question addressed to architect is open, dispatch answer-questions on the oldest such question's item.
-    - id: 4
+    - id: 5
       action: dispatch-owner
       description: Else pick the runnable item with the best selection key and dispatch its status owner.
-    - id: 5
+    - id: 6
       action: report-and-stop
       description: Else regenerate the board, report it with any blocked items and open non-blocking questions, and stop.
 
@@ -254,5 +257,6 @@ orchestrator:
 
   stop_conditions:
     - The workspace validator failed.
+    - An open stakeholder request was routed to intake.
     - A question addressed to the human is open.
     - No item is runnable.

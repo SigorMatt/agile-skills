@@ -1,9 +1,10 @@
 name: intake
-version: 0.1.2
+version: 0.2.0
 persona: product-analyst
 purpose: Turn a raw idea from a human into an epic and a first set of work items in the tracker.
 
 when_to_use:
+  - The orchestrator routed an open stakeholder request under tracker/requests/.
   - A human has described something they want built and no epic exists for it yet.
   - The workspace has no tracker directory and work is about to start.
   - A human proposes a second, unrelated body of work in a project that already has a tracker.
@@ -17,8 +18,11 @@ human_interaction: direct
 
 inputs:
   - path: "the human's stated idea, in this session"
-    required: true
+    required: false
     why: this skill exists to convert it; there is no artifact to read it from yet
+  - path: tracker/requests/
+    required: false
+    why: a stakeholder request dispatched by next is this execution's input instead of a spoken idea
   - path: tracker/project.yaml
     required: false
     why: an existing project's name, trunk branch and commands constrain what can be proposed

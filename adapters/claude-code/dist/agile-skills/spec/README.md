@@ -16,6 +16,7 @@ Nothing here names a particular agent runtime, tool, CLI, or vendor. That is a h
 | [`work-item.md`](work-item.md) | `item.md` — frontmatter fields and body sections for epics, work items, and bugs |
 | [`journal-and-history.md`](journal-and-history.md) | `journal.md` entry format; `history.md` transition format |
 | [`question.md`](question.md) | `questions/Q-###.md` format and the escalation protocol |
+| [`request.md`](request.md) | `requests/R-###.md` format — the stakeholder's own channel, a question in reverse |
 | [`doc-header.md`](doc-header.md) | version header and change log carried by every file under `docs/`; the ADR format |
 | [`dor-dod.md`](dor-dod.md) | Definition of Ready and Definition of Done, per item type |
 | [`skill-contract.md`](skill-contract.md) | `skill.yaml` schema and what a `process.md` must contain |

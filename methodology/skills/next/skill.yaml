@@ -1,5 +1,5 @@
 name: next
-version: 0.1.0
+version: 0.2.0
 persona: scheduler
 purpose: Pick the single next runnable action from workspace state and dispatch the skill that owns it.
 
@@ -16,6 +16,9 @@ dispatch:
 human_interaction: none
 
 inputs:
+  - path: tracker/requests/
+    required: false
+    why: an open stakeholder request outranks selecting work, so it is read before the candidate set is built
   - path: methodology/pipeline.yaml
     required: true
     why: the status graph, the status-to-skill map, and the selection key - this skill's entire world model

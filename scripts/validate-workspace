@@ -25,10 +25,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 
 import board as board_lib  # noqa: E402
 from claims import CitationResolver  # noqa: E402
+import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
-                       Workspace, id_kind, resolve_root)
+                       Workspace, id_kind, resolve_root, split_sections)
 
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
 ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "depends-on", "blocks",
@@ -39,6 +40,10 @@ QUESTION_FIELDS_REQUIRED = ["id", "item", "from-skill", "addressed-to", "blockin
                             "created"]
 QUESTION_FIELDS_OPTIONAL = ["answered-at", "answered-by", "kind"]
 QUESTION_KINDS = {"decision", "sign-off"}
+REQUEST_FIELDS_REQUIRED = ["id", "from", "status", "created"]
+REQUEST_FIELDS_OPTIONAL = ["about", "handled-at", "handled-by"]
+REQUEST_STATUS = {"open", "accepted", "declined"}
+REQUEST_ID_RE = re.compile(r"^R-\d{3}$")
 ADDRESSED_TO = {"architect", "human"}
 QUESTION_STATUS = {"open", "answered"}
 
@@ -908,6 +913,67 @@ class Validator:
 
     # ---- driver --------------------------------------------------------------------
 
+    def check_requests(self) -> None:
+        """The stakeholder's own channel (spec/request.md, F-021).
+
+        A request is the one artifact in the workspace a skill did not create, so the rules are
+        about not losing it: it must be readable, it must reach a recorded outcome, and its
+        `## Request` — the stakeholder's actual words — must still be there.
+        """
+        directory = os.path.join(self.workspace.tracker, "requests")
+        if not os.path.isdir(directory):
+            return
+        for name in sorted(os.listdir(directory)):
+            path = os.path.join(directory, name)
+            if not name.endswith(".md") or not os.path.isfile(path):
+                continue
+            identifier = name[:-3]
+            if not REQUEST_ID_RE.match(identifier):
+                self.report.error(path, 0, "request.filename",
+                                  f"filename {identifier!r} must be R-###")
+            try:
+                fields, body, body_line = frontmatter.load_file(path)
+            except Exception as exc:                      # noqa: BLE001 - reported, not raised
+                self.report.error(path, 0, "request.unparsable", str(exc))
+                continue
+            fields = fields or {}
+            self.check_fields(path, fields, REQUEST_FIELDS_REQUIRED, REQUEST_FIELDS_OPTIONAL,
+                              "request")
+            if fields.get("id") != identifier:
+                self.report.error(path, 0, "request.id.mismatch",
+                                  f"id is {fields.get('id')!r} but the filename is "
+                                  f"{identifier!r}")
+            if fields.get("from") != "human":
+                self.report.error(path, 0, "request.from",
+                                  f"from is {fields.get('from')!r}; a request is the "
+                                  f"stakeholder speaking, and has no other author",
+                                  hint="a skill that wants something files a question, not a "
+                                       "request (spec/request.md §4)")
+            status = fields.get("status")
+            if status not in REQUEST_STATUS:
+                self.report.error(path, 0, "request.status",
+                                  f"status must be one of {sorted(REQUEST_STATUS)}")
+            self.check_timestamp(path, 0, "request.created", fields.get("created"), "created")
+            about = fields.get("about")
+            if about and about not in self.workspace.items:
+                self.report.error(path, 0, "request.about.dangling",
+                                  f"about is {about!r}, which is not an item in this workspace")
+            sections = split_sections(body or "", body_line or 0)
+            if not sections.get("## Request", {}).get("text", "").strip():
+                self.report.error(path, 0, "request.section.empty",
+                                  "## Request is empty",
+                                  hint="those are the stakeholder's own words and the only "
+                                       "record of what they asked for")
+            if status in ("accepted", "declined"):
+                for label in ("## Response", "## Consequences"):
+                    if not sections.get(label, {}).get("text", "").strip():
+                        self.report.error(path, 0, "request.handled.section",
+                                          f"{label} is empty, but the request is {status!r}")
+                for field in ("handled-at", "handled-by"):
+                    if not fields.get(field):
+                        self.report.error(path, 0, "request.handled.field",
+                                          f"a request that is {status!r} must record {field}")
+
     def check_claim_citations(self) -> None:
         """Rule 1 of claim provenance (F-001): a citation must resolve.
 
@@ -944,6 +1010,7 @@ class Validator:
         self.check_epics()
         self.check_docs()
         self.check_board()
+        self.check_requests()
         self.check_claim_citations()
         self.report.note(f"checked {len(self.workspace.items)} item(s), "
                          f"{len(self.workspace.docs)} document(s)")

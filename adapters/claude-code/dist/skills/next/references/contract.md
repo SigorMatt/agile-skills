@@ -1,4 +1,4 @@
-# Contract — next v0.1.0
+# Contract — next v0.2.0
 
 Rendered from `methodology/skills/next/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -14,6 +14,7 @@ Rendered from `methodology/skills/next/skill.yaml`. This is the authoritative li
 
 | path | required | why |
 |------|----------|-----|
+| `tracker/requests/` | no | an open stakeholder request outranks selecting work, so it is read before the candidate set is built |
 | `methodology/pipeline.yaml` | yes | the status graph, the status-to-skill map, and the selection key - this skill's entire world model |
 | `tracker/items/*/item.md` | yes | the statuses, priorities, dependencies and creation times the selection key ranks |
 | `tracker/items/*/questions/*.md` | yes | an open blocking question changes what may run, and a human-addressed question stops the loop |

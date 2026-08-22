@@ -3,7 +3,7 @@
 
 Usage: scripts/workspace-init [project-root]
 
-Creates tracker/ (with project.yaml and items/) and the docs/ directories. Running it again on
+Creates tracker/ (with project.yaml, items/ and requests/) and the docs/ directories. Running it again on
 an existing workspace changes nothing and exits 0 — a skill may call it without first having to
 decide whether the workspace exists.
 
@@ -39,6 +39,7 @@ conventions:
 DIRECTORIES = [
     "tracker",
     "tracker/items",
+    "tracker/requests",
     "docs",
     "docs/product",
     "docs/architecture",

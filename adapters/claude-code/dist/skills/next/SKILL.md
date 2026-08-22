@@ -4,7 +4,7 @@ description: "Pick the single next runnable action from workspace state and disp
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: next
-  methodology-version: 0.1.0
+  methodology-version: 0.2.0
   persona: scheduler
   human-interaction: none
 ---
@@ -63,7 +63,17 @@ action.
    dispatch anything: every skill begins by trusting the workspace, so dispatching against a
    broken one propagates the breakage into work that looks legitimate.
 
-2. **Surface questions addressed to the human.** Read every `tracker/items/*/questions/*.md`. If
+2. **Route anything the stakeholder said on their own initiative.** Read
+   `tracker/requests/*.md`. If any has `status: open`, dispatch `intake` on the **oldest** one
+   (by `created`, then ID) and stop. Name the request ID in your report.
+
+   This comes before selecting work, not after, and the ordering is the whole point. A request
+   handled once the current item finishes is a request answered against a plan the stakeholder
+   has already tried to change. It is also the only channel they have that nobody opened for
+   them: every other one — questions, answers, sign-off — begins with a skill asking (F-021,
+   `spec/request.md` §1).
+
+3. **Surface questions addressed to the human.** Read every `tracker/items/*/questions/*.md`. If
    any has `addressed-to: human` and `status: open`, print it — the item, the question ID, the
    question text, and the options considered — and **stop the loop**. There is nothing else you
    may legitimately do: the pipeline is waiting on a person.
@@ -71,11 +81,11 @@ action.
    Print the question in full, not a pointer to it. The human returning to this session should
    be able to answer without opening a file.
 
-3. **Dispatch `answer-questions`.** Else, if any question has `addressed-to: architect` and
+4. **Dispatch `answer-questions`.** Else, if any question has `addressed-to: architect` and
    `status: open`, dispatch `answer-questions` on the item owning the **oldest** such question
    (by `created`, then item ID). Stop.
 
-4. **Dispatch the status owner.** Else, build the candidate set: every item that is **runnable**,
+5. **Dispatch the status owner.** Else, build the candidate set: every item that is **runnable**,
    which per `pipeline.yaml` means all of:
    - its status has a non-null `owner` in `pipeline.yaml`;
    - it has no open blocking question;
@@ -88,10 +98,11 @@ action.
    The selection key is total and mechanical. Two runs over the same workspace must pick the
    same item; if yours would not, you have applied judgement somewhere.
 
-5. **Report and stop.** Else nothing is runnable. Regenerate the board and report:
+6. **Report and stop.** Else nothing is runnable. Regenerate the board and report:
    - the board summary;
    - every `blocked` item with the reason from its last history row;
    - every open question and who it is addressed to;
+   - every request whose `status` is still `open`, if any reached this step;
    - if every item is `done`: say so, and name any epic still `open` and why.
 
 ---

@@ -2311,3 +2311,39 @@ hand-authored prose, so its history rows and timestamps are ones the tools actua
 Both are steps in `./scripts/check`, one expecting failure and one expecting success.
 
 `review-close` → 0.3.0. Evidence: `./scripts/check` — 10 steps, all passed, 53 fixture codes.
+
+## META-089 — F-021: a channel the stakeholder opens
+
+Every channel the methodology had is opened by a skill: a question is the pipeline asking, an
+answer is the reply, a sign-off is the pipeline asking one last time. Run 1b's sim held a new
+requirement across two turns and wrote in its own log that no question gave it a vehicle to raise
+it, then watched the epic close without it. That is not a stakeholder being shy; it is a protocol
+with no inbound direction.
+
+`spec/request.md` is that direction: `tracker/requests/R-###.md`, `from: human`, filed at the
+workspace level rather than under an item. The placement is the design decision worth recording —
+a stakeholder does not know which item their thought belongs to, and asking them to file it in the
+right place is asking them to do `intake`'s job before `intake` has looked at it.
+
+Three rules I want to be able to point at later:
+
+- **`## Request` is never edited by a skill.** It is the only record of what was actually asked
+  for, in the words it was asked in. A skill that thinks the framing is wrong says so in
+  `## Response`.
+- **Declining is a first-class outcome.** A request outside scope, or contradicting a decision
+  the stakeholder themselves recorded, is declined in writing with the reason and with what would
+  have to change. Silently absorbing a request and silently dropping one are the same failure;
+  the artifact exists to make both visible.
+- **A request suspends nothing by itself.** If acting on it invalidates an item that is
+  mid-flight, `intake` files a blocking question on that item and the ordinary suspension rules
+  run. Letting a request reach into a running item would put a second writer on its status.
+
+Routing is orchestrator step 2 — after validation, before surfacing questions and well before
+selecting work. A request handled once the current item finishes is a request answered against a
+plan the stakeholder has already tried to change.
+
+One practical note for iteration 1d: the simulated human has `Write` and no shell, and a request
+is a file. So this is a channel the sim can actually use, which questions-only never was.
+
+Versions: pipeline 0.3.0, next 0.2.0, intake 0.2.0. Evidence: `./scripts/check` — 10 steps, all
+passed, 62 fixture codes.

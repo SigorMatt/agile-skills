@@ -23,6 +23,7 @@ import miniyaml  # noqa: E402
 __all__ = [
     "Workspace", "Item", "Question", "HistoryRow", "JournalEntry", "Doc",
     "TIMESTAMP_RE", "ID_PATTERNS", "id_kind", "find_workspace_root", "resolve_root",
+    "split_sections",
     "WORKSPACE_MARKER",
 ]
 

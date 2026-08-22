@@ -1,4 +1,4 @@
-# Contract — intake v0.1.2
+# Contract — intake v0.2.0
 
 Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -14,7 +14,8 @@ Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative 
 
 | path | required | why |
 |------|----------|-----|
-| `the human's stated idea, in this session` | yes | this skill exists to convert it; there is no artifact to read it from yet |
+| `the human's stated idea, in this session` | no | this skill exists to convert it; there is no artifact to read it from yet |
+| `tracker/requests/` | no | a stakeholder request dispatched by next is this execution's input instead of a spoken idea |
 | `tracker/project.yaml` | no | an existing project's name, trunk branch and commands constrain what can be proposed |
 | `tracker/items/*/item.md` | no | existing items reveal overlap, and the highest allocated IDs |
 | `docs/product/vision.md` | no | a new epic must be coherent with an existing product vision, or explicitly revise it |

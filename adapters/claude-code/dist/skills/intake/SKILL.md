@@ -1,9 +1,9 @@
 ---
 name: intake
-description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
+description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: The orchestrator routed an open stakeholder request under tracker/requests/; A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.1.2
+  methodology-version: 0.2.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -38,8 +38,9 @@ You talk to the human directly. You are the only skill besides `refine` that doe
 
 ## Preconditions
 
-1. A human has stated an idea in this session. If they have not, stop and ask for one; there is
-   nothing to read it from.
+1. Either a human has stated an idea in this session, **or** `next` dispatched you on an open
+   stakeholder request under `tracker/requests/` (`spec/request.md`). If neither, stop and ask
+   for an idea; there is nothing to read it from.
 2. Check whether a workspace already exists: is there a `tracker/` directory with
    `project.yaml`? If yes, you are adding to an existing project — read `docs/product/vision.md`
    and the existing items first, and treat any conflict with them as something to raise with the
@@ -51,6 +52,26 @@ You talk to the human directly. You are the only skill besides `refine` that doe
 ---
 
 ## Steps
+
+0. **If you were dispatched on a request, that request is the input.** Read
+   `tracker/requests/R-###.md`. The stakeholder wrote it unprompted, so it will not be in tracker
+   vocabulary and may not be scoped to anything — translating it is your job, and `## Request` is
+   theirs. Never edit their words.
+
+   Work steps 1–9 below against that text instead of against a spoken idea, with three
+   differences. **First,** the project already exists, so the outcome is usually an amended item,
+   a new item under an existing epic, or a new epic — not a workspace. **Second,** you may decline
+   it: a request outside the epic's scope, or one contradicting a decision the stakeholder already
+   made and recorded, is declined **in writing**, with the reason, and you say what would have to
+   change for it to be accepted. Silently absorbing a request and silently dropping one are the
+   same failure. **Third,** if acting on it invalidates an item that is mid-flight, do not reach
+   into that item: file a blocking question on it in the ordinary way and let the ordinary
+   suspension rules run.
+
+   Finish by setting the request's `status` to `accepted` or `declined`, `handled-at`,
+   `handled-by: intake`, and filling `## Response` and `## Consequences` — the latter naming
+   files and item IDs, never intentions. Then journal on the affected epic and stop. A request
+   left `open` after you ran is a request `next` will hand you again forever.
 
 1. **Read the current state from disk.** List `tracker/items/*/`, read each `item.md`
    frontmatter, and read `tracker/project.yaml` and `docs/product/vision.md` if they exist. You

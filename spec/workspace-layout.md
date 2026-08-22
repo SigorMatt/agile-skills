@@ -15,6 +15,8 @@ item's history if the item and the code share a history.
 ├── tracker/
 │   ├── project.yaml              # machine-readable project config (§3)
 │   ├── board.md                  # GENERATED — never hand-edited (§4)
+│   ├── requests/                 # the stakeholder writes here, unprompted (spec/request.md)
+│   │   └── R-001.md
 │   └── items/
 │       ├── EP-001/
 │       │   ├── item.md
@@ -55,6 +57,7 @@ item's history if the item and the code share a history.
 |------|------|
 | `tracker/project.yaml` | from workspace initialisation |
 | `tracker/items/` | from workspace initialisation |
+| `tracker/requests/` | from workspace initialisation; may be empty, and usually is |
 | `tracker/board.md` | after the first item exists |
 | `<item>/item.md`, `journal.md`, `history.md` | for every item directory, from creation |
 | `<item>/questions/`, `<item>/artifacts/` | directories may be empty, but MUST exist |
@@ -187,3 +190,12 @@ Rules:
   and `answer-questions`, which produce no code.
 - `review-close` merges the branch into `{{trunk}}`. The workspace never depends on a remote
   existing: everything here works in a purely local repository.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | `tracker/requests/` added — the stakeholder-initiated channel (F-021, `spec/request.md`). |

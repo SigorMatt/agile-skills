@@ -562,7 +562,26 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
   at turn 6 with zero further human questions.
 - Direction: a stakeholder-initiated request artifact (spec'd like a question in reverse)
   that `next` detects and routes to intake/refine before building the candidate set.
-- Status: open
+- Status: fixed (commit 76dcaf1). New artifact and new spec file: `spec/request.md` —
+  `tracker/requests/R-###.md`, `from: human` (the only author a request may have),
+  `status: open | accepted | declined`, an optional `about`, `## Request` in the stakeholder's
+  own words which a skill **never edits**, and `## Response` / `## Consequences` the handling
+  skill fills in naming files and item IDs.
+  Filed workspace-wide rather than under an item, deliberately: the stakeholder does not know
+  which item their thought belongs to, and deciding that is `intake`'s job.
+  Routing: `pipeline.yaml` orchestrator step **2** (0.3.0) — an open request outranks building
+  the candidate set, dispatched to `intake` and then stop. Ordering matters: a request handled
+  once the current item finishes is answered against a plan the stakeholder already tried to
+  change. `next` 0.2.0 and `intake` 0.2.0 carry it; `intake` gains step 0, including the right
+  to **decline** in writing and the rule that invalidating a mid-flight item means filing a
+  blocking question on it rather than reaching into it.
+  `workspace-init` creates `tracker/requests/`; `spec/workspace-layout.md` (revision 2) and
+  `spec/README.md` carry it. Validator: nine new codes.
+  Fixtures: three malformed requests in `fixtures/broken-workspace` covering every rule; a
+  well-formed open request demonstrated validating clean in a scratch workspace.
+  Note for the harness: the simulated human has `Write`, so this is a channel it can actually
+  use — which is what run 1b's sim lacked when it logged that it had no vehicle for the
+  requirement it was holding.
 
 ## F-022 — An epic closes without stakeholder acceptance
 - Severity: methodology gap (acceptance-loop cluster with F-021)
