@@ -19,7 +19,9 @@ Steps, in order:
                                                file and allows every way of reading or naming one
   9. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 10. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 10. export profiles                        — scripts/export leaves the workspace behind, and
+                                               refuses to write a workspace file into a copy
+ 11. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -221,6 +223,53 @@ def check_findings_citations(runner: Runner) -> None:
     runner.emit(f"findings citations resolve ({len(cited)} cited)", True)
 
 
+def check_export(runner: Runner) -> None:
+    """F-007 both ways: the product profile ships no workspace, and the guard can refuse."""
+    import tempfile
+    exporter = os.path.join(SCRIPTS, "export")
+    example = os.path.join(ROOT, "examples", "toy-project")
+    if not os.path.isfile(exporter) or not os.path.isdir(os.path.join(example, "tracker")):
+        runner.skip("export profiles", "scripts/export or examples/toy-project is absent")
+        return
+    with tempfile.TemporaryDirectory() as base:
+        destination = os.path.join(base, "exported")
+        result = subprocess.run(
+            [sys.executable, exporter, destination, "--root", example, "--profile", "product"],
+            capture_output=True, text=True, cwd=ROOT)
+        if result.returncode != 0:
+            runner.emit("export profiles", False, result)
+            return
+        strays = []
+        for walk_base, dirs, files in os.walk(destination):
+            dirs[:] = [entry for entry in dirs if entry != ".git"]
+            for name in files:
+                relative = os.path.relpath(os.path.join(walk_base, name), destination)
+                if relative.split(os.sep)[0] in ("tracker", "docs", ".claude"):
+                    strays.append(relative)
+        if strays:
+            runner.emit("export profiles", False,
+                        detail="the product profile exported workspace files:\n"
+                               + "\n".join(f"  - {name}" for name in strays[:10]))
+            return
+        # And the destination must be a repository with exactly one commit and no ancestry.
+        log = subprocess.run(["git", "log", "--oneline"], cwd=destination,
+                             capture_output=True, text=True)
+        if log.returncode != 0 or len(log.stdout.strip().split("\n")) != 1:
+            runner.emit("export profiles", False, log,
+                        detail="the export should be a fresh repository with one commit")
+            return
+        # Refusing to overwrite is part of "non-destructive"; prove it can say no.
+        again = subprocess.run(
+            [sys.executable, exporter, destination, "--root", example, "--profile", "product"],
+            capture_output=True, text=True, cwd=ROOT)
+        if again.returncode == 0:
+            runner.emit("export profiles", False, again,
+                        detail="exporting over an existing directory should refuse without "
+                               "--force")
+            return
+    runner.emit("export profiles", True)
+
+
 def check_harness(runner: Runner) -> None:
     tests = os.path.join(ROOT, "harness", "tests", "test_harness.py")
     if not os.path.isfile(tests):
@@ -240,6 +289,7 @@ def main() -> int:
     check_signoff(runner)
     check_guard(runner)
     check_findings_citations(runner)
+    check_export(runner)
     check_harness(runner)
 
     print()

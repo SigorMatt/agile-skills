@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""Copy a project out of its workspace, with a chosen amount of the procedural record.
+
+Usage:
+  scripts/export <destination> [--root .] [--profile product|architecture|full]
+                 [--force] [--dry-run] [--strict]
+
+The workspace and the product share one repository by design: `tracker/` and `docs/` sit beside
+the code so that a commit can carry both, and so that `git log --grep WI-0007` returns an item's
+whole story. That is right for working and wrong for publishing — someone releasing the software
+should not have to publish their team's internal record, and deleting it in a later commit does
+not remove it, because git keeps everything.
+
+So this is non-destructive by construction: it **reads** the workspace, **writes** a fresh
+directory, and initialises a new repository there with a single commit and no history. The
+original is not touched, not rewritten, and not rebased.
+
+Profiles, from least to most:
+
+  product        the code alone. No tracker, no docs, no ADRs. Commit messages are rewritten to
+                 drop `(refs WI-0007)`, because the IDs would dangle.
+  architecture   the default. Code plus `docs/`, so ADRs and the architecture overview ship —
+                 the decisions a maintainer needs — while the tracker stays behind.
+  full           everything, including `tracker/`. A fresh-history copy rather than a filtered
+                 one, for handing the whole engagement to someone else.
+
+Whatever the profile, the export is checked before it is committed, and it separates two things
+that look alike:
+
+  * a **workspace file** present in the export is a content disclosure, and is always an error;
+  * an exported document that *names* a workspace path — an ADR carrying
+    `[src: tracker/items/WI-0007/artifacts/plan.md]`, which is the claim-provenance rule working
+    as intended — is a reference that will not resolve in the copy. Reported, listed, and not
+    refused, because the alternative is asking authors to choose between citing their evidence
+    and being able to publish. `--strict` refuses anyway.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+from workspace import resolve_root  # noqa: E402
+
+PROFILES = ("product", "architecture", "full")
+# Directories that belong to the workspace rather than to the product.
+WORKSPACE_DIRS = {"tracker", ".claude"}
+# Files that belong to the engagement rather than to the product. They sit at the project root
+# because that is where a consumer session needs them, not because they are part of the software.
+WORKSPACE_FILES = {"CONSUMER-PROMPT.md", "SIMULATION-NOTICE.md", "IDEA.md", "HARNESS-STATUS.md"}
+DOC_DIRS = {"docs"}
+ITEM_REF_RE = re.compile(r"\s*\((?:refs|see)\s+(?:EP-\d{3}|WI-\d{4}|BUG-\d{4})\)\s*$")
+LEAK_RE = re.compile(r"(^|[\s`'\"(])tracker/(items|requests|board\.md|project\.yaml)")
+
+
+def git(args, cwd):
+    return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True)
+
+
+def excluded(relative: str, profile: str) -> bool:
+    top = relative.split(os.sep)[0]
+    if top == ".git":
+        return True
+    if profile == "full":
+        return top == ".claude"
+    if top in WORKSPACE_DIRS:
+        return True
+    if profile != "full" and relative in WORKSPACE_FILES:
+        return True
+    if profile == "product" and top in DOC_DIRS:
+        return True
+    return False
+
+
+def tracked_files(root: str):
+    """The project's own files, from git — so ignored build output is never exported."""
+    result = git(["ls-files"], root)
+    if result.returncode != 0:
+        return None
+    return [line.strip() for line in result.stdout.split("\n") if line.strip()]
+
+
+def check_for_leaks(destination: str, profile: str):
+    """(leaks, dangling) — two different problems that used to look like one.
+
+    A **leak** is a workspace file present in the export. That is a content disclosure and it is
+    an error, always.
+
+    A **dangling citation** is an exported document *naming* a workspace path — almost always an
+    ADR carrying `[src: tracker/items/WI-0007/artifacts/plan.md]`, which is the claim-provenance
+    rule (F-001) working exactly as intended. No content escapes; the reference simply will not
+    resolve in the copy. That is worth reporting and is not worth refusing, because the
+    alternative is asking authors to choose between citing their evidence and being able to
+    publish. `--strict` turns it into an error for anyone who disagrees.
+    """
+    leaks, dangling = [], []
+    for base, dirs, files in os.walk(destination):
+        dirs[:] = [entry for entry in dirs if entry != ".git"]
+        for name in sorted(files):
+            path = os.path.join(base, name)
+            relative = os.path.relpath(path, destination)
+            if excluded(relative, profile):
+                leaks.append(f"{relative} is a workspace file and should not have been copied")
+                continue
+            if profile == "full":
+                continue
+            try:
+                with open(path, "r", encoding="utf-8") as handle:
+                    text = handle.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for index, line in enumerate(text.split("\n"), start=1):
+                if LEAK_RE.search(line):
+                    dangling.append(f"{relative}:{index} → {line.strip()[:100]}")
+    return leaks, dangling
+
+
+def commit_subject(subject: str, profile: str) -> str:
+    """A `product` export has no items to refer to, so a dangling ref would be worse than none."""
+    if profile != "product":
+        return subject
+    return ITEM_REF_RE.sub("", subject).strip() or subject
+
+
+def export(root: str, destination: str, profile: str, force: bool, dry_run: bool,
+           strict: bool = False) -> int:
+    if profile not in PROFILES:
+        print(f"export: --profile must be one of {', '.join(PROFILES)}", file=sys.stderr)
+        return 2
+    root = os.path.abspath(root)
+    destination = os.path.abspath(destination)
+    if destination == root or destination.startswith(root + os.sep):
+        print(f"export: the destination must be outside the workspace ({root})", file=sys.stderr)
+        return 2
+    if os.path.exists(destination):
+        if not force:
+            print(f"export: {destination} already exists; pass --force to replace it",
+                  file=sys.stderr)
+            return 2
+        if not dry_run:
+            shutil.rmtree(destination)
+
+    files = tracked_files(root)
+    if files is None:
+        print(f"export: {root} is not a git repository, so there is nothing to export from",
+              file=sys.stderr)
+        return 1
+    selected = [name for name in files if not excluded(name, profile)]
+    dropped = len(files) - len(selected)
+    if not selected:
+        print(f"export: the '{profile}' profile selected no files from {root}", file=sys.stderr)
+        return 1
+
+    print(f"export: profile '{profile}' — {len(selected)} file(s) selected, {dropped} left behind")
+    if dry_run:
+        for name in selected[:20]:
+            print(f"  + {name}")
+        if len(selected) > 20:
+            print(f"  … and {len(selected) - 20} more")
+        print("export: dry run, nothing was written")
+        return 0
+
+    for name in selected:
+        source = os.path.join(root, name)
+        target = os.path.join(destination, name)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copy2(source, target)
+
+    leaks, dangling = check_for_leaks(destination, profile)
+    if leaks:
+        print(f"export: refusing to finish — {len(leaks)} workspace file(s) in the export:",
+              file=sys.stderr)
+        for leak in leaks[:20]:
+            print(f"  - {leak}", file=sys.stderr)
+        if len(leaks) > 20:
+            print(f"  … and {len(leaks) - 20} more", file=sys.stderr)
+        print(f"export: the incomplete copy is at {destination}; inspect it and remove it.",
+              file=sys.stderr)
+        return 1
+    if dangling:
+        stream = sys.stderr if strict else sys.stdout
+        label = "refusing to finish —" if strict else "note:"
+        print(f"export: {label} {len(dangling)} citation(s) point at the workspace and will not "
+              f"resolve in this copy:", file=stream)
+        for entry in dangling[:10]:
+            print(f"  - {entry}", file=stream)
+        if len(dangling) > 10:
+            print(f"  … and {len(dangling) - 10} more", file=stream)
+        if strict:
+            print(f"export: the incomplete copy is at {destination}; inspect it and remove it.",
+                  file=sys.stderr)
+            return 1
+        print("        No workspace content is in the export — these are references, not "
+              "disclosures.")
+        print("        They come from the claim-provenance rule (spec/doc-header.md §4a) doing "
+              "its job.")
+        print("        Use --profile full to ship what they point at, or --strict to refuse.")
+
+    subject = git(["log", "-1", "--format=%s"], root).stdout.strip() or "initial commit"
+    message = (f"{commit_subject(subject, profile)}\n\n"
+               f"Exported with scripts/export --profile {profile}. This repository has no history "
+               f"before this commit by design: it is a copy, not a filtered clone, so nothing "
+               f"from the original is recoverable here.\n")
+    git(["init", "-q"], destination)
+    git(["add", "-A"], destination)
+    committed = git(["commit", "-q", "-m", message], destination)
+    if committed.returncode != 0:
+        print(f"export: copied to {destination}, but the initial commit failed: "
+              f"{committed.stderr.strip()}", file=sys.stderr)
+        return 1
+
+    print(f"export: wrote {destination} with a single commit and no prior history")
+    print(f"        checked: no workspace file is present in the export")
+    return 0
+
+
+def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
+    positional, options, flags = [], {}, set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--force", "--dry-run", "--strict"):
+            flags.add(token[2:])
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"export: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+    if len(positional) != 1:
+        print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
+        return 2
+    root = resolve_root(options.get("root"), tool="export")
+    return export(root, positional[0], options.get("profile", "architecture"),
+                  "force" in flags, "dry-run" in flags, "strict" in flags)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

@@ -154,6 +154,30 @@ satisfy it, and you need one of them **before** the first headless run:
 `--settings` and `--allowedTools` are honoured either way, because they are supplied explicitly
 on the command line rather than read out of the workspace.
 
+### Publishing the product without the record
+
+The workspace lives beside the code on purpose, and that is the wrong shape for a release.
+Deleting `tracker/` in a later commit does not remove it — git keeps everything — so there is a
+command that copies out instead:
+
+```bash
+python3 .claude/agile-skills/scripts/export ../my-project-release --profile architecture
+```
+
+It reads your workspace, writes a **new** directory, and initialises a fresh repository there
+with one commit and no prior history. Your repository is not touched, rewritten or rebased.
+
+| Profile | Ships | For |
+|---------|-------|-----|
+| `product` | code only; `(refs WI-0007)` stripped from the commit subject | a release where the process is nobody's business |
+| `architecture` *(default)* | code + `docs/`, so the ADRs and the overview travel | open source, or handing over to maintainers |
+| `full` | everything including `tracker/` | handing the whole engagement to someone else |
+
+Before committing, it refuses outright if any workspace file reached the copy, and it *reports*
+any citation pointing back at `tracker/` — those are references produced by the claim-provenance
+rule, not disclosures, and they will simply not resolve in the copy. `--strict` refuses on those
+too. `--dry-run` lists what would go.
+
 ---
 
 ## 5. Run it
