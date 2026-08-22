@@ -86,6 +86,47 @@ docs/
 
 ---
 
+## Prior art, and where this sits
+
+**[BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)** is the established project in
+"agile methodology as AI agents": role personas, 34+ lifecycle workflows, planning artifacts,
+cross-tool installers, a module ecosystem, MIT-licensed, tens of thousands of stars. If you have
+been looking in this space, you have seen it, and anything here that reads as novel should be
+measured against it rather than against nothing.
+
+The difference is not features; it is what the process *is*.
+
+| | BMAD-METHOD | agile-skills |
+|---|---|---|
+| Operating mode | **collaborate and facilitate** — expert personas guide a human through workflows | **delegate and verify** — interrogate the human once at refinement, then run autonomously |
+| Process is | instructions, templates and checklists the agent is asked to follow | a status graph, a transition program, hooks that deny bypass writes, gates that exit non-zero |
+| The human's seat | throughout, by design | at intake, at refinement, at every escalation, and at epic sign-off |
+| What you get at the end | planning documents | a record a stranger can reconstruct the run from — journals, history, question provenance, cited claims |
+| Breadth | 34+ workflows across the lifecycle | 8 skills, one flow, deliberately narrow |
+
+Concretely, "enforcement as a program" means: an item cannot reach `done` while a gate is
+failing, because the only sanctioned way to change a status is a script that checks the transition
+against the state machine and runs the gates first. An override is possible and is recorded in the
+history reason forever. Hand-editing the file that holds the status is denied by a hook. None of
+that is discipline; it is software, and it behaves the same on the hundredth run as the first.
+
+**Which one you want:**
+
+- You want to stay in the loop, shape the work as it goes, and have expert-shaped agents help you
+  think — **use BMAD-METHOD.** It is more mature, far broader, and built for that.
+- You want to hand work over, walk away, and be able to audit exactly what happened and on what
+  basis — **this.** The narrowness is the point: eight skills, hardened by running them.
+
+They are converging: their roadmap carries "Dev Loop Automation", which is our territory. Our bet
+is that autonomy is only worth having if it is trustworthy by construction, and that the way to
+keep that is to harden the enforcement kernel faster than automation gets bolted onto
+instruction-shaped process.
+
+*BMad™ and BMAD-METHOD™ are trademarks of BMad Code, LLC. This project is independent of it and
+contains no code or content derived from it.*
+
+---
+
 ## Layout of this repository
 
 | Path | What it is |
@@ -129,6 +170,10 @@ agent given nothing but the tracker, the docs and the git log.
 - **Not a guarantee of quality.** It guarantees that the checks were run and the reasoning was
   recorded. Those are different things, and conflating them would be exactly the overclaim the
   whole design exists to avoid.
+- **Not proven yet, and the bar is written down.** `meta/ROADMAP.md` §2 defines what "proven"
+  means here, `meta/findings/FINDINGS.md` is the open list, and
+  `meta/harness/evidence/` holds the trails of every run that produced it — including the ones
+  that went badly. Read those before trusting any of the above.
 
 ---
 
