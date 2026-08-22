@@ -249,10 +249,11 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
 ### Cluster 6 — harness
 - [ ] **META-095** — H-002 (resumable vs terminal stop classes; honest `--fresh` hint) and
       H-003 (`provision.py --wipe` / true-fresh semantics, documented).
-- [ ] **META-096** — H-004 (answers-pending schedules a sim turn first) and H-007 (the sim gets
-      a closing turn before any epic-done stop is accepted).
-- [ ] **META-097** — H-005 (killed-turn cost + stale-status handling) and H-006 (bounded skill
-      executions per worker turn).
+- [ ] **META-096** — H-004 (answers-pending schedules a sim turn first), H-007 (the sim gets a
+      closing turn before any epic-done stop is accepted), H-005 (killed-turn cost + stale-status
+      handling) and H-006 (bounded skill executions per worker turn). Merged into one unit:
+      all four are the driver's turn loop and its prompt, and splitting them would mean two
+      commits touching the same twenty lines.
 
 ### The regression gate
 - [ ] **META-098** — re-render, `./scripts/check` green including every new must-fail fixture.

@@ -1,27 +1,28 @@
 # CHECKPOINT
 
-## Current unit: META-090 — cluster 3: F-011, F-014, F-015, F-016
+## Current unit: META-095 — harness H-002 and H-003: resume means resume, fresh means fresh
 
-Four independent pipeline/spec correctness defects, all found organically by the worker in
-iteration 1.
+H-002: a turn killed by `--turn-timeout` records `stop-reason: turn-failed`, and a plain rerun
+says "pass --fresh to archive it and start a new one" — while `harness/USAGE.md` §9 promises
+"resume with the same command". The documented recovery did not exist; the only offered exit
+archives four turns of good work. Recovery required hand-editing `state.json`.
+
+H-003: `--fresh` archives the run logs and not the project workspace, so iteration 1 silently
+resumed the mini run's epic. Acceptable outcome, wrong expectation.
 
 Steps:
-1. **F-011** — `answer-questions` precondition 1 tells the only skill that can consume a human's
-   answer that it has nothing to do. Rewrite it: answerable means addressed to `architect`, **or**
-   addressed to `human` with `## Answer` filled in. Drop the harness worker-prompt workaround
-   that exists only to talk the worker past that sentence.
-2. **F-014** — `transition` runs `workspace-valid` against the pre-move workspace, so every
-   `answer-questions` resume prints a FAIL for correct work. Evaluate the gate against the state
-   the move produces.
-3. **F-015** — `implement` step 3 moves to `in-progress` before any journal entry exists, so
-   `journal.execution.missing` is guaranteed mid-run. META-084b's one-command journal+transition
-   is the mechanism; adopt it at step 3.
-4. **F-016** — an epic-level record commit lands on whatever branch is checked out and fails the
-   commit-reference gate for an unrelated item. State the rule and enforce it.
-5. Fixtures/demonstrations per fix; re-render; check green; FINDINGS; journal; commit; push.
+1. `harness/run_iteration.py` — stop reasons are classified `resumable` (a killed turn, a
+   limit/auth rejection) or `terminal` (epic-done, blocked-no-recourse, turn-budget,
+   contamination, validator-failed, stalled). A resumable stop clears on a plain rerun and the
+   run continues, exactly as USAGE §9 already promises. A terminal stop says what `--fresh`
+   actually does.
+2. `harness/provision.py --wipe` — delete and re-create the project workspace, with an explicit
+   confirmation and a refusal outside the throwaway root.
+3. `harness/USAGE.md` §3 and §9 — one flag, one meaning, and the two of them stated together.
+4. `harness/tests/test_harness.py` — the classification, both directions.
+5. Check green; FINDINGS; journal; commit; push. **Harness commit prefix.**
 
-Next unit: **META-095** — harness H-002/H-003 (cluster 6 is pulled ahead of clusters 4 and 5,
-because iteration 1d depends on it; see meta/plan.md).
+Next unit: **META-096** — H-004, H-005, H-006, H-007 (one unit; all four are the turn loop).
 
 ## Standing instructions (still in force)
 
