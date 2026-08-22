@@ -1,31 +1,27 @@
 # CHECKPOINT
 
-## Current unit: META-087 — F-013: an epic can be suspended
+## Current unit: META-088 — F-022: an epic cannot close without stakeholder acceptance
 
-F-013: three rules that cannot all hold. `open` is `terminal: true`; the only transitions into
-`awaiting-answer`/`blocked` are `from: any-non-terminal`; and the validator demands an item with
-an open blocking question be suspended — epics included. A skill with a genuine epic-level
-impasse has to either lie in the record (`blocking: false`) or leave the workspace invalid. Both
-happened, in two separate runs.
-
-Diagnosis: `terminal` is carrying two meanings — "no skill owns this status" and "this status
-may not be suspended". `open` is the first and not the second. Separate them.
+F-022: both 1b and 1c closed EP-001 with no sign-off ever addressed to the human. The DE gates
+check the record, and the record only holds what the stakeholder said when last consulted. Every
+real agile process has a product-owner acceptance moment; this one had none.
 
 Steps:
-1. `methodology/pipeline.yaml` — every status declares `suspendable`; the two escalation
-   transitions read `from: any-suspendable`. `open` stays `terminal: true` (it genuinely has no
-   owning skill) and becomes `suspendable: true`. Pipeline version → 0.2.0.
-2. `scripts/lint-skills` — `suspendable` is required and must be a boolean; a status that is
-   both terminal and suspendable is legal and a status neither owned nor suspendable is the
-   real dead end.
-3. `scripts/transition`, `scripts/validate-workspace` — `any-suspendable` replaces
-   `any-non-terminal`.
-4. `spec/ids-and-statuses.md` §4 — the table and a note saying which meaning is which.
-5. Prove by execution: the exact command F-013 quotes as refused now succeeds; suspending a
-   `done` epic is still refused. Must-fail fixture row for the still-illegal case.
-6. Re-render; check green; FINDINGS; journal; commit; push.
+1. `spec/question.md` — optional frontmatter `kind`: `decision` (default) | `sign-off`, and the
+   shape a sign-off must have (goal restated, delivered vs deferred, the explicit ask).
+2. `spec/dor-dod.md` — epic Definition of Done gains **DE7**: an answered sign-off question,
+   filed after the last child closed.
+3. `scripts/check-epic-signoff` — the mechanical half: on an epic, require a `kind: sign-off`
+   question addressed to `human`, answered, with a non-empty `## Answer`, `created` no earlier
+   than the last child's move to `done`. On anything that is not an epic, pass and say why.
+4. `review-close` — hard gate `epic-sign-off`; step 10 files the sign-off, suspends the epic to
+   `awaiting-answer` (possible since META-087) and stops; the next pass closes it. Minor bump.
+5. `scripts/validate-workspace` — `question.kind` and `question.signoff.addressed`.
+6. Fixtures both ways; prove by execution that a `done` move is refused before sign-off and
+   allowed after.
+7. Re-render; check green; FINDINGS; journal; commit; push.
 
-Next unit: **META-088** — F-022 (epic sign-off gate).
+Next unit: **META-089** — F-021 (a stakeholder-initiated request, routed by `next`).
 
 ## Standing instructions (still in force)
 
