@@ -201,32 +201,32 @@ Every unit names the finding(s) it closes; a finding is `fixed` only when execut
 with a must-fail fixture for every enforcement change. Toolkit and harness commits stay separate.
 
 ### Cluster 1 — enforcement integrity
-- [ ] **META-082** — Phase I plan + checkpoint (this unit).
-- [ ] **META-083** — F-019: every script resolves the workspace root itself; process contracts
+- [x] **META-082** — Phase I plan + checkpoint (this unit).
+- [x] **META-083** — F-019: every script resolves the workspace root itself; process contracts
       forbid chaining `transition`; validator cross-checks journal `**Status:**` lines against
       `history.md` rows. Must-fail fixture for the divergence.
-- [ ] **META-084** — F-017 (mechanism): `scripts/journal-entry` is the only sanctioned writer
+- [x] **META-084** — F-017 (mechanism): `scripts/journal-entry` is the only sanctioned writer
       of a journal entry — it stamps the heading from a clock read and the skill's own installed
       contract; `transition --journal-body-file` writes the history row and the entry from one
       clock read, so they cannot diverge. Spec forbids estimated timestamps and gives `journal.md`
       the restamp exception. Validator rejects entries stamped in the future or outside the
       workspace's git activity window. Must-fail fixtures.
-- [ ] **META-084b** — F-017 (adoption): every skill's `## Journaling` section uses the script;
+- [x] **META-084b** — F-017 (adoption): every skill's `## Journaling` section uses the script;
       version bumps; re-render.
-- [ ] **META-085** — F-018: the write guard decides on the write target, not the command string.
+- [x] **META-085** — F-018: the write guard decides on the write target, not the command string.
       Fixtures both ways (mention allowed, write denied).
-- [ ] **META-086** — F-001: claim-provenance lint — factual justifications in ADRs/reviews/docs
+- [x] **META-086** — F-001: claim-provenance lint — factual justifications in ADRs/reviews/docs
       must cite an artifact; `validate-workspace` fails unsourced ones. Must-fail fixture.
 
 ### Cluster 2 — the acceptance loop
-- [ ] **META-087** — F-013: an epic becomes suspendable; pipeline.yaml terminal-status
+- [x] **META-087** — F-013: an epic becomes suspendable; pipeline.yaml terminal-status
       contradiction resolved; validator and intake agree. Must-fail fixture.
-- [ ] **META-088** — F-022: epic sign-off gate — `review-close` files a blocking human-addressed
+- [x] **META-088** — F-022: epic sign-off gate — `review-close` files a blocking human-addressed
       acceptance question; the epic cannot reach `done` until it is answered. Must-fail fixture.
-- [ ] **META-089** — F-021: stakeholder-initiated request artifact, detected and routed by `next`.
+- [x] **META-089** — F-021: stakeholder-initiated request artifact, detected and routed by `next`.
 
 ### Cluster 3 — pipeline/spec correctness
-- [ ] **META-090** — F-011 (`answer-questions` precondition), F-014 (gates run against the
+- [x] **META-090** — F-011 (`answer-questions` precondition), F-014 (gates run against the
       post-move state), F-015 (journal written with the status move), F-016 (epic-level record
       commits have a stated home).
 
@@ -247,17 +247,17 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
 - [ ] **META-094** — F-009: README positioning.
 
 ### Cluster 6 — harness
-- [ ] **META-095** — H-002 (resumable vs terminal stop classes; honest `--fresh` hint) and
+- [x] **META-095** — H-002 (resumable vs terminal stop classes; honest `--fresh` hint) and
       H-003 (`provision.py --wipe` / true-fresh semantics, documented).
-- [ ] **META-096** — H-004 (answers-pending schedules a sim turn first), H-007 (the sim gets a
+- [x] **META-096** — H-004 (answers-pending schedules a sim turn first), H-007 (the sim gets a
       closing turn before any epic-done stop is accepted), H-005 (killed-turn cost + stale-status
       handling) and H-006 (bounded skill executions per worker turn). Merged into one unit:
       all four are the driver's turn loop and its prompt, and splitting them would mean two
       commits touching the same twenty lines.
 
 ### The regression gate
-- [ ] **META-098** — re-render, `./scripts/check` green including every new must-fail fixture.
-- [ ] **META-099** — iteration 1d configured (`iteration-1d-expenses`, fresh project
+- [x] **META-098** — re-render, `./scripts/check` green including every new must-fail fixture.
+- [x] **META-099** — iteration 1d configured (`iteration-1d-expenses`, fresh project
       `expenses-1d`, 1c's setup plus a stakeholder who refuses every alternative) and run.
 - [ ] **META-100** — findings pass over 1d's trail; anything new filed as F-024+/H-008+.
 - [ ] **META-101** — FINDINGS.md statuses current; `meta/FINAL-REPORT-2.md`.
