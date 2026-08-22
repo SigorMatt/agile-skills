@@ -467,7 +467,11 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: keep one question artifact per decision (provenance needs it), but let refine
   present them as one grouped ask per item per round — a presentation change in the
   question body/consequences convention, not a schema change.
-- Status: open
+- Status: fixed (commit 54b67ee), as filed and with no schema change. `spec/question.md` §2
+  (revision 4): questions filed for one item in one round are presented as one ask — each
+  `## Context` opens with the same frame naming the item, the round and which of how many this
+  is, and the last says that is all of them for now. `refine` step 4 carries it. One
+  conversation, three artifacts.
 
 ## H-002 — turn-failed is terminal in code; USAGE §9 promises resume; --fresh destroys the run
 - Severity: harness, correctness + doc contradiction (sharpest harness defect of iteration 1)
@@ -721,7 +725,13 @@ run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
   product-stake questions go to the stakeholder; implementation-only choices are decided
   (reversibly, recorded as assumptions) or routed to plan. A stakeholder's standing
   deferral on a category should be honored for that category.
-- Status: open
+- Status: fixed (commit 54b67ee), as filed. `refine` step 3 is a four-branch routing test applied
+  before anything is filed, stopping at the first that fits: product stake → the human; already
+  answered → do not ask again; a standing deferral covers the **category** → decide it and record
+  the deferral being relied on; implementation-only → the item's `## Notes` for `plan` to settle.
+  Added as an exit criterion so it is checkable, not advisory. `refine` → 0.2.0. The finding's
+  own words are quoted in the step, including the reverse failure — guessing at something that
+  was theirs to decide costs more.
 
 ## H-007 — The driver schedules sim turns only on open human questions
 - Severity: harness, scheduling/coverage
@@ -834,7 +844,11 @@ is not a ledger.
 - Direction: `spec/question.md` already says "One question… If there is more than one, file more
   than one question", so the contract is right and nothing checks it. The mirror of F-020: F-020
   says do not split one decision across files, this says do not merge two into one.
-- Status: open (low priority; weigh against turn 9)
+- Status: fixed (commit 54b67ee), as a body rule rather than a check. `spec/question.md` §2
+  (revision 4) states it with the consequence attached — a folded question gets half-answered and
+  half-recorded — and `refine` step 4 carries it. Not mechanised: deciding whether a paragraph
+  contains one decision or two is exactly the judgement F-001 says a linter cannot make, and a
+  bad heuristic here would push authors toward vaguer questions.
 
 ## F-028 — a deferred answer has no representation, and it undermines the F-011 fix
 - Severity: correctness (methodology gap on the escalation protocol)
