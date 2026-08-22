@@ -1,16 +1,14 @@
 # CHECKPOINT
 
-## Current unit: META-092 — cluster 5a: the workspace a consumer actually gets
+## Current unit: META-094 — F-009: README positioning against BMAD-METHOD
 
-- **F-002 + F-047** — every directory the schema requires gets a `.gitkeep` from the tool that
-  creates it: `workspace-init` **and** `new-item`. 1d found the sharper form: an item's empty
-  `questions/` is deleted by the trial merge `review-close` performs, so the item fails
-  `questions.missing` while being closed.
-- **F-003** — the consumer workspace needs a `.gitignore` (`__pycache__` from the validator).
-- **F-005** — the uninitialised state is not a hard failure; distinct exit code and a next step.
-- **F-004 + F-012** — USAGE §2 (skills load at session start) and §4 (the trust requirement).
+Ship-blocker for the open-source release. Per the finding's filed direction: a positioning
+section that is honest about the incumbent, states our thesis as delegate-and-verify rather than
+collaborate-and-facilitate, points users who want facilitation at them, and respects the
+trademark constraint ("derived from" is the only permitted relationship claim; we make no such
+claim, having derived nothing).
 
-Then **META-093** (F-007 export), **META-094** (F-009 README), **META-101** (FINAL-REPORT-2).
+Then **META-093** (F-007 export), then **META-101** (FINAL-REPORT-2 §4–§6).
 
 ## Standing instructions (still in force)
 
