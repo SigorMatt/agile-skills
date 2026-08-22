@@ -29,3 +29,6 @@
 ## Resolved during autopsy (no finding)
 - 1b's "5 items, all done" = 4 children + the epic itself in the driver's count.
 - Four review-close entries on EP-001 = step-10 per-child progress notes; by design, good.
+
+---
+Superseded 2026-08-22: all candidates above are now formally filed (F-021..F-023, H-007, F-017 addendum).

@@ -1,0 +1,19 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: expenses-1b
+  trunk-branch: main
+  description: "A command-line tool that records a friend group's members and shared expenses and reports who owes whom, persisting between runs; Python, no external services."
+
+commands:
+  # Standard library only; see ADR-0008. Both were run on this machine before being recorded:
+  # each exits 0 when clean and 1 when not. `lint` is a syntax check, not a linter.
+  test: "python3 -m unittest discover -s tests -t . -q"
+  lint: "python3 -m compileall -q expenses tests"
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

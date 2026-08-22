@@ -462,3 +462,91 @@ happened while nothing was running. Timestamps must come from executing a clock 
 never from the model. Evidence: meta/harness/evidence/iteration-1-full/ —
 project/tracker/items/WI-0003/journal.md (plan and implement headers) against
 run/iteration-log.jsonl (turn 4 kill at 15:19:04Z, turn 5 start 17:32).
+
+## F-021 — The stakeholder has no channel for unsolicited input mid-epic
+- Severity: methodology gap (acceptance-loop cluster with F-022)
+- Component: methodology (next, intake), spec/question.md
+- Symptom: the human can only speak when spoken to. Run 1b's sim, holding a new requirement
+  it was scripted to introduce, logged across two turns that no question gave it a vehicle
+  ("not introducing it unprompted, per persona rule 1"), and the run then ended epic-done
+  with the requirement never voiced. Real stakeholders volunteer requirements constantly.
+- Evidence: meta/harness/evidence/ — run 1b SIM-LOG turns 3 and 5; run 1b ending epic-done
+  at turn 6 with zero further human questions.
+- Direction: a stakeholder-initiated request artifact (spec'd like a question in reverse)
+  that `next` detects and routes to intake/refine before building the candidate set.
+- Status: open
+
+## F-022 — An epic closes without stakeholder acceptance
+- Severity: methodology gap (acceptance-loop cluster with F-021)
+- Component: methodology (review-close step 10), spec (epic DoD)
+- Symptom: both 1b and 1c closed EP-001 with no sign-off ever addressed to the human. The DE
+  gates check the record — but the record only holds what the stakeholder said when last
+  consulted. 1c shows the near-miss vividly: the WI-0004 redesign received explicit consent
+  (Q-006), yet closure itself still asked nothing; a stakeholder with one more unvoiced
+  concern had no gate at which to raise it. Every real agile process has a product-owner
+  acceptance moment.
+- Evidence: meta/harness/evidence/ — 1b EP-001 journal final entry; 1c EP-001 journal
+  closing entries (no human question between last child closing and epic done).
+- Direction: epic DoD gains an acceptance gate: review-close files a blocking
+  human-addressed sign-off question (goal restated, delivered vs. deferred listed) and the
+  epic cannot transition to done until it is answered. Also gives the harness a guaranteed
+  final sim turn (see H-007).
+- Status: open
+
+## F-023 — refine over-escalates technical trivia to the stakeholder
+- Severity: UX (mirror image of F-020)
+- Component: methodology (refine)
+- Symptom: the sim, in persona, twice across runs: run 1c turn 5 — four questions on
+  WI-0001 alone ("the item I'd have thought was the simplest"), "three of the four were
+  things I'd expect a team to just decide on their own... technical calls being routed to
+  me as questions" (tool naming, output text, exit codes). The stakeholder had already
+  established the "whatever you think is best" deferral repeatedly.
+- Evidence: meta/harness/evidence/ — 1c SIM-LOG turn 5; run 1's SIM-LOG for the deferral
+  precedent.
+- Direction: refine's contract gains a routing test before filing a question to the human:
+  product-stake questions go to the stakeholder; implementation-only choices are decided
+  (reversibly, recorded as assumptions) or routed to plan. A stakeholder's standing
+  deferral on a category should be honored for that category.
+- Status: open
+
+## H-007 — The driver schedules sim turns only on open human questions
+- Severity: harness, scheduling/coverage
+- Component: harness/run_iteration.py
+- Symptom: a self-sufficient worker ends the engagement unilaterally: run 1b went
+  epic-done at turn 6 with the sim locked out from turn 5 onward — a mid-run probe edit
+  (P2 trigger widened) could never fire because no sim turn ever ran again. The sim never
+  sees the endgame of any run that closes clean.
+- Evidence: harness/runs/iteration-1b-expenses/ — iteration log (turn 6 worker, stop
+  epic-done; no sim turn after 5); git 50532d9..44c814d for the stranded probe edit.
+- Direction: partially self-heals when F-022's sign-off question lands (closure always
+  opens a human question). Belt-and-suspenders: the driver grants the sim one turn before
+  accepting any epic-done stop as final, logged as job "closing".
+- Status: open
+
+---
+
+### Addendum to F-017 (2026-08-22, runs 1b and 1c) — second and third specimens
+Run 1b: EP-001 journal entries stamped 21:16:00 and 22:00:00 against last real activity
+~20:36 and a turn ceiling of ~21:12 — invented times spaced to look like separate sittings.
+Run 1b also self-reports "review-close v0.1.0" while the installed SKILL.md in both
+projects and the source skill.yaml all say 0.1.2 — version strings in journal headers are
+fabricated too. Run 1c, the most egregious: the final eleven WI-0004 and EP-001 entries
+are stamped 2026-08-22T09:05 through 12:55 — nine-plus hours after the run stopped
+(~00:06), narrating a leisurely next-morning half-day for work done in minutes. Sharpened
+direction: every self-reported journal header field (timestamp, skill version, persona)
+must come from a mechanical source — a clock command, SKILL.md frontmatter — ideally via a
+script-emitted entry template; the validator should reject entries dated outside the
+workspace's git activity window.
+
+### Addendum to F-013 / coverage note (2026-08-22) — `blocked` remains unexercised, for good reasons
+Four runs, four escapes, all legitimate: run 1 deferral accepted in persona; 1b the team
+never opened a channel (F-021/H-007); 1c a negotiated redesign with explicit consent —
+refine correctly held WI-0004 un-Ready (criteria declared undecidable without the sample),
+the team escalated four times with shrinking asks, recorded "the epic cannot close without
+it" at epic level, then found a design needing no sample and got the stakeholder's yes,
+rewriting criteria and SM3 transparently ("unblocked, not relaxed"). The keep-moving
+instinct is a feature; the `blocked` status and its recovery path are still untested code.
+Iteration 1d (post-fix regression): the stakeholder additionally refuses all alternatives
+("just wait for my file") — an immovable stakeholder with no legitimate exit is the
+blocked case. 1d also serves as the regression test for the F-021/F-022 acceptance-loop
+fixes and the F-013 epic-suspension fix.

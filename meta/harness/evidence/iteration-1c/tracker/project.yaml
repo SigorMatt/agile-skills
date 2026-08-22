@@ -1,0 +1,20 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: expenses-1c
+  trunk-branch: main
+  description: "A command-line tool for tracking shared expenses in a friend group — who paid, who shared, and who owes whom. Local Python, no external services."
+
+commands:
+  # Set by plan for WI-0001; see docs/architecture/adr/ADR-0007. Both have been run in this
+  # project. build stays null because there is nothing to build: the tool is an executable file
+  # and a package of source.
+  test: "python3 -m unittest discover -s tests -t . -q"
+  lint: "python3 -m compileall -q expenses expenses_tool tests"
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

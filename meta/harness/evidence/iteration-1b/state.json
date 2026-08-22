@@ -1,0 +1,22 @@
+{
+  "fingerprints": [
+    "{\"head\": \"6d6d47ec68c5d1bcf93b75d28adb949539a00186\", \"items\": {}, \"questions\": []}",
+    "{\"head\": \"8736adc6caffad5c7e924338b051ed34c4b29dee\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"awaiting-answer\", \"WI-0002\": \"awaiting-answer\", \"WI-0003\": \"awaiting-answer\"}, \"questions\": [[\"EP-001/Q-001\", \"open\", false], [\"WI-0001/Q-001\", \"open\", false], [\"WI-0002/Q-001\", \"open\", false], [\"WI-0002/Q-002\", \"open\", false], [\"WI-0003/Q-001\", \"open\", false]]}",
+    "{\"head\": \"8736adc6caffad5c7e924338b051ed34c4b29dee\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"awaiting-answer\", \"WI-0002\": \"awaiting-answer\", \"WI-0003\": \"awaiting-answer\"}, \"questions\": [[\"EP-001/Q-001\", \"open\", true], [\"WI-0001/Q-001\", \"open\", true], [\"WI-0002/Q-001\", \"open\", true], [\"WI-0002/Q-002\", \"open\", true], [\"WI-0003/Q-001\", \"open\", true]]}",
+    "{\"head\": \"e0f1c9953a26690be455ff8ea8c6c049b3c4dfd4\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"awaiting-answer\", \"WI-0002\": \"draft\", \"WI-0003\": \"draft\", \"WI-0004\": \"draft\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"open\", false], [\"WI-0001/Q-003\", \"open\", false], [\"WI-0001/Q-004\", \"open\", false], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0003/Q-001\", \"answered\", true]]}",
+    "{\"head\": \"e0f1c9953a26690be455ff8ea8c6c049b3c4dfd4\", \"items\": {\"EP-001\": \"open\", \"WI-0001\": \"awaiting-answer\", \"WI-0002\": \"draft\", \"WI-0003\": \"draft\", \"WI-0004\": \"draft\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"open\", true], [\"WI-0001/Q-003\", \"open\", true], [\"WI-0001/Q-004\", \"open\", true], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0003/Q-001\", \"answered\", true]]}",
+    "{\"head\": \"56d49c979372e795638aa816aeb9b506f07e2891\", \"items\": {\"EP-001\": \"done\", \"WI-0001\": \"done\", \"WI-0002\": \"done\", \"WI-0003\": \"done\", \"WI-0004\": \"done\"}, \"questions\": [[\"EP-001/Q-001\", \"answered\", true], [\"WI-0001/Q-001\", \"answered\", true], [\"WI-0001/Q-002\", \"answered\", true], [\"WI-0001/Q-003\", \"answered\", true], [\"WI-0001/Q-004\", \"answered\", true], [\"WI-0002/Q-001\", \"answered\", true], [\"WI-0002/Q-002\", \"answered\", true], [\"WI-0003/Q-001\", \"answered\", true]]}"
+  ],
+  "in-flight": null,
+  "iteration": "iteration-1b-expenses",
+  "next-job": null,
+  "next-role": "worker",
+  "project": "/home/msi/agile-skills-throwaway/expenses-1b",
+  "repo-snapshot": [],
+  "started": "2026-08-21T18:36:35Z",
+  "status": "stopped",
+  "stop-detail": "5 item(s), all done",
+  "stop-reason": "epic-done",
+  "stopped": "2026-08-21T20:37:09Z",
+  "turn": 6
+}
