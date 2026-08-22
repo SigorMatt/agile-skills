@@ -2544,3 +2544,45 @@ The practice changes from here: the sha goes in a follow-up commit, never by ame
 being cited. The mechanical half — a `scripts/check` step asserting every cited sha is an ancestor
 of HEAD — is F-024(b) and waits until iteration 1d finishes, because a change under `scripts/`
 while a turn is in flight trips the harness's own W4 contamination rule.
+
+## META-100 — the findings pass over iteration 1d
+
+Twenty-four findings, F-025 through F-048, plus addenda to F-002, F-011 and F-022. Every one was
+found by the worker or the simulated stakeholder during the run; I found none of them by reading
+code afterwards, which is the harness working exactly as designed.
+
+**Eight of them are defects in work this session shipped**, and they are filed like any other
+finding rather than quietly patched. A ledger that records only other people's mistakes is not a
+ledger, and two of these are worse than most of what I fixed:
+
+- **F-037** is the one that matters. The citation rule I added made the append-only rule
+  unsatisfiable. A journal entry describing a malformed `[src: ...]` marker had to quote it, the
+  linter read the quotation as a citation, and the only way out was to rewrite an append-only
+  entry — which the worker did, and then recorded in full that it had violated
+  `spec/journal-and-history.md` with no sanctioned exception covering it. The record could not
+  describe its own defect without reproducing it. A rule that forces that is worse than no rule.
+- **F-033** is a gate that reports success when it examined nothing: `lint-claims` handed a file
+  path treats it as the workspace root, finds no `docs/` beneath it, and exits 0 while printing
+  "checked the whole tree". `scripts/check` missed it because both its steps pass `--root`. The
+  telling detail is that the worker built a working rule of thumb on top of the false pass —
+  "`--changed-since` is stricter than the whole-tree run", which is arithmetically impossible.
+
+**F-045 is the honest limit of the acceptance loop.** F-022's gate fires on `open → done`, and an
+epic with a blocked child never gets there, so 1d never evaluated it. The stakeholder went looking
+for the question and wrote down that it never came, and what they said about it is the finding:
+"if this had ended with a report calling it 'done,' I'd have had no record of ever being asked,
+and that's the part I'd have pushed back on hardest." The mechanism is proven by fixtures and by
+demonstration; the claim that a stakeholder gets a say at the end of an engagement is not yet true.
+
+**F-028 is the same shape against F-011.** The rewritten precondition treats a non-empty
+`## Answer` as answerable, and a deferral — "I'll send you a sample later", said three times — is
+non-empty. Right for the case it addresses, blind to one the same run produced within minutes.
+
+F-029 and F-042 turned out to be one finding seen twice (three skills need to create items and two
+may), and F-042 is merged into F-029 rather than left as a duplicate. F-047 is F-002's defect in
+`new-item` instead of `workspace-init`, failing at a worse moment — while an item is being closed —
+so it is filed and cross-referenced rather than folded away.
+
+F-027 is filed with its own counter-evidence attached: the stakeholder complained on turn 3 that a
+question bundled two decisions, and praised the team on turn 9 for splitting one that would have.
+One question, not a habit, and the finding says so.

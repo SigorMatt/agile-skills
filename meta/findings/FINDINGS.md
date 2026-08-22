@@ -783,3 +783,355 @@ hearing how it finished. An impasse is an ending. The driver now gives one closi
 accepting `blocked-no-recourse` as well — once, tracked by the same `closing-turn-given` flag —
 and the sim prompt's `closing` job asks, when an item is blocked, whether the record describes
 the impasse the stakeholder is actually in or whether it reads as giving up.
+
+---
+
+# Findings from iteration 1d (2026-08-22)
+
+Iteration 1d stopped at `blocked-no-recourse` after 16 turns, $71.75 and zero contamination
+violations; evidence at `meta/harness/evidence/iteration-1d/`. Every finding below was found by
+the worker or the simulated stakeholder during the run, not by reading the code afterwards.
+
+**Several of these are defects in work this same session shipped.** They are filed like any other
+finding rather than quietly patched, because a ledger that records only other people's mistakes
+is not a ledger.
+
+## F-025 — `workspace-valid` cannot pass at gate time on an item's first transition
+- Severity: correctness (a hard gate that cannot be satisfied on one path)
+- Component: scripts/transition, scripts/validate-workspace
+- Symptom: `run-gate` runs before the journal entry that the **same** `transition` invocation is
+  about to write, so it reports `journal.execution.missing` on the very item being moved. Harmless
+  in 1d because `intake` gates only its completion transition — but, in the worker's words, "a
+  skill whose *completion* transition is the item's first would be trapped."
+- Evidence: evidence/iteration-1d/run/002-worker.status.md
+- Direction: the same mechanism F-014 already uses. `resolved_by_move()` should downgrade
+  `journal.execution.missing` for the moving item **when the transition is what will write the
+  entry** — i.e. when `--journal-body-file` was passed — and not otherwise, because without it the
+  finding is real. Extend `--resolving` to carry that fact rather than downgrading unconditionally.
+- Status: open
+
+## F-026 — `--help` is broken across the script suite
+- Severity: UX
+- Component: scripts (new-item, and probably every script with the same hand-rolled arg loop)
+- Symptom: `new-item --help` fails with `new-item: --help needs a value`; the usage text is
+  reachable only by reading the file or by omitting a required flag. Reported twice, turns 2 and 4.
+- Evidence: evidence/iteration-1d/run/002-worker.status.md, 004-worker.status.md
+- Direction: every entry point answers `--help` (and `-h`) with its docstring's usage block. Check
+  `transition`, `run-gate`, `journal-entry`, `lint-claims`, `check-epic-signoff`, `board-gen`,
+  `validate-workspace`, `check-commit-refs`, `check-verify-freshness`.
+- Status: open
+
+## F-027 — a question can bundle two decisions, and the record loses one
+- Severity: UX, low
+- Component: methodology (refine, intake), spec/question.md
+- Symptom: the sim, turn 3: "Q-001 folded a scope question ('is either optional') into what read
+  like a simple ordering question — I answered both halves, but it is the kind of question that
+  could get logged as just 'ordering answered' when a scope refusal was also in it."
+- Counter-evidence, and it matters: by turn 9 the same stakeholder wrote the opposite — "the team
+  correctly split the old EP-001/Q-002 into two separate questions on WI-0003 — one that needs my
+  file and one that doesn't". So this is one question, not a habit.
+- Evidence: evidence/iteration-1d/run/SIM-LOG.md turns 3 and 9
+- Direction: `spec/question.md` already says "One question… If there is more than one, file more
+  than one question", so the contract is right and nothing checks it. The mirror of F-020: F-020
+  says do not split one decision across files, this says do not merge two into one.
+- Status: open (low priority; weigh against turn 9)
+
+## F-028 — a deferred answer has no representation, and it undermines the F-011 fix
+- Severity: correctness (methodology gap on the escalation protocol)
+- Component: spec/question.md, methodology (answer-questions, next)
+- Symptom: the stakeholder answered EP-001/Q-002 with "I'll send you a sample later", which is
+  neither an answer nor silence. The worker: "the question protocol has no way to represent a
+  deferred answer without either deadlocking `next` or overstating what was settled." Leave it
+  `open` and `next` stops on it forever; mark it `answered` and the record claims a thing was
+  settled that was not.
+- Consequence for this session's own work: F-011's fixed precondition treats "addressed-to `human`
+  with `## Answer` non-empty" as answerable, and a deferral is non-empty. The fix is right for the
+  case it addresses and blind to this one.
+- Evidence: evidence/iteration-1d/run/004-worker.status.md; SIM-LOG turns 3, 9 and 13
+- Direction: a third question status, `deferred`, carrying what the stakeholder said and what
+  would unblock it. `next` does not stop on it, the item does not resume, and the record says
+  exactly what happened instead of choosing between two lies.
+- Status: open
+
+## F-029 — three skills need to create items and only two may
+- Severity: correctness, structural (a second instance of F-013's shape)
+- Component: methodology/pipeline.yaml, answer-questions, review-close
+- Symptom: two independent occurrences in one run.
+  1. `answer-questions` accepted an answer that widened scope and could not record the implied
+     work: only `intake` may create an item at `draft`, and `tracker/requests/` is `from: human`
+     by rule (F-021).
+  2. `review-close`'s D12 audit found a defect belonging to a closed item and could not file it:
+     "`pipeline.yaml` lets only `verify` create an item at `ready` and only `intake` at `draft`,
+     while `review-close`'s SKILL.md instructs it to file one — contract and pipeline disagree."
+- Evidence: evidence/iteration-1d/run/004-worker.status.md, 012-worker.status.md
+- Direction: decide which skills may create items and make `pipeline.yaml`, the transitions table
+  and the process contracts agree. `review-close` has the same standing as `verify` to file a
+  defect it found. Same failure shape as F-013: an instruction the state machine cannot execute.
+- Status: open
+
+## F-030 — `priority` is doing two jobs, so the board lies about what matters
+- Severity: UX / correctness of the record
+- Component: spec/work-item.md, methodology (refine, plan)
+- Symptom: the worker lowered WI-0003's `priority` to `medium` purely to order it last, on an item
+  the stakeholder had explicitly called non-optional, and then wrote prose in three files saying
+  that this is scheduling and not importance. "A lot of prose to work around a missing field."
+- Evidence: evidence/iteration-1d/run/004-worker.status.md
+- Direction: separate ordering from importance — a `sequence`/`after` field, or let `depends-on`
+  carry soft ordering — so the board's priority column means one thing.
+- Status: open
+
+## F-031 — an `[auto]` Definition of Ready check that only tests file existence
+- Severity: correctness (F-001's class, in a machine-decidable gate)
+- Component: spec/dor-dod.md (R8), scripts
+- Symptom: the worker: "DoR R8 is an `[auto]` check on `refinement-qa.md`. When `refine` is
+  interrupted before the conversation happens, the honest thing is to write the agenda down for
+  the next session — but a file that merely exists could read to an automated check as R8
+  satisfied." Mitigated with a banner; suggests a `status:` field the checker reads.
+- Evidence: evidence/iteration-1d/run/004-worker.status.md
+- Direction: R8's check reads a field, not a filename. A mechanical gate that checks the wrong
+  thing is worse than a manual one, because it is trusted.
+- Status: open
+
+## F-032 — a filed question has nowhere to put the answer
+- Severity: correctness, and it is the stakeholder's first impression of the protocol
+- Component: scripts/validate-workspace, spec/question.md, methodology (refine)
+- Symptom: the sim, turn 5: "none of these five questions had an `## Answer` section in the file at
+  all — refine's template for this batch stopped at 'Options considered.' I had to add the heading
+  myself to put my answer somewhere." `validate-workspace` requires `## Answer` and
+  `## Consequences` to be non-empty only once `status: answered`, so a question filed without them
+  is legal.
+- Evidence: evidence/iteration-1d/run/SIM-LOG.md turn 5
+- Direction: both headings must exist from the moment a question is filed — empty is fine, absent
+  is not — enforced by the validator and stated in `question.md`'s body rules.
+- Status: open
+
+## F-033 — `lint-claims` exits 0 having checked nothing when handed a file path
+- Severity: **correctness, severe** — a gate that reports success when it could not look
+- Component: scripts/lint-claims (introduced by this session, META-086)
+- Symptom: the worker: "lint-claims silently ignores explicit file paths and reports 'checked the
+  whole tree' with exit 0 — so a skill self-checking with file arguments can believe it passed a
+  gate it never ran." Cause: `main()` does `options.setdefault("root", token)`, so the first
+  positional becomes the workspace root; `lint-claims docs/architecture/overview.md` sets root to
+  that file, finds no `docs/` beneath it, and exits 0 — while printing a scope line asserting the
+  opposite.
+- Consequence beyond the bug: the worker built a rule of thumb on top of it — "`--changed-since`
+  is stricter than the whole-tree run" — which is impossible (`--all` lints a superset) and is
+  only explicable by the whole-tree run having checked nothing.
+- Why `scripts/check` missed it: both of its steps pass `--root`.
+- Evidence: evidence/iteration-1d/run/006-worker.status.md, 014-worker.status.md
+- Direction: accept explicit file and directory arguments and lint exactly those; or refuse an
+  argument that is not a workspace, naming `--root`. Never exit 0 having examined nothing, and
+  never print a scope line that is not what was scoped. Must-fail fixture: `lint-claims <file with
+  an unsourced absolute claim>` exits non-zero.
+- Status: open
+
+## F-034 — `plan` writes source files so that its own gates can run
+- Severity: contract/spec conflict
+- Component: methodology/plan, spec/workspace-layout.md §5
+- Symptom: `plan` created empty `expenses/__init__.py` and `tests/__init__.py` "solely so the test
+  and lint commands could be run before being recorded, as the skill's own self-check demands",
+  and flagged it under the plan's `## Risks`. `plan` is specified as producing no code.
+- Evidence: evidence/iteration-1d/run/006-worker.status.md
+- Direction: either the self-check stops requiring a command to have been run, or the "no code"
+  rule gains an explicit carve-out for scaffolding a command needs to execute at all.
+- Status: open
+
+## F-035 — `check-commit-refs` reports a merge that never happened
+- Severity: UX, misleading
+- Component: scripts/check-commit-refs
+- Symptom: on the opening `in-progress` transition of a branch with no commits yet, `trunk..branch`
+  is empty and the merged-ancestor test is trivially true, so the gate prints "already merged into
+  main… rewind the merge, close, then merge" — advice for a situation that does not exist.
+- Evidence: evidence/iteration-1d/run/007-worker.status.md
+- Direction: distinguish "empty because nothing is committed yet" from "empty because it was
+  merged" — the branch head equalling the trunk head separates them.
+- Status: open
+
+## F-036 — `new-item` leaves the workspace invalid and does not say so
+- Severity: UX
+- Component: scripts/new-item
+- Symptom: it writes the history row (actor = the creating skill) and no journal entry, so
+  `journal.execution.missing` fires until the skill journals the creation — correct behaviour, and
+  the success message says nothing about it.
+- Evidence: evidence/iteration-1d/run/007-worker.status.md
+- Direction: the success output names the next required step and the exact `journal-entry`
+  command. The worker also noted that `journal-entry` requires a `**Status:**` bullet on an entry
+  that records no transition; that is `spec/journal-and-history.md` §2.2 as written (such an entry
+  reads `X` → `X` (unchanged)), so what is missing is only that the error message does not say so.
+- Status: open
+
+## F-037 — the citation rule made the append-only rule unsatisfiable
+- Severity: **structural, severe** — one invariant added this session broke another
+- Component: scripts/lint-claims, scripts/validate-workspace, spec/doc-header.md §4a
+- Symptom: a `[src: ...]` marker in `WI-0003/Q-002` used a form §4a does not define, so
+  `validate-workspace` failed after the transition had applied. The correcting journal entry
+  described the defect **by quoting the malformed marker verbatim** — and `lint-claims` read the
+  quotation as a citation and failed on that too. In the worker's words: "Fixing it required
+  rewriting one sentence of an append-only journal entry, since no appended entry can remove a
+  line the linter rejects. That rewrite is recorded in full in a third entry on WI-0003, including
+  that it violates `spec/journal-and-history.md`'s append-only rule and does not fall under its
+  single sanctioned exception."
+- Why this is the worst finding of the run: the record could not describe its own defect without
+  reproducing it, so the only way forward was to break the invariant the whole audit trail rests
+  on. A rule that forces that is worse than the rule's absence.
+- Evidence: evidence/iteration-1d/run/008-worker.status.md, 010-worker.status.md;
+  evidence/iteration-1d/project/tracker/items/WI-0003/journal.md
+- Direction (the worker's, and it is right): a `[src: ...]` inside an inline code span or a fenced
+  block is a **quotation**, not a citation, and is skipped. `lint-claims` already skips fences for
+  the absolute-claim rule; the citation scan skips nothing, and neither does
+  `validate-workspace.check_claim_citations`. Must-fail fixture both ways: a bare malformed marker
+  still fails, the same marker in backticks does not.
+- Status: open
+
+## F-038 — a transition can leave the tracker committed-invalid
+- Severity: correctness, minor (documented behaviour, undocumented window)
+- Component: scripts/transition, spec/skill-contract.md
+- Symptom: the worker: "transition applied WI-0003's move and then reported the workspace no longer
+  validates, correctly noting the failing gate was not blocking that move — the behaviour is right
+  and clearly explained, but it does leave a window in which the tracker is committed-invalid if
+  the caller stops there."
+- Evidence: evidence/iteration-1d/run/008-worker.status.md
+- Direction: state the window in `spec/skill-contract.md` §2.3 rather than leaving it as folklore.
+  The alternative — validate the post-move state and roll back — means truncating an append-only
+  file, which META-090 rejected for that reason.
+- Status: open
+
+## F-039 — `transition` validates the journal body only after writing the history row
+- Severity: correctness (a malformed body costs a manual repair on an append-only file)
+- Component: scripts/transition, scripts/journal-entry (introduced by this session, META-084)
+- Symptom: reported on turns 8 and 10. The row-first ordering is deliberate and right; the *body
+  check* happening after it is not.
+- Evidence: evidence/iteration-1d/run/008-worker.status.md, 010-worker.status.md
+- Direction: validate the body before touching `history.md`, then write the row, then append the
+  entry. `journal-entry.check_body()` is already a pure function; call it early. Nothing about the
+  ordering needs to change.
+- Status: open
+
+## F-040 — a repeated `src:` prefix is rejected and the message blames the citation
+- Severity: UX
+- Component: scripts/lib/claims.py (introduced by this session, META-086)
+- Symptom: `spec/doc-header.md` §4a separates several sources with `;` inside one marker, i.e.
+  `[src: A; B]`. An author writing `[src: A; src: B]` gets `" src: B"` after the split, which
+  matches no form, and the error says the citation is unrecognised rather than that the prefix is
+  repeated.
+- Evidence: evidence/iteration-1d/run/011-worker.status.md
+- Direction: strip a leading `src:` from each part; if it still fails, say which part and why.
+- Status: open
+
+## F-041 — `validate-workspace` lints files the workspace does not track
+- Severity: correctness (scope)
+- Component: scripts/validate-workspace (introduced by this session, META-086)
+- Symptom: the worker: "validate-workspace lints this git-ignored status file, so a status report
+  cannot quote a malformed citation to describe the problem." `check_claim_citations` walks every
+  `*.md` under the root, `.gitignore` included.
+- Evidence: evidence/iteration-1d/run/011-worker.status.md
+- Direction: skip paths git ignores, falling back to current behaviour outside a repository. F-037's
+  code-span rule is the more general half of the same answer.
+- Status: open
+
+## F-042 — see F-029
+Merged into F-029; both occurrences of "a skill is told to create an item it may not create" are
+filed there.
+
+## F-043 — `--outcome` is unreachable in practice and named in no contract
+- Severity: UX (a working flag went unused, and the workaround is hand-editing `item.md`)
+- Component: scripts/transition, methodology/review-close
+- Symptom: the worker: "transition refuses an outcome set before the move and then reports the
+  workspace invalid for the missing outcome after it, so the only working order is transition,
+  edit item.md, re-validate; `--outcome` exists as a flag but the skill never mentions it."
+- Evidence: evidence/iteration-1d/run/012-worker.status.md
+- Direction: name `--outcome` in `review-close`'s closing step, and find out why setting the field
+  before the move is refused. Hand-editing `item.md` is precisely what the tooling exists to remove.
+- Status: open
+
+## F-044 — `transition` does not escape `|` in `--reason` and corrupts `history.md`
+- Severity: **correctness, severe** — silent record corruption after a reported success
+- Component: scripts/transition, scripts/validate-workspace
+- Symptom: the worker: "a reason containing a union type corrupts the history row and breaks
+  validation after a transition the tool reports as successful; the resulting validator errors do
+  not name the cause." `history.md` is a markdown table, so an unescaped pipe splits the row into
+  extra cells and the item's whole chain misparses. Repaired and journalled on BUG-0001 by the
+  worker.
+- Evidence: evidence/iteration-1d/run/014-worker.status.md
+- Direction: escape `|` when writing the reason cell (check `journal-entry` for the same class),
+  and make the validator's row-shape error name an unescaped pipe as the likely cause.
+- Status: open
+
+## F-045 — the epic sign-off gate does not fire on a run that ends in an impasse
+- Severity: methodology gap (the acceptance loop, incomplete — F-022's fix is half a fix)
+- Component: methodology/review-close, scripts/check-epic-signoff, spec/dor-dod.md
+- Symptom: `check-epic-signoff` gates `review-close`'s completion transition `open → done`, and
+  DE1 requires every child `done` — so an epic with a `blocked` child never reaches the gate and
+  the stakeholder is never asked. Both sides of the engagement reached this independently: the
+  worker, "EP-001 correctly stays open because DE1 fails, so the DE7 sign-off question is not yet
+  due"; and the stakeholder, who went looking — "no `kind: sign-off` question was ever filed
+  anywhere: I grepped for it and found the phrase only in journal prose, scripts and spec docs,
+  never in a question's own frontmatter."
+- The stakeholder on why it matters, verbatim: "I expected that before anyone called this
+  engagement finished, someone would ask me straight out whether I accept it as it stands — and I
+  was ready to say no… That question never came. The board and the epic both make it clear enough
+  on their own that this isn't finished… But if this had ended with a report calling it 'done,'
+  I'd have had no record of ever being asked, and that's the part I'd have pushed back on hardest."
+- Evidence: evidence/iteration-1d/run/SIM-LOG.md turn 15; run/016-worker.status.md
+- Direction: an epic **ends** when it is closed or when it can no longer progress, and the sign-off
+  belongs to both. File it when every remaining child is `blocked` or `done` and no question is
+  open — restating the goal, what was delivered, what is stuck and why — and let the epic close
+  with an outcome recording the answer, or stay open.
+- Status: open
+
+## F-046 — a bug the pipeline filed is never shown to the stakeholder
+- Severity: UX, low (largely the same gap as F-045)
+- Component: methodology (review-close, next)
+- Symptom: the sim, turn 15: "There's also a bug sitting at `planned`… that I was never told about
+  and that isn't fixed either, so strictly the whole thing isn't done even setting the import
+  aside — but nobody ever asked me about that one and I have no view on it worth recording."
+- Evidence: evidence/iteration-1d/run/SIM-LOG.md turn 15
+- Direction: the sign-off (F-045) is the moment the whole picture is shown. Fold in.
+- Status: open
+
+## F-047 — an empty `questions/` directory breaks an item at the moment of closing
+- Severity: correctness (F-002's class, with a much sharper consequence)
+- Component: scripts/new-item, scripts/workspace-init
+- Symptom: the worker: "an item with no questions has an empty `questions/` directory that git
+  cannot track, so the trial merge `review-close` is required to perform deletes it and
+  `validate-workspace` fails with `questions.missing` at the moment of closing — worked around with
+  a `.gitkeep`; `new-item` should create it."
+- Evidence: evidence/iteration-1d/run/016-worker.status.md
+- Direction: fold into F-002. Every directory the schema requires gets a `.gitkeep` from the tool
+  that creates it — `workspace-init` **and** `new-item`. F-002 predicted the fresh-clone symptom;
+  1d found it failing a close instead, which is worse.
+- Status: open (fix with F-002)
+
+## F-048 — `plan` wrote a step instructing `implement` to break a spec rule
+- Severity: correctness, low (the enforcement held)
+- Component: methodology/plan
+- Symptom: "BUG-0001's plan step 7 instructed `implement` to tick the acceptance criteria, which
+  `spec/work-item.md` reserves for `verify`. `implement` declined and declared it, and review
+  agreed — but `plan` should not be writing steps that tell a downstream skill to break a spec
+  rule."
+- Evidence: evidence/iteration-1d/run/016-worker.status.md
+- Direction: `plan`'s self-check gains "no step instructs another skill to do something its
+  contract forbids". Worth recording that the system behaved correctly here: the instruction was
+  refused, the refusal was declared, and the review agreed — all three positions are in the record.
+- Status: open
+
+---
+
+### Addendum to F-002 (2026-08-22, iteration 1d)
+1d found the same defect in `new-item` rather than `workspace-init`, and failing at a worse
+moment: an item's empty `questions/` directory is deleted by the trial merge `review-close`
+performs, so the item fails `questions.missing` *while being closed*. See F-047. Fix both tools
+together.
+
+### Addendum to F-022 (2026-08-22, iteration 1d) — the fix is half a fix
+The mechanism works and is proven by fixtures and by demonstration, and 1d never exercised it: an
+epic with a `blocked` child never reaches `open → done`, so the gate is never evaluated and the
+stakeholder is never asked. Filed as **F-045**. F-022 remains `fixed` for what it claims — an epic
+cannot *close* without acceptance — and the larger claim, that a stakeholder gets a say at the end
+of an engagement, is not yet true.
+
+### Addendum to F-011 (2026-08-22, iteration 1d)
+The rewritten precondition treats "addressed-to `human` with `## Answer` non-empty" as answerable.
+A **deferral** is non-empty: 1d's stakeholder answered "I'll send you a sample later" three times.
+So the fix is right for the case it addresses and blind to a case the same run produced
+immediately. See **F-028**.
