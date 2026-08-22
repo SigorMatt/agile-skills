@@ -1,4 +1,4 @@
-# Contract — refine v0.1.2
+# Contract — refine v0.2.0
 
 Rendered from `methodology/skills/refine/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -49,6 +49,7 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] Every question filed to the human carries product stake; implementation-only choices were decided or routed to plan, and a standing deferral was honoured for its whole category.
 - [ ] Every Definition of Ready criterion is recorded as passed, or as overridden by the human with the reason.
 - [ ] Every acceptance criterion names how it would be observed.
 - [ ] refinement-qa.md holds the full exchange, with assumed answers marked as assumed.

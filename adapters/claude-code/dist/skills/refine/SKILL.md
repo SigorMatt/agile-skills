@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.1.2
+  methodology-version: 0.2.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -62,12 +62,51 @@ acted on. Then write down exactly what was said.
    your agenda. Do not start the conversation until you have it — an unplanned interrogation
    wanders and asks twice as many questions for half the result.
 
-3. **Ask in batches, tied to criteria.** Three to six questions at a time, each traceable to a
-   failing DoR criterion. State *why* you are asking: "AC2 says the output should be sorted, but
-   not what breaks a tie — if two files have the same count, which comes first?" is answerable.
-   "Can you tell me more about sorting?" is not.
+3. **Decide who each question is for, before you file it.** Not every gap is the
+   stakeholder's to close, and their attention is the scarcest thing in this loop. For each
+   failing criterion, apply this test in order and stop at the first that fits:
 
-4. **Challenge answers that cannot be acted on — once, specifically.**
+   - **Product stake — ask the human.** The answer changes what the software is *for*, what it
+     promises, or what they would notice: scope, priorities, what counts as correct, what
+     happens to their data, anything irreversible.
+   - **Already answered — do not ask again.** Their words are in the journal from `intake` and
+     in earlier `refinement-qa.md` files. Re-asking is the fastest way to lose a stakeholder.
+   - **A standing deferral covers it — decide it, and say so.** When they have answered a whole
+     *category* with "whatever you think is best" — how it is built, what things are called,
+     the exact wording of output, exit codes, file layout, libraries — that is a real answer and
+     it applies to the category, not only to the question that produced it. Decide, record it in
+     the Q&A as `[assumed]` naming the deferral you are relying on, and move on. Asking anyway
+     tells them their answer was not heard.
+   - **Implementation-only — route it to `plan`, not to a person.** If the answer would be the
+     same whoever the stakeholder was, it is a design decision. Put it in the item's `## Notes`
+     as an open design question and let `plan` settle it under its own preference order.
+
+   A stakeholder in a real run put it plainly: four questions on one work item, "three of the
+   four were things I'd expect a team to just decide on their own… technical calls being routed
+   to me as questions" (F-023). The reverse failure is real too and costs more: guessing at
+   something that was theirs to decide.
+
+4. **Ask in batches, tied to criteria — one decision per question, one ask per item per round.**
+   Three to six questions at a time, each traceable to a failing DoR criterion. State *why* you
+   are asking: "AC2 says the output should be sorted, but not what breaks a tie — if two files
+   have the same count, which comes first?" is answerable. "Can you tell me more about sorting?"
+   is not.
+
+   Two shaping rules, from opposite complaints in real runs:
+
+   - **One decision per question file.** A question that folds a scope decision into what reads
+     like an ordering question gets half-answered and half-recorded: "I answered both halves,
+     but it is the kind of question that could get logged as just 'ordering answered' when a
+     scope refusal was also in it" (F-027). If there are two decisions, file two questions.
+   - **One grouped ask per item per round.** The artifacts stay one-per-decision, because
+     provenance needs them — but a stakeholder receiving `Q-004`, `Q-005` and `Q-006` separately
+     experiences "three separate emails… for one work item" (F-020). So each question's
+     `## Context` opens with the same one-line frame naming the item, this round, and how many
+     questions it contains — "WI-0002, round 1, question 2 of 3: what the report shows" — and
+     the last one closes by saying that is all of them for now. One conversation, three
+     artifacts.
+
+5. **Challenge answers that cannot be acted on — once, specifically.**
    - "It should handle errors gracefully" → "Which errors? For a missing file, do you want a
      message on stderr and a non-zero exit, or a warning and a skip?"
    - "The usual thing" → "Name a tool that does the usual thing, and I will match its
@@ -79,7 +118,7 @@ acted on. Then write down exactly what was said.
    open assumption in the item's `## Notes`, mark it `assumed` in the Q&A, and move on. A human
    badgered into a number they do not believe has not given you a requirement, only a truce.
 
-5. **Rewrite the acceptance criteria.** Each one gets a label `AC<n>`, a checkbox, and a form
+6. **Rewrite the acceptance criteria.** Each one gets a label `AC<n>`, a checkbox, and a form
    that names what would be observed. Apply the test: *hand this to someone with a terminal and
    no context — would they reach the same verdict you would?*
    - Before: `- [ ] AC1 — handles empty directories`
@@ -90,11 +129,11 @@ acted on. Then write down exactly what was said.
    path that does not exist, a tie, the largest reasonable size. These are where implementations
    diverge from intent, and they are nearly free to specify now.
 
-6. **Write `## Out of scope`.** At least one entry, naming something a reader could reasonably
+7. **Write `## Out of scope`.** At least one entry, naming something a reader could reasonably
    assume is included. If the human insists nothing is excluded, that itself is worth writing
    down — and usually prompts them to remember an exclusion.
 
-7. **Write `artifacts/refinement-qa.md`.** Every question and every answer, in order, verbatim.
+8. **Write `artifacts/refinement-qa.md`.** Every question and every answer, in order, verbatim.
    Tag each answer:
    - `[human]` — the human said this.
    - `[assumed]` — you proposed it and they confirmed, or they deferred to you.
@@ -104,16 +143,16 @@ acted on. Then write down exactly what was said.
    `verify` later finds the behaviour contested, this file is the evidence of what was actually
    agreed, and a tidied version of it is worth nothing.
 
-8. **Handle an override.** If the human wants the item Ready without meeting a criterion, that
+9. **Handle an override.** If the human wants the item Ready without meeting a criterion, that
    is their call and it is legitimate. Record it loudly, per `spec/dor-dod.md` §1:
    `## Override` in the Q&A naming the unmet criteria and their stated reason; the unmet
    criteria copied into the item's `## Notes`; and the history `reason` beginning
    `DoR overridden:`. Never pass an item silently.
 
-9. **Run the gates**, evaluating the Definition of Ready criterion by criterion and recording
+10. **Run the gates**, evaluating the Definition of Ready criterion by criterion and recording
    each result. Regenerate the board.
 
-10. **Journal and transition, in one command** — `draft → ready` with `--journal-body-file`
+11. **Journal and transition, in one command** — `draft → ready` with `--journal-body-file`
     (see Journaling). One command is the point: journalling and moving used to be two steps with
     an interruptible gap between them, and the record could end up claiming a move that never
     happened.

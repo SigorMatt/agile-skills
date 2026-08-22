@@ -95,6 +95,16 @@ question.
   with nowhere to write: a stakeholder in a real run received five questions that stopped at
   `## Options considered` and had to invent the structure of the record in order to reply
   (F-032).
+- **One decision per question.** A question that folds two decisions together gets
+  half-answered and half-recorded — a stakeholder who refused a scope change inside what read
+  like an ordering question noted that the refusal could easily have been logged as "ordering
+  answered" (F-027). Two decisions, two files.
+- **Questions filed for one item in one round are presented as one ask.** The artifacts stay
+  one-per-decision because provenance needs them, but the person reading three files should
+  experience one conversation, not three. Each `## Context` opens with the same frame — the
+  item, the round, and which of how many this is — and the last one says that is all of them for
+  now. Without it, a stakeholder receiving `Q-004`…`Q-006` reported "three separate emails…
+  for one work item" (F-020).
 - `## Options considered` MUST list at least two options **or** state explicitly why the
   question is not a choice between options (e.g. a missing fact). A question filed without
   having thought about the answer pushes the whole cost of the thinking upstream, which is how
@@ -203,3 +213,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §2: the optional `kind` field, and `kind: sign-off` — the stakeholder acceptance question an epic cannot close without (F-022). |
 | 3 | 2026-08-22 | §2: `## Answer` and `## Consequences` must exist from the moment a question is filed (F-032). |
+| 4 | 2026-08-22 | §2: one decision per question (F-027); questions for one item in one round are presented as one ask (F-020). |

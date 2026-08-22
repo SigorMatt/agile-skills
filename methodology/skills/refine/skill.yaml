@@ -1,5 +1,5 @@
 name: refine
-version: 0.1.2
+version: 0.2.0
 persona: product-analyst
 purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
 
@@ -78,6 +78,7 @@ escalation:
   impasse: If the human cannot answer what the item needs and will not override, set the item to blocked, recording which Definition of Ready criteria remain unmet.
 
 exit_criteria:
+  - Every question filed to the human carries product stake; implementation-only choices were decided or routed to plan, and a standing deferral was honoured for its whole category.
   - Every Definition of Ready criterion is recorded as passed, or as overridden by the human with the reason.
   - Every acceptance criterion names how it would be observed.
   - refinement-qa.md holds the full exchange, with assumed answers marked as assumed.
