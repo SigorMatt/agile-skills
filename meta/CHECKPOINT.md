@@ -1,28 +1,31 @@
 # CHECKPOINT
 
-## Current unit: META-083 — F-019: the record cannot diverge from the status undetectably
+## Current unit: META-084 — F-017: a journal header no skill can invent
 
-F-019 (`meta/findings/FINDINGS.md`): a `cd` made a relative script path fail mid-chain, the
-rest of the chained command ran anyway, and a journal entry plus a tracker commit claimed a
-transition that never happened. Three mechanical fixes, per the finding's Direction:
+F-017 + its two addenda: skills write *plausible* timestamps instead of reading a clock (run 1c
+stamped eleven entries across a next-morning half-day for work done in minutes), and they invent
+version strings too (run 1b's "review-close v0.1.0" against an installed 0.1.2). The class fix is
+that no self-reported header field is authored by the model.
 
 Steps:
-1. `scripts/lib/workspace.py` — `find_workspace_root()` / `resolve_root()`: walk up from CWD to
-   the directory holding `tracker/project.yaml`. Every script defaults its root to it and says
-   on stderr when it resolved somewhere other than CWD.
-2. `spec/skill-contract.md` — the transition is a checkpoint: never chained, its exit code gates
-   everything after it; scripts are invoked by a path that does not depend on CWD. Rendered into
-   every SKILL.md by `adapters/claude-code/render.py`.
-3. `scripts/validate-workspace` — `journal.status.unmatched`: every transition a journal entry
-   claims under `**Status:**` must have a matching row in `history.md`.
-4. Must-fail fixture: a journal entry claiming a transition `history.md` does not carry; code
-   added to `fixtures/broken-workspace/EXPECTED-CODES.txt`.
-5. Re-render, `./scripts/check` green, FINDINGS.md F-019 → fixed, journal, commit, push.
+1. `scripts/journal-entry` — the only sanctioned writer of a `journal.md` entry. It stamps the
+   heading itself: clock for the timestamp, the installed `skill.yaml` for version and persona.
+   The caller supplies only the bullets. Monotonic clamp announced, as `transition` does.
+   `--restamp-last` is the journal's counterpart of the history repair.
+2. `scripts/transition --journal-body-file` — history row and journal entry from **one** clock
+   read, with the `**Status:**` bullet written by the script from the move it just made.
+3. `spec/journal-and-history.md` — a timestamp is read from a clock and never estimated; header
+   fields come from a mechanical source; the restamp exception now covers `journal.md`.
+4. `scripts/validate-workspace` — `journal.timestamp.future`, `history.timestamp.future`,
+   `journal.timestamp.outside-activity`, `history.timestamp.outside-activity`,
+   `journal.version.impossible`.
+5. Must-fail fixture cases for each; EXPECTED-CODES updated.
+6. Ship the new script in the adapter; re-render; `./scripts/check` green; FINDINGS, journal,
+   commit, push.
 
-Done when: check green with the new code in the fixture, and running any script from a
-subdirectory of a workspace acts on the workspace, demonstrated.
+Done when: check green, and a demonstration that an entry stamped in 1c's shape is rejected.
 
-Next unit: **META-084** — F-017 (mechanical journal-entry provenance).
+Next unit: **META-084b** — every skill's `## Journaling` section adopts the script; version bumps.
 
 ## Standing instructions (still in force)
 

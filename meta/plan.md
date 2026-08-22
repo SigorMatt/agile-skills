@@ -205,10 +205,14 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
 - [ ] **META-083** — F-019: every script resolves the workspace root itself; process contracts
       forbid chaining `transition`; validator cross-checks journal `**Status:**` lines against
       `history.md` rows. Must-fail fixture for the divergence.
-- [ ] **META-084** — F-017: mechanical entry provenance. `scripts/journal-entry` emits the entry
-      header from a clock read + the skill's own version; spec forbids estimated timestamps;
-      validator rejects entries dated outside the workspace's git activity window. Must-fail
-      fixture.
+- [ ] **META-084** — F-017 (mechanism): `scripts/journal-entry` is the only sanctioned writer
+      of a journal entry — it stamps the heading from a clock read and the skill's own installed
+      contract; `transition --journal-body-file` writes the history row and the entry from one
+      clock read, so they cannot diverge. Spec forbids estimated timestamps and gives `journal.md`
+      the restamp exception. Validator rejects entries stamped in the future or outside the
+      workspace's git activity window. Must-fail fixtures.
+- [ ] **META-084b** — F-017 (adoption): every skill's `## Journaling` section uses the script;
+      version bumps; re-render.
 - [ ] **META-085** — F-018: the write guard decides on the write target, not the command string.
       Fixtures both ways (mention allowed, write denied).
 - [ ] **META-086** — F-001: claim-provenance lint — factual justifications in ADRs/reviews/docs
