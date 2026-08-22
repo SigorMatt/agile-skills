@@ -1,0 +1,21 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: expenses-1d
+  trunk-branch: main
+  description: "A local command-line tool for tracking shared expenses in a friend group: people, expenses paid by one and shared by some or all, import from a bank CSV export, and a who-owes-whom report. Python, no hosted services, data persisted locally."
+
+commands:
+  # Set by `plan` for WI-0001; see ADR-0005. Both were run in this project before being recorded.
+  test: python3 -m unittest discover -s tests -t . -q
+  # A syntax check, not a style linter: no linter is installed and the project takes no
+  # third-party dependencies (ADR-0005). A green lint gate means every file parses, nothing more.
+  lint: python3 -m compileall -q expenses tests
+  # Nothing is built: the tool is run from the checkout as `python3 -m expenses` (ADR-0005).
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

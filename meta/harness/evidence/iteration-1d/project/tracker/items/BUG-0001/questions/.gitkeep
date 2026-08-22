@@ -1,0 +1,5 @@
+`spec/workspace-layout.md` §1.1 requires this directory to exist even when it is empty, and git
+does not track empty directories. Without this file, any branch switch — including the trial
+merge `review-close` is required to perform — deletes it, and `validate-workspace` then fails
+with `questions.missing` on an item that did nothing wrong. Recorded in BUG-0001's journal at
+the review that hit it.
