@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Gate: a factual claim about the system cites something that exists.
+
+Usage:
+  scripts/lint-claims [--root .] [--changed-since <git-ref>] [--all] [--quiet]
+
+Two rules.
+
+  1. **Every citation resolves.** A `[src: ...]` marker names a workspace path, an item, an
+     acceptance criterion, a question, an ADR, a commit, or a command with its recorded outcome —
+     and each of those is looked up. A citation that does not resolve is worse than none: it is
+     the appearance of evidence.
+
+  2. **An absolute claim about a named code object carries a citation.** A paragraph under
+     `docs/` that says `no`, `never`, `only`, `every`, `cannot`, `always`, `nothing`,
+     `impossible`, `guaranteed` *about* something named in backticks or written as a path must
+     cite at least one source somewhere in that paragraph.
+
+Rule 2 is narrow on purpose, and the narrowness is the evidence. F-001: an independent audit of a
+real run found that every machine-decidable gate held and every gate resting on a human-style read
+did not, and the specific thing that went wrong — reaching shipped source comments, an ADR, an
+architecture overview, and then a seventh document after the audit flagged it — was one absolute
+sentence about a named identifier that nobody re-checked. Absolutes are cheap to write, expensive
+to verify, and catastrophic when wrong. Hedged prose is not the target; unsourced certainty is.
+
+`--changed-since <ref>` restricts rule 2 to documents this execution actually touched, including
+uncommitted ones. That is the same scoping the Definition of Done already applies to D7 and D12 —
+"the behaviour this item touched" — so the gate is a real read of a few paragraphs rather than a
+whole-repository ritual nobody performs. `--all` forces the whole tree, for an audit.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
+                    CitationResolver, is_prose, looks_like_code, paragraphs)
+from report import Report  # noqa: E402
+from workspace import resolve_root  # noqa: E402
+
+class ClaimLinter:
+    def __init__(self, root: str, changed_since=None, everything=False) -> None:
+        self.root = os.path.abspath(root)
+        self.report = Report("lint-claims", self.root)
+        self.changed_since = changed_since
+        self.everything = everything
+        self.citations = CitationResolver(self.root)
+
+    # ---- workspace facts -------------------------------------------------------------
+
+    def changed_docs(self):
+        """Documents this execution touched: differing from the ref, or dirty in the tree."""
+        result = self.git(["diff", "--name-only", self.changed_since, "--", "docs"])
+        names = set()
+        if result is not None and result.returncode == 0:
+            names.update(line.strip() for line in result.stdout.split("\n") if line.strip())
+        status = self.git(["status", "--porcelain", "--", "docs"])
+        if status is not None and status.returncode == 0:
+            for line in status.stdout.split("\n"):
+                if len(line) > 3:
+                    names.add(line[3:].strip().strip('"'))
+        return {name for name in names if name.endswith(".md")}
+
+    def documents(self):
+        """(relative-path, text) for every document rule 2 applies to."""
+        docs_dir = os.path.join(self.root, "docs")
+        if not os.path.isdir(docs_dir):
+            return []
+        selected = None
+        if self.changed_since and not self.everything:
+            selected = self.changed_docs()
+        found = []
+        for base, dirs, files in os.walk(docs_dir):
+            dirs[:] = [entry for entry in dirs if not entry.startswith(".")]
+            for name in sorted(files):
+                if not name.endswith(".md"):
+                    continue
+                path = os.path.join(base, name)
+                relative = os.path.relpath(path, self.root)
+                if selected is not None and relative not in selected:
+                    continue
+                with open(path, "r", encoding="utf-8") as handle:
+                    found.append((relative, handle.read()))
+        return found
+
+    def all_markdown(self):
+        """Every markdown file in the workspace — rule 1 applies everywhere a citation appears."""
+        found = []
+        for base, dirs, files in os.walk(self.root):
+            dirs[:] = [entry for entry in dirs
+                       if entry not in (".git", "__pycache__", ".claude", "node_modules")]
+            for name in sorted(files):
+                if not name.endswith(".md"):
+                    continue
+                path = os.path.join(base, name)
+                relative = os.path.relpath(path, self.root)
+                with open(path, "r", encoding="utf-8") as handle:
+                    found.append((relative, handle.read()))
+        return found
+
+    # ---- rule 1: a citation resolves --------------------------------------------------
+
+    def check_citations(self) -> None:
+        for relative, text in self.all_markdown():
+            for line, problem in self.citations.problems_in(text):
+                self.report.error(os.path.join(self.root, relative), line,
+                                  "claim.citation.unresolved", problem,
+                                  hint="a citation that does not resolve is the appearance of "
+                                       "evidence, which is worse than none")
+
+    # ---- rule 2: an absolute claim is sourced -----------------------------------------
+
+    def check_absolutes(self) -> None:
+        for relative, text in self.documents():
+            for start, block in paragraphs(text):
+                if not is_prose(block):
+                    continue
+                joined = "\n".join(block)
+                if CITATION_RE.search(joined):
+                    continue
+                absolute = ABSOLUTE_RE.search(joined)
+                if not absolute:
+                    continue
+                tokens = [token for token in CODE_TOKEN_RE.findall(joined)
+                          if looks_like_code(token)]
+                if not tokens:
+                    continue
+                self.report.error(
+                    os.path.join(self.root, relative), start, "claim.unsourced",
+                    f"an absolute claim ({absolute.group(1)!r}) about {tokens[0]!r} with no "
+                    f"citation",
+                    hint="add [src: <path|ITEM|ITEM ACn|ITEM/Q-nnn|ADR-nnnn|commit sha|"
+                         "run: cmd → outcome>] — an absolute is the claim shape that has "
+                         "actually gone wrong and propagated (F-001)")
+
+    def run(self) -> int:
+        self.check_citations()
+        self.check_absolutes()
+        scope = "the whole tree" if (self.everything or not self.changed_since) \
+            else f"documents changed since {self.changed_since}"
+        self.report.note(f"checked {scope}")
+        return self.report.emit()
+
+
+def main(argv: list) -> int:
+    options, flags = {}, set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--all", "--quiet"):
+            flags.add(token[2:])
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"lint-claims: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        options.setdefault("root", token)
+        index += 1
+    root = resolve_root(options.get("root"), tool="lint-claims")
+    return ClaimLinter(root, options.get("changed-since"), "all" in flags).run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

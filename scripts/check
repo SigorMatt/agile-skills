@@ -9,10 +9,13 @@ Steps, in order:
                                                EXPECTED-CODES.txt exactly
   4. rendered adapter output is current      — re-render and compare with the committed dist
   5. must-pass workspace                     — validate-workspace over examples/toy-project
-  6. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+  6. claim-provenance fixtures              — scripts/lint-claims must find both defects in
+                                               fixtures/broken-workspace and nothing at all in
+                                               fixtures/sourced-claims
+  7. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
-  7. harness self-test                       — harness/tests/test_harness.py: the contamination
+  8. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -125,6 +128,27 @@ def check_example(runner: Runner) -> None:
                [sys.executable, os.path.join(SCRIPTS, "validate-workspace"), example])
 
 
+def check_claims(runner: Runner) -> None:
+    linter = os.path.join(SCRIPTS, "lint-claims")
+    broken = os.path.join(ROOT, "fixtures", "broken-workspace")
+    clean = os.path.join(ROOT, "fixtures", "sourced-claims")
+    if not os.path.isfile(linter) or not os.path.isdir(clean):
+        runner.skip("claim-provenance fixtures", "scripts/lint-claims or its fixtures are absent")
+        return
+    result = subprocess.run([sys.executable, linter, "--root", broken, "--all"],
+                            capture_output=True, text=True, cwd=ROOT)
+    found = codes_from(result.stdout + result.stderr)
+    expected = {"claim.citation.unresolved", "claim.unsourced"}
+    if result.returncode == 0 or not expected <= found:
+        runner.emit("claim-provenance fixtures", False, result,
+                    detail=f"expected {sorted(expected)} over the broken fixture, "
+                           f"found {sorted(found)}")
+        return
+    # A rule nobody can satisfy is not a rule: prose that cites its sources must pass cleanly.
+    runner.run("claim-provenance fixtures",
+               [sys.executable, linter, "--root", clean, "--all"])
+
+
 def check_guard(runner: Runner) -> None:
     tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
     if not os.path.isfile(tests):
@@ -149,6 +173,7 @@ def main() -> int:
     check_fixture(runner)
     check_render(runner)
     check_example(runner)
+    check_claims(runner)
     check_guard(runner)
     check_harness(runner)
 

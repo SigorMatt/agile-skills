@@ -1,5 +1,5 @@
 name: review-close
-version: 0.1.3
+version: 0.2.1
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -94,6 +94,12 @@ quality_gates:
   - name: record-is-reconstructible
     description: A reader with only the tracker, docs and git log could reconstruct what happened and why.
     manual_check: Answer, using only those sources - what was built and why, which decisions were made and by which skill, what questions arose and how they were resolved, what verification found. Any answer you cannot give is a defect in the record, not in the reader.
+    enforcement: hard
+    on_failure: stay
+  - name: claims-are-sourced
+    description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
+    command: scripts/lint-claims --changed-since {{trunk}}
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
 

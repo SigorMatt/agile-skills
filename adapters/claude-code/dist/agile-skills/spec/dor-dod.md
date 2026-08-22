@@ -86,7 +86,7 @@ time and records the result in the filing journal entry.
 | D9 | The change is merged into the trunk, and the branch's work is not left only on the branch | [auto] |
 | D10 | `verify` ran **after** the last code change. A verification older than the code it verifies does not count | [auto] |
 | D11 | The review record exists at `artifacts/review.md` and states what was examined, not only the verdict | [skill] |
-| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it | [skill] |
+| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it. Absolute claims this execution wrote carry a resolvable citation (`doc-header.md` §4a) | [skill] + [auto] |
 
 ### D12 exists because D7 was not enough
 
@@ -99,6 +99,14 @@ Every machine-decidable gate held throughout; every gate resting on a human-styl
 
 D12 is scoped deliberately — the behaviour *this item touched*, not all of `docs/` — so it is a
 real read of a few paragraphs rather than a ritual nobody performs.
+
+**The half of D12 that is now a program.** The read itself cannot be automated; what can be, and
+now is, is the demand that the confident sentences point at something. `doc-header.md` §4a
+requires an absolute claim about named code to carry a citation, and requires every citation to
+resolve; `scripts/lint-claims` is a hard gate on `plan`, `implement` and `review-close`. That
+does not make the claim true — it makes it *checkable in one hop*, by a reader who does not have
+to reconstruct where the sentence came from. The sentence that propagated through seven documents
+would have carried, from its first appearance, a pointer to the code it was wrong about.
 
 ### D3 and D10 are the two that get skipped
 
@@ -119,7 +127,7 @@ to `done` with a note.
 | DE3 | The epic's `## Success measures` are each addressed — met, or explicitly not met with the reason | [skill] |
 | DE4 | `docs/product/` reflects what was actually built, not what was proposed | [skill] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
-| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written | [skill] |
+| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written. Every citation in the workspace resolves | [skill] + [auto] |
 
 DE6 is the epic-level counterpart of D12, and it is where a claim that no single item touched
 gets caught. Treat it the way a regression pass treats behaviour: the run that found three real
@@ -130,3 +138,12 @@ prose.
 DE3 is the criterion that stops a pipeline from mistaking "all the tickets are closed" for
 "the goal was achieved". If a success measure was not met, closing the epic is still allowed —
 saying so is what is mandatory.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | D12 and DE6 gain their mechanical half: claim provenance, enforced by `scripts/lint-claims` (F-001). |

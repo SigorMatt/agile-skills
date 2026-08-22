@@ -4,7 +4,7 @@ description: "Execute the recorded plan on a branch, with tests, and report whic
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: implement
-  methodology-version: 0.1.1
+  methodology-version: 0.2.0
   persona: developer
   human-interaction: via-questions
 ---
@@ -20,7 +20,7 @@ At a glance:
 
 - Runs on items at status: `planned`, `in-progress`
 - Human interaction: **via-questions** — you may not ask a person; file a question artifact instead
-- Hard gates: `tests-pass`, `lint-clean`, `workspace-valid`, `every-criterion-has-a-test`, `commits-reference-the-item`
+- Hard gates: `tests-pass`, `lint-clean`, `workspace-valid`, `every-criterion-has-a-test`, `commits-reference-the-item`, `claims-are-sourced`
 - On success: `verifying`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).

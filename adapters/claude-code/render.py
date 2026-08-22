@@ -43,9 +43,10 @@ SHARED_DIR = ".claude/agile-skills"
 SCRIPTS_TO_SHIP = [
     "validate-workspace", "board-gen", "workspace-init", "new-item",
     "check-commit-refs", "check-verify-freshness", "run-gate", "transition",
-    "journal-entry",
+    "journal-entry", "lint-claims",
 ]
-LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "workspace.py", "board.py"]
+LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "workspace.py", "board.py",
+               "claims.py"]
 SPEC_TO_SHIP = [
     "README.md", "ids-and-statuses.md", "work-item.md", "journal-and-history.md",
     "question.md", "doc-header.md", "dor-dod.md", "skill-contract.md", "workspace-layout.md",

@@ -151,6 +151,50 @@ Rules:
 
 ---
 
+## 4a. Claims and their provenance
+
+A document under `docs/` is read by people and by skills that will act on it. Its most dangerous
+sentences are the confident ones — an absolute statement about a named thing in the system,
+written once and re-quoted thereafter. An independent audit of a real run found exactly that
+failure: one wrong absolute justification reached shipped source comments, an ADR and the
+architecture overview, and then **spread to a seventh document after the audit flagged it**,
+because every skill that touched the area re-quoted the sentence rather than re-checking it.
+Every machine-decidable gate held throughout; every gate resting on a human-style read did not.
+
+So absolutes get sources.
+
+- A paragraph that makes an **absolute claim** — `no`, `none`, `never`, `always`, `only`,
+  `every`, `all`, `nothing`, `cannot`, `exactly`, `impossible`, `guaranteed` — about something
+  named as code (a backticked identifier, call, constant, or a path) MUST carry at least one
+  citation, written inline as `[src: ...]`.
+- A citation MUST resolve. An unresolvable citation is worse than none: it is the appearance of
+  evidence.
+- Hedged prose is not the target. "Recursion was deferred" needs no citation; "`list_files`
+  never recurses" does.
+
+### Citation forms
+
+| Form | Example | Resolves when |
+|------|---------|---------------|
+| workspace path | `[src: src/store.py]`, `[src: src/store.py:42]` | the file exists in the workspace |
+| item | `[src: WI-0007]` | the item exists |
+| acceptance criterion | `[src: WI-0007 AC3]` | the item exists and declares that AC |
+| question | `[src: WI-0007/Q-002]` | the question file exists |
+| ADR | `[src: ADR-0004]` | an ADR with that number exists |
+| commit | `[src: commit a1b2c3d]` | the commit is in this repository |
+| command outcome | `[src: run: python3 -m pytest -q → exit 0, 14 passed]` | it records both the command and its outcome |
+
+Several sources are separated by `;` inside one marker. `scripts/lint-claims` enforces both
+rules and is a hard gate on `plan`, `implement` and `review-close`; `scripts/validate-workspace`
+enforces the resolution rule over the whole workspace, at any time.
+
+The absolute-claim rule is checked against **what an execution touched**, not against the whole
+tree — the same scoping `dor-dod.md` applies to D7 and D12. A record written before this
+convention existed is not retroactively invalid; the next execution that edits a document is the
+one that must source what it writes.
+
+---
+
 ## 5. Which skill writes what
 
 | Document | Created by | Updated by |
@@ -165,3 +209,12 @@ Rules:
 wrong, that is a question (`question.md`), and `answer-questions` makes the edit. Otherwise the
 authoritative record would be updated by the same execution that is trying to satisfy it, and
 the check would be circular.
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-17 | Initial. |
+| 2 | 2026-08-22 | §4a added: absolute claims about named code carry a resolvable `[src: ...]` citation (F-001). |

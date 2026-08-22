@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.1.2
+  methodology-version: 0.2.0
   persona: architect
   human-interaction: direct
 ---
@@ -19,7 +19,7 @@ At a glance:
 
 - Runs on items at status: `ready`
 - Human interaction: **direct**
-- Hard gates: `workspace-valid`, `every-criterion-is-addressed`, `project-commands-resolved`, `decisions-recorded`
+- Hard gates: `workspace-valid`, `every-criterion-is-addressed`, `project-commands-resolved`, `decisions-recorded`, `claims-are-sourced`
 - On success: `planned`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).

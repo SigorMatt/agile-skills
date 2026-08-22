@@ -1,5 +1,5 @@
 name: implement
-version: 0.1.1
+version: 0.2.0
 persona: developer
 purpose: Execute the recorded plan on a branch, with tests, and report which evidence satisfies each acceptance criterion.
 
@@ -86,6 +86,12 @@ quality_gates:
     description: The change delivers this item's criteria and nothing else.
     manual_check: Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed.
     enforcement: advisory
+    on_failure: stay
+  - name: claims-are-sourced
+    description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
+    command: scripts/lint-claims --changed-since {{trunk}}
+    expect: exit-zero
+    enforcement: hard
     on_failure: stay
 
 escalation:

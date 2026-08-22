@@ -2198,3 +2198,52 @@ with F-018's own examples. Run against the **previous** guard the table fails 7 
 directions, which is the evidence that the fix is a fix and not a rewording.
 
 Evidence: `./scripts/check` — 7 steps, all passed.
+
+## META-086 — F-001: claim provenance, mechanized as far as it goes
+
+F-001 is the thesis finding, so it deserves a report on what was actually achieved rather than a
+tick.
+
+**The rule chosen, and why that one.** "A factual justification must cite an artifact" is not
+machine-decidable — deciding which sentences are factual justifications is the hard part. What is
+decidable is a narrower shape, and the narrower shape happens to be the one that failed: an
+**absolute** claim about a **named code object**. The specimen in the audit was literally "no
+environment beyond `EXPENSES_STORE`". Absolutes are cheap to write, expensive to verify, and
+catastrophic when wrong; hedged prose is not the failure mode and is deliberately not targeted.
+Calibration: over the toy project's docs the rule fires 41 times, and the flagged paragraphs are
+things like "Nothing recurses. `list_files` looks only at the entries directly inside the folder"
+— the real class, not noise.
+
+**Resolution is the part that cannot be faked.** Seven citation forms, each looked up in the
+workspace: a path that must exist, an item that must exist, an AC that item must actually
+declare, a question file, an ADR number, a commit `git cat-file` must find, or a command with a
+recorded outcome. A citation that does not resolve is reported everywhere, at any time, by
+`validate-workspace` — because unlike the absolute-claim rule it is wrong *today* regardless of
+when it was written. `scripts/lib/claims.py` holds the one implementation, shared by the gate and
+the validator, because two would eventually disagree and the disagreement would present as a gate
+passing on a record the validator rejects.
+
+**Unskippable, in this system's sense.** `claims-are-sourced` is a hard gate on `plan`,
+`implement` and `review-close`, so `transition` refuses each skill's completion move while it
+fails. `--force` remains and remains recorded in the history reason forever — that is the design,
+not a hole: an override that leaves no trace is the thing being prevented.
+
+**Two fixtures, on purpose.** The must-fail fixture proves the linter can fail. `fixtures/
+sourced-claims/` proves it can be *passed*, by prose a person would write, and includes a hedged
+paragraph that correctly needs no citation. A rule nobody can satisfy is not a rule; it is a
+rule everyone forces.
+
+**What was not achieved.** The direction's second half — "judge is a fresh subagent with a narrow
+rubric and access only to cited evidence, not the prose" — is not implementable from a shell gate.
+It ships as `review-close` step 9a: list the absolute claims the work touched, open what each
+cites, decide from what is there. That is an instruction, and instructions are precisely what
+F-001 says do not hold. Two things changed anyway: the input is now mechanically guaranteed (the
+citations exist and resolve), and the question is far narrower than "is this document still
+true". The honest summary is that the provenance half is a program and the judging half is a
+better-aimed instruction. Iteration 1d will show whether the gate fires on real prose or gets
+forced.
+
+Version bumps: plan 0.2.0, implement 0.2.0, review-close 0.2.1 (a new gate is minor; step 9a is
+the patch on top).
+
+Evidence: `./scripts/check` — 8 steps, all passed, 51 fixture codes.

@@ -1,5 +1,5 @@
 name: plan
-version: 0.1.2
+version: 0.2.0
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -84,6 +84,12 @@ quality_gates:
     description: A developer with no context can follow the plan.
     manual_check: Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make.
     enforcement: advisory
+    on_failure: stay
+  - name: claims-are-sourced
+    description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
+    command: scripts/lint-claims --changed-since {{trunk}}
+    expect: exit-zero
+    enforcement: hard
     on_failure: stay
 
 escalation:

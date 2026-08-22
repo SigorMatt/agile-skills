@@ -4,7 +4,7 @@ description: "Review the change and its record against the Definition of Done, t
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.1.3
+  methodology-version: 0.2.1
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -20,7 +20,7 @@ At a glance:
 
 - Runs on items at status: `in-review`
 - Human interaction: **via-questions** — you may not ask a person; file a question artifact instead
-- Hard gates: `definition-of-done`, `verification-postdates-the-code`, `commits-reference-the-item`, `tests-pass-on-the-merge-result`, `workspace-valid`, `record-is-reconstructible`
+- Hard gates: `definition-of-done`, `verification-postdates-the-code`, `commits-reference-the-item`, `tests-pass-on-the-merge-result`, `workspace-valid`, `record-is-reconstructible`, `claims-are-sourced`
 - On success: `done`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
@@ -132,6 +132,17 @@ You cannot ask the human. You may reject, and rejection is a normal outcome, not
 
    `## What I examined` is required and comes first. A review that records only a verdict is
    indistinguishable from one that examined nothing, which is exactly what makes reviews rot.
+
+9a. **Audit the claims, from the citations — not from the prose.** D12, and DE6 when you are
+    closing an epic, ask whether the confident sentences in `docs/` are still true. Do it the one
+    way that can fail: list each absolute claim the delivered work touched, **open the thing it
+    cites**, and decide from what you read there. Do not decide from the sentence, from a
+    neighbouring document that repeats it, or from your memory of writing it — the failure this
+    step exists for is a wrong claim that reached seven documents because each skill re-quoted the
+    previous one instead of re-checking the code. Record each claim you checked and what you
+    opened in `## What I examined`; a claim you could not verify from its citation is a finding,
+    not a pass. `scripts/lint-claims` has already proved the citations *resolve*; only a reader
+    can say whether they *support* the sentence.
 
 10. **Check the epic.** If this item was the epic's last child not at `done`, apply the epic
     Definition of Done (`spec/dor-dod.md` §4) and close the epic — or leave it open and record

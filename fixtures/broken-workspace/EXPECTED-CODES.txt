@@ -3,6 +3,7 @@ adr.options
 adr.reversibility
 artifact.missing
 board.missing
+claim.citation.unresolved
 doc.changelog.order
 doc.changelog.version
 epic.closed-with-open-children

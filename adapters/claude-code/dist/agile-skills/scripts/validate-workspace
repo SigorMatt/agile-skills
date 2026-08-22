@@ -24,6 +24,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 import board as board_lib  # noqa: E402
+from claims import CitationResolver  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
@@ -186,6 +187,7 @@ class Validator:
         self.skills = set()
         self.transitions = []
         self.window = git_activity_window(self.workspace.root)
+        self.citations = CitationResolver(self.workspace.root)
         self.installed_versions = find_installed_versions()
         self.latest_stamp = datetime.datetime.now(datetime.timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ")
@@ -889,6 +891,32 @@ class Validator:
 
     # ---- driver --------------------------------------------------------------------
 
+    def check_claim_citations(self) -> None:
+        """Rule 1 of claim provenance (F-001): a citation must resolve.
+
+        Rule 2 — an absolute claim must *carry* a citation — belongs to `scripts/lint-claims`
+        and to the gate that runs it, scoped to what an execution touched. Applying it to a
+        workspace at rest would make every historical document that predates the convention
+        permanently invalid, which is a demand to rewrite a record rather than to improve one.
+        A citation that does not resolve is different: it is wrong today, wherever it came from.
+        """
+        for base, dirs, files in os.walk(self.workspace.root):
+            dirs[:] = [entry for entry in dirs
+                       if entry not in (".git", "__pycache__", ".claude", "node_modules")]
+            for name in sorted(files):
+                if not name.endswith(".md"):
+                    continue
+                path = os.path.join(base, name)
+                try:
+                    with open(path, "r", encoding="utf-8") as handle:
+                        text = handle.read()
+                except OSError:
+                    continue
+                for line, problem in self.citations.problems_in(text):
+                    self.report.error(path, line, "claim.citation.unresolved", problem,
+                                      hint="a citation that does not resolve is the appearance "
+                                           "of evidence, which is worse than none")
+
     def run(self) -> int:
         for path, line, code, message, hint in self.workspace.load_errors:
             self.report.error(path, line, code, message, hint)
@@ -899,6 +927,7 @@ class Validator:
         self.check_epics()
         self.check_docs()
         self.check_board()
+        self.check_claim_citations()
         self.report.note(f"checked {len(self.workspace.items)} item(s), "
                          f"{len(self.workspace.docs)} document(s)")
         return self.report.emit()

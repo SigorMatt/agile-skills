@@ -19,7 +19,37 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   an artifact (test output, command result, requirement line); a linter fails
   unsourced justifications. Where judgement is unavoidable, judge is a fresh
   subagent with a narrow rubric and access only to cited evidence, not the prose.
-- Status: open
+- Status: fixed (commit 02a417a) — the provenance half is mechanical; the judging half
+  is narrowed but still instruction-shaped, said plainly below.
+  **Mechanical.** `spec/doc-header.md` §4a (revision 2) defines the convention: a paragraph
+  making an absolute claim (`no`/`never`/`only`/`every`/`cannot`/`exactly`/…) about something
+  named as code must carry an inline `[src: ...]`, and every citation must resolve. Seven
+  citation forms, each looked up: workspace path, item, `ITEM ACn`, `ITEM/Q-nnn`, ADR number,
+  commit sha, and `run: <command> → <outcome>`. `scripts/lib/claims.py` is the single
+  implementation; `scripts/lint-claims` is the gate and `scripts/validate-workspace` enforces
+  the resolution rule over a workspace at rest (`claim.citation.unresolved`).
+  **Unskippable.** `claims-are-sourced` is a **hard** gate on `plan`, `implement` and
+  `review-close` (minor bumps to 0.2.0), so `transition` refuses each skill's completion move
+  while it fails; `--force` still exists and is still recorded in the history reason forever.
+  Scoped with `--changed-since {{trunk}}`, the same scoping D7 and D12 already use.
+  `spec/dor-dod.md` D12 and DE6 are now `[skill] + [auto]`.
+  **Fixtures, both directions.** `fixtures/broken-workspace/docs/architecture/overview.md`
+  carries F-001's own sentence with a citation that does not resolve, and a second paragraph
+  with an absolute claim and no citation at all. `fixtures/sourced-claims/` is the counterpart —
+  prose a person would actually write, every claim cited, **0 findings** — because a rule nobody
+  can satisfy is not a rule. Both are a new step in `./scripts/check` (now 8 steps).
+  **Calibration evidence.** Run over the toy project's docs the rule reports 41 unsourced
+  absolutes, and spot-checking them they are the real class, not noise: "Nothing recurses.
+  `list_files` looks only at the entries directly inside the folder", "Only `main` knows what
+  `--top` is". That is the sentence shape the audit found propagating.
+  **What is NOT mechanical, stated plainly.** The second half of the direction — a fresh judge
+  reading only the cited evidence — is `review-close` step 9a: list each absolute claim the work
+  touched, open what it cites, and decide from what is there rather than from the sentence or
+  from a document repeating it. It is an instruction, so it is exactly the kind of gate F-001
+  says does not hold; what changed is that it now has a mechanically-guaranteed input (the
+  citations exist and resolve) and a much narrower question to answer. Running it in a fresh
+  subagent with tool access limited to the citations is not implementable from a shell gate and
+  is not claimed here.
 
 ## F-002 — workspace-init creates empty dirs git can't track
 - Severity: correctness, ship-blocker for open-source
