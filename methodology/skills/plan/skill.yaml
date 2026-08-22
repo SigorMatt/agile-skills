@@ -1,5 +1,5 @@
 name: plan
-version: 0.1.1
+version: 0.1.2
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 

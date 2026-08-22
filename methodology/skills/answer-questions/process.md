@@ -86,7 +86,7 @@ information.
    skill asked: a question from `review-close` and a question from `verify` both look like "it
    was being checked", and inferring would silently discard a completed verification.
 
-8. **Journal, then transition.**
+8. **Journal and transition, in one command** (`--journal-body-file`; see Journaling).
 
 ---
 
@@ -123,6 +123,28 @@ tracker: the answered questions and every artifact you propagated into (refs <IT
 A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
 code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
 the item's whole story rather than only its code.
+
+
+**How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
+let the tool stamp the heading — the timestamp from the clock, the version and persona from this
+skill's installed `skill.yaml`:
+
+```
+scripts/journal-entry <ITEM-ID> --skill answer-questions --body-file <path>
+```
+
+When the entry accompanies a status change, do not run two commands. Pass the same file to the
+transition, which appends the history row and the entry together and writes the `**Status:**`
+bullet itself from the move it actually made:
+
+```
+scripts/transition <ITEM-ID> --to <status> --actor answer-questions --reason "..." \
+                   --journal-body-file <path>
+```
+
+`scripts/journal-entry --template --skill answer-questions` prints the shape. A heading you write yourself
+is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
+clock produced (`spec/journal-and-history.md` §0).
 
 ---
 

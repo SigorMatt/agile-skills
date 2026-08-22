@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.1.1
+  methodology-version: 0.1.2
   persona: product-analyst
   human-interaction: direct
 ---
@@ -113,8 +113,10 @@ acted on. Then write down exactly what was said.
 9. **Run the gates**, evaluating the Definition of Ready criterion by criterion and recording
    each result. Regenerate the board.
 
-10. **Journal, then transition** `draft → ready`. Journaling comes first: if this is interrupted
-    in between, a repeated run is cheap and a status with no record is not.
+10. **Journal and transition, in one command** — `draft → ready` with `--journal-body-file`
+    (see Journaling). One command is the point: journalling and moving used to be two steps with
+    an interruptible gap between them, and the record could end up claiming a move that never
+    happened.
 
 ---
 
@@ -147,6 +149,28 @@ tracker: the refined item and its Q&A record (refs <ITEM-ID>)
 A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
 code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
 the item's whole story rather than only its code.
+
+
+**How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
+let the tool stamp the heading — the timestamp from the clock, the version and persona from this
+skill's installed `skill.yaml`:
+
+```
+scripts/journal-entry <ITEM-ID> --skill refine --body-file <path>
+```
+
+When the entry accompanies a status change, do not run two commands. Pass the same file to the
+transition, which appends the history row and the entry together and writes the `**Status:**`
+bullet itself from the move it actually made:
+
+```
+scripts/transition <ITEM-ID> --to <status> --actor refine --reason "..." \
+                   --journal-body-file <path>
+```
+
+`scripts/journal-entry --template --skill refine` prints the shape. A heading you write yourself
+is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
+clock produced (`spec/journal-and-history.md` §0).
 
 ---
 

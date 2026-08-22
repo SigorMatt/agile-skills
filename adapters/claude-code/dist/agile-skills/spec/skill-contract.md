@@ -223,9 +223,11 @@ of a skill is that worker's first day.
 - `## Steps` MUST include, as its first step, re-reading the item's current state from disk.
   Skills are resumed after interruptions; the most likely wrong assumption is that the
   workspace is as this skill last left it.
-- The last step MUST be the status transition, and it MUST come **after** journaling. If the
-  process is interrupted between them, an item whose status advanced without a journal entry is
-  a silent gap; a journal entry without the transition is merely a repeat next run.
+- The last step MUST be the status transition, and the journal entry MUST be written **in the
+  same command as** that transition — the tool takes the entry's body and appends both. This
+  rule used to read "journal first, then transition", which left an interruptible gap between
+  two commands; a run fell into it, and the record ended up asserting a move that had never
+  happened (F-019). A skill execution that changes no status still journals, on its own.
 - `## Self-check` MUST name at least two **specific** failure modes for this skill — the things
   this role actually gets wrong — not generic advice. This section is the main defence against
   a plausible-looking but wrong execution, and it is where lessons from a bad run get recorded.
@@ -274,3 +276,4 @@ what makes "the toy run used skill X v0.1.0, and it went wrong here" an actionab
 |---|------|--------|
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §2.3 added: a transition is a checkpoint, never chained; commands are invoked by a CWD-independent path (F-019). |
+| 3 | 2026-08-22 | §2.2: the journal entry is written in the same command as the transition, not before it (F-017, F-019). |

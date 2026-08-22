@@ -94,7 +94,8 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
      omission you declared is a handover; an omission you left for `verify` to discover is a
      defect in this report.
 
-9. **Journal, then transition** `in-progress → verifying`.
+9. **Journal and transition, in one command** — `in-progress → verifying` with
+   `--journal-body-file` (see Journaling).
 
 ---
 
@@ -112,6 +113,28 @@ On the item's `journal.md`:
 - `**Gates:**` — all six by name, each pass/fail/skipped with evidence. A gate whose command
   resolved to null is `skipped` **with the reason**, never passed.
 - `**Artifacts:**` — `impl-report.md`, the branch, and the commit range.
+
+
+**How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
+let the tool stamp the heading — the timestamp from the clock, the version and persona from this
+skill's installed `skill.yaml`:
+
+```
+scripts/journal-entry <ITEM-ID> --skill implement --body-file <path>
+```
+
+When the entry accompanies a status change, do not run two commands. Pass the same file to the
+transition, which appends the history row and the entry together and writes the `**Status:**`
+bullet itself from the move it actually made:
+
+```
+scripts/transition <ITEM-ID> --to <status> --actor implement --reason "..." \
+                   --journal-body-file <path>
+```
+
+`scripts/journal-entry --template --skill implement` prints the shape. A heading you write yourself
+is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
+clock produced (`spec/journal-and-history.md` §0).
 
 ---
 

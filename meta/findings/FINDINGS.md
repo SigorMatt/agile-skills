@@ -304,7 +304,7 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Direction: give `journal.md` the same treatment as `history.md`, and say explicitly in the spec
   that a timestamp is read from the clock and never estimated — an invented timestamp is the one
   kind of record entry that cannot be audited against anything.
-- Status: fixed — mechanism in commit 8549fca, adopted by every skill in META-084b.
+- Status: fixed (commit 8549fca for the mechanism; adoption in commit 78abb5b).
   `scripts/journal-entry` is the only sanctioned writer of an entry: it stamps the heading from
   the clock and from the acting skill's installed `skill.yaml` (version **and** persona), so no
   header field is authored by the model. `transition --journal-body-file` writes the row and the
@@ -313,7 +313,12 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   `spec/journal-and-history.md` §0 (revision 2) states the rule normatively.
   Validator: `journal.timestamp.future`, `history.timestamp.future`,
   `journal.timestamp.outside-activity`, `history.timestamp.outside-activity`,
-  `journal.version.impossible`. Demonstrated both ways in a scratch workspace — a real
+  `journal.version.impossible`. Adoption: all seven journalling skills' `## Journaling`
+  sections now write the bullets to a file and let the tool stamp the heading, and every
+  "journal, then transition" step became "journal and transition, in one command"
+  (`spec/skill-contract.md` §2.2, revision 3 — the old two-step rule is what left the gap
+  F-019 fell into). `next` is exempt; it journals nothing. Seven patch bumps.
+  Demonstrated both ways in a scratch workspace — a real
   transition produced `## 2026-08-22T00:41:10Z — refine v0.1.1 — product-analyst` with the
   clock agreeing to the second and a deliberately wrong `**Status:** draft → banana` corrected
   to `draft → ready`; a hand-written entry in run 1c's exact shape (a plausible later-that-day

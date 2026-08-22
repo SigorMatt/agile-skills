@@ -2147,3 +2147,28 @@ Fixtures: three new entries, each the shape of a real specimen — a 2099 headin
 started firing `journal.order`, a rule that had no coverage before; it is now listed. 50 codes.
 
 Evidence: `./scripts/check` green; the scratch-workspace demonstration recorded in FINDINGS.
+
+## META-084b — F-017 adoption: no skill describes writing a heading by hand any more
+
+Seven `## Journaling` sections gained the same block — write the bullets to a file, let
+`journal-entry` stamp the heading, and when the entry accompanies a status change pass the file
+to `transition --journal-body-file` instead of running two commands. `next` is exempt because it
+journals nothing on an item, by design.
+
+The step titles moved with it. Six skills read "**Journal, then transition**", and
+`spec/skill-contract.md` §2.2 mandated exactly that order — journal first, transition second,
+with the reasoning that a status advance without a record is a silent gap while a record without
+the advance is merely a repeated run next time. That reasoning was sound in the abstract and
+wrong in practice: F-019 is a run that fell into the gap between the two commands and left a
+record asserting a move that never happened, and nothing could see it. §2.2 (revision 3) now says
+the entry is written *in the same command as* the transition, which removes the gap rather than
+choosing which side of it to fail on.
+
+`intake` also lost its "then append `— → open` to the epic's history.md" instruction. That row is
+`new-item`'s work — it creates the item at its opening status and writes the row — and telling a
+skill to append a history table row by hand contradicts the guard hook that denies exactly that.
+
+Seven patch bumps: intake 0.1.2, refine 0.1.2, plan 0.1.2, implement 0.1.1, verify 0.1.2,
+review-close 0.1.3, answer-questions 0.1.2.
+
+Evidence: `./scripts/check` green after re-render.

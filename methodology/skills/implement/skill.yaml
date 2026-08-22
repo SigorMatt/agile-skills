@@ -1,5 +1,5 @@
 name: implement
-version: 0.1.0
+version: 0.1.1
 persona: developer
 purpose: Execute the recorded plan on a branch, with tests, and report which evidence satisfies each acceptance criterion.
 

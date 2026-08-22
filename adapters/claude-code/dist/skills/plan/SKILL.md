@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.1.1
+  methodology-version: 0.1.2
   persona: architect
   human-interaction: direct
 ---
@@ -132,7 +132,8 @@ will not have been tested by anyone.
 
 9. **Run the gates.** Regenerate the board.
 
-10. **Journal, then transition** `ready → planned`.
+10. **Journal and transition, in one command** — `ready → planned` with `--journal-body-file`
+    (see Journaling).
 
 ---
 
@@ -164,6 +165,28 @@ tracker: the plan, any ADRs, and the documents you updated (refs <ITEM-ID>)
 A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
 code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
 the item's whole story rather than only its code.
+
+
+**How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
+let the tool stamp the heading — the timestamp from the clock, the version and persona from this
+skill's installed `skill.yaml`:
+
+```
+scripts/journal-entry <ITEM-ID> --skill plan --body-file <path>
+```
+
+When the entry accompanies a status change, do not run two commands. Pass the same file to the
+transition, which appends the history row and the entry together and writes the `**Status:**`
+bullet itself from the move it actually made:
+
+```
+scripts/transition <ITEM-ID> --to <status> --actor plan --reason "..." \
+                   --journal-body-file <path>
+```
+
+`scripts/journal-entry --template --skill plan` prints the shape. A heading you write yourself
+is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
+clock produced (`spec/journal-and-history.md` §0).
 
 ---
 

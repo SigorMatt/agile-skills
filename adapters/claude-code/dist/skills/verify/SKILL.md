@@ -4,7 +4,7 @@ description: "Independently decide whether an item meets its acceptance criteria
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: verify
-  methodology-version: 0.1.1
+  methodology-version: 0.1.2
   persona: qa-engineer
   human-interaction: via-questions
 ---
@@ -125,7 +125,7 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    could not check — no environment, no data, a criterion that turned out to be unfalsifiable —
    is declared here. An undeclared gap reads to `review-close` as a clean pass.
 
-9. **Journal, then transition.** `verifying → in-review` if every criterion passed, or
+9. **Journal and transition, in one command** (`--journal-body-file`; see Journaling). `verifying → in-review` if every criterion passed, or
    `verifying → in-progress` if any of this item's own criteria failed. The history `reason`
    names the failing criteria by label.
 
@@ -158,6 +158,28 @@ tracker: the verification report, the ticked criteria, and any bug items you fil
 A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
 code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
 the item's whole story rather than only its code.
+
+
+**How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
+let the tool stamp the heading — the timestamp from the clock, the version and persona from this
+skill's installed `skill.yaml`:
+
+```
+scripts/journal-entry <ITEM-ID> --skill verify --body-file <path>
+```
+
+When the entry accompanies a status change, do not run two commands. Pass the same file to the
+transition, which appends the history row and the entry together and writes the `**Status:**`
+bullet itself from the move it actually made:
+
+```
+scripts/transition <ITEM-ID> --to <status> --actor verify --reason "..." \
+                   --journal-body-file <path>
+```
+
+`scripts/journal-entry --template --skill verify` prints the shape. A heading you write yourself
+is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
+clock produced (`spec/journal-and-history.md` §0).
 
 ---
 

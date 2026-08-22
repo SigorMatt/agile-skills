@@ -3,7 +3,7 @@ name: intake
 description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.1.1
+  methodology-version: 0.1.2
   persona: product-analyst
   human-interaction: direct
 ---
@@ -111,7 +111,7 @@ You talk to the human directly. You are the only skill besides `refine` that doe
 
 8. **Regenerate the board** (`scripts/board-gen`) and run `scripts/validate-workspace`.
 
-9. **Journal, then transition.** See Journaling below. The items are created directly at
+9. **Journal each execution.** See Journaling below. The items are created directly at
    `draft`, so the history row for each is `— → draft`.
 
 10. **Show the human the board and say what happens next**: the items are drafts, and `refine`
@@ -141,7 +141,7 @@ and `validate-workspace` reports `journal.execution.missing` if it does not. The
 carries the same required bullets; its `**Decisions:**` may be "see EP-###'s entry for how the
 work was split", because that reasoning belongs to the split, not to this item.
 
-Then append `— → open` to the epic's `history.md`, and `— → draft` to each item's.
+The `— → open` row on the epic and the `— → draft` row on each item are written by `scripts/new-item`, which creates the item at its opening status and appends the row. The matching journal entries are yours to write, with the tool below.
 
 
 ### Commit what you wrote
@@ -157,6 +157,28 @@ tracker: the epic and the items you created (refs <ITEM-ID>)
 A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
 code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
 the item's whole story rather than only its code.
+
+
+**How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
+let the tool stamp the heading — the timestamp from the clock, the version and persona from this
+skill's installed `skill.yaml`:
+
+```
+scripts/journal-entry <ITEM-ID> --skill intake --body-file <path>
+```
+
+When the entry accompanies a status change, do not run two commands. Pass the same file to the
+transition, which appends the history row and the entry together and writes the `**Status:**`
+bullet itself from the move it actually made:
+
+```
+scripts/transition <ITEM-ID> --to <status> --actor intake --reason "..." \
+                   --journal-body-file <path>
+```
+
+`scripts/journal-entry --template --skill intake` prints the shape. A heading you write yourself
+is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
+clock produced (`spec/journal-and-history.md` §0).
 
 ---
 
