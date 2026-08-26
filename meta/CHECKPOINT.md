@@ -4,31 +4,27 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-105a
+## Current unit — META-106
 
-**Enforcement over the workspace at rest.** `scripts/validate-workspace` and
-`scripts/transition`, holding the model META-103/104 wrote down.
+**The skill contracts re-derived from ADR-0006.** Prose and contracts; version bumps; re-render.
 
-Steps:
-1. `transition_is_legal` honours `applies_to`, so an epic can no longer be blocked by whichever
-   skill happens to hold it.
-2. `transition` refuses a move whose matching row is `gated: true`, not only the move to the
-   actor's own `next_status` (ADR-0006 §1c).
-3. `item.arose-from.missing` / `item.arose-from.unresolved` — provenance for every item whose
-   creation row names an actor other than `intake` (F-029, F-042).
-4. `question.deferred.*` — `deferred` is a legal status; a deferred blocking question leaves its
-   item at `blocked` (F-028).
-5. `epic.closed-with-active-children` and `epic.outcome.overclaims` replace
-   `epic.closed-with-open-children`: children must be terminal, and an epic that closes with an
-   undelivered child may not call itself `delivered` (DE1 as re-derived).
-6. Every new code gets a case in `fixtures/broken-workspace` + `EXPECTED-CODES.txt`.
+1. `next` — orchestrator step 6: an engagement at rest is dispatched to `review-close`, read
+   from `scripts/engagement-state` rather than judged. 0.2.0 → 0.3.0.
+2. `review-close` — it ends engagements: `dispatch.item_types` gains `epic`; step 10 rewritten
+   around rest and the four endings; it may file a bug at `ready` with provenance (F-029.2).
+   0.3.1 → 0.4.0.
+3. `answer-questions` — the deferral (F-028): decide under it, or record `deferred` and move the
+   item to `blocked`. It may create a work item at `draft` when an answer widens scope
+   (F-029.1). 0.1.4 → 0.2.0.
+4. `refine` — DoR R9's split is a creation, and it now has the authority and the provenance rule.
+5. `verify` — provenance on a filed bug.
 
-Done when: `./scripts/check` green with the new codes in the must-fail fixture, re-rendered,
-committed and pushed, plan ticked, journalled.
+Done when: `./scripts/check` green, rendered output current, committed and pushed, plan ticked,
+journalled.
 
-## Next unit — META-105b
+## Next unit — META-107
 
-`scripts/engagement-state` and `check-epic-signoff` as the termination gate.
+Fixtures both ways for every historical contradiction, plus a must-pass ended engagement.
 
 ## Standing instructions (still in force)
 
