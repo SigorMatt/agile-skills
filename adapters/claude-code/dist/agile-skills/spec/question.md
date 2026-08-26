@@ -81,10 +81,10 @@ question.
 | `from-skill` | always | the skill that filed it |
 | `addressed-to` | always | `architect` \| `human` |
 | `blocking` | always | `true` \| `false` |
-| `status` | always | `open` \| `answered` |
+| `status` | always | `open` \| `answered` \| `deferred` |
 | `created` | always | UTC ISO-8601 |
-| `answered-at` | when answered | UTC ISO-8601, ≥ `created` |
-| `answered-by` | when answered | `answer-questions`, or `human` when escalated |
+| `answered-at` | when `answered` or `deferred` | UTC ISO-8601, ≥ `created` |
+| `answered-by` | when `answered` or `deferred` | `answer-questions`, or `human` when escalated |
 | `kind` | optional | `decision` (the default when absent) \| `sign-off` |
 
 ### Body rules
@@ -109,41 +109,101 @@ question.
   question is not a choice between options (e.g. a missing fact). A question filed without
   having thought about the answer pushes the whole cost of the thinking upstream, which is how
   a question protocol degrades into "ask the human everything".
-- `## Answer` and `## Consequences` MUST be non-empty when `status: answered`.
+- `## Answer` and `## Consequences` MUST be non-empty when `status: answered` or
+  `status: deferred`.
 - `## Consequences` MUST name **files**, not intentions. "Updated the plan" is not a
   consequence; "`artifacts/plan.md` step 3 rewritten; `item.md` AC2 amended; `docs/architecture/
   adr/ADR-0004.md` created" is. This is what makes the rule "downstream skills re-read
   artifacts, never the Q&A" actually enforceable.
 
-### `kind: sign-off` — the acceptance question
+### `status: deferred` — the answer that is neither an answer nor silence
+
+A stakeholder said "I'll send you a sample later", three times, and the protocol had nowhere to
+put it. Leaving the question `open` deadlocks the loop for ever; marking it `answered` claims a
+thing was settled that was not. The worker in that run wrote it down exactly: *"the question
+protocol has no way to represent a deferred answer without either deadlocking `next` or
+overstating what was settled"* (F-028).
+
+`deferred` is that third state. It means: **the person replied, and their reply was that they
+are not answering yet.**
+
+- `## Answer` carries what they actually said, verbatim. A deferral is a real thing they said
+  and the record keeps it in their words.
+- `## Consequences` carries what the pipeline did **instead** — which is the whole point of the
+  status, and why `deferred` is not just `open` with a nicer name. It MUST name files, like any
+  other consequence.
+- `answered-at` and `answered-by` are set, because a reply arrived.
+- The orchestrator does **not** stop on a deferred question (`next` step 3 reads `open`), and
+  the question is not re-asked. It is not open.
+
+**What happens to the item is decided, not left to taste.** The architect has two moves and
+must take one:
+
+1. **Decide it under the deferral.** If the record plus the deferral is enough to choose — the
+   deferral itself often *is* an answer, e.g. "proceed without it" — the question becomes
+   `answered`, citing the deferral as the basis. This is not a deferred question at all, and
+   calling it one would understate what was settled.
+2. **Record the deferral and stop.** If no decision can be taken without the missing thing, the
+   question becomes `deferred` and the item moves `awaiting-answer → blocked` with the
+   `resume-to` it already carries, and `## Consequences` says what would unblock it. A blocking
+   question that is deferred leaves the item at `blocked`, never at its old status: resuming
+   would be a claim that the work can proceed, which is the guess the whole protocol exists to
+   prevent.
+
+A **non-blocking** question that is deferred changes nothing about the item; it simply stops
+being asked.
+
+`validate-workspace` enforces the pairing: `question.deferred.not-blocked` fires when an item
+carries a deferred blocking question and is not at `blocked` (or already closed).
+
+A deferred **sign-off** (below) is the one deferral with a further consequence: the engagement
+does not end, because the acknowledgment did not happen. The honest record is E3, the impasse
+(`ids-and-statuses.md` §3.5).
+
+### `kind: sign-off` — the termination question
 
 Almost every question is a `decision`: something the pipeline cannot settle by itself. One is
-not. A **sign-off** is the moment the stakeholder is asked whether what was built is what they
-wanted, and it is filed by `review-close` before an epic may close (`dor-dod.md` DE7).
+not. A **sign-off** is the moment the stakeholder is told what happened and asked whether they
+accept it, and it is filed by `review-close` when the engagement reaches **rest** — before the
+epic may reach *any* of its endings, not only closure (`ids-and-statuses.md` §3.5,
+`dor-dod.md` DE7).
 
-It obeys every rule above and adds four:
+It obeys every rule above and adds five:
 
 - `addressed-to` MUST be `human` and `blocking` MUST be `true`. Nobody accepts on the
   stakeholder's behalf, and an acceptance question that does not stop the epic is a formality.
 - `## Context` MUST restate **the goal in the stakeholder's own terms** — from the epic's
   `## Goal` and the vision, not from the tracker's vocabulary — so the answer is about the
   outcome rather than about the tickets.
-- `## Question` MUST list **what was delivered and what was not**, each with one line of why,
-  and then ask plainly whether the stakeholder accepts the epic as complete.
+- `## Question` MUST **name every child item of the epic**, by ID, each marked delivered or not
+  delivered with one line of why — and then ask plainly whether the stakeholder accepts the
+  engagement as it stands.
 - `## Options considered` MUST offer at least: accept as complete; accept with named follow-up
   items; do not accept, with what is missing. That is a real choice, and a sign-off that offers
   only "yes" is theatre.
+- Exactly one sign-off is due per **rest**. If the engagement re-enters rest after further work,
+  the acknowledgment is due again, because the previous one accepted something else.
 
-The epic goes to `awaiting-answer` with `resume-to: open` and the run stops. An epic can be
-closed *without* acceptance — a stakeholder may decline, or go quiet — but only through the
-recorded route: the question is answered "not accepted", and the epic closes with an outcome
-that says so, or stays open. What is no longer possible is closing while never having asked.
+**Naming every child is the rule, and it is deliberate.** "List what was not delivered" is not
+checkable and "name every child" is, so the gate can enforce it. It is also what closes the
+second half of the gap: a bug the pipeline filed and never fixed is a child of the epic, so it
+appears in the statement whether or not anyone remembered it. The stakeholder in the run that
+produced this rule found one for themselves afterwards — *"there's also a bug sitting at
+`planned`… that I was never told about"* (F-046).
+
+The epic goes to `awaiting-answer` with `resume-to: open` and the run stops. The answer then
+selects the ending: accept → the epic closes with `delivered` or `delivered-partial`; do not
+accept → the epic goes to `blocked`, the impasse, with what would unblock it recorded; withdraw
+→ the epic closes as `dropped`. Every one of those is a legitimate end, and what is no longer
+possible is ending while never having asked.
 
 Why this is a rule rather than good manners: two consecutive automated runs closed an epic with
 no question ever addressed to the human. Every Definition of Done gate passed, correctly — they
 check the record, and the record only holds what the stakeholder said when last consulted. In one
 of those runs a mid-epic redesign had received explicit consent three items earlier; closure
-itself still asked nothing (F-022).
+itself still asked nothing (F-022). The fix built then gated *closure*, so the next run — which
+ended at an impasse instead — never reached the gate at all, and the stakeholder wrote down that
+the question never came (F-045). Rest, not closure, is the trigger.
 
 ---
 
@@ -186,6 +246,10 @@ Rules:
    not been propagated, and the next skill will not see it.
 6. **The question is never deleted, and its `status` is never reverted.** A superseded answer is
    handled by filing a new question that cites the old one.
+7. **A deferral is a reply, not silence.** `status: deferred` records that the person answered
+   and their answer was "not yet". The loop does not stop on it and the item does not resume:
+   a deferred *blocking* question leaves its item at `blocked` with what would unblock it
+   written down.
 
 ---
 
@@ -214,3 +278,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 2 | 2026-08-22 | §2: the optional `kind` field, and `kind: sign-off` — the stakeholder acceptance question an epic cannot close without (F-022). |
 | 3 | 2026-08-22 | §2: `## Answer` and `## Consequences` must exist from the moment a question is filed (F-032). |
 | 4 | 2026-08-22 | §2: one decision per question (F-027); questions for one item in one round are presented as one ask (F-020). |
+| 5 | 2026-08-27 | §2: `status: deferred` — the reply that is neither an answer nor silence, and what it does to the item (F-028). `kind: sign-off` becomes the **termination** question: triggered by rest rather than by closure, and it must name every child item (F-045, F-046). Derived in ADR-0006. |

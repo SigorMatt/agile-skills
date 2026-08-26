@@ -122,13 +122,31 @@ to `done` with a note.
 
 | # | Criterion | Check |
 |---|-----------|-------|
-| DE1 | Every child item is `done` | [auto] |
+| DE1 | Every child item is at a **terminal** status (`done` or `blocked`), and every child that was not delivered is named in the termination question and in the epic's outcome | [auto] |
 | DE2 | Every child item's `outcome` is recorded; dropped items say why in their `## Notes` | [auto] |
 | DE3 | The epic's `## Success measures` are each addressed — met, or explicitly not met with the reason | [skill] |
 | DE4 | `docs/product/` reflects what was actually built, not what was proposed | [skill] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
 | DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written. Every citation in the workspace resolves | [skill] + [auto] |
-| DE7 | The stakeholder was **asked** whether the epic is accepted, after the last child closed, and answered | [auto] |
+| DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and answered — in **every** ending, not only closure | [auto] |
+
+### DE1 was an entry condition for one ending out of four
+
+"Every child item is `done`" describes ending **E1** and nothing else. E2 (delivered-partial),
+E3 (impasse) and E4 (abandoned) all end legitimately with at least one child not `done`
+(`ids-and-statuses.md` §3.5), and a criterion that only E1 can satisfy is why the epic in a real
+run sat `open` for ever with a `blocked` child, never reaching the gate that would have asked
+the stakeholder anything (F-045).
+
+What generalises is **terminal, and named**: every child has stopped, and every child that did
+not deliver appears by ID in the termination question and in what the epic records as its
+outcome. That is strictly stronger than the rule it replaces — DE1 never required anyone to say
+*which* children delivered — and it is what makes F-046 mechanical. A bug the pipeline filed and
+never fixed is a child of the epic, so it is named, so the stakeholder sees it. "List what was
+not delivered" cannot be checked; "name every child" can.
+
+An epic that closes with an undelivered child MUST carry `outcome: delivered-partial` or
+`dropped`. Closing one as `delivered` is overclaiming and the validator refuses it.
 
 DE6 is the epic-level counterpart of D12, and it is where a claim that no single item touched
 gets caught. Treat it the way a regression pass treats behaviour: the run that found three real
@@ -140,21 +158,31 @@ DE3 is the criterion that stops a pipeline from mistaking "all the tickets are c
 "the goal was achieved". If a success measure was not met, closing the epic is still allowed —
 saying so is what is mandatory.
 
-### DE7 is about asking, not about being told yes
+### DE7 is about asking, not about being told yes — in every ending
 
 DE3 and DE4 both ask whether the record says the goal was met. DE7 asks something the record
 cannot answer on its own: whether the person who wanted it agrees. A record only holds what the
 stakeholder said when last consulted, so an epic can satisfy every other criterion while nobody
 has spoken to them since refinement — which is what happened, twice, in consecutive runs.
 
-`review-close` files a `kind: sign-off` question on the epic (`question.md` §2), suspends the
-epic to `awaiting-answer`, and stops. `scripts/check-epic-signoff` is the gate, and it requires
-the sign-off to have been filed **after the last child item closed** — an acceptance obtained
-halfway through is an acceptance of something else.
+**DE7 is a termination criterion, not a completion criterion.** It was written as the latter and
+the difference cost a whole run: the gate fired on `open → done`, an epic with a `blocked` child
+never reaches `done`, and so the one ending where the stakeholder most needed to speak was the
+one ending that never asked them (F-045). The stakeholder in that run went looking for the
+question and recorded that it never came.
 
-A "no" closes the epic just as legitimately as a "yes": the outcome records that it was not
-accepted, or the epic stays open with follow-up items. The criterion is that the question was
-asked and answered, never that the answer was favourable.
+So the trigger is **rest**, not closure (`ids-and-statuses.md` §3.5): every child terminal, no
+question open anywhere in the engagement, no request open. At rest, `review-close` files a
+`kind: sign-off` question on the epic (`question.md` §2), suspends the epic to
+`awaiting-answer`, and stops. `scripts/check-epic-signoff` is the gate; it requires the
+acknowledgment to have been filed **after the engagement reached rest** — an acceptance obtained
+halfway through is an acceptance of something else — and it requires the question to **name
+every child item**, so that what was not delivered is in front of the stakeholder rather than
+implied by its absence.
+
+A "no" ends the engagement just as legitimately as a "yes": the epic goes to `blocked` with the
+impasse recorded (E3), or closes with an outcome that says what was and was not delivered. The
+criterion is that the question was asked and answered, never that the answer was favourable.
 
 ---
 
@@ -165,3 +193,4 @@ asked and answered, never that the answer was favourable.
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | D12 and DE6 gain their mechanical half: claim provenance, enforced by `scripts/lint-claims` (F-001). |
 | 3 | 2026-08-22 | DE7 added: the stakeholder is asked to accept the epic, after the last child closed, and answers (F-022). |
+| 4 | 2026-08-27 | DE1 generalised from "every child `done`" to "every child terminal, and every undelivered child named" (F-045, F-046); DE7 generalised from a completion gate to a **termination** gate, triggered by rest. Derived in ADR-0006. |

@@ -2710,3 +2710,41 @@ an engagement is over is *precisely* how F-045 happened.
 
 No code moved in this unit. `./scripts/check`: 13 steps, green — a no-op guard, since nothing
 reads ADRs.
+
+## META-103 — the spec, re-derived
+
+Four files. The changes that are not mechanical restatements of ADR-0006:
+
+**`ids-and-statuses.md` §3.5** is new and is where the model lives: the four endings, rest as
+the trigger, and the sentence the whole session turns on — *no engagement ends, in any ending,
+without a blocking question addressed to the human stating what was delivered, what was not, and
+why*. §3.2's epic table now says what `blocked` means for an epic (the impasse **ending**)
+rather than "every child is blocked or awaiting a human", which was a description of a symptom.
+
+**§4 gains two columns.** `applies_to` is what makes "only `review-close` ends an engagement"
+expressible: the generic `any-suspendable → blocked` row is now scoped to work items and bugs, so
+an epic cannot be blocked by whoever happens to be holding it. `Gated` is the second, and it is
+the one I nearly missed — without it `open → blocked` would run the acknowledgment gate and
+ignore the verdict, since `transition` only *refuses* on a skill's `next_status`.
+
+**§5 (creation authority) is new**, and writing the table made me add a row nobody had filed:
+DoR **R9** instructs `refine` to split an item, and `refine` had no authority to create the part
+it splits off. F-029 filed two occurrences; there were three.
+
+**DE1 was the interesting one.** It reads as a completeness rule and it is actually an entry
+condition for exactly one of the four endings. Replacing it with "every child terminal, and every
+undelivered child **named**" is strictly stronger — DE1 never required anyone to say which
+children delivered — and it dissolves F-046 into a consequence rather than a separate fix.
+
+**`question.md`** gains `status: deferred` and the rule that decides what the item does, because
+the finding (F-028) is really "the protocol had a third case and no third state". The part worth
+writing down is that a deferral is *not* automatically a deferred question: if the record plus
+the deferral is enough to decide, the honest status is `answered` citing the deferral. Only when
+no decision is possible does the question become `deferred` and the item go to `blocked` — never
+back to its old status, because resuming would assert that the work can proceed.
+
+`kind: sign-off` is now the **termination** question, triggered by rest, and it must name every
+child by ID. "List what was not delivered" cannot be checked and "name every child" can, which is
+the difference between a rule and an intention.
+
+Re-rendered (the adapter ships `spec/`). `./scripts/check`: 13 steps, green.

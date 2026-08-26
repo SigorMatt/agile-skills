@@ -36,8 +36,9 @@ depends-on:
 | `created` | always | timestamp | UTC ISO-8601 to the second; set once, never changed |
 | `updated` | always | timestamp | bumped by every skill that writes the item |
 | `branch` | once code exists | string | `wi/<ID>`; set by `implement` when it creates the branch |
-| `outcome` | when `status: done` | enum | `delivered` \| `dropped` \| `duplicate` |
+| `outcome` | when `status: done` | enum | `delivered` \| `dropped` \| `duplicate`; and `delivered-partial`, **epics only** |
 | `found-in` | `bug`, when known | ID | the work item whose delivered behaviour the bug contradicts |
+| `arose-from` | when the creating skill is not `intake` | citation | what caused this item to exist: `<ITEM>`, `<ITEM>/Q-###`, or `R-###` (`ids-and-statuses.md` §5) |
 | `depends-on` | optional | list of IDs | this item cannot start until those are `done` |
 | `blocks` | optional | list of IDs | informational mirror of another item's `depends-on` |
 | `relates-to` | optional | list of IDs | non-blocking association |
@@ -50,6 +51,14 @@ Rules that a validator enforces:
   is an error.
 - `depends-on` MUST NOT contain a cycle.
 - `outcome` MUST be present if and only if `status` is `done`.
+- `outcome: delivered-partial` is legal on an **epic** only. It records ending E2
+  (`ids-and-statuses.md` §3.5): the engagement closed with the stakeholder's acceptance and with
+  at least one child not delivered. An epic that closes with a child at `blocked` and an outcome
+  of `delivered` is overclaiming, and the validator says so (`epic.outcome.overclaims`).
+- `arose-from` MUST be present when the item's creation row names an actor other than `intake`,
+  and MUST resolve — to an item, a question file, or a request file that exists. It is the
+  enforceable half of the creation-authority table: it says *why* an item exists, where the
+  actor on the creation row says *who* recorded it.
 - `branch` MUST be present once `status` has ever been `in-progress` or later.
 - `updated` MUST NOT be earlier than `created`, and MUST NOT be earlier than the timestamp of
   the last `history.md` entry.
@@ -191,3 +200,11 @@ each file, so that I can see which files dominate the total without opening them
 Refinement established that "line" means newline-terminated, and that a final line without a
 trailing newline still counts — see `questions` on this item and `artifacts/refinement-qa.md`.
 ```
+
+---
+
+## Revisions
+
+| # | Date | Change |
+|---|------|--------|
+| 1 | 2026-08-27 | §1: `arose-from` provenance for items a skill other than `intake` created (F-029); `outcome: delivered-partial` for an epic that ended at E2 (F-045). Derived in ADR-0006. |
