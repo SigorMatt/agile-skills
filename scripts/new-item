@@ -4,7 +4,7 @@
 Usage:
   scripts/new-item --id WI-0001 --type work-item --title "..." --epic EP-001 \\
                    --priority high --status draft --actor intake --reason "..." \\
-                   [--root .] [--found-in WI-0007]
+                   [--root .] [--found-in WI-0007] [--arose-from WI-0007/Q-002]
   scripts/new-item --next-id work-item [--root .]
 
 Why this exists rather than leaving skills to write the files: an item's journal.md and
@@ -15,6 +15,13 @@ table header correctly, every time, under interruption, is exactly the kind of t
 The body it writes is a **skeleton with the required headings** and placeholder prompts. The
 creating skill fills it in. It is not a substitute for thinking; it is a substitute for
 remembering the format.
+
+It also **refuses a creation the pipeline does not permit**: `--actor` and `--status` must match
+a `from: null` row in pipeline.yaml for this item type, and a row that declares `provenance`
+requires `--arose-from` (or, on a bug, `--found-in`). The creation-authority table is worth
+having only if it is applied where items are actually created; catching it at validation time
+means the item already exists and somebody has to unpick it (spec/ids-and-statuses.md section 5,
+F-029).
 """
 
 from __future__ import annotations
@@ -28,6 +35,42 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 
 import miniyaml  # noqa: E402
 from workspace import ID_PATTERNS, id_kind, resolve_root  # noqa: E402
+
+
+def find_pipeline() -> str:
+    here = os.path.dirname(os.path.abspath(__file__))
+    for candidate in (os.path.join(here, "pipeline.yaml"),
+                      os.path.join(here, "..", "pipeline.yaml"),
+                      os.path.join(here, "..", "methodology", "pipeline.yaml")):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return ""
+
+
+def creation_rule(kind: str, status: str, actor: str):
+    """(rule, problem). The `from: null` row that permits this creation, or why none does."""
+    path = find_pipeline()
+    if not path:
+        return None, None          # no pipeline to check against; do not invent a refusal
+    try:
+        pipeline = miniyaml.load_file(path) or {}
+    except miniyaml.YamlError:
+        return None, None
+    rows = [row for row in (pipeline.get("transitions") or [])
+            if isinstance(row, dict) and row.get("from") is None]
+    for row in rows:
+        applies = row.get("applies_to")
+        if applies and kind not in applies:
+            continue
+        if row.get("to") != status:
+            continue
+        if row.get("actor") != actor:
+            continue
+        return row, None
+    allowed = sorted({f"{row.get('actor')} -> {row.get('to')}" for row in rows
+                      if not row.get("applies_to") or kind in row.get("applies_to")})
+    return None, (f"{actor!r} may not create a {kind} at {status!r}. pipeline.yaml permits: "
+                  + (", ".join(allowed) or "nothing"))
 
 BODY = {
     "epic": """
@@ -180,6 +223,23 @@ def main(argv: list) -> int:
         print("new-item: --epic is required for work items and bugs", file=sys.stderr)
         return 1
 
+    rule, problem = creation_rule(kind, options["status"], options["actor"])
+    if problem:
+        print(f"new-item: {problem}", file=sys.stderr)
+        print("  a skill may create an item exactly when it is the skill that observes the "
+              "need for one (spec/ids-and-statuses.md §5)", file=sys.stderr)
+        return 1
+    # `intake` is exempt by rule, not by oversight: it creates from the vision, which is the
+    # engagement's starting point and cites nothing (spec/ids-and-statuses.md §5). Every other
+    # creator was reacting to something, and the something is what has to be on the record.
+    if rule is not None and rule.get("provenance") and options["actor"] != "intake":
+        if not options.get("arose-from") and not (kind == "bug" and options.get("found-in")):
+            print(f"new-item: {options['actor']!r} must record what caused this item to exist: "
+                  f"--arose-from <ITEM|ITEM/Q-###|R-###>"
+                  + (" (or --found-in, on a bug)" if kind == "bug" else ""), file=sys.stderr)
+            print(f"  pipeline.yaml: {rule['provenance']}", file=sys.stderr)
+            return 1
+
     timestamp = now()
     fields = {
         "id": identifier,
@@ -194,6 +254,8 @@ def main(argv: list) -> int:
     fields["updated"] = timestamp
     if "found-in" in options:
         fields["found-in"] = options["found-in"]
+    if "arose-from" in options:
+        fields["arose-from"] = options["arose-from"]
 
     # Both directories are required by the schema and both are usually empty, so both need a
     # `.gitkeep` or git will not carry them. F-047 is what that costs: an item with no questions

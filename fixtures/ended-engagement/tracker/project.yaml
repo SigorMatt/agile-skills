@@ -1,0 +1,11 @@
+project:
+  name: ended-engagement
+  trunk-branch: main
+  description: A fixture workspace for the termination gate.
+commands:
+  test: "true"
+  lint: "true"
+  build: "true"
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

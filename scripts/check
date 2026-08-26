@@ -14,16 +14,22 @@ Steps, in order:
                                                fixtures/sourced-claims
   7. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
                                                fixture's epic and passes the sourced-claims one
-  8. pipeline invariants                     — lint-skills must report the expected finding code
+  8. the termination gate                    — check-epic-signoff over fixtures/ended-engagement:
+                                               one epic per verdict it has to reach, and
+                                               engagement-state's own two
+  9. pipeline invariants                     — lint-skills must report the expected finding code
                                                for each defect reintroduced into pipeline.yaml
-  9. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+ 10. the derived model, by execution         — creation authority refused and permitted through
+                                               new-item, and an engagement refused an ending
+                                               while nobody had asked the stakeholder
+ 11. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
- 10. findings citations resolve             — every `commit <sha>` cited in
+ 12. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 11. export profiles                        — scripts/export leaves the workspace behind, and
+ 13. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 12. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 14. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -162,6 +168,20 @@ def check_claims(runner: Runner) -> None:
                [sys.executable, linter, "--root", clean, "--changed-since", "HEAD"])
 
 
+# fixtures/ended-engagement: one epic per verdict the termination gate has to reach.
+# (epic, extra args, must the gate pass?, what the case is)
+TERMINATION_CASES = [
+    ("EP-001", [], True, "the impasse ending, with every child named"),
+    ("EP-002", [], False, "a statement that omits the bug the pipeline filed (F-046)"),
+    ("EP-003", [], False, "an engagement nobody was ever asked about (F-045)"),
+    ("EP-004", [], False, "closing on a deferred acknowledgment"),
+    ("EP-004", ["--resolving", "EP-004:open->blocked"], True,
+     "parking at the impasse on a deferred acknowledgment"),
+]
+REST_VERDICTS = {"EP-001": "at-rest", "EP-002": "at-rest", "EP-003": "at-rest",
+                 "EP-004": "at-rest", "EP-005": "active"}
+
+
 def check_signoff(runner: Runner) -> None:
     """DE7 both ways: an epic with no usable sign-off is refused, one with a real one passes."""
     gate = os.path.join(SCRIPTS, "check-epic-signoff")
@@ -174,6 +194,46 @@ def check_signoff(runner: Runner) -> None:
                [sys.executable, gate, "EP-001", "--root", broken], expect_zero=False)
     runner.run("epic sign-off gate",
                [sys.executable, gate, "EP-001", "--root", clean])
+
+
+def check_termination(runner: Runner) -> None:
+    """The termination gate at each of the four verdicts, and rest at both of its own.
+
+    Every epic in the fixture is a contradiction a real run produced. EP-003 is the one that
+    matters most: an engagement that is over, with nobody ever asked. That is exactly where a run
+    stopped — printed a board and called it a day — while the stakeholder was waiting to be asked
+    and afterwards wrote down that the question never came (F-045).
+    """
+    gate = os.path.join(SCRIPTS, "check-epic-signoff")
+    rest = os.path.join(SCRIPTS, "engagement-state")
+    root = os.path.join(ROOT, "fixtures", "ended-engagement")
+    if not os.path.isfile(gate) or not os.path.isfile(rest) or not os.path.isdir(root):
+        runner.skip("the termination gate at every ending",
+                    "the gate, engagement-state, or fixtures/ended-engagement is absent")
+        return
+    problems = []
+    for epic, extra, should_pass, what in TERMINATION_CASES:
+        result = subprocess.run([sys.executable, gate, epic, "--root", root] + extra,
+                                capture_output=True, text=True, cwd=ROOT)
+        ok = (result.returncode == 0) if should_pass else (result.returncode != 0)
+        if not ok:
+            problems.append(f"{epic} — {what}: expected "
+                            + ("PASS" if should_pass else "FAIL")
+                            + f", exited {result.returncode}\n      "
+                            + (result.stdout + result.stderr).strip().split("\n")[0])
+    for epic, verdict in sorted(REST_VERDICTS.items()):
+        result = subprocess.run([sys.executable, rest, epic, "--root", root],
+                                capture_output=True, text=True, cwd=ROOT)
+        expected = f"engagement-state: {epic} {verdict}"
+        if expected not in result.stdout:
+            problems.append(f"{epic}: expected {verdict!r}\n      "
+                            + (result.stdout + result.stderr).strip().split("\n")[0])
+    if problems:
+        runner.emit("the termination gate at every ending", False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit(f"the termination gate at every ending "
+                f"({len(TERMINATION_CASES)} verdicts, {len(REST_VERDICTS)} rest checks)", True)
 
 
 # Each entry: a label, an edit to methodology/pipeline.yaml, and the finding code lint-skills
@@ -251,6 +311,141 @@ def check_pipeline_faults(runner: Runner) -> None:
         return
     runner.emit(f"pipeline invariants refuse each injected fault "
                 f"({len(PIPELINE_FAULTS)} faults)", True)
+
+
+def check_derived_model(runner: Runner) -> None:
+    """The termination model, exercised against a real workspace rather than described.
+
+    Every case below is a contradiction a real run hit, re-decided by the model derived in
+    ADR-0006. They are run by execution because that is the only way to know the *tools* agree
+    with the spec: `new-item` refusing a creation, and `transition` refusing an ending, are the
+    two places where the authority table and the termination gate actually bite.
+
+    The last one is the session's centre. A run ended at an impasse with the stakeholder writing
+    down that nobody ever asked them (F-045); here, ending an engagement while no acknowledgment
+    exists is refused by the gate, not by anyone's discipline.
+    """
+    import tempfile
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "new-item", "transition", "validate-workspace")}
+    if not all(os.path.isfile(path) for path in tools.values()):
+        runner.skip("the derived model, by execution", "one of the scripts is absent")
+        return
+
+    problems = []
+    with tempfile.TemporaryDirectory() as root:
+        def run(script, *args):
+            return subprocess.run([sys.executable, tools[script], *args, "--root", root],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        subprocess.run([sys.executable, tools["workspace-init"], root],
+                       capture_output=True, text=True, cwd=ROOT)
+
+        def item(*args):
+            return subprocess.run([sys.executable, tools["new-item"], "--root", root, *args],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        def expect(label, result, should_pass):
+            ok = (result.returncode == 0) if should_pass else (result.returncode != 0)
+            if not ok:
+                tail = (result.stdout + result.stderr).strip().split("\n")[-3:]
+                problems.append(f"{label}: expected "
+                                + ("success" if should_pass else "a refusal")
+                                + ", got exit {}\n      {}".format(result.returncode,
+                                                                   "\n      ".join(tail)))
+
+        expect("intake creates the epic",
+               item("--id", "EP-001", "--type", "epic", "--title", "A goal",
+                    "--status", "open", "--actor", "intake", "--reason", "from the raw idea"),
+               True)
+        expect("intake creates a work item",
+               item("--id", "WI-0001", "--type", "work-item", "--epic", "EP-001",
+                    "--title", "Do the thing", "--status", "draft", "--actor", "intake",
+                    "--reason", "refined from the idea"),
+               True)
+
+        # F-029.2: review-close found a defect belonging to another item and could not file it.
+        expect("plan may not create a bug",
+               item("--id", "BUG-0001", "--type", "bug", "--epic", "EP-001", "--title", "Broken",
+                    "--status", "ready", "--actor", "plan", "--reason", "noticed it"),
+               False)
+        expect("review-close may not create a bug with no provenance",
+               item("--id", "BUG-0001", "--type", "bug", "--epic", "EP-001", "--title", "Broken",
+                    "--status", "ready", "--actor", "review-close", "--reason", "found in review"),
+               False)
+        expect("review-close files a bug it found (F-029.2)",
+               item("--id", "BUG-0001", "--type", "bug", "--epic", "EP-001", "--title", "Broken",
+                    "--status", "ready", "--actor", "review-close", "--found-in", "WI-0001",
+                    "--reason", "found while reviewing WI-0001"),
+               True)
+
+        # The question the widening answer came from has to exist, because provenance that does
+        # not resolve is the failure the field is guarding against.
+        question_dir = os.path.join(root, "tracker", "items", "WI-0001", "questions")
+        os.makedirs(question_dir, exist_ok=True)
+        with open(os.path.join(question_dir, "Q-001.md"), "w", encoding="utf-8") as handle:
+            handle.write("---\nid: Q-001\nitem: WI-0001\nfrom-skill: refine\n"
+                         "addressed-to: human\nblocking: true\nstatus: open\n"
+                         "created: 2026-08-27T00:00:00Z\n---\n\n## Context\n\nx\n\n"
+                         "## Question\n\nDoes this cover the second case too?\n\n"
+                         "## Options considered\n\n- A\n- B\n\n## Answer\n\n"
+                         "## Consequences\n")
+
+        # F-029.1: an answer widened the scope and there was nowhere to record the implied work.
+        expect("answer-questions may not create a work item with no provenance",
+               item("--id", "WI-0002", "--type", "work-item", "--epic", "EP-001",
+                    "--title", "Widened scope", "--status", "draft",
+                    "--actor", "answer-questions", "--reason", "an answer widened the scope"),
+               False)
+        expect("answer-questions records work an answer implied (F-029.1)",
+               item("--id", "WI-0002", "--type", "work-item", "--epic", "EP-001",
+                    "--title", "Widened scope", "--status", "draft",
+                    "--actor", "answer-questions", "--arose-from", "WI-0001/Q-001",
+                    "--reason", "an answer widened the scope"),
+               True)
+        # DoR R9 tells refine to split an item; until ADR-0006 it could not create the part.
+        expect("refine records the item it split (DoR R9)",
+               item("--id", "WI-0003", "--type", "work-item", "--epic", "EP-001",
+                    "--title", "The other half", "--status", "draft", "--actor", "refine",
+                    "--arose-from", "WI-0001", "--reason", "WI-0001 was two items"),
+               True)
+        expect("implement may not create work for itself",
+               item("--id", "WI-0004", "--type", "work-item", "--epic", "EP-001",
+                    "--title", "While I was in there", "--status", "draft",
+                    "--actor", "implement", "--arose-from", "WI-0001", "--reason", "noticed it"),
+               False)
+
+        # F-045: ending an engagement that nobody has been asked about.
+        expect("an engagement may not end before the stakeholder is asked (F-045)",
+               run("transition", "EP-001", "--to", "blocked", "--actor", "review-close",
+                   "--resume-to", "open", "--reason", "impasse"),
+               False)
+        # ...and only review-close may end one at all (ADR-0006 §2).
+        expect("only review-close ends an engagement",
+               run("transition", "EP-001", "--to", "blocked", "--actor", "intake",
+                   "--resume-to", "open", "--reason", "giving up"),
+               False)
+        # F-013: the move `intake`'s own instruction requires, which used to be refused.
+        suspend = run("transition", "EP-001", "--to", "awaiting-answer", "--actor", "intake",
+                      "--resume-to", "open", "--reason", "an epic-level question")
+        if "EP-001 open → awaiting-answer" not in suspend.stdout:
+            problems.append("an epic could not be suspended by a blocking question (F-013):\n"
+                            "      " + (suspend.stdout + suspend.stderr).strip()[-300:])
+
+        # And the provenance rules must be satisfiable: nothing this sequence created may be
+        # reported as missing or dangling. A rule nobody can satisfy is not a rule.
+        validated = run("validate-workspace")
+        stray = [line for line in (validated.stdout + validated.stderr).split("\n")
+                 if "item.arose-from" in line]
+        if stray:
+            problems.append("provenance findings on items created through the tool:\n      "
+                            + "\n      ".join(stray[:5]))
+
+    if problems:
+        runner.emit("the derived model, by execution", False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit("the derived model, by execution (12 cases)", True)
 
 
 def check_guard(runner: Runner) -> None:
@@ -366,7 +561,9 @@ def main() -> int:
     check_example(runner)
     check_claims(runner)
     check_signoff(runner)
+    check_termination(runner)
     check_pipeline_faults(runner)
+    check_derived_model(runner)
     check_guard(runner)
     check_findings_citations(runner)
     check_export(runner)

@@ -293,7 +293,7 @@ outranks completeness in a .5 session.
 - [x] **META-106** — skill contracts re-derived: `review-close` (ends the engagement),
       `answer-questions` (deferral), `next` (the close-out step), `refine`/`verify` creation
       authority. Version bumps, re-render.
-- [ ] **META-107** — fixtures both ways: every historical contradiction as a case — F-013's epic
+- [x] **META-107** — fixtures both ways: every historical contradiction as a case — F-013's epic
       suspension, F-029's two occurrences, F-045's impasse, F-046's unshown bug — plus a
       must-pass `fixtures/ended-engagement/`. Wired into `./scripts/check`.
 

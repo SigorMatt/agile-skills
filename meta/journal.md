@@ -2888,3 +2888,40 @@ than as a cross-reference, and there is a stated answer for the case where the b
 one item's.
 
 Re-rendered. `./scripts/check`: green.
+
+## META-107 — every historical contradiction, as a case
+
+The mission asked me to re-check each contradiction against the derived model as a fixture. Two
+of them turned out to be better proven by **execution** than by a static tree, and that changed
+the shape of the unit.
+
+**`new-item` now refuses a creation the pipeline does not permit.** This was not in the plan and
+it is the right place for the rule: the creation-authority table is only worth having if it is
+applied where items are actually created. Catching it at validation time means the item already
+exists and somebody has to unpick it. `--actor` and `--status` must match a `from: null` row for
+this item type, and a row that declares `provenance` requires `--arose-from` (or `--found-in` on
+a bug). `intake` is exempt, by rule rather than by oversight: it creates from the vision, which is
+the engagement's starting point and cites nothing.
+
+So `scripts/check` gained "the derived model, by execution": twelve cases against a throwaway
+workspace built by the real tools. `plan` may not file a bug; `review-close` may, and may not do
+it without saying what it found and where; `answer-questions` records the work an answer implied;
+`refine` records the item it split; `implement` may not create work for itself. Then the two
+transitions: an epic may be suspended by a blocking question (F-013's exact move, which used to
+be refused), and **an engagement may not end before the stakeholder is asked** — `review-close`
+moving `EP-001 open → blocked` with no acknowledgment is refused by a hard gate. That last
+assertion is the session in one line.
+
+**`fixtures/ended-engagement/`** carries the cases that need a shaped record rather than a
+sequence of commands: five epics, one per verdict. EP-001 is the impasse ending done right, with
+a statement naming all three children and the stakeholder saying no. EP-002 omits the bug the
+pipeline filed (F-046). EP-003 is at rest with nobody ever asked (F-045) — the state a real run
+stopped in. EP-004's acknowledgment is deferred, which passes for parking at the impasse and
+fails for closing. EP-005 is the control: still running, so "nothing runnable right now" is not
+mistaken for "over".
+
+I made it a **gate** fixture, not a workspace fixture, and said so in its README. The validator's
+rules live in `fixtures/broken-workspace`; if this tree had to satisfy them too, every unrelated
+schema change would break it for reasons that have nothing to do with terminations.
+
+`./scripts/check`: 16 assertions across 14 numbered steps, green.
