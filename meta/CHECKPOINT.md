@@ -4,28 +4,30 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-102
+## Current unit — META-103
 
-**ADR-0006 — the termination model.** The derivation the mission asks for, written once, before
-any code moves. F-013, F-029, F-045 and F-046 are one design debt: the status graph and the
-authority rules were derived from the happy path.
+**The spec re-derived from ADR-0006.** Prose only; `pipeline.yaml` and the scripts follow in
+META-104/105, so `./scripts/check` may report the spec and the pipeline disagreeing at the end of
+this unit only if a lint rule reads the prose — it does not, so the gate must stay green.
 
-Steps:
-1. Enumerate every legal **ending** of an engagement, and every legal mid-flight event that
-   changes the item set.
-2. State the **termination gate**: no engagement ends, in any ending, without a blocking
-   human-addressed question saying what was delivered, what was not, and why.
-3. Derive the **creation-authority table** — who may create an item, in which status, with what
-   provenance.
-4. Name each historical contradiction (F-013, F-029 ×2, F-045, F-046) and say what the derived
-   model does with it, so META-107 can turn each into a fixture.
+Files, and what changes in each:
+1. `spec/ids-and-statuses.md` — §3.2 the four endings and the epic's final states; §4 the
+   transition table gains `applies_to` and the epic ending rows; new §6 **creation authority**
+   with the provenance rule. `## Revisions` row.
+2. `spec/work-item.md` — `arose-from` (required for items created by `refine`,
+   `answer-questions`, `verify`, `review-close`); `outcome: delivered-partial` for epics.
+3. `spec/dor-dod.md` — DE1 generalised to "every child at a terminal status, the undelivered
+   named"; DE7 generalised from completion to **termination**.
+4. `spec/question.md` — `kind: sign-off` is the termination question (trigger = rest, content =
+   every child named); `status: deferred` (F-028) with the rule that a deferred blocking question
+   sends its item to `blocked`.
 
-Done when: `meta/adr/ADR-0006-termination-model.md` exists, `./scripts/check` is still green
-(it does not read ADRs, so this is a no-op guard), committed and pushed, plan ticked, journalled.
+Done when: the four files carry the rules and a `## Revisions` row each, `./scripts/check` green,
+committed and pushed, plan ticked, journalled.
 
-## Next unit — META-103
+## Next unit — META-104
 
-The spec files re-derived from ADR-0006.
+`pipeline.yaml` 0.4.0 and the `lint-skills` rules that hold it to the spec.
 
 ## Standing instructions (still in force)
 
