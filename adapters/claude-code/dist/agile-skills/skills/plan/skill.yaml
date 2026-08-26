@@ -1,5 +1,5 @@
 name: plan
-version: 0.2.0
+version: 0.3.0
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -46,6 +46,9 @@ outputs:
     kind: file
     when: conditional
   - path: tracker/project.yaml
+    kind: file
+    when: conditional
+  - path: "behaviour-free scaffolding a declared gate command needs in order to execute, listed under Scaffolding in the plan"
     kind: file
     when: conditional
   - path: "a commit of the workspace files this execution wrote"

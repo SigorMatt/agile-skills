@@ -1,4 +1,4 @@
-# Contract — plan v0.2.0
+# Contract — plan v0.3.0
 
 Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -29,6 +29,7 @@ Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative li
 | `docs/architecture/adr/ADR-####-{{item.id}}.md` | file | conditional |
 | `docs/architecture/overview.md` | file | conditional |
 | `tracker/project.yaml` | file | conditional |
+| `behaviour-free scaffolding a declared gate command needs in order to execute, listed under Scaffolding in the plan` | file | conditional |
 | `a commit of the workspace files this execution wrote` | commit | on-success |
 | `tracker/items/{{item.id}}/journal.md` | append | always |
 | `tracker/items/{{item.id}}/history.md` | append | on-success |

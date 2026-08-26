@@ -2,7 +2,7 @@
 id: WI-0003
 type: work-item
 title: An item created without provenance, carrying a deferred blocking question
-status: draft
+status: ready
 priority: medium
 epic: EP-001
 created: 2026-08-16T13:00:00Z
@@ -21,6 +21,8 @@ creation-authority table is enforceable rather than advisory.
 - [ ] AC2 — `question.deferred.not-blocked` fires: a deferred blocking question, item at `draft`
 - [ ] AC3 — `item.outcome.epic-only` fires: `delivered-partial` records how an *engagement*
   ended and is not a work item's to claim
+- [ ] AC4 — `artifact.refinement-qa.not-recorded` fires: the item reached `ready` on an agenda
+  for a conversation that never happened
 
 ## Out of scope
 

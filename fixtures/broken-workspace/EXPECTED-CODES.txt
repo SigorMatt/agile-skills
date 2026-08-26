@@ -2,6 +2,7 @@ adr.filename
 adr.options
 adr.reversibility
 artifact.missing
+artifact.refinement-qa.not-recorded
 board.missing
 claim.citation.unresolved
 doc.changelog.order

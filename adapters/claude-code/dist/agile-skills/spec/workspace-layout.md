@@ -72,7 +72,7 @@ worked on. The files are created with their headers at the moment the item is cr
 
 | Artifact | Written by | Contains |
 |----------|-----------|----------|
-| `artifacts/refinement-qa.md` | `refine` | the full Q&A verbatim, each answer marked as `human` or `assumed` |
+| `artifacts/refinement-qa.md` | `refine` | the full Q&A verbatim, each answer marked as `human` or `assumed`. MUST open with frontmatter carrying `status: agenda` or `status: recorded` — see §1.3 |
 | `artifacts/plan.md` | `plan` | design, steps, assumptions, ADR references, gate commands |
 | `artifacts/impl-report.md` | `implement` | what was built, AC → evidence map, deviations from the plan |
 | `artifacts/verify-report.md` | `verify` | per-AC verdict with evidence, gates run, defects found. MUST contain a line `Verified-commit: <sha>` naming the commit that was verified — a verification that does not say what it verified cannot be shown to be current, and Definition of Done D10 turns on exactly that |
@@ -85,6 +85,27 @@ no `impl-report.md`" — which is a real failure mode, not a hypothetical one.
 Re-running a skill **overwrites** its own artifact and appends a journal entry. It does not
 create `plan-2.md`. The journal is where the history of attempts lives; the artifact always
 holds the current answer.
+
+### 1.3 `refinement-qa.md` says whether the conversation happened
+
+```yaml
+---
+status: recorded
+---
+```
+
+`status: agenda` means the questions are written down and the conversation has **not** happened
+— which is the honest thing for `refine` to leave behind when it is interrupted before reaching
+the human. `status: recorded` means the exchange in this file is what was actually said.
+
+Definition of Ready **R8** is satisfied only by `recorded`, and `validate-workspace` reports
+`artifact.refinement-qa.not-recorded` on an item that has reached `ready` without it.
+
+The field exists because R8 was an `[auto]` check on a **filename**. A worker interrupted mid
+refinement did the right thing — wrote the agenda down for the next session — and then noticed
+that the file it had just created would read to an automated check as R8 satisfied, and
+mitigated it with a banner nothing reads (F-031). A mechanical gate that checks the wrong thing
+is worse than a manual one, because it is trusted: nobody re-reads a criterion marked `[auto]`.
 
 ---
 
@@ -188,6 +209,16 @@ Rules:
 - Workspace changes (tracker and docs) are committed **with** the code change that caused them,
   not separately. A commit that changes only the tracker is legitimate for `intake`, `refine`
   and `answer-questions`, which produce no code.
+- **`plan` produces no code, with one carve-out: scaffolding a declared gate command needs in
+  order to execute at all.** `plan`'s own contract requires it to have *run* the commands it
+  records, and a test command cannot run against a package that has no `__init__.py` — it errors
+  rather than failing. So `plan` MAY create a file outside `tracker/` and `docs/` when all of:
+  the command cannot execute without it; the file contains **no behaviour** (an empty package
+  marker, an empty test module, the minimum a tool needs to recognise the project); it is listed
+  in the plan under `## Scaffolding` with the command that needed it; and no acceptance criterion
+  depends on it. A stub function with a `pass` body is **not** scaffolding — that is an interface
+  decision, and it belongs in the plan where a reviewer can argue with it. See
+  `meta/adr/ADR-0007` for why this beats letting `plan` record a command it never ran (F-034).
 - **An epic-level record commit belongs on the trunk**, not on whichever item branch happens to
   be checked out. An epic is not a branch-scoped unit of work: it has no branch of its own, it
   outlives every item under it, and its record — `tracker/items/EP-###/` — is changed by
@@ -211,3 +242,4 @@ Rules:
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | `tracker/requests/` added — the stakeholder-initiated channel (F-021, `spec/request.md`). |
 | 3 | 2026-08-22 | §5: an epic-level record commit is made on the trunk, not on the item branch that happens to be checked out (F-016). |
+| 4 | 2026-08-27 | §5: `plan` may create behaviour-free scaffolding a declared gate command needs in order to execute, listed under `## Scaffolding` (F-034, ADR-0007). §1.2/§1.3: `refinement-qa.md` declares `status: agenda` or `recorded`, and Definition of Ready R8 reads that field rather than the filename (F-031). |

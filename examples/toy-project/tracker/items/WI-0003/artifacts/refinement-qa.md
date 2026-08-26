@@ -1,3 +1,7 @@
+---
+status: recorded
+---
+
 # Refinement Q&A — WI-0003
 
 Recorded by `refine` v0.1.1 (product-analyst) on 2026-08-16T23:58:00Z.

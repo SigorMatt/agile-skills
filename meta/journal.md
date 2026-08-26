@@ -2925,3 +2925,41 @@ rules live in `fixtures/broken-workspace`; if this tree had to satisfy them too,
 schema change would break it for reasons that have nothing to do with terminations.
 
 `./scripts/check`: 16 assertions across 14 numbered steps, green.
+
+## META-108 — the correctness batch: F-031, F-034, F-038
+
+**F-031 — R8 reads a field.** `refinement-qa.md` opens with `status: agenda | recorded`, and
+`artifact.refinement-qa.not-recorded` fires when an item reached `ready` on an agenda. The
+finding is worth restating because it is F-001's thesis pointed at the mechanical half: an
+`[auto]` criterion that checks the *filename* is not a weaker gate than a manual one, it is a
+worse one, because nobody re-reads a criterion marked `[auto]`. The worker who found it had done
+the right thing — interrupted mid-refinement, it wrote the agenda down for the next session — and
+then noticed that the file it had just created would read to the checker as R8 satisfied.
+
+Migrating `examples/toy-project`'s three artifacts was part of the fix, and it is a migration
+rather than a rewrite: the Q&A in those files *was* recorded, so `status: recorded` is true of
+each of them.
+
+**F-034 — ADR-0007, and the option I did not take.** `plan` created two empty `__init__.py`
+files so that `pytest` could run at all before it recorded the command, and flagged it under
+`## Risks` as a rule it had bent. The two obvious fixes — drop the "have you run it" requirement,
+or let `implement` create the scaffolding — are the same option wearing different hats: both end
+with a plan recording a gate command that has never been executed, which is the
+sentence-with-nothing-behind-it that the whole F-001 line of work exists to eliminate, failing in
+the most expensive place.
+
+So the carve-out, bounded four ways, and the bound that matters is: **a stub function with a
+`pass` body is not scaffolding.** That is an interface decision, and an interface decision belongs
+in the plan where a reviewer can argue with it, not in a file where it will be silently kept.
+`## Scaffolding` is now a required heading in `plan.md` — usually `none` — so a reviewer reads a
+list rather than a diff. It is a `[skill]` rule and I have said so: nothing mechanically
+distinguishes an empty package marker from a small implementation, and claiming otherwise would
+be the over-claim this project keeps catching itself in.
+
+**F-038 — folklore, written down.** The window is real and the behaviour producing it is correct;
+what was missing was the obligation it creates. `spec/skill-contract.md` §2.3 now says a skill
+MUST NOT *end an execution* while the validator reports errors — fix them, or name each one and
+why it is not yours. Committing a workspace you know does not validate is the failure; committing
+one and saying so is a handover.
+
+`plan` 0.2.0 → 0.3.0. `./scripts/check`: green, 69 fixture codes.

@@ -133,8 +133,23 @@ acted on. Then write down exactly what was said.
    assume is included. If the human insists nothing is excluded, that itself is worth writing
    down — and usually prompts them to remember an exclusion.
 
-8. **Write `artifacts/refinement-qa.md`.** Every question and every answer, in order, verbatim.
-   Tag each answer:
+8. **Write `artifacts/refinement-qa.md`.** It opens with frontmatter saying which kind of file
+   it is:
+
+   ```yaml
+   ---
+   status: recorded
+   ---
+   ```
+
+   `agenda` while the questions are written down and the conversation has **not** happened —
+   which is the honest thing to leave behind if you are interrupted before reaching the human —
+   and `recorded` once the exchange below it is what was actually said. Definition of Ready R8
+   reads that field, so an agenda cannot pass an item to `ready` by existing
+   (`spec/workspace-layout.md` §1.3). Do not write `recorded` on a file you intend to finish
+   later; the point of the field is that the two states are different.
+
+   Then every question and every answer, in order, verbatim. Tag each answer:
    - `[human]` — the human said this.
    - `[assumed]` — you proposed it and they confirmed, or they deferred to you.
    - `[unresolved]` — asked, not settled; carried into `## Notes` as a risk.

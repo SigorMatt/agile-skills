@@ -80,6 +80,7 @@ will not have been tested by anyone.
    | AC | satisfied by step | demonstrated by |
    ## Assumptions
    ## Decisions and ADRs
+   ## Scaffolding
    ## Risks
    ## Out of scope for this item
    ```
@@ -90,6 +91,14 @@ will not have been tested by anyone.
      `summarise()`" is.
    - **`## Acceptance criteria mapping`** is a table with one row per AC. An AC with no row is a
      hole in the design and the `every-criterion-is-addressed` gate fails.
+   - **`## Scaffolding`** lists every file you created outside `tracker/` and `docs/`, one line
+     each, naming the command that could not otherwise execute — or says `none`, which is the
+     usual answer. You produce no code, and this is the one carve-out: a gate command you record
+     must be a command you have run, and `pytest` against a package with no `__init__.py` does
+     not fail, it errors. So an empty package marker or an empty test module is allowed;
+     behaviour is not, and a stub function with a `pass` body is behaviour — that is an interface
+     decision and it belongs in `## Approach` where a reviewer can argue with it
+     (`spec/workspace-layout.md` §5, ADR-0007, F-034).
    - **`## Risks`** names what could make this plan wrong, not generic caution. "If the input
      directory can contain millions of files, the in-memory sort is wrong; refinement says it
      cannot" is a risk. "Bugs may occur" is not.
@@ -174,6 +183,10 @@ the item's whole story rather than only its code.
    implementations are not.
 5. Is `commands.test` a command you have actually run in this project, or one you expect to
    work?
+6. Did you create any file outside `tracker/` and `docs/`? Every one must be listed under
+   `## Scaffolding`, must contain no behaviour, and must be there because a command you declared
+   could not otherwise execute. If deleting it would make an acceptance criterion fail, it is
+   implementation and it is not yours to write.
 
 **The two ways this skill goes wrong:**
 

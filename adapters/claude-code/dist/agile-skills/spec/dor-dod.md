@@ -28,7 +28,7 @@ reviewer cannot tell which criterion was the weak one.
 | R5 | `## Out of scope` names at least one thing a reader could reasonably assume is included | [skill] |
 | R6 | Every open question on this item is non-blocking | [auto] |
 | R7 | The item is independently deliverable: nothing in `depends-on` is unfinished, or the dependency is recorded and the item is sequenced after it | [auto] |
-| R8 | The refinement Q&A is recorded verbatim in `artifacts/refinement-qa.md`, including which answers came from the human and which were assumed | [auto] |
+| R8 | The refinement Q&A is recorded verbatim in `artifacts/refinement-qa.md`, including which answers came from the human and which were assumed, and that file declares `status: recorded` — an agenda for a conversation that has not happened yet does not satisfy this | [auto] |
 | R9 | Estimated to be deliverable as one coherent change. If it is not, it was split, and this item is one of the parts | [skill] |
 | R10 | Every combination of the behaviours this item introduces — its options, its flags, its modes — either has a stated behaviour in a criterion, or is named in `## Out of scope`, or is recorded in `## Notes` as deliberately unconstrained with who left it so | [skill] |
 
@@ -193,4 +193,5 @@ criterion is that the question was asked and answered, never that the answer was
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | D12 and DE6 gain their mechanical half: claim provenance, enforced by `scripts/lint-claims` (F-001). |
 | 3 | 2026-08-22 | DE7 added: the stakeholder is asked to accept the epic, after the last child closed, and answers (F-022). |
-| 4 | 2026-08-27 | DE1 generalised from "every child `done`" to "every child terminal, and every undelivered child named" (F-045, F-046); DE7 generalised from a completion gate to a **termination** gate, triggered by rest. Derived in ADR-0006. |
+| 4 | 2026-08-27 | R8 reads `refinement-qa.md`'s `status` field rather than the filename: an `[auto]` check that only tests existence is trusted and wrong (F-031). |
+| 5 | 2026-08-27 | DE1 generalised from "every child `done`" to "every child terminal, and every undelivered child named" (F-045, F-046); DE7 generalised from a completion gate to a **termination** gate, triggered by rest. Derived in ADR-0006. |

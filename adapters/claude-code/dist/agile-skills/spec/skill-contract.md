@@ -253,6 +253,30 @@ These two rules exist because a run broke both of them and the record could not 
   up to `tracker/project.yaml`, so they may be run from anywhere in the workspace; a relative
   path to the *tool* is what breaks when the working directory moves.
 
+#### The window in which the tracker is committed-invalid
+
+`transition` applies the move and *then* runs the validator, and it reports honestly when the
+resulting workspace does not validate. Two things are true at once, and both need saying:
+
+- **The behaviour is correct.** A gate that is not blocking this move must not block it, and
+  rolling the move back would mean truncating an append-only file — which is a worse cure than
+  the disease, and was rejected for exactly that reason. So a transition can succeed and leave
+  findings behind.
+- **It leaves a window.** Between that move and whatever fixes the findings, the tracker is
+  invalid. If the skill stops there — the turn ends, the session is interrupted, the worker
+  decides it is finished — the invalid state is what gets committed, and the next execution
+  begins by refusing to do anything, because `next` will not dispatch against a workspace that
+  does not validate.
+
+**So: a skill that transitions an item MUST NOT end its execution while `validate-workspace`
+reports errors.** Either fix them, or — if they cannot be fixed here — say so explicitly in the
+journal entry and in what you report to the caller, naming each finding and why it is not yours
+to resolve. Committing a workspace you know does not validate, without saying so, is the failure;
+committing one and saying so is a handover.
+
+This is written down because it was folklore. A worker met it, described it correctly, and had
+nothing to cite (F-038).
+
 ---
 
 ## 3. Versioning
@@ -277,3 +301,4 @@ what makes "the toy run used skill X v0.1.0, and it went wrong here" an actionab
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §2.3 added: a transition is a checkpoint, never chained; commands are invoked by a CWD-independent path (F-019). |
 | 3 | 2026-08-22 | §2.2: the journal entry is written in the same command as the transition, not before it (F-017, F-019). |
+| 4 | 2026-08-27 | §2.3: the window in which the tracker is committed-invalid after a transition, and the rule that a skill does not end an execution inside it (F-038). |

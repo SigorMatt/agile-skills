@@ -883,6 +883,27 @@ class Validator:
                 self.report.error(item.root, 0, "artifact.missing",
                                   f"the item reached {status!r} but artifacts/{artifact} does "
                                   f"not exist")
+        # F-031: R8 used to be an [auto] check on a filename. A `refine` execution interrupted
+        # before the conversation happened does the right thing by writing the agenda down for
+        # the next session — and that file, existing, read to the checker as R8 satisfied. The
+        # artifact says which it is, and the checker reads the field.
+        if expected_type == "work-item" and "ready" in reached \
+                and item.has_artifact("refinement-qa.md"):
+            try:
+                fields, _, _ = frontmatter.load_file(item.artifact_path("refinement-qa.md"))
+            except Exception:
+                fields = None
+            declared = (fields or {}).get("status")
+            if declared != "recorded":
+                self.report.error(item.artifact_path("refinement-qa.md"), 0,
+                                  "artifact.refinement-qa.not-recorded",
+                                  f"the item reached 'ready' but refinement-qa.md declares "
+                                  f"status {declared!r}",
+                                  hint="'agenda' means the questions are written down and the "
+                                       "conversation has not happened; only 'recorded' "
+                                       "satisfies Definition of Ready R8 "
+                                       "(spec/workspace-layout.md §1.3)")
+
         if item.status == "done" and item.fields.get("outcome") == "delivered" \
                 and not item.has_artifact("review.md"):
             self.report.error(item.root, 0, "artifact.missing",
