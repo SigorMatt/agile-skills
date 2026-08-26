@@ -48,6 +48,30 @@ the recorded-assumption path).
 parked at `blocked` with the trail explaining why; epic otherwise done;
 answers-as-assumptions marked; all probe actions tagged as planted in SIM-LOG.
 
+### Re-run 1e — builder 2.5's regression run (2026-08-27)
+
+**Rationale.** 1d reached the impasse and stopped there: `blocked-no-recourse`,
+with the stakeholder recording on the closing turn that nobody had ever asked
+them whether they accepted what was built (F-045), and that a bug the pipeline
+had filed was never mentioned to them at all (F-046). Builder 2.5 derived the
+termination model (`meta/adr/ADR-0006`) in response: an engagement has four
+legal endings, and every one of them passes through a blocking question that
+names every child item as delivered or not.
+
+**The config and the probe are 1d's, unchanged** —
+`probes/iteration-1e-expenses.md` is byte-identical to
+`probes/iteration-1d-expenses.md`, and only `project` and `max-turns` differ in
+the config. That is deliberate: the toolkit is the one variable, so a
+difference in the ending is attributable to the fix and to nothing else.
+
+**Success looks like:** the run reaches the same impasse it reached in 1d —
+and this time **ends through the termination gate**. The sign-off question
+fires with WI-000n and the bug both named, the sim answers it in persona ("no,
+not as it stands"), the ending is recorded on the epic with what was and was
+not delivered, and the driver stops on a terminal reason with zero
+contamination violations. 1d ended with the stakeholder noting the question
+never came; 1e ends with them having been asked.
+
 ---
 
 ## Iteration 2 — `tidy` (downloads-folder organizer CLI)

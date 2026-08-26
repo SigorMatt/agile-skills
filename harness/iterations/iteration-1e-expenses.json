@@ -1,0 +1,11 @@
+{
+  "id": "iteration-1e-expenses",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 1 — expenses (re-run 1e: builder 2.5's regression run. 1d's config and probe UNCHANGED — the probe file is byte-identical to probes/iteration-1d-expenses.md, so the only variable is the toolkit)",
+  "project": "expenses-1e",
+  "persona": "cooperative-pm",
+  "probe": "iteration-1e-expenses",
+  "max-turns": 18,
+  "worker-model": "opus",
+  "sim-model": "sonnet",
+  "worker-skills-per-turn": 3
+}

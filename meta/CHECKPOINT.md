@@ -4,27 +4,36 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-108
+## Current unit — META-110 — iteration 1e
 
-**The correctness batch.** Three findings, one unit, because each is small and none of them
-touches the others.
+**The regression gate.** 1d's config and probe, unchanged; fresh project `expenses-1e`;
+max-turns 18. The probe file is **byte-identical** to `probes/iteration-1d-expenses.md`
+(sha256 `9f51368f…`), so the toolkit is the only variable.
 
-1. **F-031** — DoR R8 is an `[auto]` check that only tests that `refinement-qa.md` exists. It
-   must read a **field**: the artifact declares `status: agenda | recorded`, and R8 is satisfied
-   only by `recorded`. A mechanical gate that checks the wrong thing is worse than a manual one,
-   because it is trusted. Migrating `examples/toy-project`'s artifacts is part of the unit.
-2. **F-034** — `plan` created empty `__init__.py` files so its own gate commands could run at
-   all, and flagged it under `## Risks` because `plan` is specified as producing no code.
-   Resolve the contract conflict explicitly by ADR, whichever way it goes.
-3. **F-038** — a transition can leave the tracker committed-invalid. Documented behaviour,
-   undocumented window: state it in `spec/skill-contract.md` §2.3.
+```
+harness/provision.py --iteration iteration-1e-expenses --wipe
+harness/run_iteration.py --iteration iteration-1e-expenses
+```
 
-Done when: `./scripts/check` green, rendered output current, committed and pushed, plan ticked,
-journalled.
+Expected shape: the run reaches the impasse as 1d did — and this time **ends through the
+termination gate**. `next` step 6 dispatches `review-close` on the epic at rest; the sign-off
+fires naming every child; the sim answers "no, not as it stands"; the ending is recorded on the
+epic; the driver stops on a terminal reason with zero contamination violations.
 
-## Next unit — META-109
+**While the run is in flight, do not touch the toolkit.** An uncommitted change under
+`methodology/`, `spec/`, `scripts/`, `adapters/`, `examples/`, `fixtures/` or the top-level docs
+trips the harness's own W4 rule and stops the run. `meta/` and `harness/` are exempt.
 
-Ledger statuses current with real commit citations, and the gate green end to end.
+Watch for: a `turn-budget` stop before the ending is recorded. 1d reached `blocked` at turn 14 of
+16; the ending needs ~3 turns after that. If 18 is not enough, say so plainly in the report
+rather than quietly raising it — the budget came from the mission.
+
+Done when: the run has stopped, the trail is copied to `meta/harness/evidence/iteration-1e/`
+and committed, plan ticked, journalled.
+
+## Next unit — META-111
+
+Findings pass over 1e's trail: anything new filed as F-049+/H-###.
 
 ## Standing instructions (still in force)
 
