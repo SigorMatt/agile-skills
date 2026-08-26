@@ -14,14 +14,16 @@ Steps, in order:
                                                fixtures/sourced-claims
   7. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
                                                fixture's epic and passes the sourced-claims one
-  8. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+  8. pipeline invariants                     — lint-skills must report the expected finding code
+                                               for each defect reintroduced into pipeline.yaml
+  9. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
-  9. findings citations resolve             — every `commit <sha>` cited in
+ 10. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 10. export profiles                        — scripts/export leaves the workspace behind, and
+ 11. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 11. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 12. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -174,6 +176,83 @@ def check_signoff(runner: Runner) -> None:
                [sys.executable, gate, "EP-001", "--root", clean])
 
 
+# Each entry: a label, an edit to methodology/pipeline.yaml, and the finding code lint-skills
+# must report. Every one of these is a defect a real run found, restated as an invariant — the
+# point of the step is that flipping the rule back reproduces the finding.
+PIPELINE_FAULTS = [
+    ("an epic ending that is not gated (F-045)",
+     ("    actor: review-close\n    applies_to: [epic]\n    gated: true\n"
+      "    resume_to: required\n",
+      "    actor: review-close\n    applies_to: [epic]\n"
+      "    resume_to: required\n"),
+     "transition.ending.ungated"),
+    ("an epic ending any skill may make (ADR-0006 §2)",
+     ("  - from: open\n    to: blocked\n    actor: review-close\n",
+      "  - from: open\n    to: blocked\n    actor: any\n"),
+     "transition.ending.actor"),
+    ("a creation row with no provenance (F-029)",
+     ("    provenance: The question whose answer widened the scope, as arose-from ITEM/Q-###.\n",
+      ""),
+     "transition.creation.provenance"),
+    ("a transition scoped to an item type that does not exist",
+     ("    to: draft\n    actor: refine\n    applies_to: [work-item]\n",
+      "    to: draft\n    actor: refine\n    applies_to: [work-itme]\n"),
+     "transition.applies_to.unknown"),
+    ("an epic that cannot be suspended (F-013)",
+     ("  - name: open\n    applies_to: [epic]\n    owner: null\n    terminal: true\n"
+      "    suspendable: true\n",
+      "  - name: open\n    applies_to: [epic]\n    owner: null\n    terminal: true\n"
+      "    suspendable: false\n"),
+     "pipeline.status.unsuspendable"),
+]
+
+
+def check_pipeline_faults(runner: Runner) -> None:
+    """Every pipeline invariant, proven to fire by reintroducing the defect it came from.
+
+    lint-skills has no fixture directory of its own: it lints `methodology/`, and there is one
+    of those. So the step copies the tree, injects one fault at a time, and asserts the expected
+    code comes back — which is the same bargain `fixtures/broken-workspace` strikes for the
+    workspace validator. A rule nobody has watched fail is a rule nobody knows works.
+    """
+    import shutil
+    import tempfile
+    linter = os.path.join(SCRIPTS, "lint-skills")
+    source = os.path.join(ROOT, "methodology", "pipeline.yaml")
+    if not os.path.isfile(linter) or not os.path.isfile(source):
+        runner.skip("pipeline invariants refuse each injected fault",
+                    "scripts/lint-skills or methodology/pipeline.yaml is absent")
+        return
+    with open(source, "r", encoding="utf-8") as handle:
+        original = handle.read()
+    problems = []
+    with tempfile.TemporaryDirectory() as base:
+        root = os.path.join(base, "tree")
+        os.makedirs(root)
+        for name in ("methodology", "spec"):
+            shutil.copytree(os.path.join(ROOT, name), os.path.join(root, name))
+        target = os.path.join(root, "methodology", "pipeline.yaml")
+        for label, (find, replace), code in PIPELINE_FAULTS:
+            if find not in original:
+                problems.append(f"{label}: the text this fault edits is no longer in "
+                                f"pipeline.yaml — the fault, not the rule, is stale")
+                continue
+            with open(target, "w", encoding="utf-8") as handle:
+                handle.write(original.replace(find, replace, 1))
+            result = subprocess.run([sys.executable, linter, root],
+                                    capture_output=True, text=True, cwd=ROOT)
+            if result.returncode == 0:
+                problems.append(f"{label}: lint-skills passed; expected [{code}]")
+            elif f"[{code}]" not in result.stdout:
+                problems.append(f"{label}: lint-skills failed without reporting [{code}]")
+    if problems:
+        runner.emit("pipeline invariants refuse each injected fault", False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit(f"pipeline invariants refuse each injected fault "
+                f"({len(PIPELINE_FAULTS)} faults)", True)
+
+
 def check_guard(runner: Runner) -> None:
     tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
     if not os.path.isfile(tests):
@@ -287,6 +366,7 @@ def main() -> int:
     check_example(runner)
     check_claims(runner)
     check_signoff(runner)
+    check_pipeline_faults(runner)
     check_guard(runner)
     check_findings_citations(runner)
     check_export(runner)

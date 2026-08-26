@@ -2748,3 +2748,33 @@ child by ID. "List what was not delivered" cannot be checked and "name every chi
 the difference between a rule and an intention.
 
 Re-rendered (the adapter ships `spec/`). `./scripts/check`: 13 steps, green.
+
+## META-104 — pipeline.yaml 0.4.0, and the invariants that hold it
+
+The transition table gains three keys, and each one exists because a rule could not otherwise be
+stated:
+
+- **`applies_to`** — the generic `any-suspendable → blocked` row was `actor: any` and matched an
+  epic, so any skill holding an epic could end the engagement. Scoping it to work items and bugs
+  is what makes "only `review-close` ends an engagement" a fact about the file rather than an
+  instruction in a process document.
+- **`gated`** — `scripts/transition` refuses a move only when it is the actor's own
+  `next_status`. Without a per-row flag, `open → blocked` would have run the termination gate and
+  ignored its verdict. That is F-045 reappearing three feet to the left, which is exactly what a
+  derivation is supposed to prevent.
+- **`provenance`** — on the creation rows, naming what the creating skill must record.
+
+Five new lint rules, and I made `scripts/check` prove all of them rather than demonstrating them
+by hand as META-087 did. New step 8: copy `methodology/` and `spec/` to a temp tree, reintroduce
+one defect at a time into `pipeline.yaml`, and assert lint-skills reports the expected code. Five
+faults, five codes — including `pipeline.status.unsuspendable`, so **F-013's own defect is now a
+mechanical must-fail case** rather than a sentence in the ledger saying somebody once flipped the
+value back.
+
+One rule needed a second pass. My first version of "an ending" was "an epic-scoped move into a
+terminal status", which caught `→ open` — an epic *lives* at `open`; it is terminal because the
+pipeline does not advance it, not because the engagement stopped. The test that works is
+**terminal and not suspendable**: `done` and `blocked` qualify, `open` does not. That distinction
+is the same one F-013 was about, arriving a third time.
+
+`./scripts/check`: 14 steps (12 numbered; two of them run two assertions), all green.

@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.3.0
+version: 0.4.0
 
 item_types:
   - epic
@@ -98,14 +98,14 @@ statuses:
     owner: null
     terminal: true
     suspendable: false
-    description: A documented impasse. Only a human can move it.
+    description: A documented impasse. Only a human can move it. On an epic this is the impasse ENDING of the engagement, reached only through review-close and only after the stakeholder was asked.
 
   - name: open
     applies_to: [epic]
     owner: null
     terminal: true
     suspendable: true
-    description: An epic with children not yet all done. Advances only through its children, but a blocking question or an impasse may suspend it.
+    description: The engagement is running. Advances only through its children - except at rest, when the orchestrator dispatches review-close on the epic to end it (spec/ids-and-statuses.md section 3.5). A blocking question or an impasse may suspend it.
 
   - name: done
     applies_to: [work-item, bug, epic]
@@ -117,84 +117,153 @@ statuses:
 # Every legal transition. `from: null` means item creation. `from: any-suspendable` means any
 # status whose `suspendable` is true — including an epic's `open`. `resume_to` records whether
 # the transition must carry the status it suspends (see spec/ids-and-statuses.md §4).
+#
+# `applies_to` scopes a row to item types; a row without it applies to all of them. It is what
+# makes "only review-close ends an engagement" expressible — the generic impasse row below is a
+# work-item rule, and an epic's impasse is its own row with its own actor (ADR-0006 §2).
+#
+# `gated: true` means a skill's hard gates REFUSE this move, not merely report on it.
+# `scripts/transition` otherwise blocks only the move to the actor's own `next_status`, because
+# trapping a skill that is escaping downward — filing a question, sending an item back — is worse
+# than letting it move. An epic has no downward escape: it advances only through its children, so
+# every terminal move it makes declares the engagement finished and must be refused while the
+# termination gate fails (ADR-0006 §1c; F-045).
+#
+# `provenance` on a creation row states what the creating skill must record in the new item's
+# `arose-from`. The authority table is only enforceable if the claim is checkable
+# (spec/ids-and-statuses.md §5; F-029, F-042).
 transitions:
   - from: null
     to: draft
     actor: intake
+    applies_to: [work-item]
     resume_to: forbidden
-    condition: Item created from a refined idea under an epic.
+    provenance: The vision it refined, or the request R-### it was routed.
+    condition: Item created from a refined idea under an epic, or from a routed stakeholder request.
+
+  - from: null
+    to: draft
+    actor: refine
+    applies_to: [work-item]
+    resume_to: forbidden
+    provenance: The item it split, as arose-from.
+    condition: Definition of Ready R9 - the item under refinement is two items, and this is one of the parts.
+
+  - from: null
+    to: draft
+    actor: answer-questions
+    applies_to: [work-item]
+    resume_to: forbidden
+    provenance: The question whose answer widened the scope, as arose-from ITEM/Q-###.
+    condition: An answer widened the scope and implied work no item records.
 
   - from: null
     to: ready
     actor: verify
+    applies_to: [bug]
     resume_to: forbidden
+    provenance: The item the defect was found against, as arose-from; and found-in where known.
     condition: A bug filed with reproduction steps already satisfies the bug Definition of Ready.
+
+  - from: null
+    to: ready
+    actor: review-close
+    applies_to: [bug]
+    resume_to: forbidden
+    provenance: The item under review when the defect was found, as arose-from; and found-in where known.
+    condition: Review found a defect belonging to another item, which this item's send-back cannot carry.
 
   - from: null
     to: open
     actor: intake
+    applies_to: [epic]
     resume_to: forbidden
+    provenance: The vision it refined.
     condition: Epic created from the raw idea.
 
   - from: draft
     to: ready
     actor: refine
+    applies_to: [work-item, bug]
+    gated: true
     resume_to: forbidden
     condition: Definition of Ready passes, or the human explicitly overrides.
 
   - from: ready
     to: planned
     actor: plan
+    applies_to: [work-item, bug]
+    gated: true
     resume_to: forbidden
     condition: Design recorded and plan.md written.
 
   - from: planned
     to: in-progress
     actor: implement
+    applies_to: [work-item, bug]
     resume_to: forbidden
     condition: Branch created and work started.
 
   - from: in-progress
     to: verifying
     actor: implement
+    applies_to: [work-item, bug]
+    gated: true
     resume_to: forbidden
     condition: Hard gates pass and impl-report.md is written.
 
   - from: verifying
     to: in-review
     actor: verify
+    applies_to: [work-item, bug]
+    gated: true
     resume_to: forbidden
     condition: Every acceptance criterion is confirmed with evidence.
 
   - from: verifying
     to: in-progress
     actor: verify
+    applies_to: [work-item, bug]
     resume_to: forbidden
     condition: Verification fails against this item's own acceptance criteria.
 
   - from: in-review
     to: done
     actor: review-close
+    applies_to: [work-item, bug]
+    gated: true
     resume_to: forbidden
     condition: Definition of Done passes and the branch is merged into the trunk.
 
   - from: in-review
     to: in-progress
     actor: review-close
+    applies_to: [work-item, bug]
     resume_to: forbidden
     condition: Review rejects the change, with the reasons recorded in review.md.
 
   - from: open
     to: done
     actor: review-close
+    applies_to: [epic]
+    gated: true
     resume_to: forbidden
-    condition: Epic only. Every child item is done and the epic Definition of Done passes.
+    condition: The engagement ended at E1, E2 or E4 - every child is terminal, the epic Definition of Done passes, and the stakeholder answered the termination question.
+
+  - from: open
+    to: blocked
+    actor: review-close
+    applies_to: [epic]
+    gated: true
+    resume_to: required
+    condition: The engagement ended at E3 - the impasse. Every child is terminal, at least one did not deliver, and the stakeholder was asked and did not accept.
 
   - from: done
     to: open
     actor: any
+    applies_to: [epic]
     resume_to: forbidden
-    condition: Epic only. A defect was filed against the epic's delivered behaviour after it closed, so the goal is no longer met. The reopening row records which item reopened it.
+    condition: A defect was filed against the epic's delivered behaviour after it closed, so the goal is no longer met. The reopening row records which item reopened it.
 
   - from: any-suspendable
     to: awaiting-answer
@@ -208,11 +277,19 @@ transitions:
     resume_to: forbidden
     condition: The blocking question is answered and its consequences are propagated into artifacts.
 
+  - from: awaiting-answer
+    to: blocked
+    actor: answer-questions
+    applies_to: [work-item, bug]
+    resume_to: required
+    condition: The answer was deferred - the stakeholder replied "not yet" and no decision can be taken without the missing thing (spec/question.md section 2).
+
   - from: any-suspendable
     to: blocked
     actor: any
+    applies_to: [work-item, bug]
     resume_to: required
-    condition: A documented impasse that no skill can resolve.
+    condition: A documented impasse that no skill can resolve. An epic's impasse is its own row - only review-close ends an engagement.
 
   - from: blocked
     to: resume-to
@@ -240,13 +317,16 @@ orchestrator:
       action: dispatch-owner
       description: Else pick the runnable item with the best selection key and dispatch its status owner.
     - id: 6
+      action: end-the-engagement
+      description: Else, for each epic still at open, run scripts/engagement-state EP-###. If it reports at-rest, dispatch review-close on that epic and stop. An engagement that can no longer progress must be ended through the stakeholder, not left on the board - which is what happened in a run that stopped here with the stakeholder recording that nobody ever asked them (F-045). The step terminates because both of review-close's moves from open leave open.
+    - id: 7
       action: report-and-stop
       description: Else regenerate the board, report it with any blocked items and open non-blocking questions, and stop.
 
   # An item is runnable when all of these hold.
   runnable:
     - Its status has a non-null owner.
-    - It has no open blocking question.
+    - It has no open blocking question. A deferred question is not open - the person replied, and their reply was "not yet" (spec/question.md section 2).
     - Every id in its depends-on is at status done.
 
   # Deterministic and total: two runs over the same workspace pick the same item.
@@ -259,4 +339,5 @@ orchestrator:
     - The workspace validator failed.
     - An open stakeholder request was routed to intake.
     - A question addressed to the human is open.
-    - No item is runnable.
+    - No item is runnable, and review-close was dispatched to end an engagement at rest.
+    - No item is runnable and every engagement has already ended.

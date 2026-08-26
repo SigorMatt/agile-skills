@@ -6,6 +6,9 @@ Usage: scripts/lint-skills [repo-root]
 Checks, in order:
   * pipeline.yaml is well formed, its skills list matches methodology/skills/ exactly, and
     every status an item can wait in is suspendable
+  * every transition is well formed: applies_to names real item types, gated is a boolean, a
+    creation row declares its provenance, and every ending of an engagement is gated and owned
+    by exactly one skill (ADR-0006)
   * every skill.yaml conforms to the contract schema (required fields, types, enums, no
     unknown keys)
   * dispatch.on_status and pipeline statuses agree in BOTH directions: an unclaimed
@@ -150,6 +153,83 @@ class Linter:
                     hint="every non-terminal status needs exactly one owner, or the "
                          "orchestrator has no way to advance an item in it")
         return True
+
+    def check_transitions(self) -> None:
+        """The transition table against the model derived in ADR-0006.
+
+        Three of these rules exist because a run found the rule missing, not because a schema
+        wanted tidying:
+
+        * `transition.ending.ungated` — an epic has no downward escape, so every terminal move
+          it makes declares the engagement finished. `scripts/transition` refuses a move only
+          when it is gated; an ungated epic ending would run the termination gate and ignore its
+          verdict, which is F-045 by a different route.
+        * `transition.ending.actor` — ending an engagement means applying the epic Definition of
+          Done and reading the acknowledgment. `actor: any` there would let whichever skill
+          happened to be holding the epic end it.
+        * `transition.creation.provenance` — the creation-authority table is only enforceable if
+          the creating skill records what caused the item to exist (F-029, F-042).
+        """
+        item_types = set(self.pipeline.get("item_types") or [])
+        rows = self.pipeline.get("transitions") or []
+        for row in rows:
+            if not isinstance(row, dict):
+                self.report.error(self.pipeline_path, 0, "transition.shape",
+                                  f"transition entry is malformed: {row!r}")
+                continue
+            label = f"{row.get('from')} -> {row.get('to')} by {row.get('actor')!r}"
+            applies = row.get("applies_to")
+            if applies is not None:
+                if not isinstance(applies, list) or not applies:
+                    self.report.error(self.pipeline_path, 0, "transition.applies_to.shape",
+                                      f"{label}: applies_to must be a non-empty list")
+                else:
+                    for value in applies:
+                        if value not in item_types:
+                            self.report.error(
+                                self.pipeline_path, 0, "transition.applies_to.unknown",
+                                f"{label}: applies_to contains {value!r}, which is not an "
+                                f"item type in pipeline.yaml")
+            if "gated" in row and not isinstance(row.get("gated"), bool):
+                self.report.error(self.pipeline_path, 0, "transition.gated.shape",
+                                  f"{label}: gated must be a boolean")
+
+            if row.get("from") is None:
+                if not is_str(row.get("provenance")):
+                    self.report.error(
+                        self.pipeline_path, 0, "transition.creation.provenance",
+                        f"{label}: a creation row must declare the provenance the creating "
+                        f"skill records",
+                        hint="without it the creation-authority table says who may create and "
+                             "nothing says why an item exists, so an item invented to make a "
+                             "gate pass is indistinguishable from one that was needed "
+                             "(spec/ids-and-statuses.md §5)")
+                if row.get("actor") == "any":
+                    self.report.error(
+                        self.pipeline_path, 0, "transition.creation.actor",
+                        f"{label}: a creation row must name one skill, never 'any'")
+
+            # An ending of an engagement: an epic-scoped move into a status that is terminal
+            # and not suspendable. `open` is terminal (the pipeline does not advance an epic out
+            # of it) but suspendable, and it is where an engagement lives, not where it stops.
+            target = self.statuses.get(row.get("to"), {})
+            if (row.get("from") is not None and applies == ["epic"]
+                    and target.get("terminal") and not target.get("suspendable")):
+                if row.get("gated") is not True:
+                    self.report.error(
+                        self.pipeline_path, 0, "transition.ending.ungated",
+                        f"{label}: an epic's move into terminal status "
+                        f"{row.get('to')!r} ends the engagement and must be gated",
+                        hint="a skill's hard gates refuse only gated moves; an ungated ending "
+                             "would run the termination gate and ignore its verdict (F-045, "
+                             "ADR-0006 §1c)")
+                if row.get("actor") == "any":
+                    self.report.error(
+                        self.pipeline_path, 0, "transition.ending.actor",
+                        f"{label}: an ending must name the skill that ends engagements, "
+                        f"never 'any'",
+                        hint="ending means applying the epic Definition of Done and reading "
+                             "the stakeholder's acknowledgment (ADR-0006 §2)")
 
     def check_skill_registry(self) -> None:
         declared = list(self.pipeline.get("skills") or [])
@@ -535,6 +615,7 @@ class Linter:
                               "methodology/skills/ does not exist")
             return self.report.emit()
         if self.load_pipeline():
+            self.check_transitions()
             self.check_skill_registry()
             for name in sorted(os.listdir(self.skills_dir)):
                 if os.path.isdir(os.path.join(self.skills_dir, name)):
