@@ -284,10 +284,12 @@ outranks completeness in a .5 session.
       (sign-off = the termination question; `status: deferred`, F-028).
 - [x] **META-104** — `pipeline.yaml` 0.4.0: transitions gain `applies_to` and `gated`; the epic
       ending rows; creation rows carry `provenance`. New `lint-skills` rules; must-fail cases.
-- [ ] **META-105** — enforcement: `scripts/engagement-state` (is the engagement at rest?),
-      `check-epic-signoff` as the **termination** gate (fires on every ending; names every child
-      not delivered — F-045, F-046), `transition` gating for an epic's ending moves,
-      `validate-workspace` for provenance, deferred questions and epic-outcome honesty.
+- [ ] **META-105a** — enforcement, the workspace at rest: `validate-workspace` for
+      `applies_to`, `arose-from` provenance (F-029), deferred questions (F-028) and
+      epic-outcome honesty; `transition` refuses a `gated` move.
+- [ ] **META-105b** — enforcement, the ending: `scripts/engagement-state` (is the engagement at
+      rest?) and `check-epic-signoff` as the **termination** gate — it fires on every ending and
+      requires the acknowledgment to name every child (F-045, F-046).
 - [ ] **META-106** — skill contracts re-derived: `review-close` (ends the engagement),
       `answer-questions` (deferral), `next` (the close-out step), `refine`/`verify` creation
       authority. Version bumps, re-render.

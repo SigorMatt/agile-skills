@@ -4,30 +4,31 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-103
+## Current unit — META-105a
 
-**The spec re-derived from ADR-0006.** Prose only; `pipeline.yaml` and the scripts follow in
-META-104/105, so `./scripts/check` may report the spec and the pipeline disagreeing at the end of
-this unit only if a lint rule reads the prose — it does not, so the gate must stay green.
+**Enforcement over the workspace at rest.** `scripts/validate-workspace` and
+`scripts/transition`, holding the model META-103/104 wrote down.
 
-Files, and what changes in each:
-1. `spec/ids-and-statuses.md` — §3.2 the four endings and the epic's final states; §4 the
-   transition table gains `applies_to` and the epic ending rows; new §6 **creation authority**
-   with the provenance rule. `## Revisions` row.
-2. `spec/work-item.md` — `arose-from` (required for items created by `refine`,
-   `answer-questions`, `verify`, `review-close`); `outcome: delivered-partial` for epics.
-3. `spec/dor-dod.md` — DE1 generalised to "every child at a terminal status, the undelivered
-   named"; DE7 generalised from completion to **termination**.
-4. `spec/question.md` — `kind: sign-off` is the termination question (trigger = rest, content =
-   every child named); `status: deferred` (F-028) with the rule that a deferred blocking question
-   sends its item to `blocked`.
+Steps:
+1. `transition_is_legal` honours `applies_to`, so an epic can no longer be blocked by whichever
+   skill happens to hold it.
+2. `transition` refuses a move whose matching row is `gated: true`, not only the move to the
+   actor's own `next_status` (ADR-0006 §1c).
+3. `item.arose-from.missing` / `item.arose-from.unresolved` — provenance for every item whose
+   creation row names an actor other than `intake` (F-029, F-042).
+4. `question.deferred.*` — `deferred` is a legal status; a deferred blocking question leaves its
+   item at `blocked` (F-028).
+5. `epic.closed-with-active-children` and `epic.outcome.overclaims` replace
+   `epic.closed-with-open-children`: children must be terminal, and an epic that closes with an
+   undelivered child may not call itself `delivered` (DE1 as re-derived).
+6. Every new code gets a case in `fixtures/broken-workspace` + `EXPECTED-CODES.txt`.
 
-Done when: the four files carry the rules and a `## Revisions` row each, `./scripts/check` green,
+Done when: `./scripts/check` green with the new codes in the must-fail fixture, re-rendered,
 committed and pushed, plan ticked, journalled.
 
-## Next unit — META-104
+## Next unit — META-105b
 
-`pipeline.yaml` 0.4.0 and the `lint-skills` rules that hold it to the spec.
+`scripts/engagement-state` and `check-epic-signoff` as the termination gate.
 
 ## Standing instructions (still in force)
 
