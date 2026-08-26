@@ -290,7 +290,7 @@ outranks completeness in a .5 session.
 - [x] **META-105b** — enforcement, the ending: `scripts/engagement-state` (is the engagement at
       rest?) and `check-epic-signoff` as the **termination** gate — it fires on every ending and
       requires the acknowledgment to name every child (F-045, F-046).
-- [ ] **META-106** — skill contracts re-derived: `review-close` (ends the engagement),
+- [x] **META-106** — skill contracts re-derived: `review-close` (ends the engagement),
       `answer-questions` (deferral), `next` (the close-out step), `refine`/`verify` creation
       authority. Version bumps, re-render.
 - [ ] **META-107** — fixtures both ways: every historical contradiction as a case — F-013's epic

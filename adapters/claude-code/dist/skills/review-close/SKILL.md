@@ -1,10 +1,10 @@
 ---
 name: review-close
-description: "Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons. Use when: An item sits at status in-review after verification passed; A change is ready to merge and needs a Definition of Done check first; An epic's last child item is being closed and the epic itself needs closing; Someone asks to \"review\", \"close\", \"merge\", or \"sign off\" a tracked item. Part of the agile-skills pipeline (persona: reviewer)."
+description: "Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons. Use when: An item sits at status in-review after verification passed; A change is ready to merge and needs a Definition of Done check first; An engagement has reached rest - every child stopped, nothing open - and the epic must be ended through the stakeholder; Someone asks to \"review\", \"close\", \"merge\", \"sign off\", or \"wrap up\" a tracked item or an epic. Part of the agile-skills pipeline (persona: reviewer)."
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.3.1
+  methodology-version: 0.4.0
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -43,10 +43,21 @@ You cannot ask the human. You may reject, and rejection is a normal outcome, not
 
 ## Preconditions
 
+You are dispatched in one of two situations, and steps 1–9 are about the first.
+
+**Reviewing an item:**
+
 1. The item is at `in-review`.
 2. `verify-report.md` and `impl-report.md` both exist. If either is missing, the item reached
    this status without doing the work: send it back with that reason.
 3. The branch exists and merges cleanly, or you know why it does not.
+
+**Ending an engagement:**
+
+4. The item is an `epic` at `open`, and `scripts/engagement-state <EP-ID>` reports `at-rest`.
+   There is no code to review and no branch to merge; go straight to step 10. If the script
+   reports anything else, you were dispatched in error — report that and stop, rather than
+   ending an engagement that is still running.
 
 ---
 
@@ -144,25 +155,51 @@ You cannot ask the human. You may reject, and rejection is a normal outcome, not
     not a pass. `scripts/lint-claims` has already proved the citations *resolve*; only a reader
     can say whether they *support* the sentence.
 
-10. **Check the epic, and ask the stakeholder before closing it.** If this item was the epic's
-    last child not at `done`, apply the epic Definition of Done (`spec/dor-dod.md` §4). This is
-    the only moment in the pipeline where every sibling's state is already in hand, which is why
-    epic closure lives here.
+10. **End the engagement, when it is over.** You are also the skill that ends engagements, and
+    an engagement ends when it can no longer progress — not only when it finishes. Ask the
+    program, never your own read of the board:
 
-    DE7 comes before the others in time: **the epic cannot close until the stakeholder has been
-    asked whether they accept it, and has answered.** If no answered `kind: sign-off` question
-    exists on the epic, file one now (`spec/question.md` §2) — restate the goal in the
-    stakeholder's own words, list what was delivered and what was not with one line of why for
-    each, and offer the real choices: accept, accept with named follow-up items, or do not accept
-    and say what is missing. Then transition the **epic** to `awaiting-answer` with
-    `resume-to: open`, and stop. You are not stalling; you are at the one gate in this pipeline
-    that belongs to a person.
+    ```
+    scripts/engagement-state <EP-ID>
+    ```
 
-    On a later execution the answer will be in the file and the epic will be back at `open`.
-    Then close it — or leave it open and record why. A stakeholder who declines closes the epic
-    just as legitimately, with the outcome saying so; what is not allowed is closing while never
-    having asked. Closing while a success measure went unmet is likewise allowed, and saying so
-    is mandatory.
+    `at-rest` means every child has stopped (`done` or `blocked`), no question is open anywhere
+    in the engagement, and no request is open. It is the same function the termination gate
+    reads, so you and the gate cannot disagree about whether there is anything left to do
+    (`spec/ids-and-statuses.md` §3.5).
+
+    **If it is at rest and no sign-off has been filed since rest was reached — ask.** File a
+    `kind: sign-off` question on the **epic** (`spec/question.md` §2):
+
+    - `## Context` restates the goal in the stakeholder's own words, from the epic's `## Goal`
+      and the vision — not in the tracker's vocabulary.
+    - `## Question` **names every child item by ID**, each marked delivered or not delivered with
+      one line of why, and then asks plainly whether they accept the engagement as it stands. A
+      bug you filed and nobody fixed is a child, so it goes in the list. The gate checks the
+      naming, because "list what was not delivered" cannot be checked and "name every child" can.
+    - `## Options considered` offers the real choices: accept as complete; accept with named
+      follow-up items; do not accept, and say what is missing.
+
+    Then transition the **epic** to `awaiting-answer` with `resume-to: open`, and stop. You are
+    not stalling; you are at the one gate in this pipeline that belongs to a person.
+
+    **If the reply is already in the file — record the ending.** Apply the epic Definition of
+    Done (`spec/dor-dod.md` §4) criterion by criterion, then take exactly one of the four
+    endings, and set the epic's `outcome` to match what actually happened:
+
+    | Their reply | The ending | The move |
+    |-------------|-----------|----------|
+    | accept, and every child delivered | **E1 delivered** | `open → done`, `outcome: delivered` |
+    | accept, or accept with follow-ups, and something did not deliver | **E2 delivered-partial** | `open → done`, `outcome: delivered-partial` |
+    | do not accept — or a deferral with no way forward | **E3 impasse** | `open → blocked`, `resume-to: open` |
+    | withdraw the engagement | **E4 abandoned** | children not `done` to `blocked` first, then `open → done`, `outcome: dropped` |
+
+    A "no" ends the engagement as legitimately as a "yes"; what is not allowed is ending while
+    never having asked. Closing over an undelivered child is legal and closing over one while
+    calling the outcome `delivered` is not — the validator refuses it, and it should.
+
+    This is the only moment in the pipeline where every sibling's state is already in hand,
+    which is why ending an engagement lives here.
 
 11. **Journal and transition, in one command** (`--journal-body-file`; see Journaling).
 
@@ -175,9 +212,11 @@ On the item's `journal.md`:
 - `**Inputs read:**` — every artifact, and the diff range you reviewed (`{{trunk}}..head`).
 - `**Decisions:**` — every finding and whether it was a send-back or an accepted gap, with the
   reasoning; the merge decision; the epic decision.
-- `**Gates:**` — all six, with the per-criterion Definition of Done table as the evidence for
-  `definition-of-done`.
-- `**Artifacts:**` — `review.md`, the merge commit, and the epic if it was closed.
+- `**Gates:**` — every one, with the per-criterion Definition of Done table as the evidence for
+  `definition-of-done`, and `scripts/engagement-state`'s verdict as the evidence for the epic
+  decision.
+- `**Artifacts:**` — `review.md`, the merge commit, any bug you filed, the sign-off question, and
+  the epic if the engagement ended.
 
 If the epic was closed, also write an entry on the **epic's** journal summarising what the epic
 delivered against its success measures.
@@ -237,9 +276,18 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
 5. Could you, using only the tracker, docs and `git log`, answer what was built and why, which
    skill decided what, what questions arose and how they were resolved, and what verification
    found? If not, the record fails — send it back rather than closing over it.
+6. Did you run `scripts/engagement-state` on the epic, or decide from the board how finished it
+   looked?
+7. If you ended an engagement: does the epic's `outcome` say what actually happened, and does the
+   sign-off you are relying on name **every** child item?
 
 **The two ways this skill goes wrong:**
 
+- **Treating "nothing left to run" as "nothing left to do".** Every child has stopped, the board
+  looks self-explanatory, and closing the loop feels like tidying rather than a decision. It is a
+  decision, and it belongs to the person who asked for the work: a run ended exactly here, and
+  the stakeholder went looking for the question afterwards and wrote down that it never came
+  (F-045). Run `scripts/engagement-state` and act on what it says.
 - **Approving because everything upstream says it is fine.** The plan was thorough, verification
   passed, the gates are green — so the review becomes a formality. But every upstream stage
   checked its *own* claim; you are the only one checking that the claims are about the same
@@ -261,8 +309,12 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
   separate so that the check and the judgement are not made by the same worker.
 - **Tests fail after merge:** back to `in-progress` with the failure quoted. Do not repair the
   merge yourself.
-- **A defect belongs to another item:** file a bug item with reproduction steps and `found-in`,
-  and continue reviewing this one.
+- **A defect belongs to another item:** file a `bug` item at `ready` with reproduction steps and
+  `found-in` (or `arose-from` naming the item you were reviewing), and continue reviewing this
+  one. You have the authority to create it: you are the skill that observed the need for it
+  (`spec/ids-and-statuses.md` §5). This used to be a contradiction — your contract told you to
+  file it and the pipeline let only `verify` create a bug — and a real execution hit it and had
+  nowhere to put a defect it had found (F-029).
 - **The merge cannot be completed for reasons outside the change** (a protected trunk, a missing
   permission): set the item to `blocked` with what was tried, and leave the branch intact.
 

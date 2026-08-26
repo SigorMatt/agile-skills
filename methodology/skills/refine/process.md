@@ -223,7 +223,10 @@ the item's whole story rather than only its code.
   contradiction to the human explicitly, and record their decision. If they change the
   direction, note that `docs/product/vision.md` needs updating and file a question addressed to
   `architect` to do it — you do not edit architecture documents.
-- **The item turns out to be two items:** say so. Ask the human to confirm the split, create the
-  second item at `draft` under the same epic with the extracted criteria, and record the split
-  in both items' journals. Refining a compound item into a coherent one is impossible; the
-  criteria will keep contradicting each other.
+- **The item turns out to be two items (DoR R9):** say so. Ask the human to confirm the split,
+  create the second item at `draft` under the same epic with the extracted criteria and
+  `arose-from` naming the item you split, and record the split in both items' journals. Refining
+  a compound item into a coherent one is impossible; the criteria will keep contradicting each
+  other. You have the authority to create that item — R9 tells you to split, so the split is
+  yours to record (`spec/ids-and-statuses.md` §5) — and the provenance is what lets a reader see,
+  a month later, that the second item is half of a decision rather than a thing somebody invented.

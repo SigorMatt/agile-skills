@@ -1,4 +1,4 @@
-# Contract — review-close v0.3.1
+# Contract — review-close v0.4.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -6,7 +6,7 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 - **Purpose:** Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 - **Human interaction:** via-questions
 - **Dispatched on statuses:** `in-review`
-- **Item types:** `work-item`, `bug`
+- **Item types:** `work-item`, `bug`, `epic`
 - **On success:** `done`
 - **On unrecoverable failure:** `in-progress`
 
@@ -22,6 +22,7 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 | `tracker/items/{{item.id}}/history.md` | yes | a gap in the chain means a status changed outside a skill |
 | `the diff of {{item.branch}} against {{trunk}}` | yes | the review judges the change, not the description of it |
 | `docs/architecture/adr/` | no | the change must not silently contradict a recorded decision |
+| `scripts/engagement-state {{item.id}}` | no | on an epic, whether the engagement is at rest - the same function the termination gate reads, so the two cannot disagree |
 
 ## Outputs
 
@@ -31,6 +32,8 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `merge of {{item.branch}} into {{trunk}}` | commit | on-success |
 | `tracker/items/EP-###/item.md` | file | conditional |
+| `tracker/items/EP-###/questions/Q-###.md` | file | conditional |
+| `tracker/items/BUG-####/` | file | conditional |
 | `tracker/items/{{item.id}}/journal.md` | append | always |
 | `tracker/items/{{item.id}}/history.md` | append | always |
 
@@ -51,16 +54,17 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Escalation
 
-- **question:** File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect when the change contradicts a recorded decision and it is unclear which should give way. Set the item to awaiting-answer with resume-to in-review and stop.
-- **defect:** A defect in this item's own delivery sends it back to in-progress with reasons. A defect elsewhere, noticed during review, becomes a bug item.
-- **impasse:** If the item cannot be merged for reasons outside the change itself, set it to blocked with what was tried.
+- **question:** File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect when the change contradicts a recorded decision and it is unclear which should give way. Set the item to awaiting-answer with resume-to in-review and stop. On an epic at rest, file the kind sign-off question addressed to human and suspend the epic to awaiting-answer with resume-to open.
+- **defect:** A defect in this item's own delivery sends it back to in-progress with reasons. A defect elsewhere, noticed during review, becomes a bug item this skill files at ready, recording found-in or arose-from - it is the skill that observed the need for it (spec/ids-and-statuses.md section 5).
+- **impasse:** If the item cannot be merged for reasons outside the change itself, set it to blocked with what was tried. On an epic, the impasse is an ENDING - it is recorded only after the stakeholder has been asked and has replied.
 
 ## Exit criteria — all must be true before transitioning
 
 - [ ] Every Definition of Done criterion is recorded as passed, or the item was rejected.
 - [ ] review.md states what was examined, not only the verdict.
 - [ ] The branch is merged into the trunk and the item is done with an outcome recorded.
-- [ ] If this was the epic's last open child, the epic Definition of Done was applied and the epic closed or explicitly left open with the reason.
+- [ ] If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
+- [ ] An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.
 - [ ] The journal entry and the history row for this execution are written.
 
 ## Schemas this skill writes against

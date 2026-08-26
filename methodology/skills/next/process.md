@@ -71,12 +71,38 @@ action.
    The selection key is total and mechanical. Two runs over the same workspace must pick the
    same item; if yours would not, you have applied judgement somewhere.
 
-6. **Report and stop.** Else nothing is runnable. Regenerate the board and report:
+6. **End an engagement that is over.** Else nothing is runnable — and "nothing is runnable" is
+   not the same as "there is nothing to do". An engagement whose children have all stopped is
+   **finished**, and somebody has to say so to the person who asked for it.
+
+   For each epic still at `open`, run:
+
+   ```
+   scripts/engagement-state <EP-ID>
+   ```
+
+   If it reports **`at-rest`**, dispatch `review-close` on that epic and stop. Name the epic and
+   quote the verdict line in your report.
+
+   You do not decide what rest is; the script does — every child at a terminal status, no
+   question open anywhere in the engagement, no request open. That is deliberate: the gate that
+   asks the stakeholder reads the *same* function, and the two of you disagreeing about whether
+   an engagement is over is exactly how a real run ended with the stakeholder recording that
+   nobody ever asked them (F-045, `spec/ids-and-statuses.md` §3.5).
+
+   This step terminates. Both of `review-close`'s moves from `open` — to `awaiting-answer` to
+   ask, and to `done` or `blocked` to record the ending — leave `open`, so the epic cannot be
+   dispatched here twice for the same reason.
+
+7. **Report and stop.** Else nothing is runnable and every engagement has already ended.
+   Regenerate the board and report:
    - the board summary;
    - every `blocked` item with the reason from its last history row;
    - every open question and who it is addressed to;
    - every request whose `status` is still `open`, if any reached this step;
-   - if every item is `done`: say so, and name any epic still `open` and why.
+   - if every item is `done`: say so, and name any epic still `open` and why;
+   - for each epic, the verdict `scripts/engagement-state` gave it, so a reader can see why the
+     loop stopped rather than inferring it.
 
 ---
 
@@ -92,6 +118,9 @@ action.
 - **Never invent a status-to-skill mapping.** It comes from `pipeline.yaml`. If a status has no
   owner there and is not terminal, that is a defect in the pipeline — report it as one rather
   than picking a plausible skill.
+- **Never decide for yourself that an engagement is over.** Step 6 is a script's verdict, not
+  yours. Reading the board and concluding "this looks finished" is engineering judgement in the
+  one place in the system that must have none.
 
 ---
 
@@ -123,10 +152,13 @@ is the first thing to read when the pipeline picked something surprising.
 
 1. Did you apply any criterion that is not in `pipeline.yaml`'s `runnable` list or
    `selection_key`?
-2. Can you state, for every candidate you rejected, which key value eliminated it?
-3. Did you read the contents of any artifact for anything other than the fields you need
+2. If you stopped without dispatching: did you run `scripts/engagement-state` for every epic
+   still at `open`, and is its verdict in your report? Stopping on an engagement that is at rest,
+   without ending it, is the failure this step exists for.
+3. Can you state, for every candidate you rejected, which key value eliminated it?
+4. Did you read the contents of any artifact for anything other than the fields you need
    (status, priority, dependencies, question metadata)?
-4. Did you dispatch exactly one thing, or none?
+5. Did you dispatch exactly one thing, or none?
 
 **The two ways this skill goes wrong:**
 

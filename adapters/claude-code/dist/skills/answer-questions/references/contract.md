@@ -1,4 +1,4 @@
-# Contract — answer-questions v0.1.4
+# Contract — answer-questions v0.2.0
 
 Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -30,6 +30,7 @@ Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the auth
 | `tracker/items/{{item.id}}/artifacts/plan.md` | file | conditional |
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `docs/architecture/adr/ADR-####-{{item.id}}.md` | file | conditional |
+| `tracker/items/WI-####/` | file | conditional |
 | `a commit of the workspace files this execution wrote` | commit | on-success |
 | `tracker/items/{{item.id}}/journal.md` | append | always |
 | `tracker/items/{{item.id}}/history.md` | append | on-success |
@@ -45,16 +46,18 @@ Every gate below appears in the journal entry for every execution — including 
 | `escalation-is-justified` | hard | For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition. | stay |
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `item-resumed-correctly` | hard | Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match. | stay |
+| `a-deferral-is-not-an-answer` | hard | For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, the item must be at blocked with what would unblock it in Consequences. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop. | stay |
 
 ## Escalation
 
 - **question:** When the record cannot settle it, re-address the question to human, keep it open, state which escalation condition applies, and stop the loop rather than guessing.
-- **defect:** If a question reveals that delivered behaviour is wrong, file a bug item; do not fix it inside the answer.
+- **defect:** If a question reveals that delivered behaviour is wrong, file a bug item; do not fix it inside the answer. If an answer widens the scope, file the implied work as a work-item at draft with arose-from naming the question - it is this skill that observed the need for it (spec/ids-and-statuses.md section 5).
 - **impasse:** If the human is unavailable and the question is blocking, leave the item at awaiting-answer and report it. An unanswerable question is not a reason to unblock the item.
 
 ## Exit criteria — all must be true before transitioning
 
-- [ ] Every question this execution handled is either answered with consequences, or addressed to the human with the condition stated.
+- [ ] Every question this execution handled is either answered with consequences, deferred with the item parked and what would unblock it recorded, or addressed to the human with the condition stated.
+- [ ] Work an answer implied and no item records exists as a work-item at draft, with arose-from naming the question.
 - [ ] Every file named in a Consequences section actually contains the change.
 - [ ] Items whose blocking questions are all resolved are returned to their recorded resume-to status.
 - [ ] Any new decision is recorded as an ADR, cited from the question.

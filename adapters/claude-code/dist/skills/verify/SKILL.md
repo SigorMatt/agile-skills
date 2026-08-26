@@ -4,7 +4,7 @@ description: "Independently decide whether an item meets its acceptance criteria
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: verify
-  methodology-version: 0.1.2
+  methodology-version: 0.1.3
   persona: qa-engineer
   human-interaction: via-questions
 ---
@@ -95,6 +95,11 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    - **A failure of behaviour *delivered by another item*** → a new `bug` item at status `ready`
      under the same epic, with `found-in` naming that item, numbered reproduction steps, and
      **real quoted output**. This item continues; it is not responsible for that defect.
+
+     `found-in` is not bookkeeping: it is the bug's **provenance**, the record of what caused it
+     to exist (`spec/ids-and-statuses.md` §5), and the validator requires it. Where the behaviour
+     is not one item's — it emerged from two of them together — record `arose-from` naming the
+     item you were verifying instead, and say in `## Summary` why `found-in` is not answerable.
 
    When it is genuinely unclear which applies, the test is: does an acceptance criterion of
    *this* item say the behaviour should be different? If yes, it is a send-back. If no, it is a

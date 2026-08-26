@@ -20,8 +20,11 @@ information.
    `status: open` and either
    - `addressed-to: architect` — you answer it; or
    - `addressed-to: human` **with `## Answer` filled in** — the human has replied and you are
-     the only skill that may propagate that reply, mark the question answered, and resume the
-     item.
+     the only skill that may propagate that reply, mark the question answered or deferred, and
+     resume or park the item.
+
+   "Replied" is not the same as "answered". A reply of *"I'll send you a sample later"* is a real
+   thing the person said and it settles nothing; step 3a is what you do with it.
 
    If every open question is addressed to `human` and none has an answer, you have nothing to do:
    report and stop. That case — escalated and not yet answered — is the one this precondition was
@@ -65,6 +68,40 @@ information.
    Equally, do not skip step 4 because deciding is faster: if you are about to commit the
    project to something expensive to undo, that is exactly the moment to ask.
 
+3a. **When the reply defers rather than answers.** A stakeholder saying "later" is neither an
+    answer nor silence, and the protocol used to have nowhere to put it: leaving the question
+    `open` deadlocks the loop for ever, and marking it `answered` claims a thing was settled that
+    was not (F-028). You have exactly two moves and you must take one.
+
+    1. **Decide it under the deferral.** Often the deferral *is* an answer — "go ahead anyway,
+       we'll decide later" settles the question by authorising you to choose. If the record plus
+       what they said is enough, the question is `answered`, and `## Answer` says what you
+       decided and quotes the deferral as its basis. Do not call this a deferred question; that
+       would understate what was settled.
+    2. **Record the deferral and park the item.** If no decision can be taken without the missing
+       thing, set `status: deferred`, put what they actually said in `## Answer` verbatim, and
+       put **what the pipeline is doing instead** in `## Consequences`, including what would
+       unblock it. Then move the item `awaiting-answer → blocked` with the `resume-to` it already
+       carries.
+
+    A deferred blocking question leaves the item at `blocked`, never back at its old status.
+    Resuming would assert that the work can proceed without the missing thing, which is the guess
+    the whole protocol exists to prevent — and the validator refuses it
+    (`question.deferred.not-blocked`). A deferred **non-blocking** question changes nothing about
+    the item; it simply stops being asked.
+
+3b. **When an answer widens the scope.** An answer sometimes implies work no item records — the
+    stakeholder says yes to something nobody had scoped. File it: a `work-item` at `draft` under
+    the same epic, with `arose-from: <ITEM>/Q-###` naming the question whose answer produced it.
+    You have the authority because you are the skill that observed the need for it
+    (`spec/ids-and-statuses.md` §5). This was a contradiction until it was derived away: an
+    execution accepted exactly such an answer and had no legal way to record the implied work,
+    so the scope change lived only in a question file (F-029).
+
+    What you may **not** do is treat it as an amendment to an existing item's criteria. Widening
+    an item to swallow new work hides the change from the board and from the person who asked
+    for it.
+
 4. **Write the answer into the question file.** `## Answer` states the decision and its basis.
    `## Consequences` lists the **files** you changed, specifically:
 
@@ -76,8 +113,9 @@ information.
    - `docs/architecture/adr/ADR-0004-stable-ordering.md` — created
    ```
 
-   Set `status: answered`, `answered-at`, and `answered-by` (`answer-questions`, or `human` when
-   they answered an escalation).
+   Set `status` (`answered`, or `deferred` per step 3a), `answered-at`, and `answered-by`
+   (`answer-questions`, or `human` when they replied to an escalation). A deferral is a reply, so
+   it carries both stamps.
 
 5. **Actually make those changes.** This is the step that is skipped under time pressure, and
    skipping it is why the gate `answer-is-propagated` exists. Open each file you named and make
@@ -90,7 +128,8 @@ information.
 
 7. **Return the item to its recorded `resume-to` status** — once **every blocking** question on
    it is answered. If a blocking question remains, or one was escalated to the human, the item
-   stays at `awaiting-answer`.
+   stays at `awaiting-answer`; if one was **deferred**, the item goes to `blocked` instead
+   (step 3a).
 
    Read `resume-to` from the history row that suspended the item. Do not infer it from which
    skill asked: a question from `review-close` and a question from `verify` both look like "it
@@ -110,8 +149,8 @@ On the item's `journal.md`:
   (document / recorded intent / decided / escalated), and the reasoning. For escalations, the
   condition that justified it.
 - `**Questions raised:**` — questions you re-addressed to the human, or `none`.
-- `**Gates:**` — all five, with the file-by-file propagation check as evidence for
-  `answer-is-propagated`.
+- `**Gates:**` — every one, with the file-by-file propagation check as evidence for
+  `answer-is-propagated` and, for each deferral, which of step 3a's two moves you took and why.
 - `**Artifacts:**` — every question file, every artifact you edited with what changed, every ADR
   created, and the documents whose versions you bumped.
 
@@ -170,6 +209,9 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
 2. For each answer: can you point at the document it follows from, or at the ADR you wrote?
 3. For each escalation: which of the four conditions applies? If the honest answer is "answering
    would have taken a while", it is not an escalation.
+3a. For each deferral: is the item where the deferral puts it — `blocked` if you recorded a
+   deferral, resumed if you decided under it? A question marked `deferred` on an item that
+   carried on is a claim that the work can proceed without the thing that is missing.
 4. Did you return the item to the status recorded in `resume-to`, or to the one that seemed
    natural?
 5. Did you amend an acceptance criterion? If so, is that amendment journaled with its reason,
@@ -182,6 +224,11 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
   re-reads `plan.md`, which still says the old thing. The failure is invisible precisely because
   the question looks answered. Treat `## Consequences` as a to-do list you must complete before
   setting `status: answered`, never as a description of what you intend to do.
+- **Turning a deferral into an answer to keep the loop moving.** The reply is non-empty, the
+  question can be marked `answered`, and the pipeline continues — and what is now on the record
+  is that a thing was settled which was not. The tell is that `## Consequences` names files that
+  do not contain any decision. If what they said does not decide it, record the deferral and park
+  the item; stopping honestly is a result.
 - **Amending an acceptance criterion to match what was built.** The question arrives from
   `verify`, the code does something reasonable, the criterion says something slightly different,
   and the smallest edit is to the criterion. That single move turns the entire pipeline into

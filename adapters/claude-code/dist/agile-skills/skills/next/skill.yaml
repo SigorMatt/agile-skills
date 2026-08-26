@@ -1,5 +1,5 @@
 name: next
-version: 0.2.0
+version: 0.3.0
 persona: scheduler
 purpose: Pick the single next runnable action from workspace state and dispatch the skill that owns it.
 
@@ -31,6 +31,9 @@ inputs:
   - path: tracker/items/*/history.md
     required: false
     why: reports where an item stopped when nothing is runnable
+  - path: "scripts/engagement-state <EP-ID>"
+    required: true
+    why: whether an engagement is still running or is over - the one judgement this skill is not allowed to make for itself
 
 outputs:
   - path: tracker/board.md
@@ -45,6 +48,11 @@ quality_gates:
     description: The workspace satisfies the schemas before any dispatch decision is made.
     command: scripts/validate-workspace
     expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: engagements-are-ended
+    description: An engagement whose work has all stopped is dispatched to review-close, not reported as idle.
+    manual_check: For every epic still at open, state the verdict scripts/engagement-state gave it. If any is at-rest and this run did not dispatch review-close on it, the run stopped on an engagement that is over and nobody has told the stakeholder.
     enforcement: hard
     on_failure: stay
   - name: board-current
@@ -68,6 +76,7 @@ exit_criteria:
   - The workspace validated, or the run stopped with the validator's output.
   - The board was regenerated.
   - Exactly one of - a question was surfaced and the loop stopped, a skill was dispatched, or the board was reported with the reason nothing is runnable.
+  - Every epic still at open was asked scripts/engagement-state, and none of them is at-rest and undispatched.
   - The dispatch decision names the item, its status, and the owning skill taken from pipeline.yaml.
 
 next_status: null

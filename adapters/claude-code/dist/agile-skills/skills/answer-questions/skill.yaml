@@ -1,12 +1,12 @@
 name: answer-questions
-version: 0.1.4
+version: 0.2.0
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
 when_to_use:
   - An item sits at status awaiting-answer with an open blocking question.
   - Open questions addressed to the architect exist on any item.
-  - A human has just answered an escalated question and the answer must reach the artifacts.
+  - A human has just answered an escalated question - or deferred it - and the reply must reach the artifacts.
   - Someone asks to "answer the open questions", "unblock", or "triage the questions" in a workspace.
 
 dispatch:
@@ -51,6 +51,9 @@ outputs:
   - path: docs/architecture/adr/ADR-####-{{item.id}}.md
     kind: file
     when: conditional
+  - path: tracker/items/WI-####/
+    kind: file
+    when: conditional
   - path: "a commit of the workspace files this execution wrote"
     kind: commit
     when: on-success
@@ -88,14 +91,20 @@ quality_gates:
     manual_check: Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match.
     enforcement: hard
     on_failure: stay
+  - name: a-deferral-is-not-an-answer
+    description: A reply of "not yet" is recorded as a deferral and the item is parked, or it is enough to decide on and the question is answered citing it. Never both, never neither.
+    manual_check: For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, the item must be at blocked with what would unblock it in Consequences. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop.
+    enforcement: hard
+    on_failure: stay
 
 escalation:
   question: When the record cannot settle it, re-address the question to human, keep it open, state which escalation condition applies, and stop the loop rather than guessing.
-  defect: If a question reveals that delivered behaviour is wrong, file a bug item; do not fix it inside the answer.
+  defect: If a question reveals that delivered behaviour is wrong, file a bug item; do not fix it inside the answer. If an answer widens the scope, file the implied work as a work-item at draft with arose-from naming the question - it is this skill that observed the need for it (spec/ids-and-statuses.md section 5).
   impasse: If the human is unavailable and the question is blocking, leave the item at awaiting-answer and report it. An unanswerable question is not a reason to unblock the item.
 
 exit_criteria:
-  - Every question this execution handled is either answered with consequences, or addressed to the human with the condition stated.
+  - Every question this execution handled is either answered with consequences, deferred with the item parked and what would unblock it recorded, or addressed to the human with the condition stated.
+  - Work an answer implied and no item records exists as a work-item at draft, with arose-from naming the question.
   - Every file named in a Consequences section actually contains the change.
   - Items whose blocking questions are all resolved are returned to their recorded resume-to status.
   - Any new decision is recorded as an ADR, cited from the question.

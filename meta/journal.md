@@ -2849,3 +2849,42 @@ the rule *can* be satisfied, and it could not. I rewrote its `## Question` and o
 worse than no fixture.
 
 `engagement-state` and `engagement.py` ship with the adapter. `./scripts/check`: green.
+
+## META-106 — the skill contracts, re-derived
+
+Five contracts, and the interesting thing is how little prose each needed once the model was in
+`pipeline.yaml` and the spec.
+
+**`next` 0.3.0** gains one step and one prohibition. The step runs `scripts/engagement-state` on
+every epic still at `open` and dispatches `review-close` on one that is `at-rest`. The
+prohibition is the important half: *never decide for yourself that an engagement is over*. `next`
+is the one component that must contain no judgement, and "the board looks finished" is judgement.
+It reads a verdict; it does not form one.
+
+**`review-close` 0.4.0** is now dispatched on two quite different things, so its preconditions
+say so up front: an item at `in-review` (steps 1–9) or an epic at `open` and at rest (step 10,
+directly). Step 10 stopped being "check the epic when you close its last child" and became "end
+the engagement, when it is over", with the four endings as a table mapping the stakeholder's
+reply to a move and an outcome. Its "two ways this skill goes wrong" gained a first entry:
+**treating "nothing left to run" as "nothing left to do"** — which is what a real run did, at the
+exact point where the stakeholder was waiting to be asked.
+
+**`answer-questions` 0.2.0** gets steps 3a and 3b. 3a is F-028 and it is stated as *two moves,
+take one*: decide under the deferral (and the question is `answered`, quoting it), or record
+`deferred` and park the item at `blocked`. What I wanted to avoid was a third, comfortable
+option — mark it answered and carry on — so the gate `a-deferral-is-not-an-answer` asks which
+move was taken, and the skill's failure list names the tell: `## Consequences` naming files that
+contain no decision.
+
+3b is F-029.1: an answer that widens scope files a `work-item` at `draft` with
+`arose-from: <ITEM>/Q-###`. The paragraph that earns its place is the one saying what you may
+*not* do — widen an existing item's criteria to swallow the new work — because that is the move
+that hides a scope change from the board and from the person who asked for it.
+
+**`refine` 0.2.1** and **`verify` 0.1.3** are one sentence each, and both are provenance. R9 tells
+`refine` to split an item and it now has the authority to create the part it splits off. `verify`
+already recorded `found-in`; what changed is that `found-in` is now named as *provenance* rather
+than as a cross-reference, and there is a stated answer for the case where the behaviour is not
+one item's.
+
+Re-rendered. `./scripts/check`: green.

@@ -1,17 +1,17 @@
 name: review-close
-version: 0.3.1
+version: 0.4.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
 when_to_use:
   - An item sits at status in-review after verification passed.
   - A change is ready to merge and needs a Definition of Done check first.
-  - An epic's last child item is being closed and the epic itself needs closing.
-  - Someone asks to "review", "close", "merge", or "sign off" a tracked item.
+  - An engagement has reached rest - every child stopped, nothing open - and the epic must be ended through the stakeholder.
+  - Someone asks to "review", "close", "merge", "sign off", or "wrap up" a tracked item or an epic.
 
 dispatch:
   on_status: [in-review]
-  item_types: [work-item, bug]
+  item_types: [work-item, bug, epic]
 
 human_interaction: via-questions
 
@@ -40,6 +40,9 @@ inputs:
   - path: docs/architecture/adr/
     required: false
     why: the change must not silently contradict a recorded decision
+  - path: "scripts/engagement-state {{item.id}}"
+    required: false
+    why: on an epic, whether the engagement is at rest - the same function the termination gate reads, so the two cannot disagree
 
 outputs:
   - path: tracker/items/{{item.id}}/artifacts/review.md
@@ -52,6 +55,12 @@ outputs:
     kind: commit
     when: on-success
   - path: tracker/items/EP-###/item.md
+    kind: file
+    when: conditional
+  - path: tracker/items/EP-###/questions/Q-###.md
+    kind: file
+    when: conditional
+  - path: tracker/items/BUG-####/
     kind: file
     when: conditional
   - path: tracker/items/{{item.id}}/journal.md
@@ -103,22 +112,23 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: epic-sign-off
-    description: An epic does not close until the stakeholder has been asked to accept it, after the last child closed, and has answered.
+    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied.
     command: scripts/check-epic-signoff {{item.id}}
     expect: exit-zero
     enforcement: hard
     on_failure: stay
 
 escalation:
-  question: File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect when the change contradicts a recorded decision and it is unclear which should give way. Set the item to awaiting-answer with resume-to in-review and stop.
-  defect: A defect in this item's own delivery sends it back to in-progress with reasons. A defect elsewhere, noticed during review, becomes a bug item.
-  impasse: If the item cannot be merged for reasons outside the change itself, set it to blocked with what was tried.
+  question: File tracker/items/{{item.id}}/questions/Q-###.md addressed to architect when the change contradicts a recorded decision and it is unclear which should give way. Set the item to awaiting-answer with resume-to in-review and stop. On an epic at rest, file the kind sign-off question addressed to human and suspend the epic to awaiting-answer with resume-to open.
+  defect: A defect in this item's own delivery sends it back to in-progress with reasons. A defect elsewhere, noticed during review, becomes a bug item this skill files at ready, recording found-in or arose-from - it is the skill that observed the need for it (spec/ids-and-statuses.md section 5).
+  impasse: If the item cannot be merged for reasons outside the change itself, set it to blocked with what was tried. On an epic, the impasse is an ENDING - it is recorded only after the stakeholder has been asked and has replied.
 
 exit_criteria:
   - Every Definition of Done criterion is recorded as passed, or the item was rejected.
   - review.md states what was examined, not only the verdict.
   - The branch is merged into the trunk and the item is done with an outcome recorded.
-  - If this was the epic's last open child, the epic Definition of Done was applied and the epic closed or explicitly left open with the reason.
+  - If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
+  - An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.
   - The journal entry and the history row for this execution are written.
 
 next_status: done
