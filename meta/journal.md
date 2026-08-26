@@ -2778,3 +2778,39 @@ pipeline does not advance it, not because the engagement stopped. The test that 
 is the same one F-013 was about, arriving a third time.
 
 `./scripts/check`: 14 steps (12 numbered; two of them run two assertions), all green.
+
+## META-105a — the validator and `transition`, holding the model
+
+Five enforcement changes, and one of them changed my mind about the spec.
+
+**Provenance.** `item.arose-from.missing` fires when an item's creation row names an actor other
+than `intake` and nothing says what caused the item to exist. Running it over the toy project
+immediately reported all three of its bugs — and that is where I backed off, correctly. A bug's
+`found-in` *already* names the delivered behaviour it contradicts, which is exactly what caused
+it to exist; demanding a second field saying the same thing is the "lot of prose to work around
+a missing field" F-030 complains about, pointed the other way. So on a bug, `found-in` satisfies
+provenance, and I changed `spec/ids-and-statuses.md` §5 and `work-item.md` to say so rather than
+leaving the validator kinder than the spec. The toy project passes untouched, which is the point:
+a new rule that forces a rewrite of banked work is usually a rule with the wrong scope.
+
+**`applies_to` in two places.** `validate-workspace.transition_is_legal` and `transition`'s own
+`legal()` were separate implementations of the same walk; both now take the item type. Without
+this, scoping the generic impasse row to work items would have been decoration — the epic would
+still have matched the row in the code.
+
+**`gated`.** `transition` refuses a move when the matching pipeline row says so, not only when it
+is the actor's `next_status`. `legal()` became `matching_rule()` returning the row, which is what
+made this two lines instead of a second lookup.
+
+**DE1's replacement, in codes.** `epic.closed-with-open-children` split into
+`epic.closed-with-active-children` (a child still in flight) and `epic.outcome.overclaims` (an
+epic that closed over an undelivered child and called itself `delivered`). The second is the one
+that carries weight: E2 is legal, and it is legal *because* the outcome says what happened.
+
+**Deferral.** `question.deferred.not-blocked` — a deferred blocking question whose item is not at
+`blocked`. The validator will not let the pipeline record a deferral and carry on as if it had an
+answer, which is the half of F-028 that a status alone would not have fixed.
+
+Fixture: a new `WI-0003` carrying three of the new faults at once, plus `arose-from: WI-0404` on
+`BUG-0001` for the unresolved case. Four new codes, one retired, one split — 68 codes in
+`EXPECTED-CODES.txt`, and no code emitted that the file does not list.

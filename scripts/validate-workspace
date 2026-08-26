@@ -32,9 +32,11 @@ from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE, 
                        Workspace, id_kind, resolve_root, split_sections)
 
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
-ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "depends-on", "blocks",
-                        "relates-to"]
+ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "arose-from", "depends-on",
+                        "blocks", "relates-to"]
 OUTCOMES = {"delivered", "dropped", "duplicate"}
+EPIC_ONLY_OUTCOMES = {"delivered-partial"}
+TERMINAL_CHILD_STATUSES = {"done", "blocked"}
 
 QUESTION_FIELDS_REQUIRED = ["id", "item", "from-skill", "addressed-to", "blocking", "status",
                             "created"]
@@ -45,7 +47,7 @@ REQUEST_FIELDS_OPTIONAL = ["about", "handled-at", "handled-by"]
 REQUEST_STATUS = {"open", "accepted", "declined"}
 REQUEST_ID_RE = re.compile(r"^R-\d{3}$")
 ADDRESSED_TO = {"architect", "human"}
-QUESTION_STATUS = {"open", "answered"}
+QUESTION_STATUS = {"open", "answered", "deferred"}
 
 DOC_FIELDS_REQUIRED = ["title", "version", "status", "updated", "updated-by", "updated-for"]
 DOC_FIELDS_OPTIONAL = ["supersedes", "superseded-by"]
@@ -431,10 +433,17 @@ class Validator:
                 self.report.error(path, 0, "item.found-in.dangling",
                                   f"found-in references {found_in!r}, which does not exist")
 
+        self.check_provenance(path, item, expected_type)
+
         outcome = item.fields.get("outcome")
-        if item.status == "done" and outcome not in OUTCOMES:
+        allowed = OUTCOMES | (EPIC_ONLY_OUTCOMES if expected_type == "epic" else set())
+        if item.status == "done" and outcome not in allowed:
             self.report.error(path, 0, "item.outcome.missing",
-                              f"a done item must record an outcome, one of {sorted(OUTCOMES)}")
+                              f"a done item must record an outcome, one of {sorted(allowed)}")
+        if outcome in EPIC_ONLY_OUTCOMES and expected_type != "epic":
+            self.report.error(path, 0, "item.outcome.epic-only",
+                              f"outcome {outcome!r} records how an engagement ended and is "
+                              f"legal on an epic only (spec/work-item.md §1)")
         if item.status != "done" and outcome is not None:
             self.report.error(path, 0, "item.outcome.premature",
                               f"outcome is set to {outcome!r} but the item is not done")
@@ -447,6 +456,56 @@ class Validator:
                                   "the item has been in progress but records no branch",
                                   hint="git log --grep is only reconstructible if the branch "
                                        "is named here")
+
+    def check_provenance(self, path, item, expected_type) -> None:
+        """`arose-from`: what caused this item to exist (spec/ids-and-statuses.md §5).
+
+        The creation-authority table says *who* may create an item; provenance says *why* it
+        exists, and without the second the first is unenforceable — an item invented to make a
+        gate pass is indistinguishable from one somebody needed. Required exactly when the
+        creation row names an actor other than `intake`, so every item in a workspace built
+        before this rule is unaffected (F-029, F-042).
+        """
+        arose = item.fields.get("arose-from")
+        creator = item.history[0].actor if item.history else None
+        # A bug's `found-in` already names the delivered behaviour it contradicts, which is what
+        # caused it to exist. Demanding a second field saying the same thing would be
+        # bureaucracy, so either satisfies provenance on a bug.
+        has_provenance = bool(arose) or (expected_type == "bug"
+                                         and bool(item.fields.get("found-in")))
+        if creator is not None and creator != "intake" and not has_provenance:
+            self.report.error(path, 0, "item.arose-from.missing",
+                              f"{creator!r} created this item and recorded no provenance",
+                              hint="a skill may create an item when it observes the need for "
+                                   "one, and only if it records what caused it — arose-from "
+                                   "naming an item, a question (ITEM/Q-###) or a request "
+                                   "(R-###); on a bug, found-in also answers it "
+                                   "(spec/ids-and-statuses.md §5)")
+        if not arose:
+            return
+        if not isinstance(arose, str):
+            self.report.error(path, 0, "item.arose-from.unresolved",
+                              "arose-from must be a citation string")
+            return
+        reference = arose.strip()
+        resolved = False
+        if REQUEST_ID_RE.match(reference):
+            resolved = os.path.isfile(os.path.join(self.workspace.root, "tracker", "requests",
+                                                   reference + ".md"))
+        elif "/" in reference:
+            owner, _, question_id = reference.partition("/")
+            resolved = os.path.isfile(os.path.join(self.workspace.root, "tracker", "items",
+                                                   owner, "questions", question_id + ".md"))
+        else:
+            resolved = reference in self.workspace.items
+        if not resolved:
+            self.report.error(path, 0, "item.arose-from.unresolved",
+                              f"arose-from is {reference!r}, which resolves to nothing",
+                              hint="it names an item, a question as ITEM/Q-###, or a request "
+                                   "as R-###")
+        elif reference == item.identifier:
+            self.report.error(path, 0, "item.arose-from.unresolved",
+                              "arose-from names the item itself")
 
     def check_item_body(self, path, item, expected_type) -> None:
         for section in BODY_SECTIONS[expected_type]:
@@ -485,10 +544,17 @@ class Validator:
 
     # ---- history -------------------------------------------------------------------
 
-    def transition_is_legal(self, from_status, to_status, actor, suspended_from) -> bool:
+    def transition_is_legal(self, from_status, to_status, actor, suspended_from,
+                            item_type=None) -> bool:
         for rule in self.transitions:
             rule_from, rule_to = rule.get("from"), rule.get("to")
             rule_actor = rule.get("actor")
+
+            # `applies_to` scopes a row to item types. It is what keeps an epic's ending out of
+            # the generic impasse row: only `review-close` ends an engagement (ADR-0006 §2).
+            applies = rule.get("applies_to")
+            if applies and item_type is not None and item_type not in applies:
+                continue
 
             if rule_from is None:
                 if from_status is not None:
@@ -579,7 +645,8 @@ class Validator:
                                   f"resume-to is {resume_to!r}, which is not legal for a "
                                   f"{expected_type}")
 
-            if not self.transition_is_legal(from_status, to_status, row.actor, suspended_from):
+            if not self.transition_is_legal(from_status, to_status, row.actor, suspended_from,
+                                            expected_type):
                 self.report.error(path, row.line, "history.transition.illegal",
                                   f"{from_status} → {to_status} by {row.actor!r} is not a "
                                   f"transition in pipeline.yaml")
@@ -690,6 +757,7 @@ class Validator:
 
     def check_questions(self, item) -> None:
         seen_blocking_open = False
+        seen_blocking_deferred = False
         for question in item.questions:
             path = question.path
             if not QUESTION_ID_RE.match(question.identifier):
@@ -751,18 +819,24 @@ class Validator:
                                            "moment it exists, empty until answered "
                                            "(spec/question.md §2)")
 
-            if status == "answered":
+            if status in ("answered", "deferred"):
                 for field in ("answered-at", "answered-by"):
                     if not question.fields.get(field):
                         self.report.error(path, 0, "question.answered.field",
-                                          f"an answered question must record {field}")
+                                          f"a {status} question must record {field}",
+                                          hint="a deferral is a reply — somebody said 'not yet' "
+                                               "at a time (spec/question.md §2)")
                 for section in ("## Answer", "## Consequences"):
                     text = question.sections.get(section, {}).get("text", "")
                     stripped = "\n".join(line for line in text.split("\n")
                                          if not line.strip().startswith("<!--"))
                     if not stripped.strip():
                         self.report.error(path, question.body_line, "question.answered.section",
-                                          f"{section} is empty on an answered question")
+                                          f"{section} is empty on a {status} question",
+                                          hint="on a deferred question ## Answer carries what "
+                                               "the person actually said and ## Consequences "
+                                               "carries what the pipeline did instead "
+                                               "(spec/question.md §2)")
                 consequences = question.sections.get("## Consequences", {}).get("text", "")
                 if consequences.strip() and "`" not in consequences and "/" not in consequences:
                     self.report.error(path, question.body_line, "question.consequences.files",
@@ -771,6 +845,21 @@ class Validator:
                                            "propagated (spec/question.md rule 5)")
             if status == "open" and question.is_blocking:
                 seen_blocking_open = True
+            if status == "deferred" and question.is_blocking:
+                seen_blocking_deferred = True
+
+        # F-028: a deferral is neither an answer nor silence. `deferred` says the person replied
+        # and their reply was "not yet"; the loop does not stop on it and the item does not
+        # resume, because resuming would assert that the work can proceed without the missing
+        # thing. A blocking question that is deferred leaves its item at `blocked`.
+        if seen_blocking_deferred and item.status not in ("blocked", "done"):
+            self.report.error(item.path, 0, "question.deferred.not-blocked",
+                              f"a blocking question on this item is deferred but the item is "
+                              f"{item.status!r}",
+                              hint="a deferred blocking question leaves the item at blocked "
+                                   "with what would unblock it recorded; if the deferral was "
+                                   "enough to decide on, the honest status is answered "
+                                   "(spec/question.md §2)")
 
         if seen_blocking_open and item.status not in ("awaiting-answer", "blocked"):
             self.report.error(item.path, 0, "question.blocking.not-suspended",
@@ -807,14 +896,32 @@ class Validator:
             if not children:
                 self.report.warn(epic.path, 0, "epic.childless",
                                  "the epic has no child items")
+            # DE1 as re-derived (ADR-0006 §1b): "every child is done" was the entry condition
+            # for one ending out of four. What generalises is "every child has stopped, and the
+            # ones that did not deliver are named". So an active child still refuses closure —
+            # and an epic that closes over an undelivered child may not call itself delivered.
             if epic.status == "done":
-                open_children = [child.identifier for child in children
-                                 if child.status != "done"]
-                if open_children:
-                    self.report.error(epic.path, 0, "epic.closed-with-open-children",
-                                      f"the epic is done but {', '.join(sorted(open_children))} "
-                                      f"are not",
-                                      hint="Definition of Done DE1")
+                active = [child.identifier for child in children
+                          if child.status not in TERMINAL_CHILD_STATUSES]
+                if active:
+                    self.report.error(epic.path, 0, "epic.closed-with-active-children",
+                                      f"the epic is done but {', '.join(sorted(active))} "
+                                      f"{'is' if len(active) == 1 else 'are'} still in flight",
+                                      hint="an engagement ends when every child has stopped — "
+                                           "done or blocked (spec/ids-and-statuses.md §3.5, "
+                                           "Definition of Done DE1)")
+                undelivered = sorted(child.identifier for child in children
+                                     if not (child.status == "done"
+                                             and child.fields.get("outcome") in
+                                             ("delivered", "duplicate")))
+                if undelivered and epic.fields.get("outcome") == "delivered":
+                    self.report.error(epic.path, 0, "epic.outcome.overclaims",
+                                      f"the epic closed as 'delivered' but "
+                                      f"{', '.join(undelivered)} did not deliver",
+                                      hint="an engagement that ended with something undelivered "
+                                           "closes as delivered-partial or dropped; saying "
+                                           "'delivered' is the overclaim the outcome field "
+                                           "exists to prevent (spec/work-item.md §1)")
 
     # ---- project.yaml and board ----------------------------------------------------
 

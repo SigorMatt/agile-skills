@@ -228,8 +228,8 @@ for it, and only if it records **what caused the item to exist** in a citation t
 | `intake` | `epic`, `work-item` | `open`, `draft` | `arose-from: R-###` when the item came from a stakeholder request; otherwise the vision it refined |
 | `refine` | `work-item` | `draft` | `arose-from: <ITEM>` — the item it split (DoR R9) |
 | `answer-questions` | `work-item` | `draft` | `arose-from: <ITEM>/Q-###` — the question whose answer widened the scope |
-| `verify` | `bug` | `ready` | `found-in` where known, and `arose-from: <ITEM>` |
-| `review-close` | `bug` | `ready` | `found-in` where known, and `arose-from: <ITEM>` |
+| `verify` | `bug` | `ready` | `found-in`, or `arose-from: <ITEM>` when the behaviour it contradicts is not one item's |
+| `review-close` | `bug` | `ready` | `found-in`, or `arose-from: <ITEM>` — the item under review |
 | `plan`, `implement`, `next` | — | — | — |
 
 `plan` and `implement` are excluded by the rule rather than by omission. Neither observes a need
@@ -240,9 +240,14 @@ Nothing may create an item past `draft`. A `bug` at `ready` is not an exception:
 with reproduction steps has already satisfied its Definition of Ready (`dor-dod.md` §2), so
 `ready` is where it is born rather than a status it skipped to.
 
+Every item whose creation row names an actor other than `intake` MUST carry provenance, and
 `arose-from` MUST resolve — to an item that exists, a question file that exists, or a request
-file that exists. Without that, "who may create" degrades into "who says they may", and an item
-created for no recorded reason cannot be told apart from one invented to make a gate pass.
+file that exists. On a **bug**, `found-in` satisfies the requirement on its own: it already names
+the delivered behaviour the bug contradicts, which is what caused the bug to exist, and demanding
+a second field that says the same thing would be bureaucracy.
+
+Without provenance, "who may create" degrades into "who says they may", and an item created for
+no recorded reason cannot be told apart from one invented to make a gate pass.
 `validate-workspace` reports `item.arose-from.missing` and `item.arose-from.unresolved`.
 
 ## 6. Priority

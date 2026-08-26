@@ -6,7 +6,8 @@ board.missing
 claim.citation.unresolved
 doc.changelog.order
 doc.changelog.version
-epic.closed-with-open-children
+epic.closed-with-active-children
+epic.outcome.overclaims
 history.actor
 history.after-done
 history.first-row
@@ -18,6 +19,8 @@ history.status
 history.tail-mismatch
 history.timestamp.future
 history.transition.illegal
+item.arose-from.missing
+item.arose-from.unresolved
 item.branch.missing
 item.criteria.numbering
 item.epic.dangling
@@ -25,6 +28,7 @@ item.field.missing
 item.field.unknown
 item.found-in.dangling
 item.id.mismatch
+item.outcome.epic-only
 item.outcome.premature
 item.priority
 item.relation.dangling
@@ -47,6 +51,7 @@ project.conventions.commit-subject
 question.answered.field
 question.blocking.not-suspended
 question.consequences.files
+question.deferred.not-blocked
 question.id.mismatch
 question.item.mismatch
 question.kind

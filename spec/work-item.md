@@ -38,7 +38,7 @@ depends-on:
 | `branch` | once code exists | string | `wi/<ID>`; set by `implement` when it creates the branch |
 | `outcome` | when `status: done` | enum | `delivered` \| `dropped` \| `duplicate`; and `delivered-partial`, **epics only** |
 | `found-in` | `bug`, when known | ID | the work item whose delivered behaviour the bug contradicts |
-| `arose-from` | when the creating skill is not `intake` | citation | what caused this item to exist: `<ITEM>`, `<ITEM>/Q-###`, or `R-###` (`ids-and-statuses.md` §5) |
+| `arose-from` | when the creating skill is not `intake`, unless a bug's `found-in` covers it | citation | what caused this item to exist: `<ITEM>`, `<ITEM>/Q-###`, or `R-###` (`ids-and-statuses.md` §5) |
 | `depends-on` | optional | list of IDs | this item cannot start until those are `done` |
 | `blocks` | optional | list of IDs | informational mirror of another item's `depends-on` |
 | `relates-to` | optional | list of IDs | non-blocking association |
@@ -55,10 +55,11 @@ Rules that a validator enforces:
   (`ids-and-statuses.md` §3.5): the engagement closed with the stakeholder's acceptance and with
   at least one child not delivered. An epic that closes with a child at `blocked` and an outcome
   of `delivered` is overclaiming, and the validator says so (`epic.outcome.overclaims`).
-- `arose-from` MUST be present when the item's creation row names an actor other than `intake`,
-  and MUST resolve — to an item, a question file, or a request file that exists. It is the
-  enforceable half of the creation-authority table: it says *why* an item exists, where the
-  actor on the creation row says *who* recorded it.
+- `arose-from` MUST be present when the item's creation row names an actor other than `intake`
+  — except on a bug that carries `found-in`, which already names what caused it — and MUST
+  resolve to an item, a question file, or a request file that exists. It is the enforceable half
+  of the creation-authority table: it says *why* an item exists, where the actor on the creation
+  row says *who* recorded it.
 - `branch` MUST be present once `status` has ever been `in-progress` or later.
 - `updated` MUST NOT be earlier than `created`, and MUST NOT be earlier than the timestamp of
   the last `history.md` entry.

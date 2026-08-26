@@ -284,7 +284,7 @@ outranks completeness in a .5 session.
       (sign-off = the termination question; `status: deferred`, F-028).
 - [x] **META-104** — `pipeline.yaml` 0.4.0: transitions gain `applies_to` and `gated`; the epic
       ending rows; creation rows carry `provenance`. New `lint-skills` rules; must-fail cases.
-- [ ] **META-105a** — enforcement, the workspace at rest: `validate-workspace` for
+- [x] **META-105a** — enforcement, the workspace at rest: `validate-workspace` for
       `applies_to`, `arose-from` provenance (F-029), deferred questions (F-028) and
       epic-outcome honesty; `transition` refuses a `gated` move.
 - [ ] **META-105b** — enforcement, the ending: `scripts/engagement-state` (is the engagement at

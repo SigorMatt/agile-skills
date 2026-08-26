@@ -9,6 +9,7 @@ created: 2026-08-16T12:00:00Z
 updated: 2026-08-16T12:30:00Z
 outcome: delivered
 found-in: WI-0404
+arose-from: WI-0404
 ---
 
 ## Summary

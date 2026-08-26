@@ -13,12 +13,14 @@ What it does, in order:
      pipeline.yaml;
   2. runs the actor skill's hard, command-backed gates, telling them which move is pending so
      that `workspace-valid` judges the state the move produces rather than the one it is leaving
-     (F-014). They REFUSE the move only when it is
-     the skill's completion transition — the move to its own `next_status`. On any other move
-     (a send-back, a question, an impasse, or an intermediate step such as
+     (F-014). They REFUSE the move when it is the skill's completion transition — the move to
+     its own `next_status` — or when pipeline.yaml marks the matching row `gated: true`. On any
+     other move (a send-back, a question, an impasse, or an intermediate step such as
      `planned -> in-progress`) the gates are still run and reported, but they do not block:
      escaping downward is never what a gate should prevent, and a skill that cannot file a
-     question about its own failing gate is trapped;
+     question about its own failing gate is trapped. `gated` exists because `next_status` is one
+     status per skill: `review-close` ends an engagement at `done` OR at `blocked`, and an
+     ungated ending would run the termination gate and ignore its verdict (F-045);
   3. writes the new status (and outcome/branch if given) into item.md and bumps `updated`;
   4. appends the history row;
   5. with --journal-body-file, appends the matching journal entry through
@@ -156,9 +158,18 @@ def is_suspendable(pipeline, status) -> bool:
     return False
 
 
-def legal(pipeline, from_status, to_status, actor, suspended_from) -> bool:
+def matching_rule(pipeline, from_status, to_status, actor, suspended_from, item_type=None):
+    """The first transition row in pipeline.yaml that permits this move, or None.
+
+    `applies_to` scopes a row to item types; a row without it applies to all of them. It is what
+    keeps an epic's ending out of the generic impasse row — only `review-close` ends an
+    engagement (ADR-0006 §2).
+    """
     for rule in pipeline.get("transitions") or []:
         rule_from, rule_to, rule_actor = rule.get("from"), rule.get("to"), rule.get("actor")
+        applies = rule.get("applies_to")
+        if applies and item_type is not None and item_type not in applies:
+            continue
         if rule_from is None:
             if from_status is not None:
                 continue
@@ -174,8 +185,13 @@ def legal(pipeline, from_status, to_status, actor, suspended_from) -> bool:
             continue
         if rule_actor != "any" and rule_actor != actor:
             continue
-        return True
-    return False
+        return rule
+    return None
+
+
+def legal(pipeline, from_status, to_status, actor, suspended_from, item_type=None) -> bool:
+    return matching_rule(pipeline, from_status, to_status, actor, suspended_from,
+                         item_type) is not None
 
 
 def last_resume_to(history_text: str):
@@ -327,7 +343,9 @@ def main(argv: list) -> int:
     resume_to = options.get("resume-to")
     suspended = last_resume_to(history_text)
 
-    if not legal(pipeline, from_status, to_status, actor, suspended):
+    item_type = fields.get("type")
+    rule = matching_rule(pipeline, from_status, to_status, actor, suspended, item_type)
+    if rule is None:
         print(f"transition: {from_status} → {to_status} by {actor!r} is not a transition in "
               f"pipeline.yaml", file=sys.stderr)
         if from_status in ("awaiting-answer", "blocked"):
@@ -368,6 +386,14 @@ def main(argv: list) -> int:
         except miniyaml.YamlError:
             completion_status = None
     gating = completion_status is not None and to_status == completion_status
+
+    # ...and any transition pipeline.yaml marks `gated`. `next_status` is one status per skill,
+    # which is enough while every completion move is the skill's own happy path. It is not
+    # enough for an epic: `review-close` ends an engagement at `done` *or* at `blocked`, and an
+    # ungated ending would run the termination gate and ignore its verdict — F-045 again, three
+    # feet to the left (ADR-0006 §1c).
+    if not gating and rule.get("gated") is True:
+        gating = True
 
     # F-039: the body is checked here, before a single byte is written. It used to be checked
     # after the history row had been appended, so a missing bullet cost a manual repair of an
