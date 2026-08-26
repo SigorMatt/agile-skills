@@ -2963,3 +2963,25 @@ why it is not yours. Committing a workspace you know does not validate is the fa
 one and saying so is a handover.
 
 `plan` 0.2.0 → 0.3.0. `./scripts/check`: green, 69 fixture codes.
+
+## META-109 — the ledger, and a citation check that was not checking
+
+Eight findings moved to `fixed` — F-028, F-029 (+F-042), F-031, F-034, F-038, F-045, F-046 — plus
+addenda on F-011, F-013 and F-022 saying what the derivation did to each. Six remain open, all of
+them the ones the mission said to leave open: F-008, F-030, F-035, F-036, F-043, F-048.
+
+Then the unit found its own defect, which is the part worth recording. `scripts/check` step
+"findings citations resolve" matched `commit <sha>`. Every citation I had just written says
+**`commits a, b, c`** — a fix derived across seven units cites seven — and `commits` is not
+`commit ` followed by a sha, so the step reported PASS having checked exactly the sixteen old
+singular citations and none of the new ones.
+
+That is F-024 verbatim: *a citation that looks valid and is not is the failure F-001 is about*,
+in the step that exists to catch it. It went from 17 cited to **24** once the plural form was
+parsed, and all 24 resolve — the one dangling sha is `234f170`, which is on the `FOREIGN_SHAS`
+list because it belongs to a throwaway project's repository.
+
+The general lesson is the one this project keeps relearning: a gate that silently narrows its own
+scope reports success for the part it can still see. `lint-claims` did it with a file path
+(F-033), `run-gate` does it with an unresolved placeholder and says so loudly, and this step did
+it with a plural.

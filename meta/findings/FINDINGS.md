@@ -911,7 +911,23 @@ is not a ledger.
 - Direction: a third question status, `deferred`, carrying what the stakeholder said and what
   would unblock it. `next` does not stop on it, the item does not resume, and the record says
   exactly what happened instead of choosing between two lies.
-- Status: open
+- Status: fixed (commits 4aacb6c, 54a63b9, 0d22fb6), as filed, with one addition the filing did
+  not anticipate. `spec/question.md` §2 defines `status: deferred`: `## Answer` carries what the
+  person actually said, verbatim; `## Consequences` carries **what the pipeline did instead**,
+  naming files. `next` does not stop on it (`pipeline.yaml`'s `runnable` says so explicitly) and
+  the item does not resume.
+  **The addition:** a deferral is not automatically a *deferred question*. `answer-questions`
+  step 3a is two moves and it must take one — decide under the deferral, in which case the
+  question is `answered` and quotes it as the basis ("go ahead anyway" settles a question by
+  authorising a choice); or record `deferred` and move the item `awaiting-answer → blocked` with
+  what would unblock it. Without that fork the status would have become a comfortable third
+  option — mark it deferred, carry on — which is the failure the finding describes with a nicer
+  name on it.
+  **Enforced, not just described.** `validate-workspace` reports `question.deferred.not-blocked`
+  when an item carries a deferred blocking question and is not at `blocked`; `deferred` requires
+  `answered-at`, `answered-by` and both body sections, because a reply is a reply. The gate
+  `a-deferral-is-not-an-answer` asks which of the two moves was taken. Must-fail case:
+  `fixtures/broken-workspace` WI-0003.
 
 ## F-029 — three skills need to create items and only two may
 - Severity: correctness, structural (a second instance of F-013's shape)
@@ -927,7 +943,25 @@ is not a ledger.
 - Direction: decide which skills may create items and make `pipeline.yaml`, the transitions table
   and the process contracts agree. `review-close` has the same standing as `verify` to file a
   defect it found. Same failure shape as F-013: an instruction the state machine cannot execute.
-- Status: open
+- Status: fixed (commits 4dfa6e2, 4aacb6c, 0ada0ca, 54a63b9, 0d22fb6, 6c70f84), by derivation
+  rather than by adding the two missing rows. `meta/adr/ADR-0006` §3 enumerates the events that
+  change an engagement's item set and reads the authority table off that enumeration; the rule
+  that comes out is **a skill may create an item exactly when it is the skill that observes the
+  need for it, and only if it records what caused the item to exist.**
+  That rule excludes `plan` and `implement` for a reason rather than by omission — `plan`
+  observes uncertainty, which is a question, and `implement` observes scope creep, which is a
+  question too — and it turned up a **third** occurrence nobody had filed: Definition of Ready
+  **R9** instructs `refine` to split an item, and `refine` could not create the part it split off
+  either.
+  `spec/ids-and-statuses.md` §5 is the table; `pipeline.yaml` 0.4.0's creation rows carry
+  `provenance`; `arose-from` is a new item field that must resolve (on a bug, `found-in` answers
+  it, because it already names what caused the bug to exist). Three enforcement points:
+  `scripts/new-item` **refuses** a creation the pipeline does not permit and refuses one with no
+  provenance; `validate-workspace` reports `item.arose-from.missing` / `.unresolved`;
+  `lint-skills` reports `transition.creation.provenance` on a creation row that declares none.
+  Proven by execution in `./scripts/check` — twelve cases against a workspace built by the real
+  tools, including `plan` refused a bug, `review-close` allowed one, and both of the run's own
+  occurrences.
 
 ## F-030 — `priority` is doing two jobs, so the board lies about what matters
 - Severity: UX / correctness of the record
@@ -950,7 +984,13 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/004-worker.status.md
 - Direction: R8's check reads a field, not a filename. A mechanical gate that checks the wrong
   thing is worse than a manual one, because it is trusted.
-- Status: open
+- Status: fixed (commit d8dcd98), as filed. `artifacts/refinement-qa.md` opens with frontmatter
+  declaring `status: agenda` or `status: recorded` (`spec/workspace-layout.md` §1.3);
+  `validate-workspace` reports `artifact.refinement-qa.not-recorded` when an item reached `ready`
+  on an agenda; `refine` step 8 says which to write and says not to write `recorded` on a file it
+  intends to finish later. Must-fail case: `fixtures/broken-workspace` WI-0003 reaches `ready` on
+  an agenda. `examples/toy-project`'s three artifacts were migrated — a migration, not a rewrite:
+  the Q&A in them was recorded, so the field is true of each.
 
 ## F-032 — a filed question has nowhere to put the answer
 - Severity: correctness, and it is the stakeholder's first impression of the protocol
@@ -994,7 +1034,18 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/006-worker.status.md
 - Direction: either the self-check stops requiring a command to have been run, or the "no code"
   rule gains an explicit carve-out for scaffolding a command needs to execute at all.
-- Status: open
+- Status: fixed (commit d8dcd98) — the carve-out, decided in `meta/adr/ADR-0007` and bounded
+  four ways. The rejected option is the interesting half: dropping the "have you run it"
+  requirement and letting `implement` create the scaffolding are the same option in two hats, and
+  both end with a plan recording a gate command nobody has executed — F-001's class, failing at
+  the most expensive moment. `plan` may create a file outside `tracker/` and `docs/` only when a
+  declared command cannot execute at all without it, the file contains **no behaviour**, it is
+  listed under a new required `## Scaffolding` heading with the command that needed it, and no
+  acceptance criterion depends on it. A stub function with a `pass` body is explicitly not
+  scaffolding — that is an interface decision, and it belongs in the plan where a reviewer can
+  argue with it. `spec/workspace-layout.md` §5 carries the rule; `plan` → 0.3.0. It is a
+  `[skill]` bound and the ADR says so: nothing mechanically separates an empty package marker
+  from a small implementation.
 
 ## F-035 — `check-commit-refs` reports a merge that never happened
 - Severity: UX, misleading
@@ -1054,7 +1105,12 @@ is not a ledger.
 - Direction: state the window in `spec/skill-contract.md` §2.3 rather than leaving it as folklore.
   The alternative — validate the post-move state and roll back — means truncating an append-only
   file, which META-090 rejected for that reason.
-- Status: open
+- Status: fixed (commit d8dcd98), as filed, plus the obligation the window creates. §2.3 now says
+  both things: the behaviour is correct (a gate that is not blocking this move must not block it,
+  and rolling back means truncating an append-only file), **and** a skill that transitions an item
+  MUST NOT end its execution while `validate-workspace` reports errors — fix them, or name each
+  finding and why it is not yours to resolve. Committing a workspace you know does not validate,
+  without saying so, is the failure; committing one and saying so is a handover.
 
 ## F-039 — `transition` validates the journal body only after writing the history row
 - Severity: correctness (a malformed body costs a manual repair on an append-only file)
@@ -1091,7 +1147,8 @@ is not a ledger.
 
 ## F-042 — see F-029
 Merged into F-029; both occurrences of "a skill is told to create an item it may not create" are
-filed there.
+filed there. Fixed with it (see F-029's status); the derivation found a third occurrence —
+Definition of Ready R9's split — that neither filing had noticed.
 
 ## F-043 — `--outcome` is unreachable in practice and named in no contract
 - Severity: UX (a working flag went unused, and the workaround is hand-editing `item.md`)
@@ -1137,7 +1194,27 @@ filed there.
   belongs to both. File it when every remaining child is `blocked` or `done` and no question is
   open — restating the goal, what was delivered, what is stuck and why — and let the epic close
   with an outcome recording the answer, or stay open.
-- Status: open
+- Status: fixed (commits 4dfa6e2, 4aacb6c, 0ada0ca, 8ddd968, 0d22fb6, 6c70f84), as the direction
+  says, derived rather than patched. `meta/adr/ADR-0006` enumerates the **four** legal endings —
+  delivered, delivered-partial, impasse, abandoned — and every one of them passes through a
+  blocking human-addressed question stating what was delivered, what was not, and why. F-022's
+  gate stops being a *completion* gate and becomes a **termination** gate.
+  The trigger is **rest**, not closure: every child at a terminal status, no question open
+  anywhere in the engagement, no request open. `scripts/lib/engagement.py` decides it and both
+  consumers read the same function — `scripts/engagement-state`, which `next`'s new orchestrator
+  step 6 reads, and `check-epic-signoff`, which dates the acknowledgment against it. The
+  orchestrator and the gate disagreeing about whether an engagement is over is precisely how this
+  finding happened.
+  Two things had to change for the impasse ending not to be a hole the same size. `pipeline.yaml`
+  transitions declare `applies_to`, so the generic `any-suspendable → blocked` row no longer
+  matches an epic and only `review-close` may end an engagement; and they declare `gated`, so
+  `transition` **refuses** `open → blocked` while the gate fails — without it the ending would
+  have run the acknowledgment gate and ignored its verdict, because `transition` blocks only a
+  skill's `next_status`.
+  Proven by execution in `./scripts/check`: `review-close` moving an epic to `blocked` with no
+  acknowledgment is refused by a hard gate. `fixtures/ended-engagement` EP-003 is the static
+  case — at rest, nobody asked — and EP-001 is the impasse ending done right, with the
+  stakeholder saying no.
 
 ## F-046 — a bug the pipeline filed is never shown to the stakeholder
 - Severity: UX, low (largely the same gap as F-045)
@@ -1147,7 +1224,18 @@ filed there.
   aside — but nobody ever asked me about that one and I have no view on it worth recording."
 - Evidence: evidence/iteration-1d/run/SIM-LOG.md turn 15
 - Direction: the sign-off (F-045) is the moment the whole picture is shown. Fold in.
-- Status: open
+- Status: fixed (commits 4aacb6c, 8ddd968, 6c70f84), folded in as the direction says — and it
+  stopped being a separate fix once DE1 was re-derived. The termination question MUST **name
+  every child item of the epic**, by ID, each marked delivered or not with one line of why, and
+  `check-epic-signoff` checks the naming. "List what was not delivered" cannot be checked and
+  "name every child" can; a bug the pipeline filed and never fixed is a child, so it is in the
+  statement whether or not anyone remembered it.
+  DE1 changed with it: "every child item is `done`" was the entry condition for one ending out of
+  four, and what replaces it is "every child is at a terminal status, and every child that was
+  not delivered is named". An epic that closes over an undelivered child may not record
+  `outcome: delivered` — `validate-workspace` reports `epic.outcome.overclaims`. Must-fail case:
+  `fixtures/ended-engagement` EP-002, whose statement names the delivered child and quietly omits
+  the bug.
 
 ## F-047 — an empty `questions/` directory breaks an item at the moment of closing
 - Severity: correctness (F-002's class, with a much sharper consequence)
@@ -1197,3 +1285,32 @@ The rewritten precondition treats "addressed-to `human` with `## Answer` non-emp
 A **deferral** is non-empty: 1d's stakeholder answered "I'll send you a sample later" three times.
 So the fix is right for the case it addresses and blind to a case the same run produced
 immediately. See **F-028**.
+
+### Addendum to F-013 (2026-08-27, builder 2.5) — re-derived, not reversed
+F-013's fix stands exactly as it was: `terminal` and `suspendable` are different questions, and an
+epic at `open` is both. What changed is that it is now a **consequence** rather than a repair.
+`meta/adr/ADR-0006` derives the status graph from the set of legal endings, and the same
+distinction falls out on the way — an epic *lives* at `open`, which is why `open` is terminal
+(the pipeline does not advance it) and suspendable (a person's question may stop it), and why
+`open` is not an ending even though it is terminal.
+
+That third appearance was useful: my first attempt at the lint rule "an epic's ending must be
+gated" defined an ending as "an epic-scoped move into a terminal status", and it caught `→ open`.
+The test that works is **terminal and not suspendable**. Same confusion, three years of runs
+apart, caught by a rule this time instead of by a run.
+
+F-013's own defect is now a mechanical must-fail case rather than a demonstration somebody
+performed once: `./scripts/check` reintroduces `open: suspendable: false` into a copy of
+`pipeline.yaml` and asserts `pipeline.status.unsuspendable` comes back.
+
+### Addendum to F-022 (2026-08-27, builder 2.5) — the other half
+The 2026-08-22 addendum said F-022 was half a fix: the mechanism worked and the larger claim,
+that a stakeholder gets a say at the end of an engagement, was not yet true. It is now the claim
+F-045's fix makes, and F-022 is unchanged — an epic still cannot *close* without acceptance. What
+was added around it is that closure is one of four endings, and the other three are gated too.
+
+### Addendum to F-011 (2026-08-27, builder 2.5)
+The 2026-08-22 addendum recorded that F-011's precondition was blind to a deferral, because a
+deferral is a non-empty `## Answer`. F-028's fix closes it: the precondition still says
+"addressed-to `human` with `## Answer` filled in", and `answer-questions` step 3a now decides what
+that reply *was*. "Replied" and "answered" are different things and the protocol says so.

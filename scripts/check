@@ -477,7 +477,13 @@ def check_findings_citations(runner: Runner) -> None:
     with open(ledger, "r", encoding="utf-8") as handle:
         text = handle.read()
     import re
-    cited = sorted(set(re.findall(r"commit ([0-9a-f]{7,40})\b", text)) - FOREIGN_SHAS)
+    # `commit <sha>` and `commits <sha>, <sha>, <sha>` — a fix that spans a session's worth of
+    # units cites several, and the plural form went unchecked when this step only knew the
+    # singular. A citation nobody verifies is the whole of F-024.
+    shas = set()
+    for group in re.findall(r"commits? ((?:[0-9a-f]{7,40})(?:\s*,\s*[0-9a-f]{7,40})*)", text):
+        shas.update(part.strip() for part in group.split(","))
+    cited = sorted(shas - FOREIGN_SHAS)
     if not cited:
         runner.skip("findings citations resolve", "the ledger cites no commits")
         return

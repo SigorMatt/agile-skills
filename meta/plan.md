@@ -302,7 +302,7 @@ outranks completeness in a .5 session.
 - [x] **META-108** — F-031 (DoR R8 reads a field, not a filename), F-034 (`plan` and scaffolding
       — resolved by ADR either way), F-038 (the committed-invalid window, stated in
       `spec/skill-contract.md` §2.3).
-- [ ] **META-109** — ledger statuses current with real commit citations; `./scripts/check` green
+- [x] **META-109** — ledger statuses current with real commit citations; `./scripts/check` green
       end to end, rendered output current.
 
 ### The regression gate
