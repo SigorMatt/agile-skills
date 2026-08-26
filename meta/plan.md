@@ -261,3 +261,51 @@ with a must-fail fixture for every enforcement change. Toolkit and harness commi
       `expenses-1d`, 1c's setup plus a stakeholder who refuses every alternative) and run.
 - [x] **META-100** — findings pass over 1d's trail; anything new filed as F-024+/H-008+.
 - [x] **META-101** — FINDINGS.md statuses current; `meta/FINAL-REPORT-2.md`.
+
+---
+
+## Phase II — builder session 2.5 (`meta/BUILDER-2.5-PROMPT.md`)
+
+A compact fix session between builder two and iteration 2: derive the termination model once
+(the F-013 class: F-029, F-045, F-046), close the correctness findings that would corrupt
+iteration 2's evidence (F-028, F-031, F-034, F-038), and prove both on iteration 1e.
+
+Riding along **open on purpose** — F-008, F-030, F-035, F-036, F-043, F-048. Scope discipline
+outranks completeness in a .5 session.
+
+### The derivation
+
+- [ ] **META-102** — `meta/adr/ADR-0006-termination-model.md`: every legal ending of an
+      engagement, every mid-flight event that changes the item set, the termination gate, and
+      the creation-authority table. Derivation only; no code.
+- [ ] **META-103** — spec re-derived from ADR-0006: `ids-and-statuses.md` (epic endings, the
+      transition table, creation authority), `work-item.md` (`arose-from`, the
+      `delivered-partial` outcome), `dor-dod.md` (DE1 and DE7 generalised), `question.md`
+      (sign-off = the termination question; `status: deferred`, F-028).
+- [ ] **META-104** — `pipeline.yaml` 0.4.0: transitions gain `applies_to` and `gated`; the epic
+      ending rows; creation rows carry `provenance`. New `lint-skills` rules; must-fail cases.
+- [ ] **META-105** — enforcement: `scripts/engagement-state` (is the engagement at rest?),
+      `check-epic-signoff` as the **termination** gate (fires on every ending; names every child
+      not delivered — F-045, F-046), `transition` gating for an epic's ending moves,
+      `validate-workspace` for provenance, deferred questions and epic-outcome honesty.
+- [ ] **META-106** — skill contracts re-derived: `review-close` (ends the engagement),
+      `answer-questions` (deferral), `next` (the close-out step), `refine`/`verify` creation
+      authority. Version bumps, re-render.
+- [ ] **META-107** — fixtures both ways: every historical contradiction as a case — F-013's epic
+      suspension, F-029's two occurrences, F-045's impasse, F-046's unshown bug — plus a
+      must-pass `fixtures/ended-engagement/`. Wired into `./scripts/check`.
+
+### The correctness batch
+
+- [ ] **META-108** — F-031 (DoR R8 reads a field, not a filename), F-034 (`plan` and scaffolding
+      — resolved by ADR either way), F-038 (the committed-invalid window, stated in
+      `spec/skill-contract.md` §2.3).
+- [ ] **META-109** — ledger statuses current with real commit citations; `./scripts/check` green
+      end to end, rendered output current.
+
+### The regression gate
+
+- [ ] **META-110** — iteration 1e configured (1d's config and probe unchanged, project
+      `expenses-1e`, max-turns 18) and run.
+- [ ] **META-111** — findings pass over 1e's trail; anything new filed as F-049+/H-###.
+- [ ] **META-112** — `meta/FINAL-REPORT-2.5.md`, with the go/no-go for iteration 2.

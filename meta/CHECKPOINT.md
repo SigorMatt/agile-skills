@@ -1,42 +1,38 @@
 # CHECKPOINT
 
-## Phase I is complete. There is no next unit.
+## Session: builder 2.5 (`meta/BUILDER-2.5-PROMPT.md`). Phase II is running.
 
-Builder session two worked the findings ledger and ran iteration 1d as its regression gate.
-Everything is on `main` and pushed. Read [`meta/FINAL-REPORT-2.md`](FINAL-REPORT-2.md) first.
+Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-Where things stand:
+## Current unit — META-102
 
-- **38 findings fixed**, each citing a commit that `./scripts/check` verifies is in this
-  repository's history. **14 open**, 1 rejected, 1 deferred.
-- `./scripts/check`: **13 steps, all passing** — 195 selftest cases, 63 must-fail fixture codes,
-  30 write-guard cases, 47 harness tests.
-- **Iteration 1d** ran to `blocked-no-recourse` in 16 turns and $71.75 with zero contamination
-  violations. `blocked` executed for the first time in five runs; the trail is banked at
-  `meta/harness/evidence/iteration-1d/` and is read-only.
-- **ROADMAP §2 is not met**: two of three conditions hold, and "a full consumer run with zero
-  version bumps" does not. The Codex adapter and the content packs stay gated. FINAL-REPORT-2 §6
-  is the argument.
+**ADR-0006 — the termination model.** The derivation the mission asks for, written once, before
+any code moves. F-013, F-029, F-045 and F-046 are one design debt: the status graph and the
+authority rules were derived from the happy path.
 
-## What the owner does next
+Steps:
+1. Enumerate every legal **ending** of an engagement, and every legal mid-flight event that
+   changes the item set.
+2. State the **termination gate**: no engagement ends, in any ending, without a blocking
+   human-addressed question saying what was delivered, what was not, and why.
+3. Derive the **creation-authority table** — who may create an item, in which status, with what
+   provenance.
+4. Name each historical contradiction (F-013, F-029 ×2, F-045, F-046) and say what the derived
+   model does with it, so META-107 can turn each into a fixture.
 
-1. Review 1d's trail: `meta/harness/evidence/iteration-1d/README.md`, then `run/SIM-LOG.md`
-   (`[PLANTED:` is coverage, `[ORGANIC]` is signal), then the item trail.
-2. Then iteration 2 (`tidy`), already configured, against the fixed toolkit.
+Done when: `meta/adr/ADR-0006-termination-model.md` exists, `./scripts/check` is still green
+(it does not read ADRs, so this is a no-op guard), committed and pushed, plan ticked, journalled.
 
-## If you are a builder session picking this up
+## Next unit — META-103
 
-The highest-value open findings, in order, are in FINAL-REPORT-2 §6 "Recommended next":
-**F-045** (the sign-off gate does not fire on an impasse) and **F-029** (three skills need to
-create items and only two may) — both are F-013's structural shape again — then **F-028**
-(a deferred answer has no representation, which undermines the F-011 fix).
+The spec files re-derived from ADR-0006.
 
 ## Standing instructions (still in force)
 
 - **The unit cycle ends with `git push`, not `git commit`.** `origin` is
   `git@github.com:SigorMatt/agile-skills.git`; `main` tracks it.
 - **Never record a commit sha by amending the commit being cited** (F-024). Commit the work, then
-  record the sha in a follow-up commit. `scripts/check` step 11 enforces this.
+  record the sha in a follow-up commit. `scripts/check` step 9 enforces this.
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
 - **Do not modify the toolkit while a harness run is in flight.** An uncommitted change under
