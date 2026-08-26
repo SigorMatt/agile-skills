@@ -2661,3 +2661,52 @@ The discovery check *cannot* work in the installing session — skills load at s
 the file-level check comes first and is labelled as the one that works now. §4 gains F-012's trust
 requirement with the stderr line quoted verbatim, so someone who hits it can search for the words
 they actually saw.
+
+---
+
+# Builder session 2.5
+
+## META-102 — ADR-0006: the termination model
+
+The mission asked for the derivation to be done once, properly, rather than a sixth exception. So
+I started from the two enumerations and read the rules off them, and the useful part was how much
+the enumeration decided by itself.
+
+Three things I did not expect to fall out of "list the endings":
+
+**`blocked` means two different things and always has.** For a work item it is a suspension —
+the engagement continues around it. For an epic it *is* the engagement, so there is nothing to
+continue. That single distinction is the whole of F-045: the gate fired on `open → done` because
+closure was assumed to be the only ending, and the run that needed the gate most never reached
+it.
+
+**DE1 is an entry condition for one ending out of four.** "Every child is `done`" describes E1.
+E2, E3 and E4 all end legitimately with a child not done. What generalises is "every child is at
+a terminal status, and the ones that are not delivered are **named**" — which is strictly
+stronger than DE1 and is exactly what F-046 was asking for. F-046 stopped being a separate
+finding at that point; it is a consequence of stating the content rule as "name every child"
+rather than "list what was not delivered". The first is checkable and the second is not.
+
+**An epic never escapes downward, so every terminal move it makes is a completion move.**
+`transition` gates only the move to a skill's `next_status`, for a good reason (do not trap a
+skill that is trying to file a question). That reason is about work in flight; an epic has none.
+Without this clause E3 would have been a hole the size of the finding it exists to fix — the
+sign-off gate would run on `open → blocked` and be ignored.
+
+For F-029 the enumeration route works the same way: list the events that change the item set,
+and the authority table is what is left. The rule that comes out — *a skill may create an item
+exactly when it is the skill that observes the need for it, and only if it records what caused
+the item to exist* — excludes `plan` and `implement` for a reason rather than by omission, and
+that is the difference from the table it replaces. It also turned up an authority nobody had
+filed: DoR **R9** tells `refine` to split an item, and `refine` may not create one either.
+
+Provenance (`arose-from`) is the price. Without it the table is unenforceable — "who may create"
+degrades to "who says they may" — and an item created for no recorded reason cannot be told apart
+from one invented to make a gate pass.
+
+Rest had to become a program (`scripts/engagement-state`), not because the test is hard but
+because it has two consumers. The orchestrator and the termination gate disagreeing about whether
+an engagement is over is *precisely* how F-045 happened.
+
+No code moved in this unit. `./scripts/check`: 13 steps, green — a no-op guard, since nothing
+reads ADRs.

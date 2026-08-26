@@ -275,7 +275,7 @@ outranks completeness in a .5 session.
 
 ### The derivation
 
-- [ ] **META-102** — `meta/adr/ADR-0006-termination-model.md`: every legal ending of an
+- [x] **META-102** — `meta/adr/ADR-0006-termination-model.md`: every legal ending of an
       engagement, every mid-flight event that changes the item set, the termination gate, and
       the creation-authority table. Derivation only; no code.
 - [ ] **META-103** — spec re-derived from ADR-0006: `ids-and-statuses.md` (epic endings, the
