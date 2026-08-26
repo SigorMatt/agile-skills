@@ -4,27 +4,27 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-106
+## Current unit — META-108
 
-**The skill contracts re-derived from ADR-0006.** Prose and contracts; version bumps; re-render.
+**The correctness batch.** Three findings, one unit, because each is small and none of them
+touches the others.
 
-1. `next` — orchestrator step 6: an engagement at rest is dispatched to `review-close`, read
-   from `scripts/engagement-state` rather than judged. 0.2.0 → 0.3.0.
-2. `review-close` — it ends engagements: `dispatch.item_types` gains `epic`; step 10 rewritten
-   around rest and the four endings; it may file a bug at `ready` with provenance (F-029.2).
-   0.3.1 → 0.4.0.
-3. `answer-questions` — the deferral (F-028): decide under it, or record `deferred` and move the
-   item to `blocked`. It may create a work item at `draft` when an answer widens scope
-   (F-029.1). 0.1.4 → 0.2.0.
-4. `refine` — DoR R9's split is a creation, and it now has the authority and the provenance rule.
-5. `verify` — provenance on a filed bug.
+1. **F-031** — DoR R8 is an `[auto]` check that only tests that `refinement-qa.md` exists. It
+   must read a **field**: the artifact declares `status: agenda | recorded`, and R8 is satisfied
+   only by `recorded`. A mechanical gate that checks the wrong thing is worse than a manual one,
+   because it is trusted. Migrating `examples/toy-project`'s artifacts is part of the unit.
+2. **F-034** — `plan` created empty `__init__.py` files so its own gate commands could run at
+   all, and flagged it under `## Risks` because `plan` is specified as producing no code.
+   Resolve the contract conflict explicitly by ADR, whichever way it goes.
+3. **F-038** — a transition can leave the tracker committed-invalid. Documented behaviour,
+   undocumented window: state it in `spec/skill-contract.md` §2.3.
 
 Done when: `./scripts/check` green, rendered output current, committed and pushed, plan ticked,
 journalled.
 
-## Next unit — META-107
+## Next unit — META-109
 
-Fixtures both ways for every historical contradiction, plus a must-pass ended engagement.
+Ledger statuses current with real commit citations, and the gate green end to end.
 
 ## Standing instructions (still in force)
 
