@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Is this engagement still running, or is it over?
+
+Usage: scripts/engagement-state <EP-ID> [--root .]
+       scripts/engagement-state --all [--root .]
+
+Prints one verdict per epic and the reasons behind it:
+
+  active     — a child is still in flight, or a question or request is open
+  at-rest    — every child has stopped, nothing is open: the engagement is over and unrecorded
+  suspended  — the epic is awaiting an answer (often the acknowledgment itself)
+  ended      — the epic is `done` or `blocked`; the ending is recorded
+
+`next` reads this at orchestrator step 6 rather than judging it, and dispatches `review-close`
+on an epic that is `at-rest`. An engagement that can no longer progress must be ended through
+the stakeholder, not left on the board — which is what a real run did, stopping with the
+stakeholder recording that the question never came (F-045, ADR-0006 §4).
+
+Exit codes: 0 the verdict was computed, 2 a usage error. This is a question, not a gate: it
+never fails a build, and a caller reads the verdict rather than the exit status.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import engagement as engagement_lib  # noqa: E402
+from workspace import Workspace, resolve_root  # noqa: E402
+
+
+def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
+    positional, options, flags = [], {}, set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token == "--all":
+            flags.add("all")
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"engagement-state: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+
+    if not positional and "all" not in flags:
+        print("engagement-state: usage: engagement-state <EP-ID> [--root .] | --all",
+              file=sys.stderr)
+        return 2
+
+    root = resolve_root(options.get("root"), tool="engagement-state")
+    workspace = Workspace(root).load()
+
+    if "all" in flags:
+        epics = sorted(workspace.epics(), key=lambda item: item.identifier)
+        if not epics:
+            print("engagement-state: no epics in this workspace")
+            return 0
+    else:
+        epic = workspace.items.get(positional[0])
+        if epic is None:
+            print(f"engagement-state: {positional[0]} is not an item in {root}", file=sys.stderr)
+            return 2
+        if epic.type != "epic":
+            print(f"engagement-state: {positional[0]} is a {epic.type!r}; an engagement is an "
+                  f"epic and its children", file=sys.stderr)
+            return 2
+        epics = [epic]
+
+    for epic in epics:
+        print(engagement_lib.state(workspace, epic).describe())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

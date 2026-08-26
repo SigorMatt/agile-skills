@@ -1,21 +1,40 @@
 #!/usr/bin/env python3
-"""Gate: an epic does not close until the stakeholder has accepted it.
+"""The termination gate: no engagement ends without the stakeholder having been asked.
 
-Usage: scripts/check-epic-signoff <ITEM-ID> [--root .]
+Usage: scripts/check-epic-signoff <ITEM-ID> [--root .] [--resolving <ITEM>:<from>-><to>]
 
 Epic Definition of Done DE7. On anything that is not an epic this passes and says so — the gate
-runs on every `review-close` execution and only epic closure is its business.
+runs on every `review-close` execution and only an engagement's ending is its business.
 
 On an epic it requires a question on the epic with:
 
   * `kind: sign-off`
   * `addressed-to: human`  — nobody else can accept on the stakeholder's behalf
-  * `status: answered` with a non-empty `## Answer`
-  * `created` no earlier than the last child item's move to `done`
+  * a reply: `status: answered`, with a non-empty `## Answer`
+  * `created` no earlier than the moment the engagement reached **rest**
+  * a `## Question` naming **every child item of the epic**, by ID
 
-The last condition is the one that does the work. Without it, a sign-off obtained halfway through
-the epic would satisfy the gate for work the stakeholder had not seen, which is the same failure
-by a slower route. The acceptance has to be of the finished thing.
+The last two are what generalise F-022's fix into a termination gate.
+
+**Rest, not closure.** F-022 gated `open -> done`. An epic with a `blocked` child never reaches
+`done`, so the run that most needed the gate — one that ended at an impasse — never evaluated it,
+and the stakeholder went looking for the question and wrote down that it never came (F-045). The
+trigger is now rest: every child stopped, no question open, no request open. `scripts/lib/
+engagement.py` decides it, and the orchestrator reads the same function, so the two cannot
+disagree about whether an engagement is over.
+
+**Naming every child.** "List what was not delivered" cannot be checked; "name every child" can.
+It is also the fix for the second half of the gap: a bug the pipeline filed and never fixed is a
+child, so it is in the statement whether or not anyone remembered it. A stakeholder found one for
+themselves after a run ended — *"there's also a bug sitting at `planned`… that I was never told
+about"* (F-046).
+
+**Deferral.** An engagement may end at the **impasse** (`open -> blocked`) on a deferred
+acknowledgment — the stakeholder replied "not yet", and parking it is the honest record. It may
+not *close* on one: `open -> done` requires `status: answered`. Both moves are made from `open`,
+so the gate is told the pending move through `--resolving`, which `run-gate` passes it. With no
+`--resolving` the strict rule applies, because a gate that relaxes when nobody told it anything
+is a gate that checked nothing (F-033).
 
 F-022: two consecutive runs closed an epic with no sign-off ever addressed to the human. The
 Definition of Done gates all held — they check the record, and the record only holds what the
@@ -34,6 +53,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
+import engagement as engagement_lib  # noqa: E402
 import frontmatter  # noqa: E402
 from workspace import Workspace, resolve_root  # noqa: E402
 
@@ -55,17 +75,18 @@ def answer_text(body: str) -> str:
     return "\n".join(collected).strip()
 
 
-def last_child_done(workspace, epic_id: str):
-    """The timestamp of the most recent child transition to `done`, or None."""
-    latest = None
-    for identifier, item in workspace.items.items():
-        if item.fields.get("epic") != epic_id:
+def question_text(body: str) -> str:
+    """The text under `## Question`, up to the next level-2 heading."""
+    collecting, collected = False, []
+    for line in body.split("\n"):
+        if line.startswith("## "):
+            if collecting:
+                break
+            collecting = line.strip().lower() == "## question"
             continue
-        for row in item.history:
-            if row.normalised(row.to_status) == "done":
-                if latest is None or row.when > latest:
-                    latest = row.when
-    return latest
+        if collecting:
+            collected.append(line)
+    return "\n".join(collected)
 
 
 def main(argv: list) -> int:
@@ -86,8 +107,8 @@ def main(argv: list) -> int:
         positional.append(token)
         index += 1
     if not positional:
-        print("check-epic-signoff: usage: check-epic-signoff <ITEM-ID> [--root .]",
-              file=sys.stderr)
+        print("check-epic-signoff: usage: check-epic-signoff <ITEM-ID> [--root .] "
+              "[--resolving <ITEM>:<from>-><to>]", file=sys.stderr)
         return 2
     item_id = positional[0]
     root = resolve_root(options.get("root"), tool="check-epic-signoff")
@@ -99,8 +120,20 @@ def main(argv: list) -> int:
         return 2
     if item.fields.get("type") != "epic":
         print(f"check-epic-signoff: {item_id} is a {item.fields.get('type')!r}, not an epic — "
-              f"the stakeholder sign-off gate applies to epic closure only. PASS.")
+              f"the termination gate applies to an engagement's ending only. PASS.")
         return 0
+
+    # Which ending is pending? `run-gate` passes the move on behalf of `transition`. Absent it,
+    # apply the strict rule: a gate that relaxes because nobody told it anything has stopped
+    # being a gate (F-033).
+    pending_to = ""
+    resolving = options.get("resolving") or ""
+    if "->" in resolving:
+        pending_to = resolving.split("->", 1)[1].split("+")[0].strip()
+    deferral_is_enough = pending_to == "blocked"
+
+    engagement = engagement_lib.state(workspace, item)
+    expected_children = [child.identifier for child in engagement.children]
 
     directory = os.path.join(item.root, "questions")
     sign_offs = []
@@ -117,14 +150,16 @@ def main(argv: list) -> int:
         print(f"check-epic-signoff: FAIL — {item_id} has no sign-off question.\n"
               f"  Epic Definition of Done DE7: before an epic closes, file a question on it with\n"
               f"  kind: sign-off, addressed-to: human, blocking: true — restating the goal, "
-              f"listing\n"
-              f"  what was delivered and what was deferred, and asking plainly whether the "
-              f"stakeholder\n"
-              f"  accepts it. Then suspend the epic to awaiting-answer and stop.",
+              f"naming\n"
+              f"  EVERY child item as delivered or not with one line of why, and asking plainly "
+              f"whether\n"
+              f"  the stakeholder accepts the engagement as it stands. Then suspend the epic to\n"
+              f"  awaiting-answer and stop. Children: "
+              f"{', '.join(expected_children) or 'none'}",
               file=sys.stderr)
         return 1
 
-    boundary = last_child_done(workspace, item_id)
+    boundary = engagement.rest_since
     problems = []
     accepted = None
     for path, fields, body in sign_offs:
@@ -133,17 +168,31 @@ def main(argv: list) -> int:
             problems.append(f"{relative} is addressed to {fields.get('addressed-to')!r}; "
                             f"only the stakeholder can accept the epic")
             continue
-        if fields.get("status") != "answered":
-            problems.append(f"{relative} is still {fields.get('status')!r} — the epic waits on "
-                            f"the stakeholder, which is the point of the gate")
+        status = fields.get("status")
+        if status not in ("answered", "deferred"):
+            problems.append(f"{relative} is still {status!r} — the engagement waits on the "
+                            f"stakeholder, which is the point of the gate")
+            continue
+        if status == "deferred" and not deferral_is_enough:
+            problems.append(f"{relative} is deferred — the stakeholder replied 'not yet'. An "
+                            f"engagement may be parked at the impasse on a deferral "
+                            f"(open → blocked); it may not close on one")
             continue
         if not answer_text(body):
-            problems.append(f"{relative} says answered but its '## Answer' is empty")
+            problems.append(f"{relative} says {status} but its '## Answer' is empty")
             continue
         if boundary and str(fields.get("created") or "") < boundary:
-            problems.append(f"{relative} was filed at {fields.get('created')}, before the last "
-                            f"child item closed at {boundary}; the stakeholder accepted "
-                            f"something other than the finished epic")
+            problems.append(f"{relative} was filed at {fields.get('created')}, before the "
+                            f"engagement reached rest at {boundary}; the stakeholder was asked "
+                            f"about something other than what they are being asked to accept")
+            continue
+        asked = question_text(body)
+        unnamed = [child for child in expected_children if child not in asked]
+        if unnamed:
+            problems.append(f"{relative} does not name {', '.join(unnamed)} in its "
+                            f"'## Question'; the statement must name every child item as "
+                            f"delivered or not, so that what was not delivered is in front of "
+                            f"the stakeholder rather than implied by its absence (F-046)")
             continue
         accepted = relative
 
@@ -153,8 +202,10 @@ def main(argv: list) -> int:
             print(f"  - {problem}", file=sys.stderr)
         return 1
 
-    print(f"check-epic-signoff: PASS — {accepted} carries the stakeholder's answer"
-          + (f", filed after the last child closed at {boundary}" if boundary else ""))
+    print(f"check-epic-signoff: PASS — {accepted} carries the stakeholder's reply, names all "
+          f"{len(expected_children)} child item(s)"
+          + (f", and was filed after the engagement reached rest at {boundary}"
+             if boundary else ""))
     return 0
 
 

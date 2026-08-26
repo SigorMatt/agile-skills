@@ -8,3 +8,10 @@ are ones the tools produced: the child WI-0001 reached `done`, and only then was
 filed, answered "accept with the import as a follow-up", and recorded. Move the sign-off's
 `created` earlier than the child's close and the gate refuses it — that case is exercised in
 `meta/journal.md` under META-088.
+
+**Edited once, on purpose (2026-08-27, META-105b).** The termination gate now requires the
+statement to **name every child item by ID**, so that a child nobody remembered is in front of
+the stakeholder rather than implied by its absence (F-046). The captured `## Question` described
+what was delivered in prose and named nothing, so it would have failed the rule it is supposed to
+demonstrate. The `## Question` section — and only that section — was rewritten to name `WI-0001`.
+Everything else here is still what the tools produced.

@@ -127,8 +127,14 @@ def run_one(gate: dict, resolver: Resolver, root: str, resolving=None) -> tuple:
         if os.path.isfile(candidate):
             extra = ["--root", root]
             # A gate run on behalf of a transition that has not happened yet must judge the
-            # workspace the move produces, not the one it is leaving (F-014).
-            if resolving and os.path.basename(parts[0]) == "validate-workspace":
+            # workspace the move produces, not the one it is leaving (F-014). The termination
+            # gate needs the same fact for a different reason: an engagement may end at `blocked`
+            # on a deferred acknowledgment and may not *close* on one, and both moves are made
+            # from `open` (ADR-0006 §2). Passing the pending move rather than a placeholder keeps
+            # the gate strict when nobody passed one — a placeholder that resolved to nothing
+            # would SKIP, and a skipped gate is a gate that checked nothing (F-033).
+            if resolving and os.path.basename(parts[0]) in ("validate-workspace",
+                                                            "check-epic-signoff"):
                 extra += ["--resolving", resolving]
             command = shlex.join([sys.executable, candidate] + parts[1:] + extra)
 

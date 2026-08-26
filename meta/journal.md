@@ -2814,3 +2814,38 @@ answer, which is the half of F-028 that a status alone would not have fixed.
 Fixture: a new `WI-0003` carrying three of the new faults at once, plus `arose-from: WI-0404` on
 `BUG-0001` for the unresolved case. Four new codes, one retired, one split — 68 codes in
 `EXPECTED-CODES.txt`, and no code emitted that the file does not list.
+
+## META-105b — rest as a program, and the gate that reads it
+
+`scripts/lib/engagement.py` is the whole of ADR-0006 §4 in one function, and it has two callers
+on purpose. `scripts/engagement-state` is the orchestrator's copy — it prints `active`,
+`at-rest`, `suspended` or `ended` with the reasons — and `check-epic-signoff` imports the same
+function to date the acknowledgment. The alternative was the rest test written twice, in `next`'s
+prose and in the gate's code, which is the arrangement that produced F-045: the gate's idea of
+"the epic is finished" and the orchestrator's idea of "there is nothing left to do" were different
+sentences, and the run fell into the gap between them.
+
+Two details in `rest_boundary` worth recording because they are easy to get wrong:
+
+- it reads **children only**. The acknowledgment is itself a question on the epic, answered after
+  rest; including the epic's own questions would push the boundary past the question the boundary
+  exists to date, and the gate would reject every sign-off it had just asked for.
+- it reads each child's **last history row**, not its move to `done`. The old boundary was "the
+  last child closed", which does not exist in three of the four endings.
+
+`check-epic-signoff` is now the termination gate. It accepts `answered` or `deferred`, and it
+learns which ending is pending from `--resolving`, which `run-gate` now forwards to it as well as
+to `validate-workspace`. That plumbing is deliberate: I first reached for a `{{transition.to}}`
+placeholder, and a placeholder that resolves to nothing makes `run-gate` **SKIP** the gate and
+print "this gate checked nothing" — F-033's exact failure, in the gate that most needs not to have
+it. Passing the move as an argument fails closed instead: with no `--resolving`, the strict rule
+applies and a deferral is refused.
+
+The new content rule — the statement must name every child by ID — immediately failed
+`fixtures/signed-off-epic`, which is captured output from a real run and describes what was
+delivered in prose without naming anything. That is the rule working: the fixture exists to prove
+the rule *can* be satisfied, and it could not. I rewrote its `## Question` and only its
+`## Question`, and said so in the fixture's README, because a captured fixture quietly edited is
+worse than no fixture.
+
+`engagement-state` and `engagement.py` ship with the adapter. `./scripts/check`: green.

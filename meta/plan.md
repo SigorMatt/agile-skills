@@ -287,7 +287,7 @@ outranks completeness in a .5 session.
 - [x] **META-105a** — enforcement, the workspace at rest: `validate-workspace` for
       `applies_to`, `arose-from` provenance (F-029), deferred questions (F-028) and
       epic-outcome honesty; `transition` refuses a `gated` move.
-- [ ] **META-105b** — enforcement, the ending: `scripts/engagement-state` (is the engagement at
+- [x] **META-105b** — enforcement, the ending: `scripts/engagement-state` (is the engagement at
       rest?) and `check-epic-signoff` as the **termination** gate — it fires on every ending and
       requires the acknowledgment to name every child (F-045, F-046).
 - [ ] **META-106** — skill contracts re-derived: `review-close` (ends the engagement),
