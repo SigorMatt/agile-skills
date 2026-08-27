@@ -1,36 +1,31 @@
 # CHECKPOINT
 
-## Current unit: META-113 — F-050, part 1: `applies_to` completeness becomes a gate
+## Current unit: META-114 — F-050, part 2: what a deferral does to an epic
 
-Phase III is builder micro-session 2.6 (`meta/BUILDER-2.6-PROMPT.md`): the three findings
-FINAL-REPORT-2.5 §9 named as conditions on the iteration-2 go, and nothing else. Scope is
-closed — anything new is filed and left open.
+META-113 built the mechanism: `rule_obligations` in `pipeline.yaml`, read by
+`validate-workspace` and checked against the transition table by `lint-skills`, with two
+injected faults and a step that refuses a pipeline which dropped an obligation. That closed the
+class and scoped `question.deferred.not-blocked` to the item types the deferral row permits.
 
-**Intent of this unit.** F-050 is F-013's shape in this repo's own work: a validator rule that
-names a status was written for every item type while the transition that satisfies it was scoped
-to two of them, so an epic-level deferral produced a workspace no legal move could repair. The
-instance is one line; the class is what the mission asks for. So this unit builds the mechanism
-first:
+**Intent of this unit.** The instance. The validator now says nothing about an epic-level
+deferral, and saying nothing is not an answer — `answer-questions` still has to know what to do
+when the stakeholder replies "not yet" to a question on an epic. 1e's evidence names it: a
+deferred acknowledgment is the E3 impasse, and only `review-close` ends an engagement. So:
 
-- `methodology/pipeline.yaml` gains a `rule_obligations:` block. Each entry names a validator
-  rule that requires an item to be at one of a fixed set of statuses, the item types it applies
-  to, and the transition that must be legal for those types if the rule is to be satisfiable.
-- `scripts/validate-workspace` **reads** the obligation's `applies_to` rather than deciding for
-  itself which item types a status rule constrains, and reports `pipeline.obligation.missing`
-  when an obligation it depends on is absent.
-- `scripts/lint-skills` checks each obligation against the transition table in both directions:
-  a transition the obligation names and no row provides (`obligation.unsatisfiable`), and a
-  scope the rule claims and the transitions do not permit (`obligation.applies_to.mismatch`) —
-  which is F-050 exactly, and, in the other direction, F-013.
-- Two injected faults in `scripts/check`'s pipeline-invariant step, one per code.
-
-META-114 then fixes the instance: the epic branch of the deferral, in the spec and in
-`answer-questions`, with the by-execution must-fail case.
+- `spec/question.md` §2: on an epic, a deferred blocking question returns the epic to `open`;
+  the engagement is ended through the stakeholder by `review-close` once it comes to rest. It is
+  not parked at `blocked` by the answerer, because `blocked` on an epic *is* the ending.
+- `methodology/skills/answer-questions/process.md` step 3a gains that branch; `skill.yaml`'s
+  `a-deferral-is-not-an-answer` gate and exit criteria follow. Version 0.2.0 → 0.3.0 (MINOR: a
+  new step).
+- Two cases in `scripts/check`'s by-execution step: the move 1e's architect would have made on
+  the other branch is **refused** (`transition EP-001 --to blocked --actor answer-questions`),
+  and an epic carrying a deferred blocking question at `open` **validates clean**.
 
 ## The units of this session
 
-- **META-113** — F-050 part 1: the obligation registry and its gate (this unit).
-- **META-114** — F-050 part 2: the instance — spec, `answer-questions`, by-execution fixtures.
+- [x] **META-113** — F-050 part 1: the obligation registry and its gate.
+- **META-114** — F-050 part 2: the instance (this unit).
 - **META-115** — F-049: the `**Status:**` bullet, all occurrences, plus the class check if cheap.
 - **META-116** — F-055: name `git worktree add --detach` in `review-close`, with the must-fail case.
 - **META-117** — findings statuses with citations that resolve, `./scripts/check` green,
@@ -47,9 +42,6 @@ Then **stop**. Do not run iteration 2 — the owner launches it.
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
 - Every change traces to an F-### or H-###. Behavioural skill change ⇒ version bump. Spec change
-  ⇒ a `## Revisions` row. Re-render after any of it.
+  ⇒ a `## Revisions` row **appended in order**. Re-render after any of it.
 - Every enforcement fix ships a must-fail fixture, and — where a rule could be satisfied
   vacuously — a fixture proving it can be passed.
-- **From F-050:** when you add a rule, enumerate the item types it applies to, and check it
-  against the transitions that are legal for each. This session's job is to stop that being a
-  thing a person has to remember.
