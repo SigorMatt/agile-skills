@@ -3026,3 +3026,41 @@ has only fixture coverage.
 The sentence I would keep if I could keep one is the stakeholder's, from the closing turn:
 *"The epic sits at `blocked`, not `done`, which is the correct place for it to sit given my
 answer."* In 1d the same persona wrote that the question never came.
+
+## META-111 — the findings pass over 1e
+
+**Twelve new findings (F-049…F-060), one addendum, one coverage note.** Every one was found by
+the worker or the stakeholder during the run; I found none of them by reading code afterwards,
+which is the harness doing its job for the second session running.
+
+The three that matter most, in order:
+
+**F-050 is a defect in this session's own work, and it is F-013's shape.** An epic-level question
+cannot legally be `deferred`: `question.deferred.not-blocked` applies to every item type, but
+`awaiting-answer → blocked` is scoped to work items and bugs, and an epic reaches `blocked` only
+as the E3 ending through `review-close`. So a deferred epic question makes a workspace no legal
+move can repair. I introduced both halves in the same session — `applies_to` at META-104 and the
+deferral rule at META-105a — and never checked them against each other **on an epic**. That is
+precisely the failure ADR-0006 was written to stop: a rule derived for one item type, applied to
+all of them. It went unsuffered only because the architect took step 3a's *first* move.
+
+The uncomfortable lesson is not that I made an error; it is that the derivation gave me a way to
+check for exactly this and I did not run it over my own additions. "Enumerate the item types a
+rule applies to" is a thing I now know to do and did not do twice in the same afternoon.
+
+**F-055 is the only finding that caused real damage.** `review-close` step 8 says to trial-merge
+into "a throwaway copy of the trunk" and never says how; `git worktree add <path> main` checks
+out the real branch, so the trial merge fast-forwarded the real `main`. What saved it was
+`check-commit-refs` catching it immediately with a message that named the fix, and the worker
+rewinding and writing the rule into the item's record. A procedure that names an outcome and
+leaves the mechanism to the reader will be implemented differently every time.
+
+**F-049 was hit six times across five turns and four skills.** Every `## Journaling` section says
+the transition "writes" the `**Status:**` bullet; the script *requires* it and then rewrites it.
+Prose against contract, costing a failed transition every time somebody believed the prose. With
+F-059 that is two prose-versus-contract findings in one run, which makes it a class worth a lint
+rule rather than two edits.
+
+Also worth recording, because a green result would otherwise imply the opposite: **`status:
+deferred` was never exercised.** The fork fired, the status did not — and F-050 is what the other
+branch would have hit.

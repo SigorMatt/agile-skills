@@ -1354,3 +1354,241 @@ The 2026-08-22 addendum recorded that F-011's precondition was blind to a deferr
 deferral is a non-empty `## Answer`. F-028's fix closes it: the precondition still says
 "addressed-to `human` with `## Answer` filled in", and `answer-questions` step 3a now decides what
 that reply *was*. "Replied" and "answered" are different things and the protocol says so.
+
+---
+
+# Iteration 1e — the findings pass (2026-08-27, builder 2.5)
+
+Trail: `meta/harness/evidence/iteration-1e/`. Every finding below was found by the worker or the stakeholder during the run;
+none was found by reading code afterwards. **H-008** was filed during the run and is above.
+Reproductions of already-open findings are recorded as addenda, not re-filed.
+
+## F-049 — the SKILL.md files say the tool writes the `**Status:**` bullet; the tool refuses a body without one
+- Severity: UX, high frequency — the most-hit friction of the run
+- Component: methodology (plan, implement, verify, review-close, refine, answer-questions), scripts/transition
+- Symptom: every `## Journaling` section says *"the transition … writes the `**Status:**` bullet
+  itself from the move it actually made"*, which reads as *you need not write one*.
+  `scripts/transition --journal-body-file` **requires** the bullet to be present and then
+  rewrites it, exiting 1 with `the journal body is not a legal entry — missing the '**Status:**'
+  bullet`. The worker, turn 2: *"The caller therefore has to write a Status bullet that the tool
+  then overwrites, which is exactly the duplication F-019 was meant to remove."*
+- Frequency: **six occurrences across five turns** (2, 11, 12, 13, 15, 16) and four different
+  skills, each costing a failed transition and a re-run. Turn 13: *"Turn 12 reported it against
+  `implement`; the wording is identical in `verify` and `review-close`, so the one-word fix
+  belongs in all three."*
+- The same class, smaller: `**Commands:**` and `**Artifacts:**` are also structurally mandatory
+  and unmentioned in the prose. Turn 14: the opening `implement` entry *"was refused for a
+  missing `**Artifacts:**` bullet, which is awkward precisely because that entry has no artifacts
+  yet."*
+- Evidence: meta/harness/evidence/iteration-1e/run/002-, 011-, 012-, 013-, 015-, 016-worker.status.md
+- Direction: the prose is wrong and the script is right — `journal-entry --template` already
+  prints the bullet. Say **"rewrites"** rather than "writes" in every `## Journaling` section,
+  name the structurally mandatory bullets, and have the error message say the bullet's content is
+  ignored so the reader knows the template is the answer.
+- Status: open
+
+## F-050 — an epic-level question cannot legally be `deferred`, and this session built that
+- Severity: correctness, structural — **a defect in this session's own work**, and F-013's shape again
+- Component: scripts/validate-workspace, methodology/pipeline.yaml (both changed at META-104/105a)
+- Symptom: found by the worker on turn 4, reading the new rules against each other:
+  `validate-workspace` applies `question.deferred.not-blocked` to **every item type**, requiring
+  the item carrying a deferred blocking question to be at `blocked`; but `pipeline.yaml` scopes
+  `awaiting-answer → blocked` for `answer-questions` to `work-item` and `bug`, and an epic may
+  reach `blocked` only as the **E3 impasse ending through `review-close`**. So marking an
+  epic-level question `deferred` produces a workspace that no legal move can repair.
+- Consequence: the stakeholder's deferral in 1e arrived on an **epic-level** question
+  (`EP-001/Q-001`). Had the architect taken step 3a's second move rather than its first, the run
+  would have hit this. It took the first move — deciding under the deferral — so the defect was
+  reported rather than suffered.
+- Why it happened: `applies_to` was added to the transition table (ADR-0006 §2, so that only
+  `review-close` ends an engagement) in the same session as the deferral status, and the two
+  rules were never checked against each other on an epic. Exactly the failure ADR-0006 was
+  written to stop: a rule derived for one item type applied to all of them.
+- Evidence: meta/harness/evidence/iteration-1e/run/004-worker.status.md
+- Direction: decide which gives. Either an epic-level deferral is legal and needs its own
+  transition (`awaiting-answer → blocked` by `answer-questions`, `applies_to: [epic]` — and then
+  it is an *ending* and must be gated) — or it is not, and `question.deferred.not-blocked` must
+  exempt epics while `answer-questions` is told what to do with an epic-level deferral instead.
+  The second is probably right: a deferred sign-off is E3, and E3 belongs to `review-close`.
+- Status: open
+
+## F-051 — `new-item` writes the creation row and no journal entry, so a new item fails validation immediately
+- Severity: correctness, minor but hit on every item created
+- Component: scripts/new-item
+- Symptom: the worker, turn 6: *"`scripts/new-item` writes a history creation row but no journal
+  entry, so the workspace fails `journal.execution.missing` the moment an item is created and
+  stays failing until the caller writes the entry by hand with `journal-entry --status`."*
+  Every other status change has one command that writes both.
+- Consequence: it is the committed-invalid window (F-038) opened by the tool that creates items,
+  on every item, rather than by an unusual path.
+- Evidence: meta/harness/evidence/iteration-1e/run/006-worker.status.md
+- Direction: `new-item` takes `--journal-body-file` as `transition` does, or writes the creation
+  entry itself. The rule that already exists — the row and the entry are written by one command —
+  should hold at creation too.
+- Status: open
+
+## F-052 — `lint-claims --changed-since` reports a scope it did not have
+- Severity: correctness — F-033's class, in the same script
+- Component: scripts/lint-claims
+- Symptom: reported on **three turns**. Turn 7: *"`lint-claims --changed-since main` reported
+  'checked no documents changed since main' while on a branch that had added `README.md` and
+  several tracker artifacts relative to `main`. Rule 1 did fire on `README.md` while the file was
+  uncommitted, so the gate is not inert — but the summary line claims a scope it did not have,
+  and a reader would take the exit-0 as broader coverage than it was."*
+- The consequence, seen in the same run: every contracted `claims-are-sourced` gate is
+  trunk-scoped, and *"three skills passed over BUG-0001's defect before `verify` found it with
+  the whole-tree run"* (turn 15). The scoping is deliberate; the reporting is what misleads.
+- Evidence: meta/harness/evidence/iteration-1e/run/007-, 008-, 015-worker.status.md
+- Direction: the scope line must describe what was examined — how many documents, selected how.
+  F-033 fixed this for the file-argument path; the `--changed-since` path says the same kind of
+  untrue thing.
+- Status: open
+
+## F-053 — `outcome` and `status: done` cannot both be written, in either order
+- Severity: correctness — the F-014 mechanism does not model a dependent field
+- Component: scripts/transition, scripts/validate-workspace, spec/work-item.md
+- Symptom: the worker, turn 9: *"`spec/work-item.md` requires `outcome` if and only if
+  `status: done`, but `transition`'s `--resolving` models only the status change. Setting
+  `outcome: delivered` before the transition failed the pre-flight `workspace-valid` hard gate
+  with `item.outcome.premature`; removing it let the transition through, which then reported
+  'the transition was applied, but the workspace no longer validates'."* Hit again at turn 16 —
+  *"the outcome-before-transition trap in review-close step 9 (cost a failed transition)"*.
+- Consequence: `review-close` must take a non-zero exit on a transition that actually succeeded,
+  on every item it closes. That is the committed-invalid window (F-038) as the **normal** path.
+- Evidence: meta/harness/evidence/iteration-1e/run/009-, 016-worker.status.md
+- Direction: `transition` grows `--outcome` and writes it with the move, the way it already
+  writes `--branch`; or `--resolving` teaches the validator that `item.outcome.premature` is
+  resolved by the pending move to `done`. The first is simpler and matches an existing pattern.
+- Status: open
+
+## F-054 — `lint-claims` rejects a citation whose path is wrapped in backticks, with a misleading message
+- Severity: UX
+- Component: scripts/lib/claims.py, scripts/lint-claims
+- Symptom: the worker, turn 11: *"`lint-claims` does not accept a citation whose path is wrapped
+  in backticks … fails as `claim.citation.unresolved` with the same message an unresolvable path
+  gets, which sends you looking for a missing file rather than a stray character."*
+- Evidence: meta/harness/evidence/iteration-1e/run/011-worker.status.md
+- Direction: strip surrounding backticks from a citation part before resolving it — writing a
+  path in backticks is what all of this repository's prose does — or, if it must be rejected, say
+  *why* rather than reporting it as unresolvable.
+- Status: open
+
+## F-055 — `review-close`'s "throwaway copy of the trunk" advanced the real trunk
+- Severity: **correctness, severe** — the only finding in the run that caused real damage
+- Component: methodology/review-close
+- Symptom: step 8 says to trial-merge into *"a throwaway copy of the trunk"* and does not say how.
+  The worker used `git worktree add /tmp/trial4 main`, which **checks out the real `main` branch**
+  in a second directory rather than copying it, so the trial merge fast-forwarded the real ref —
+  and removing the worktree did not move it back. Turn 12: *"the review's trial merge accidentally
+  advanced the real `main`."*
+- What saved it: `check-commit-refs` caught it immediately and its message named the fix; the
+  worker rewound with no loss and wrote the rule into `review.md` and the item's journal. Turn 13
+  used `git worktree add --detach` and checked `git rev-parse main` after the merge. So the
+  enforcement held and the record is complete — but the methodology told a skill to do something
+  dangerous without saying how to do it safely.
+- Evidence: meta/harness/evidence/iteration-1e/run/012-, 013-, 016-worker.status.md
+- Direction: name the command — `git worktree add --detach <path> <trunk>` — with one line on why
+  `--detach` matters, and a self-check that the trunk ref is unchanged after the trial. A
+  procedure that says "a throwaway copy" and leaves the mechanism to the reader will be
+  implemented differently every time.
+- Status: open
+
+## F-056 — `validate-workspace` does not notice a duplicated section heading
+- Severity: correctness, low — but it is a silent one
+- Component: scripts/validate-workspace
+- Symptom: the worker, turn 11: an `item.md` edit spliced against a section anchor earlier in the
+  file than the section being replaced *"silently duplicated three `## Notes` subsections.
+  `validate-workspace` passed on the duplicated file — duplicate headings are not something it
+  checks. Caught by re-reading the whole item, which is the only reason it did not ship."*
+- Evidence: meta/harness/evidence/iteration-1e/run/011-worker.status.md
+- Direction: a required section appearing twice is an error. Cheap to check, and the failure it
+  prevents is a document that reads correctly in one place and wrongly in another.
+- Status: open
+
+## F-057 — a defect whose fix is a document has no skill allowed to fix it
+- Severity: methodology gap, structural (F-013's shape, in `docs/` rather than in the tracker)
+- Component: spec/doc-header.md §5, spec/dor-dod.md D7
+- Symptom: BUG-0001's acceptance criteria are criteria *about `docs/product/vision.md`*.
+  `spec/doc-header.md` §5 says `implement` and `verify` do not write to `docs/` and names
+  `refine` and `answer-questions` as that file's updaters — so, read flatly, **no skill the
+  pipeline dispatches on `planned` or `in-progress` may fix it.** Meanwhile D7 makes the
+  delivering item responsible for leaving `docs/` true, and `implement` had already written two
+  accepted versions of `docs/architecture/overview.md` in this project.
+- The worker resolved it for the project with an ADR and said so loudly rather than quietly, and
+  flagged it: *"This is a real gap in the methodology, not a project quirk: it deserves either an
+  exception in §5 for items whose criteria are about a document, or a dispatchable owner for such
+  items."*
+- Evidence: meta/harness/evidence/iteration-1e/run/015-worker.status.md
+- Direction: as the worker says. Note the shape — an instruction the state machine cannot carry
+  out — is the F-013 class again, which suggests `docs/` authority deserves the same enumeration
+  treatment ADR-0006 gave item creation.
+- Status: open
+
+## F-058 — `check-verify-freshness` treats `docs/` as record, even when a document is the deliverable
+- Severity: correctness, low
+- Component: scripts/check-verify-freshness
+- Symptom: reported at turn 16 alongside F-057, and it is the same case from the gate's side: on
+  an item whose delivered change *is* a document, the freshness comparison excludes the thing
+  that was delivered.
+- Evidence: meta/harness/evidence/iteration-1e/run/016-worker.status.md
+- Direction: decide with F-057. If a document can be a deliverable, the gate that asks "did
+  verification postdate the change" has to count it.
+- Status: open
+
+## F-059 — `verify`'s procedure and its contract disagree about its gate list
+- Severity: correctness of the contract, low
+- Component: methodology/verify, scripts/lint-skills
+- Symptom: reported at turn 16 as *"a gate-list mismatch between `verify`'s SKILL.md and its
+  contract"*. `lint-skills` checks the contract against the schema and the pipeline; it does not
+  check that the procedure's prose list of gates matches `quality_gates`.
+- Evidence: meta/harness/evidence/iteration-1e/run/016-worker.status.md
+- Direction: confirm the instance, then fix the class rather than the instance — this is the
+  second prose-versus-contract finding in one run (with F-049). Have `lint-skills` check that
+  every gate named in `process.md` exists in `skill.yaml` and the reverse.
+- Status: open
+
+## F-060 — the pipeline cannot tell a stakeholder it is waiting on something they owe
+- Severity: methodology gap
+- Component: methodology (next), spec/request.md, spec/question.md
+- Symptom: the last two turns had nothing to do and no way to say why to the person who could fix
+  it. The worker, turn 20: *"there is currently no mechanism by which the pipeline can say 'we are
+  still waiting on you for the file you promised' other than this status file. … `tracker/requests/`
+  is the stakeholder's inbound channel and only they can open one, and a question can only be
+  filed by a skill that owns a runnable item."*
+- Consequence: an item parked on an artifact the stakeholder owes becomes invisible to them once
+  the sign-off is answered. In 1e they *were* told at sign-off — that is the fix working — and
+  what is missing is any way to say it again without a new engagement.
+- Evidence: meta/harness/evidence/iteration-1e/run/020-worker.status.md
+- Direction: a *pending-input* channel, distinct from a question: an item parked on an external
+  artifact carries what is owed and by whom, and the board and `next`'s report surface it every
+  run. Relates to F-008 (asynchronous human interaction as a first-class mode).
+- Status: open
+
+### Addendum to F-035 (2026-08-27, iteration 1e) — reproduced three times, with the exact message
+F-035 (`check-commit-refs` reports a merge that never happened) fired on **every** item's
+`planned → in-progress` move, where the branch has no commits of its own yet. Turn 15 has it
+verbatim: *"`wi/BUG-0001` is already merged into `main`, so `main..wi/BUG-0001` is empty"* with
+advice to rewind a merge that never happened. Turn 8: *"reproduced exactly, which is worth more
+than a fresh report: they are not flukes."*
+
+The worker's own framing is the fix: *"An empty range on a freshly branched item is a different
+condition from an already-merged one, and the script can tell them apart."* Non-blocking on that
+move, so nothing was harmed — but turn 14: *"a reader of the transcript would reasonably think
+something had gone wrong."*
+
+### Coverage note (2026-08-27, iteration 1e)
+- **P1 `dor-override-rounding` did not fire.** No question about uneven-split remainders was ever
+  put to the stakeholder, so the Definition of Ready override path was not exercised this run. It
+  fired in 1d, so this is a gap in 1e's coverage, not in the toolkit's.
+- **P2 `blocked-bank-csv` fired once**, at turn 3, and never again — because the team parked the
+  item and never offered a workaround to refuse. The stakeholder recorded that as correct
+  behaviour rather than a missed probe.
+- **P3 `send-back-natural` fired organically.** `review-close` rejected WI-0004 back to
+  `in-progress` at turn 12 over D7 and D12 — a stale `docs/architecture/overview.md`, not a code
+  defect. The send-back path executed on its own, as the probe hoped and did not force.
+- **P4 `sign-off-honestly` fired and was answered.** The run's headline result; see
+  `meta/harness/evidence/iteration-1e/README.md`.
+- **`status: deferred` was not exercised.** The stakeholder deferred (turn 3) and
+  `answer-questions` took step 3a's *first* move — deciding under the deferral — so the status
+  itself, and `question.deferred.not-blocked` with it, still has only fixture coverage. **F-050 is
+  what the second move would have hit.**
