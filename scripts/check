@@ -19,17 +19,21 @@ Steps, in order:
                                                engagement-state's own two
   9. pipeline invariants                     — lint-skills must report the expected finding code
                                                for each defect reintroduced into pipeline.yaml
- 10. the derived model, by execution         — creation authority refused and permitted through
+ 10. a dropped rule obligation is refused    — validate-workspace against a pipeline.yaml whose
+                                               rule_obligations no longer scope a status rule;
+                                               the registry has to be load-bearing to be worth
+                                               having (F-050)
+ 11. the derived model, by execution         — creation authority refused and permitted through
                                                new-item, and an engagement refused an ending
                                                while nobody had asked the stakeholder
- 11. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+ 12. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
- 12. findings citations resolve             — every `commit <sha>` cited in
+ 13. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 13. export profiles                        — scripts/export leaves the workspace behind, and
+ 14. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 14. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 15. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -258,6 +262,18 @@ PIPELINE_FAULTS = [
      ("    to: draft\n    actor: refine\n    applies_to: [work-item]\n",
       "    to: draft\n    actor: refine\n    applies_to: [work-itme]\n"),
      "transition.applies_to.unknown"),
+    # F-050, in both directions. The registry exists so that "which item types does this rule
+    # apply to" is a question a program answers; these two faults are the question being asked.
+    ("a status rule scoped wider than the moves that satisfy it (F-050)",
+     ("  - code: question.deferred.not-blocked\n    applies_to: [work-item, bug]\n",
+      "  - code: question.deferred.not-blocked\n    applies_to: [work-item, bug, epic]\n"),
+     "obligation.applies_to.mismatch"),
+    ("a status rule whose transition no row provides (F-050)",
+     ("  - from: awaiting-answer\n    to: blocked\n    actor: answer-questions\n"
+      "    applies_to: [work-item, bug]\n",
+      "  - from: awaiting-answer\n    to: blocked\n    actor: refine\n"
+      "    applies_to: [work-item, bug]\n"),
+     "obligation.unsatisfiable"),
     ("an epic that cannot be suspended (F-013)",
      ("  - name: open\n    applies_to: [epic]\n    owner: null\n    terminal: true\n"
       "    suspendable: true\n",
@@ -312,6 +328,50 @@ def check_pipeline_faults(runner: Runner) -> None:
     runner.emit(f"pipeline invariants refuse each injected fault "
                 f"({len(PIPELINE_FAULTS)} faults)", True)
 
+
+def check_obligation_binding(runner: Runner) -> None:
+    """The validator's status rules are bound to the registry, not merely described by it.
+
+    `rule_obligations` is only worth having if dropping an entry breaks something. So: rename the
+    obligation `question.deferred.not-blocked` depends on, point the validator at that pipeline,
+    and require it to refuse. Without this the registry could rot into a comment while the rule
+    it is supposed to scope carried on deciding its own scope — which is the state F-050 was
+    filed against.
+    """
+    import tempfile
+    validator = os.path.join(SCRIPTS, "validate-workspace")
+    source = os.path.join(ROOT, "methodology", "pipeline.yaml")
+    workspace = os.path.join(ROOT, "examples", "toy-project")
+    if not all(os.path.exists(path) for path in (validator, source, workspace)):
+        runner.skip("a dropped rule obligation is refused",
+                    "the validator, pipeline.yaml or examples/toy-project is absent")
+        return
+    with open(source, "r", encoding="utf-8") as handle:
+        original = handle.read()
+    find = "  - code: question.deferred.not-blocked\n"
+    if find not in original:
+        runner.emit("a dropped rule obligation is refused", False,
+                    detail="  - the obligation this case removes is no longer in pipeline.yaml "
+                           "— the case, not the rule, is stale")
+        return
+    with tempfile.TemporaryDirectory() as base:
+        target = os.path.join(base, "pipeline.yaml")
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(original.replace(find, "  - code: question.deferred.not-parked\n", 1))
+        result = subprocess.run([sys.executable, validator, "--root", workspace,
+                                 "--pipeline", target],
+                                capture_output=True, text=True, cwd=ROOT)
+    if result.returncode == 0:
+        runner.emit("a dropped rule obligation is refused", False,
+                    detail="  - validate-workspace passed against a pipeline missing the "
+                           "obligation that scopes question.deferred.not-blocked")
+        return
+    if "pipeline.obligation.missing" not in codes_from(result.stdout + result.stderr):
+        runner.emit("a dropped rule obligation is refused", False,
+                    detail="  - validate-workspace failed without reporting "
+                           "[pipeline.obligation.missing]")
+        return
+    runner.emit("a dropped rule obligation is refused", True)
 
 def check_derived_model(runner: Runner) -> None:
     """The termination model, exercised against a real workspace rather than described.
@@ -569,6 +629,7 @@ def main() -> int:
     check_signoff(runner)
     check_termination(runner)
     check_pipeline_faults(runner)
+    check_obligation_binding(runner)
     check_derived_model(runner)
     check_guard(runner)
     check_findings_citations(runner)

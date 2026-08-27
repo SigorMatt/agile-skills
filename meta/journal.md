@@ -3087,3 +3087,43 @@ of this is mechanical: the model is on paper, and applying it to a new rule is s
 person has to remember to do.
 
 Phase II ends here.
+
+---
+
+## 2026-08-27 — META-113 — F-050 part 1: `applies_to` completeness becomes a gate
+
+- **Unit:** META-113
+- **Inputs read:** `meta/BUILDER-2.6-PROMPT.md`, `meta/FINAL-REPORT-2.5.md` §7/§9,
+  `meta/findings/FINDINGS.md` F-049/F-050/F-055, `meta/adr/ADR-0006-termination-model.md`,
+  `methodology/pipeline.yaml`, `scripts/validate-workspace`, `scripts/lint-skills`,
+  `scripts/check`, `scripts/check-epic-signoff`.
+- **Decisions:**
+  - **The class before the instance.** F-050's instance is one line — scope the rule to the two
+    item types its transition permits. The mission asks for the class, and the class is worth
+    more: `pipeline.yaml` gains a `rule_obligations` block naming, per validator rule that
+    requires an item to be at one of a fixed set of statuses, the item types the rule applies to
+    and the transition that satisfies it.
+  - **The registry is load-bearing in both directions, or it is a comment.**
+    `validate-workspace` *reads* `applies_to` from it rather than deciding scope for itself, and
+    refuses to run against a pipeline that dropped an obligation it depends on
+    (`pipeline.obligation.missing`). `lint-skills` checks each entry against the transition
+    table: `obligation.unsatisfiable` when no row provides the move, and
+    `obligation.applies_to.mismatch` when the scopes disagree — which is F-050 in one direction
+    and F-013 in the other.
+  - **Two obligations, not a survey.** The rules of this shape are
+    `question.deferred.not-blocked` (F-028) and `question.blocking.not-suspended` (F-013). The
+    other status comparisons in the validator either derive their legal set from the pipeline
+    already or are the converse check ("the item is at X, so something must exist"), which
+    cannot strand a workspace.
+  - The spec was already right. `spec/ids-and-statuses.md` §4's table has always scoped the
+    deferral row to work items and bugs; only the validator was wider. So the spec change is a
+    note saying that a rule which names a status declares the move that satisfies it, not a
+    correction.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` — 17 assertions across 15 steps, all PASS. Two new injected
+  pipeline faults (7 total) and one new step: a dropped rule obligation is refused.
+- **Artifacts:** `methodology/pipeline.yaml` 0.4.0 → 0.5.0 (`rule_obligations`),
+  `scripts/lint-skills` (`check_rule_obligations`), `scripts/validate-workspace`
+  (`obligation_types`, `STATUS_RULE_CODES`, both rules scoped), `scripts/check`
+  (`check_obligation_binding`, two faults, renumbered docstring),
+  `spec/ids-and-statuses.md` §4 + Revisions row 4, re-rendered `adapters/claude-code/dist`.

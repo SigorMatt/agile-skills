@@ -208,6 +208,17 @@ Notes:
 - **`verifying → in-progress` is a rejection, not a bug.** A failure of *this item's own*
   acceptance criteria sends the item back. A defect in *previously delivered* behaviour is a
   new `bug` item instead, and this item continues. `verify`'s process defines the test.
+- **A rule elsewhere that names a status must declare the move that satisfies it.** The
+  validator enforces several rules of the shape *"this item must be at one of these statuses"*.
+  Such a rule is enforceable only for the item types some skill may legally move there, so the
+  scope is not the rule's to decide: `methodology/pipeline.yaml` carries a `rule_obligations`
+  block naming, per rule, the item types it applies to and the transition that satisfies it.
+  `validate-workspace` reads that scope, and `lint-skills` checks it against this table in both
+  directions — a rule scoped wider than the moves that satisfy it, and a move narrowed while the
+  rule still claims the item type. The first of those had already happened when the registry was
+  written: a deferred question required its item to be at `blocked`, the deferral row above is
+  scoped to work items and bugs, and an epic-level deferral therefore produced a workspace no
+  legal move could repair (F-050).
 - **Skills change statuses. Nothing else does.** A human editing `status:` by hand produces a
   history gap, and the validator reports it as `history.gap`.
 
@@ -276,3 +287,4 @@ protecting.
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §4: statuses declare `suspendable` separately from `terminal`, so an epic at `open` can be suspended by a blocking question or an impasse (F-013). |
 | 3 | 2026-08-27 | §3.5: the four endings of an engagement, rest as the mechanical trigger, and the rule that every ending passes through the stakeholder (F-045, F-046). §4: transitions declare `applies_to`; the epic ending rows; the deferral row; an epic's terminal moves are gated. New §5: creation authority and `arose-from` provenance (F-029, F-042). Derived in ADR-0006. |
+| 4 | 2026-08-27 | §4: a rule elsewhere that requires an item to be at a status declares the move that satisfies it, in `pipeline.yaml`'s `rule_obligations`; the scope is checked against this table rather than remembered (F-050). |

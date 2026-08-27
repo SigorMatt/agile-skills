@@ -111,7 +111,7 @@ class Linter:
             return False
 
         for key in ("item_types", "skills", "priorities", "statuses", "transitions",
-                    "orchestrator"):
+                    "rule_obligations", "orchestrator"):
             if key not in self.pipeline:
                 self.report.error(self.pipeline_path, 0, "pipeline.field.missing",
                                   f"required key {key!r} is missing")
@@ -230,6 +230,90 @@ class Linter:
                         f"never 'any'",
                         hint="ending means applying the epic Definition of Done and reading "
                              "the stakeholder's acknowledgment (ADR-0006 §2)")
+
+    def check_rule_obligations(self) -> None:
+        """Every status-requiring validator rule, against the moves that can satisfy it.
+
+        A rule that requires an item to be at one of a fixed set of statuses is only enforceable
+        if some skill may legally put it there — for **every item type the rule applies to**.
+        `question.deferred.not-blocked` was written for all three and the move that satisfies it
+        was scoped to two, so an epic-level deferral produced a workspace no legal move could
+        repair (F-050). Nobody spotted it by reading, in a session whose whole subject was that
+        failure mode; this is that reading, done by a program.
+
+        The check runs in both directions, because both directions have happened:
+
+        * `obligation.unsatisfiable` — the rule names a move no transition row provides. The
+          rule then cannot be obeyed by anyone.
+        * `obligation.applies_to.mismatch` — the rule claims item types the transitions do not
+          permit (F-050), or the transitions permit item types the rule does not claim, which is
+          how a rule silently stops applying to an item type it was written for (F-013).
+        """
+        item_types = list(self.pipeline.get("item_types") or [])
+        rows = self.pipeline.get("transitions") or []
+        obligations = self.pipeline.get("rule_obligations")
+        if obligations is None:
+            return                              # pipeline.field.missing already said so
+        if not isinstance(obligations, list) or not obligations:
+            self.report.error(self.pipeline_path, 0, "obligation.shape",
+                              "rule_obligations must be a non-empty list")
+            return
+        for entry in obligations:
+            if not isinstance(entry, dict) or not is_str(entry.get("code")):
+                self.report.error(self.pipeline_path, 0, "obligation.shape",
+                                  f"rule_obligations entry is malformed: {entry!r}")
+                continue
+            code = entry["code"]
+            declared = entry.get("applies_to")
+            if not isinstance(declared, list) or not declared:
+                self.report.error(self.pipeline_path, 0, "obligation.shape",
+                                  f"{code}: applies_to must be a non-empty list")
+                continue
+            unknown = [value for value in declared if value not in item_types]
+            if unknown:
+                self.report.error(self.pipeline_path, 0, "obligation.shape",
+                                  f"{code}: applies_to contains {unknown!r}, which is not an "
+                                  f"item type in pipeline.yaml")
+                continue
+            if not is_str(entry.get("rationale")):
+                self.report.error(self.pipeline_path, 0, "obligation.shape",
+                                  f"{code}: an obligation must record why the rule requires "
+                                  f"that status of those item types")
+
+            permitted = set()
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                if (row.get("from") != entry.get("from") or row.get("to") != entry.get("to")
+                        or row.get("actor") != entry.get("actor")):
+                    continue
+                permitted.update(row.get("applies_to") or item_types)
+
+            label = (f"{entry.get('from')} -> {entry.get('to')} "
+                     f"by {entry.get('actor')!r}")
+            if not permitted:
+                self.report.error(
+                    self.pipeline_path, 0, "obligation.unsatisfiable",
+                    f"{code} requires {label}, and no transition row provides it",
+                    hint="a rule that names a status an item must be at is enforceable only "
+                         "while some skill may legally move it there (ADR-0006 §2)")
+                continue
+            if permitted != set(declared):
+                missing = sorted(set(declared) - permitted)
+                extra = sorted(permitted - set(declared))
+                detail = []
+                if missing:
+                    detail.append(f"the rule applies to {', '.join(missing)} and {label} is not "
+                                  f"legal for {'it' if len(missing) == 1 else 'them'}")
+                if extra:
+                    detail.append(f"{label} is legal for {', '.join(extra)} and the rule does "
+                                  f"not claim {'it' if len(extra) == 1 else 'them'}")
+                self.report.error(
+                    self.pipeline_path, 0, "obligation.applies_to.mismatch",
+                    f"{code}: " + "; ".join(detail),
+                    hint="a rule scoped wider than the moves that satisfy it puts items in a "
+                         "state no legal move repairs (F-050); one scoped narrower stops "
+                         "applying to an item type it was written for (F-013)")
 
     def check_skill_registry(self) -> None:
         declared = list(self.pipeline.get("skills") or [])
@@ -616,6 +700,7 @@ class Linter:
             return self.report.emit()
         if self.load_pipeline():
             self.check_transitions()
+            self.check_rule_obligations()
             self.check_skill_registry()
             for name in sorted(os.listdir(self.skills_dir)):
                 if os.path.isdir(os.path.join(self.skills_dir, name)):

@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.4.0
+version: 0.5.0
 
 item_types:
   - epic
@@ -296,6 +296,39 @@ transitions:
     actor: any
     resume_to: forbidden
     condition: A human recorded a resolution in the item.
+
+# Rules the workspace validator enforces by requiring an item to be at one of a fixed set of
+# statuses. Each entry names the rule's code, the item types it applies to, and the transition
+# that must be legal for those types if the rule is to be satisfiable at all.
+#
+# This block exists because a rule of exactly that shape was written for every item type while
+# the transition that satisfies it was scoped to two of them: marking an epic-level question
+# `deferred` required the epic to be at `blocked`, and no legal move could put it there, because
+# an epic reaches `blocked` only as the E3 impasse ending through `review-close` (F-050). That
+# is F-013's shape in the toolkit's own work, and it was written in the same session as the
+# derivation that exists to prevent it — so "enumerate the item types a rule applies to" is a
+# gate here rather than a habit.
+#
+# It is load-bearing in both directions. `scripts/validate-workspace` reads `applies_to` from
+# here rather than deciding for itself which item types a status rule constrains, and reports
+# `pipeline.obligation.missing` when an obligation it depends on is absent.
+# `scripts/lint-skills` checks each entry against the transition table: an obligation naming a
+# transition no row provides is `obligation.unsatisfiable`, and a scope the transitions do not
+# permit is `obligation.applies_to.mismatch` — F-050 in one direction, F-013 in the other.
+rule_obligations:
+  - code: question.deferred.not-blocked
+    applies_to: [work-item, bug]
+    from: awaiting-answer
+    to: blocked
+    actor: answer-questions
+    rationale: A deferred blocking question parks its item at blocked with what would unblock it recorded. An epic is not parked by a deferral - a deferred acknowledgment is the E3 impasse and only review-close ends an engagement (ADR-0006 section 2, F-050).
+
+  - code: question.blocking.not-suspended
+    applies_to: [work-item, bug, epic]
+    from: any-suspendable
+    to: awaiting-answer
+    actor: any
+    rationale: An open blocking question suspends its item, and an epic-level question is exactly the case that must be able to suspend an epic (F-013).
 
 # The orchestrator's algorithm, in order. `next` executes exactly these steps and stops at the
 # first one that produces an action. Nothing here requires engineering judgement, by design.

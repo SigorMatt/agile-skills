@@ -49,6 +49,12 @@ REQUEST_ID_RE = re.compile(r"^R-\d{3}$")
 ADDRESSED_TO = {"architect", "human"}
 QUESTION_STATUS = {"open", "answered", "deferred"}
 
+# The rules below require an item to be at one of a fixed set of statuses. Each one's
+# scope is declared in pipeline.yaml under `rule_obligations` and checked against the
+# transition table by lint-skills, so that a rule can never be enforced against an item
+# type no legal move could satisfy it for (F-050).
+STATUS_RULE_CODES = ("question.deferred.not-blocked", "question.blocking.not-suspended")
+
 DOC_FIELDS_REQUIRED = ["title", "version", "status", "updated", "updated-by", "updated-for"]
 DOC_FIELDS_OPTIONAL = ["supersedes", "superseded-by"]
 DOC_STATUS = {"current", "superseded", "draft"}
@@ -233,6 +239,8 @@ class Validator:
         self.priorities = set()
         self.skills = set()
         self.transitions = []
+        self.obligations = {}
+        self.obligations_reported = set()
         self.window = git_activity_window(self.workspace.root)
         self.citations = CitationResolver(self.workspace.root)
         self.installed_versions = find_installed_versions()
@@ -258,11 +266,44 @@ class Validator:
         self.priorities = {entry["name"] for entry in self.pipeline.get("priorities") or []}
         self.skills = set(self.pipeline.get("skills") or [])
         self.transitions = self.pipeline.get("transitions") or []
+        for entry in self.pipeline.get("rule_obligations") or []:
+            if isinstance(entry, dict) and entry.get("code"):
+                self.obligations[entry["code"]] = entry
+        # Checked here rather than at the point of use, so a pipeline that dropped an obligation
+        # is caught on every workspace instead of only on one that happens to contain the
+        # question that would have exercised the rule.
+        for code in STATUS_RULE_CODES:
+            self.obligation_types(code)
         return True
 
     def statuses_for(self, item_type: str) -> set:
         return {name for name, entry in self.statuses.items()
                 if item_type in (entry.get("applies_to") or [])}
+
+    def obligation_types(self, code: str) -> set:
+        """The item types a status-requiring rule applies to, read from pipeline.yaml.
+
+        A rule of the shape "this item must be at one of these statuses" is satisfiable only for
+        the item types some skill may legally move there, so this validator does not decide that
+        scope for itself — `rule_obligations` declares it, `lint-skills` checks it against the
+        transition table, and the rule below reads it. Deciding it here is precisely what went
+        wrong: `question.deferred.not-blocked` was applied to every item type while the move that
+        satisfies it was scoped to two, so an epic-level deferral produced a workspace no legal
+        move could repair (F-050).
+        """
+        entry = self.obligations.get(code)
+        if entry is None:
+            if code not in self.obligations_reported:
+                self.obligations_reported.add(code)
+                self.report.error(
+                    self.pipeline_path, 0, "pipeline.obligation.missing",
+                    f"no rule_obligations entry for {code!r}",
+                    hint="this rule requires an item to be at a particular status, so "
+                         "pipeline.yaml must declare which item types it applies to and which "
+                         "transition satisfies it — otherwise the scope is a thing a person "
+                         "remembers (F-050)")
+            return set()
+        return set(entry.get("applies_to") or [])
 
     def is_terminal(self, status: str) -> bool:
         return bool((self.statuses.get(status) or {}).get("terminal"))
@@ -388,7 +429,7 @@ class Validator:
         self.check_item_body(path, item, expected_type)
         self.check_history(item, expected_type)
         self.check_journal(item)
-        self.check_questions(item)
+        self.check_questions(item, expected_type)
         self.check_item_artifacts(item, expected_type)
 
     def check_item_relations(self, path, identifier, item, expected_type) -> None:
@@ -755,7 +796,7 @@ class Validator:
                 else:
                     used.add(match)
 
-    def check_questions(self, item) -> None:
+    def check_questions(self, item, expected_type) -> None:
         seen_blocking_open = False
         seen_blocking_deferred = False
         for question in item.questions:
@@ -852,21 +893,31 @@ class Validator:
         # and their reply was "not yet"; the loop does not stop on it and the item does not
         # resume, because resuming would assert that the work can proceed without the missing
         # thing. A blocking question that is deferred leaves its item at `blocked`.
-        if seen_blocking_deferred and item.status not in ("blocked", "done"):
-            self.report.error(item.path, 0, "question.deferred.not-blocked",
-                              f"a blocking question on this item is deferred but the item is "
-                              f"{item.status!r}",
-                              hint="a deferred blocking question leaves the item at blocked "
-                                   "with what would unblock it recorded; if the deferral was "
-                                   "enough to decide on, the honest status is answered "
-                                   "(spec/question.md §2)")
+        #
+        # F-050: on the item types that can be parked there. An epic reaches `blocked` only as
+        # the E3 impasse ending through `review-close`, so a deferral cannot park one — the epic
+        # returns to `open`, where it is not working anyway, and the engagement is ended through
+        # the stakeholder once it comes to rest. The scope is read from `rule_obligations`, not
+        # decided here, because deciding it here is what produced a state no move could repair.
+        if seen_blocking_deferred and expected_type in self.obligation_types(
+                "question.deferred.not-blocked"):
+            if item.status not in ("blocked", "done"):
+                self.report.error(item.path, 0, "question.deferred.not-blocked",
+                                  f"a blocking question on this item is deferred but the item is "
+                                  f"{item.status!r}",
+                                  hint="a deferred blocking question leaves the item at blocked "
+                                       "with what would unblock it recorded; if the deferral was "
+                                       "enough to decide on, the honest status is answered "
+                                       "(spec/question.md §2)")
 
-        if seen_blocking_open and item.status not in ("awaiting-answer", "blocked"):
-            self.report.error(item.path, 0, "question.blocking.not-suspended",
-                              f"an open blocking question exists but the item is "
-                              f"{item.status!r}",
-                              hint="a blocking question suspends the item "
-                                   "(spec/question.md rule 1)")
+        if seen_blocking_open and expected_type in self.obligation_types(
+                "question.blocking.not-suspended"):
+            if item.status not in ("awaiting-answer", "blocked"):
+                self.report.error(item.path, 0, "question.blocking.not-suspended",
+                                  f"an open blocking question exists but the item is "
+                                  f"{item.status!r}",
+                                  hint="a blocking question suspends the item "
+                                       "(spec/question.md rule 1)")
         if item.status == "awaiting-answer" and not seen_blocking_open:
             self.report.error(item.path, 0, "question.awaiting.none-open",
                               "the item is awaiting-answer but no open blocking question "
