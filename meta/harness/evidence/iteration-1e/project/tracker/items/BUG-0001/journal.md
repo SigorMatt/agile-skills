@@ -1,0 +1,265 @@
+# Journal — BUG-0001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T00:12:31Z — verify v0.1.3 — qa-engineer
+
+- **Item:** BUG-0001
+- **Trigger:** filed by `verify` while verifying WI-0001, per step 6 of that skill's procedure — behaviour in the tree that no acceptance criterion and no plan step accounts for.
+- **Inputs read:**
+  - `docs/product/vision.md` — the two paragraphs at lines 31 and 38, and the front matter recording `version: 3`, `updated-by: answer-questions`, `updated-for: WI-0001`
+  - `.claude/agile-skills/spec/doc-header.md` section 4a and its citation-forms table — the rule the document breaks, and the exemption it does not qualify for
+  - `.claude/agile-skills/spec/dor-dod.md` section 2 — the bug Definition of Ready, RB1 to RB5
+  - `tracker/items/WI-0001/artifacts/impl-report.md` — `## What I did not do`, where `implement` recorded the same two errors and handed them on
+  - `.claude/agile-skills/pipeline.yaml` — the creation-authority rows, which is why this is filed by `verify` and not by `implement`
+- **Decisions:**
+  - **Filed as a bug rather than sent back to WI-0001.** The test in `verify`'s step 7 is whether an acceptance criterion of the item under verification says the behaviour should be different. None of WI-0001's AC1–AC9 mentions `vision.md`, and the `claims-are-sourced` gate WI-0001 must pass is scoped to what changed since the trunk, which passes. So it is not that item's failure.
+  - **`found-in: WI-0001`.** The offending text entered at `vision.md` v3, whose own front matter records `updated-for: WI-0001` — the version `answer-questions` wrote while propagating that item's three answers. That is checkable in one hop, which is what provenance is for.
+  - **Priority `low`.** No contracted gate fails, nothing a user of the tool sees is wrong, and the fix is two citation markers plus a version bump. Recorded so that nobody later reads `low` as a judgement that the claim itself is unimportant.
+  - **RB5 answered with "no test is possible", not with a test.** The check is `scripts/lint-claims` itself and AC1 runs it. The project's test command covers the `expenses` package and has no reach into `docs/`; a test that shelled out to a toolkit script would be testing the toolkit.
+  - **Recreated the item once, deliberately.** The first filing put the literal citation-marker syntax in the title, in the history row's reason, and in the quoted linter output. The workspace validator reads that syntax anywhere it appears and tried to resolve it, so the freshly created item made the workspace red with five errors. Since the item was seconds old, uncommitted, and had no execution behind it beyond its own creation row, I deleted the directory and re-created it with the same fields and linter-safe wording, rather than leaving an invalid item and a repair trail. Both hint lines are elided in the quoted output for the same reason, and `## Notes` says so and warns whoever fixes it.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, 2 errors, both `claim.unsourced` in `docs/product/vision.md` (lines 31 and 38)
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 0 errors — the scoping every contracted gate uses
+  - `python3 .claude/agile-skills/scripts/new-item --next-id bug` → exit 0, `BUG-0001`
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0001 ... --actor verify --found-in WI-0001` → exit 0, created at `ready`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 with 5 errors on the first filing, then exit 1 with only `journal.execution.missing` after the re-filing, which this entry clears
+- **Gates:**
+  - Definition of Ready for a bug, applied at filing time per `spec/dor-dod.md` section 2:
+  - `RB1` (numbered, runnable reproduction) → **pass** — three numbered steps, each a command that can be run from the repository root with nothing else known
+  - `RB2` (actual behaviour quotes real output) → **pass** — the linter's own stdout and exit code, captured from the run above, with the two hint lines elided and the elision declared
+  - `RB3` (expected behaviour cites what it contradicts) → **pass** — `spec/doc-header.md` section 4a, including why the "written before the convention" exemption does not apply
+  - `RB4` (`found-in` names the delivering item) → **pass** — `found-in: WI-0001`, corroborated by `vision.md`'s `updated-for`
+  - `RB5` (regression test, or why none is possible) → **pass** — `## Notes` records why the check is the linter itself, and AC1 runs it
+- **Artifacts:**
+  - `tracker/items/BUG-0001/item.md` — summary, three reproduction steps, expected and actual behaviour, AC1–AC4, and the notes
+  - `tracker/items/BUG-0001/history.md` — the creation row
+- **Status:** `—` → `ready`
+- **Result:** BUG-0001 is filed at `ready` against `docs/product/vision.md`, with `found-in: WI-0001`. It is a documentation defect, not a defect in the tool: two absolute claims carry their source in prose but not in the checkable marker the spec requires, so `lint-claims --all` exits 1 while the contracted, trunk-scoped gate exits 0. The bug Definition of Ready passes on all five criteria, so no refinement is needed before it can be planned.
+
+## 2026-08-27T02:16:21Z — plan v0.3.0 — architect
+
+- **Item:** BUG-0001
+- **Trigger:** status `ready` with a non-null owner in `pipeline.yaml`; dispatched by `next` as the only runnable item — BUG-0002 closed this turn, WI-0001, WI-0002 and WI-0004 are `done`, WI-0003 is `blocked`, and EP-001's `open` has no owner.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the summary, the three reproduction steps, the expected and actual behaviour with its elided hint lines, AC1 to AC4, and the five notes, including the warning about writing the marker syntax literally into a tracker artifact
+  - `tracker/items/BUG-0001/history.md` — the single creation row, `— → ready`, actor `verify`
+  - `tracker/items/BUG-0001/journal.md` — `verify`'s filing entry, including why this was filed rather than sent back to WI-0001, why `implement` had no authority to file it, and the deliberate re-creation of the item after its first filing turned the workspace red
+  - no `artifacts/refinement-qa.md` — a bug enters at `ready` and this one was never refined, so there is no Q&A to read
+  - `docs/product/vision.md` v3 in full — the two flagged paragraphs at lines 31 and 38, the front matter, and the unflagged absolutes in `## What it deliberately is not`
+  - `.claude/agile-skills/spec/doc-header.md` — §2 and §3 (front matter and change-log rules), §4a and its citation-forms table (the rule the document breaks), and **§5, the writer table**, which is where this item's real design problem turned out to be
+  - `.claude/agile-skills/spec/dor-dod.md` §3 — D7 and D12, the criteria that pull against §5
+  - ADR-0001 through ADR-0008 — read to establish that none of them speaks to documentation provenance and that nothing here is superseded; ADR-0004 is cited for the null lint command
+  - `expenses/store.py` — `add_expense`'s signature and the record it appends, to establish that the "no per-person amounts and no weights" claim is checkable there
+  - `expenses/cli.py` — `build_parser` and `HANDLERS`, to establish that `add`, `list` and `delete` are the whole surface and that the "cannot be edited in place" claim is checkable there
+  - `docs/architecture/overview.md` v7 — how this project's documents already place their markers, and the two versions `implement` wrote (5 and 7), which are the precedent ADR-0009 turns on
+  - `tracker/project.yaml` — `commands.test` set, `commands.lint` null with ADR-0004 as the record
+- **Decisions:**
+  - **[decided] `implement` edits `docs/product/vision.md`, and that is written down as ADR-0009 rather than assumed.** This is the decision this item actually forces, and it is not a documentation choice. `spec/doc-header.md` §5 lists `refine` and `answer-questions` as the updaters of the product vision and says flatly that `implement` and `verify` do not write to `docs/` — which, read flatly, makes BUG-0001 unbuildable, because no skill dispatched on `planned` or `in-progress` may touch the only file the item is about. Read against its own stated reason — that the authoritative record must not be updated by the same execution trying to satisfy it — it forbids something narrower: a skill editing `docs/` on a conclusion it reached mid-execution. ADR-0009 takes the second reading, with four options and their costs, and bounds the circularity three ways that do not depend on `implement`: `verify` made the judgement, AC2 forbids softening either claim, and AC1 is a program. The same tension already exists in this project, resolved the same way twice: `implement` wrote versions 5 and 7 of `docs/architecture/overview.md`, for WI-0004 and BUG-0002, because D7 makes the delivering item responsible for leaving `docs/` true and at plan time the code does not exist yet. Both were reviewed and accepted.
+  - **[decided] The fix is additive: the bracketed question references stay.** Removing `WI-0001/Q-003` from the second paragraph would remove the only backticked name it makes its absolute claim *about*, so the linter would stop flagging the paragraph — AC1 would pass because the check had stopped looking, not because the claim had been sourced. That is the one way this fix can be wrong while looking right, so plan step 5 makes the implementer remove a marker, watch the error return, and put it back, with both runs in the report.
+  - **[decided] Each marker names the stakeholder answer *and* the file where the claim is visible in the code** — `WI-0001/Q-001` with `expenses/store.py` for the equal-split absolute, `WI-0001/Q-003` with `expenses/cli.py` for the deletion absolute. A question alone says why the product is that way; the file shows that it is, which is what D12 asks a claim about behaviour to be checkable against.
+  - **[assumed, reversible] The markers sit at the end of the sentence carrying the absolute**, not at the paragraph's end or immediately after the absolute word. The rule is per paragraph, so all three positions satisfy it; this one matches how `docs/architecture/overview.md` places its own. Reversing it is moving two markers.
+  - **[assumed, reversible] Which sources each marker names**, as above. Reversing it is editing one bracketed marker in one file, with nothing depending on it.
+  - **[assumed, reversible] The change-log row's exact wording** is the implementer's, within what step 3 requires it to say.
+  - **[documented] No regression test, and none is possible.** BUG-0001's `## Notes` settles it: the check *is* `scripts/lint-claims`, AC1 runs it, and this project's test command covers the `expenses` package and has no reach into `docs/`. A test that shelled out to a toolkit script would be testing the toolkit.
+  - **[documented] `docs/architecture/overview.md` is not touched.** This item alters nothing about the shape of the system, and `spec/doc-header.md` §3 makes a version bump with no substantive change a thing that devalues every other one.
+  - **[decided] No human question.** Nothing here turns on stakeholder intent: the two claims are already theirs, recorded in `WI-0001/Q-001` and `WI-0001/Q-003`, and AC2 forbids changing them. The one hard decision is about which skill holds the pen, which is an architect's decision and not a thing to spend the stakeholder's turn on.
+  - **[decided] No new item filed.** Nothing was found that belongs to another item. The scoping that let this defect through three contracted gates — `claims-are-sourced` is trunk-scoped everywhere it appears — is a property of the toolkit, not of this project, and it is recorded under `## Out of scope for this item` rather than turned into work here.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, 2 errors, both `claim.unsourced` in `docs/product/vision.md` at lines 31 and 38 — the defect, reproduced before planning against it. Output filtered through `sed` to elide the hint lines' marker syntax, per the item's own warning
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` after writing ADR-0009 → exit 1, **3** errors: the two above plus `claim.citation.unresolved` in the new ADR, which cited this plan before it existed. Recorded because it is the risk this plan names first, demonstrated on the plan itself
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` after writing `plan.md` → exit 1, back to the original 2 errors; the third resolved once the file it named existed
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked 1 document(s)`, 0 errors, 0 warnings — the trunk-scoped gate this skill is contracted on
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 123 tests in 1.502s`, `OK` — `commands.test` run by this execution, not assumed
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 7 items, 11 documents, 0 errors, 0 warnings; the eleventh document is ADR-0009
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** — `validate-workspace .` exit 0, 0 errors and 0 warnings over 7 items and 11 documents, the eleventh being ADR-0009
+  - `every-criterion-is-addressed` → **pass** — four criteria, four rows in `plan.md`'s mapping table, each naming the step that satisfies it and the observation that demonstrates it: AC1 → steps 1, 2 and 4 (the linter's own output, plus step 5's removal-and-restore showing the lines are still examined); AC2 → steps 1 and 2 (the diff of `vision.md`, confined to two sentences and the header, with both sentences quoted in full); AC3 → step 3 (the front-matter block and the top change-log row, both showing 4); AC4 → step 6 (`validate-workspace`'s own output and exit code)
+  - `project-commands-resolved` → **pass** — `commands.test` is `python3 -m unittest discover -s tests -t .`, run in this execution to exit 0 with 123 tests; `commands.lint` stays null with ADR-0004 as the record, which is the ADR the gate's own wording admits
+  - `decisions-recorded` → **pass** — nine decisions listed above and in `plan.md`'s `## Decisions and ADRs` table: three point at ADR-0009 and its numbered clauses, one at `## Approach` and the step that checks it, three at entries under `## Assumptions` that state what reversal costs, and two at documents that already settled them (BUG-0001's notes, ADR-0004)
+  - `claims-are-sourced` → **pass** — `lint-claims --changed-since main` exit 0 over the one document this execution wrote. The whole-tree run still reports the two errors this item exists to fix, which is the defect and not this execution's; every marker written by this execution resolves, confirmed by `validate-workspace` over the whole workspace
+  - `plan-is-executable-without-you` (advisory) → **pass** — eight numbered steps, each naming the file it touches and what is true afterwards. The two things a reader could get wrong are hoisted into `## Approach` rather than buried in a step: that the bracketed references must stay, because removing one silences the check instead of satisfying it; and that the linter reads the whole tree, so a marker written into this item's own paperwork is part of its acceptance criterion — demonstrated on this very plan, and named first under `## Risks`
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/plan.md` — new: problem, approach, eight steps, the four-row mapping table, three assumptions, the eight-row decision table, `## Scaffolding` = none, four risks, five things out of scope
+  - `docs/architecture/adr/ADR-0009-a-documents-own-bug-is-fixed-by-the-item-that-owns-it.md` — new, version 1: four options, the decision in two checkable clauses, consequences including cheap reversibility in both directions
+  - `docs/architecture/overview.md` — **not touched**, deliberately; this item changes nothing about the shape of the system
+  - `tracker/board.md` — regenerated
+  - no file created outside `tracker/` and `docs/`; no production code written
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0001 is planned. The fix itself is two source markers and a version bump, and the plan says exactly where each goes and what it names. The decision that was actually open was not the markers but the pen: `spec/doc-header.md` §5 forbids `implement` from writing to `docs/`, which would leave a document-only defect with no skill allowed to fix it, while D7 makes the delivering item responsible for leaving `docs/` true. ADR-0009 records the resolution against three alternatives, and plan step 5 guards the one way this fix could pass while sourcing nothing.
+
+## 2026-08-27T02:16:58Z — implement v0.2.1 — developer
+
+- **Item:** BUG-0001
+- **Trigger:** status `planned`, dispatched by `next` as the only runnable item; the plan written by `plan` at 2026-08-27T02:16:21Z is the thing being executed.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — AC1 to AC4, the three reproduction steps, and the five notes, including the warning not to write the marker syntax literally into a tracker artifact
+  - `tracker/items/BUG-0001/artifacts/plan.md` — the eight steps, the four-row mapping table, the three assumptions, and the two hazards hoisted into `## Approach`
+  - `tracker/items/BUG-0001/history.md` — two rows, `— → ready` (verify) then `ready → planned` (plan); no send-back, so this is a fresh execution and not a defect fix
+  - `tracker/items/BUG-0001/questions/` — `.gitkeep` only; nothing was ever asked on this item
+  - `docs/architecture/adr/ADR-0009-a-documents-own-bug-is-fixed-by-the-item-that-owns-it.md` — the decision this execution acts under, including the clause that says an `implement` execution which *discovers* a document is wrong still files a question
+  - `docs/product/vision.md` v3 — the two paragraphs to be sourced, the front matter, and the change log
+  - `tracker/project.yaml` — branch prefix `wi/`, commit subject `<scope>: <summary> (refs <ITEM-ID>)`, `commands.test` set, `commands.lint` null with ADR-0004
+- **Decisions:**
+  - **Branch `wi/BUG-0001`, from `main` at `7f5ac6c`** — the commit that carries the plan and ADR-0009, so the branch starts from the design it executes.
+  - **Nothing else decided yet.** The plan's eight steps are executed in order from here; any choice made inside their latitude is recorded in the closing entry and in `impl-report.md`.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0001 main` → exit 0, branch created at `7f5ac6c`
+- **Gates:**
+  - `tests-pass` → **not yet run** — this entry opens the execution; the gate runs on the branch head at plan step 7
+  - `lint-clean` → **not yet run** (and will be `skipped`: `commands.lint` is null, ADR-0004)
+  - `workspace-valid` → **not yet run** by this execution as a completion gate; the transition that writes this entry runs it, and it passed
+  - `every-criterion-has-a-test` → **not yet run** — nothing has been changed yet, and this item's criteria are checked by the claims linter and the workspace validator rather than by a unit test, which BUG-0001's `## Notes` records as deliberate
+  - `commits-reference-the-item` → **not yet run** — the branch has no commits of its own yet
+  - `claims-are-sourced` → **not yet run**
+- **Artifacts:**
+  - branch `wi/BUG-0001`, created from `main` at `7f5ac6c`; no commits of its own yet
+  - no file created or changed by this entry — the opening entry records the branch, not work
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of BUG-0001 has started on `wi/BUG-0001`, branched from `main` at `7f5ac6c`. Nothing has been edited; the next entry reports the work.
+
+## 2026-08-27T02:19:28Z — implement v0.2.1 — developer
+
+- **Item:** BUG-0001
+- **Trigger:** continuing the execution opened at 2026-08-27T02:16:58Z on `wi/BUG-0001`; this entry reports the work and closes it.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/artifacts/plan.md` — the eight steps, worked in order; the two hazards in `## Approach`; the four-row mapping table the report is written against
+  - `tracker/items/BUG-0001/item.md` — AC1 to AC4 and the five notes, re-read before the edit rather than remembered
+  - `docs/architecture/adr/ADR-0009-a-documents-own-bug-is-fixed-by-the-item-that-owns-it.md` — §1 in particular, which draws the line between executing a recorded judgement and reaching one
+  - `docs/product/vision.md` v3 in full, and v4 after each edit
+  - `.claude/agile-skills/spec/doc-header.md` §2 and §3 — the front-matter fields and the rule that every content change bumps the version and adds a row
+- **Decisions:**
+  - **Rewrapped three lines of the first paragraph, and declared it.** The marker made one line 141 characters in a document that wraps at about 98. No word was added, removed or reordered; the diff's three deleted lines return as three added lines with the same prose. Recorded as a deviation because plan step 1 says "change no other word", which stays true, while "change no other line" does not.
+  - **Both markers sit at the end of the sentence carrying the absolute**, which is the plan's assumption rather than its instruction, and matches how `docs/architecture/overview.md` places its own.
+  - **The bracketed question references were left exactly where they were.** This is the plan's decision, not this execution's, and it is what plan step 5 checks: removing one takes away the backticked name the paragraph makes its claim about, so the paragraph stops being examined rather than starts being sourced.
+  - **The change-log row says both what gained citations and what did not change.** The row's wording is this execution's, within what step 3 requires; naming that neither claim changed is what a reader checking AC2 a year from now would otherwise have to reconstruct from a diff.
+  - **No question filed, and none was needed.** The one genuinely open decision — whether this skill may edit the product vision — was taken by `plan` and recorded as ADR-0009 before this execution began. ADR-0009 §1 is explicit that an `implement` execution which reaches such a judgement *itself* still files a question and stops; that is not this case.
+  - **Nothing else was touched.** The document's other absolutes, the trunk-scoped gate that let this defect through, and `docs/architecture/overview.md` are all recorded under `## What I did not do` rather than fixed on the way past.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0001 main` → exit 0, at `7f5ac6c`
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` after steps 1 to 3 → exit 0, `0 errors, 0 warnings` over the whole tree — AC1
+  - **the removal-and-restore check, plan step 5, done twice.** Marker 1 removed → exit 1, `docs/product/vision.md:31: ERROR [claim.unsourced] an absolute claim ('no') about 'WI-0001/Q-001' with no citation`, 1 error; restored from a copy, `md5sum -c` → `OK`. Marker 2 removed → exit 1, `docs/product/vision.md:38: ERROR [claim.unsourced] an absolute claim ('cannot') about 'WI-0001/Q-003' with no citation`, 1 error; restored, `md5sum -c` → `OK`. Restored tree → exit 0, 0 errors. The linter's `hint:` lines are elided wherever this execution quotes its output, because they carry the marker syntax with a placeholder inside and would not resolve
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 7 items, 11 documents, 0 errors, 0 warnings — AC4
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 123 tests in 1.499s`, `OK`, on the branch head
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0001 wi/BUG-0001` → exit 0, `all 1 commit(s) on main..wi/BUG-0001 name BUG-0001`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked 1 document(s)`, 0 errors, 0 warnings
+  - `git diff main..wi/BUG-0001 --stat` → `docs/product/vision.md | 17 +++--`, 1 file changed, 9 insertions, 8 deletions
+  - `git commit` → `1235e19`, the one commit on this branch
+- **Gates:**
+  - `tests-pass` → **pass** — `python3 -m unittest discover -s tests -t .` exit 0, `Ran 123 tests`, `OK`, run on the branch head after the last change. Identical to `main`'s result, which is the expected outcome for an item that touches no code
+  - `lint-clean` → **skipped** — `commands.lint` is null in `tracker/project.yaml`, by ADR-0004; nothing ran, so nothing is claimed
+  - `workspace-valid` → **pass** — `validate-workspace .` exit 0, 0 errors and 0 warnings over 7 items and 11 documents
+  - `every-criterion-has-a-test` → **pass** — AC1 names `lint-claims --all` and its output, plus the two injections that make it fail and the restore that makes it pass, which is this item's equivalent of a test that fails without the change; AC4 names `validate-workspace` and its output; AC2 names the diff and quotes both sentences in full after the edit; AC3 names the front-matter block and the change-log row, both showing 4. No criterion rests on reading anything. There is no unit test and none is possible — the check is the linter, and this project's test command has no reach into `docs/`, which BUG-0001's own notes record as deliberate
+  - `commits-reference-the-item` → **pass** — `check-commit-refs BUG-0001 wi/BUG-0001` exit 0. (The same gate reported a failure when it ran during the opening transition, because the branch then had no commits of its own and the script reads that state as "already merged". It is green now that the branch carries work; noted so the earlier entry's `not yet run` line is not read as a contradiction)
+  - `claims-are-sourced` → **pass** — `lint-claims --changed-since main` exit 0 over the one document this branch changed, and the stronger whole-tree run this item exists for, also exit 0
+  - `no-unplanned-scope` (advisory) → **pass** — one file in the diff, `docs/product/vision.md`, in three hunks, each traceable to a numbered step: the front matter and the change-log row to step 3, the two paragraphs to steps 1 and 2. Nothing under `expenses/`, `tests/` or `README.md`
+- **Artifacts:**
+  - `docs/product/vision.md` — version 3 → **4**: two resolvable citations added, the first paragraph rewrapped around the longer line, `updated-by: implement` and `updated-for: BUG-0001` in the front matter, and the matching top change-log row
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — new: what was built, the four-criterion evidence table, the removal-and-restore section, one declared deviation, the seven gates, and four things not done
+  - branch `wi/BUG-0001`, one commit, `main..wi/BUG-0001` = `1235e19`
+  - no file created outside `docs/` and `tracker/`; no production code and no test written, because this item asks for neither
+- **Status:** `in-progress` → `verifying`
+- **Result:** BUG-0001 is implemented. The two paragraphs of `docs/product/vision.md` that claimed something absolutely about a named thing now carry a citation that resolves, each naming the stakeholder answer that decided the claim and the file where it is visible in the code; the claims themselves are word-for-word what they were. `lint-claims --all` exits 0 over the whole tree for the first time, and it does so because the paragraphs are sourced and not because the linter stopped looking at them — checked by taking each marker out in turn, watching the error return, and restoring the file against a checksum.
+
+## 2026-08-27T02:24:18Z — verify v0.1.3 — qa-engineer
+
+- **Item:** BUG-0001
+- **Trigger:** status `verifying` — the item's own dispatcher run picked it as the only runnable candidate, its status owner in `pipeline.yaml` being `verify`.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the four acceptance criteria, read first and before any report, so the checks were derived from the criteria rather than from what was built
+  - `tracker/items/BUG-0001/artifacts/plan.md` — the eight steps, the assumptions, and what the plan puts out of scope
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — read after the checks had been designed and run, to compare rather than to rely on
+  - `tracker/items/BUG-0001/history.md`
+  - `tracker/project.yaml` — the test command, and `lint: null`
+  - the code at `76e62a6458b4b2d03dd45ee396110f91d74104a3`, the head of `wi/BUG-0001`: `docs/product/vision.md`, `expenses/store.py`, `expenses/cli.py`
+- **Decisions:**
+  - **Verdict: pass, all four criteria, no send-back and no bug filed.** Nothing failed and nothing delivered by another item was found wrong while checking this one.
+  - **The sensitivity check was run here, not read from the report.** The one way this fix passes for the wrong reason is a paragraph that stopped being examined rather than being sourced, so each citation marker was removed on its own, the linter re-run, the returning error read, and the file restored and checksummed. Exactly one error came back each time, naming the right line and the right absolute word.
+  - **A third injection was added that the plan does not call for.** A scratch document with an unsourced claim was written under `docs/product/`, flagged by the whole-tree linter, and deleted. Without it, AC1 measured after this report was written would rest on an assumption about the linter's scope; with it, the final green run is known to have read the artifacts this execution added.
+  - **The citations were resolved by hand as well as by the linter.** The linter decides that a citation exists, not that it supports the claim. Both markers name a question that exists and a source file that shows the behaviour, checked at `expenses/store.py:109` and in the parser in `expenses/cli.py`.
+  - **The rewrap deviation is not a defect.** Plan step 1 says change no other word; three lines were rewrapped and no word moved. AC2 is about what the paragraph says, so the criterion is unaffected — recorded in the report rather than passed over.
+  - No criterion was judged ambiguous, so no question was filed.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 123 tests in 1.517s`, `OK`
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 0, 0 errors, 0 warnings (on the branch head as committed)
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 7 items, 11 documents, 0 errors, 0 warnings
+  - `git diff main -- docs/product/vision.md` → exit 0, three hunks, 9 insertions, 8 deletions
+  - `git diff --name-only main..HEAD` → exit 0, six files: `docs/product/vision.md` and this item's five tracker files
+  - `sed -n '25,42p' docs/product/vision.md` and `sed -n '1,12p' docs/product/vision.md` → exit 0, both paragraphs and the front matter read back
+  - first marker removed, then `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, one error at `docs/product/vision.md:31`; restored, `md5sum -c` → exit 0, `OK`
+  - second marker removed, then `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, one error at `docs/product/vision.md:38`; restored, `md5sum -c` → exit 0, `OK`
+  - scratch document added under `docs/product/`, then `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, one error against it; removed, `git status --short` → exit 0, empty
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 0, 0 errors, 0 warnings (final, with `verify-report.md` and the ticked criteria in the tree)
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings (final, same tree)
+- **Gates:**
+  - `tests-pass` → **pass** (123 tests, `OK`, exit 0, run on `76e62a6`)
+  - `lint-clean` → **skipped** (`commands.lint` is null in `tracker/project.yaml`; ADR-0004 is the decision. Nothing ran, so nothing is claimed — declared under `## Not verified, and why`)
+  - `workspace-valid` → **pass** (exit 0, 7 items, 11 documents, 0 errors)
+  - `every-criterion-independently-checked` → **pass** (every row of the report names a command run in this execution and quotes its output; no row cites `impl-report.md`)
+  - `negative-cases-exercised` → **pass** (AC1's failure condition produced three times by construction, each giving exit 1 and the expected error)
+  - `tests-would-fail-without-the-change` (advisory) → **pass** (no unit test exists and none is possible here; the equivalent is the two marker removals, each of which brought its own error back)
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/verify-report.md` — created
+  - `tracker/items/BUG-0001/item.md` — AC1 to AC4 ticked, each against a command in this execution
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0001 passes verification at `76e62a6`. The two absolute claims in `docs/product/vision.md` now carry citations that resolve, the whole-tree claims linter is clean over a tree that includes this execution's own artifacts, both claims still say what they said, and the document is at version 4 with a matching change-log row. The item goes to `in-review`.
+
+## 2026-08-27T02:28:28Z — review-close v0.4.0 — reviewer
+
+- **Item:** BUG-0001
+- **Trigger:** status `in-review` — dispatched by `next` as the only item whose status has an owner.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the four criteria and their tick state, and the five notes the filing skill left
+  - `tracker/items/BUG-0001/history.md` — five rows, read for gaps
+  - `tracker/items/BUG-0001/journal.md` — all five entries, in full
+  - `tracker/items/BUG-0001/artifacts/plan.md`, `impl-report.md`, `verify-report.md`
+  - `docs/architecture/adr/ADR-0009-a-documents-own-bug-is-fixed-by-the-item-that-owns-it.md`, in full
+  - the diff `main..wi/BUG-0001`, hunk by hunk — three hunks in `docs/product/vision.md`, plus this item's own tracker files
+  - for D12, the things the two citations name: `tracker/items/WI-0001/questions/Q-001.md`, `tracker/items/WI-0001/questions/Q-003.md`, `expenses/store.py`, `expenses/cli.py`
+  - `tracker/items/BUG-0001/questions/` — empty; none was ever filed on this item
+- **Decisions:**
+  - **Accept, and close as delivered.** All twelve Definition of Done criteria pass, each recorded with its own evidence in `review.md`. Every hunk maps to a plan step and nothing else is in the diff.
+  - **D12 was decided by opening what the citations name, not by reading the sentences.** The stakeholder answer in `WI-0001/Q-001` refuses per-person amounts and weights in as many words, and `add_expense` builds its shares from an equal split with neither in its signature; `WI-0001/Q-003` records editing as refused, and no `edit` subcommand is registered in the parser. Both claims are true and both citations support them.
+  - **The rewrap deviation from plan step 1 is accepted, not sent back.** Three lines were rewrapped and no word changed; AC2 is about what the paragraph says. `implement` declared it rather than leaving it to be found.
+  - **Finding: `check-verify-freshness` counts `docs/` as record.** Its message on this item was that only the record had changed, `docs/` included — sound for every other item here, because their deliverable is under `expenses/`, and weaker for this one, whose deliverable *is* a file under `docs/`. Not a defect in the change: the range was checked directly and `git diff --name-only 76e62a6..HEAD -- docs/` is empty. No bug item filed, because the script belongs to the toolkit and nothing in this project can change it. Recorded in `review.md` `## Findings` and in the item's `## Notes`.
+  - **Four accepted gaps, all copied into the item's `## Notes`** so they survive the item being closed: the never-run `lint-clean`, the unflagged absolutes elsewhere in `vision.md`, the trunk-scoped gate that let this defect past three skills, and the freshness finding above.
+  - **The trial merge was made in a `git worktree` checked out on `main`, which advanced the real trunk ref — caught by a gate, and rewound.** A worktree shares the repository's refs, so `git merge` inside it fast-forwarded `main` itself rather than a copy; removing the worktree did not undo that. The first attempt at this transition then failed on `commits-reference-the-item`, which reported `main..wi/BUG-0001` empty and told me to rewind, close and merge. `main` was reset to `7f5ac6c` with `git branch -f`, the gate went green again, and nothing had been published. The gate did exactly the job it exists for; the lesson is that a throwaway copy of the trunk must not be a checkout of the trunk branch.
+  - **Merge order: trial, discard, close, merge.** The trial merge was a fast-forward, so the merge result is the branch head commit-for-commit and the suite run on it is a run on that head. The item is closed while `main..wi/BUG-0001` still has commits in it, because `check-commit-refs` reads that range.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0001 wi/BUG-0001` → exit 0
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0001 wi/BUG-0001` → exit 0, `all 3 commit(s) on main..wi/BUG-0001 name BUG-0001`
+  - `git diff --name-only 76e62a6..HEAD` → exit 0, five files, all under `tracker/`; the same restricted to `docs/` → exit 0, empty
+  - `git diff main -- docs/product/vision.md` → exit 0, three hunks, 9 insertions, 8 deletions
+  - `git worktree add -f /tmp/trial-bug0001 main` → exit 0; `git -C /tmp/trial-bug0001 merge --no-edit wi/BUG-0001` → exit 0, fast-forward
+  - `python3 -m unittest discover -s tests -t .` in the trial worktree → exit 0, `Ran 123 tests in 1.526s`, `OK`
+  - `git worktree remove --force /tmp/trial-bug0001` → exit 0; `git worktree list` → only the project
+  - `grep -n edit expenses/cli.py` → no match; `sed -n '109,150p' expenses/store.py` → read
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 1 document, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 0, 0 errors, 0 warnings, with `review.md` and the closing notes in the tree
+  - `python3 .claude/agile-skills/scripts/transition BUG-0001 --to done --actor review-close ...` → **exit 1 on the first attempt**, two hard gates failing: `commits-reference-the-item`, because the trial merge had advanced `main`; and `workspace-valid`, because `outcome: delivered` had been written before the move
+  - `git branch -f main 7f5ac6c` → exit 0; `check-commit-refs BUG-0001 wi/BUG-0001` → exit 0 again, 3 commits
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 with `item.outcome.premature` while `outcome: delivered` sat in an item that was not yet `done`, then exit 0 once it was removed. The outcome is written after the move, not before it
+- **Gates:**
+  - `definition-of-done` → **pass** (D1 to D12 each recorded with its own result and evidence in `review.md` `## Definition of Done`; no single verdict stands in for the table)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0, and the file list since `76e62a6` checked by hand because of the finding above)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 3 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (123 tests, `OK`, exit 0, run in the trial worktree on the merge result)
+  - `workspace-valid` → **pass** (exit 0 at the transition, 7 items, 11 documents, 0 errors)
+  - `record-is-reconstructible` → **pass** (from `tracker/` and `git log --grep BUG-0001` alone: what was built and why is in `item.md` and `plan.md`; who decided what is in ADR-0009 and the five journal entries, each naming its skill and persona; no question arose and both skills that could have filed one say so; what verification found is in `verify-report.md`, including the three injections)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0; and the whole-tree form, which is this item's own AC1, exit 0)
+  - `epic-sign-off` → **not applicable to this move** (this is a bug closing, not an epic ending; EP-001 is untouched by this execution and reaches rest only once this item is `done`)
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/review.md` — created
+  - `tracker/items/BUG-0001/item.md` — four accepted gaps appended under `## Notes`, and `outcome: delivered` written immediately after this move
+  - the merge of `wi/BUG-0001` into `main`, made after this close
+  - no bug items filed, no questions filed
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0001 is delivered and closed. `docs/product/vision.md` is at version 4, its two absolute claims each carry a citation that resolves and that a reader can follow in one hop, and both claims still say what they said. The whole-tree claims linter is clean over the project for the first time since the defect was filed.

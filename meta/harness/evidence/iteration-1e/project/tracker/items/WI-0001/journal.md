@@ -1,0 +1,388 @@
+# Journal — WI-0001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-26T23:24:58Z — intake v0.2.0 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** invoked directly on the stakeholder's opening statement (`IDEA.md`); no prior workspace state existed
+- **Inputs read:**
+  - `IDEA.md` — the stakeholder's opening statement
+  - `tracker/project.yaml`
+  - `tracker/items/EP-001/item.md` (written by this same execution)
+- **Decisions:**
+  - See EP-001's entry for this execution for how the work was split and why.
+  - Recorded, rather than resolved, two things the stakeholder did not state: how an expense divides between its sharers, and how amounts are represented and rounded. An equal split is the plain reading of "shared by some or all" but was not said, so it is a note for refinement, not an assumption baked into a criterion.
+- **Questions raised:** none on this item; `EP-001/Q-001`, `EP-001/Q-002` and `EP-001/Q-003` are filed on the epic and affect this item
+- **Commands:**
+  - `scripts/new-item --id WI-0001 --type work-item --status draft --actor intake` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace` reported 0 errors at the end of this execution)
+  - `epic-has-success-measures` → **pass** (assessed on EP-001; see its entry)
+  - `items-are-separable` (advisory) → **pass** (see EP-001's entry for the order and dependencies of all three items)
+  - `no-solution-in-the-problem` (advisory) → **pass** (see EP-001's entry)
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` (new)
+- **Status:** `—` → `draft`
+- **Result:** Created at draft with five rough acceptance criteria covering adding people, recording an expense with its payer and sharers, listing both, surviving a restart, and rejecting an unknown person. Refinement is next.
+
+## 2026-08-26T23:38:51Z — refine v0.2.1 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** status `draft`, dispatched by `next` as the only runnable item (WI-0002 blocked on its dependency, WI-0003 at `blocked`, EP-001 at `open` with no owner)
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — five criteria as `intake` left them
+  - `tracker/items/WI-0001/history.md` — one row, `— → draft` from `intake`. This is a **fresh** draft, not a send-back from `verifying` or `in-review`, so the whole item is in scope rather than one specific defect
+  - `tracker/items/WI-0001/journal.md` — `intake`'s entry, including the two things it recorded as unstated and refused to invent
+  - `tracker/items/WI-0001/artifacts/` — empty but for `.gitkeep`; no prior refinement
+  - `tracker/items/EP-001/item.md` and its `questions/Q-001.md`, `Q-002.md`, `Q-003.md` — all three now answered; their content is what stopped this execution re-asking anything the stakeholder has already settled
+  - `tracker/items/EP-001/journal.md` — `intake`'s entry, carrying the stakeholder's opening statement verbatim
+  - `tracker/items/WI-0002/item.md`, `WI-0003/item.md` — to check that nothing asked here belongs to them
+  - `docs/product/vision.md` (v2)
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `question.md`, `workspace-layout.md` §1.3, `journal-and-history.md`
+- **Decisions:**
+  - **Ran the Definition of Ready criterion by criterion before writing anything.** R1, R2, R3, R5, R6, R7 and R9 pass on the item as it stands. R4, R8 and R10 fail. The per-criterion table with the reason for each verdict is in `artifacts/refinement-qa.md`; the summary is under **Gates** below.
+  - **Sorted every R4/R10 gap by who owns it before filing anything.** Applying the skill's own test in order produced three questions for the stakeholder and seven decisions this skill took itself. The seven are recorded in `artifacts/refinement-qa.md` as A1–A7 and copied into the item's `## Notes`, each marked `[assumed — refine, not asked]` so that nothing here is ever misread as something the stakeholder said. They are: the command surface (`python3 -m expenses person|expense …`); stdout/exit-0 on success and stderr/non-zero with nothing written on refusal; a person identified by their exact name, duplicates refused; amounts as decimals of at most two places, strictly positive; `--shared-by` requiring at least one name, the payer not needing to be among them, and a repeated name refused; the requirement that shares sum exactly to the amount paid; and leaving the store's path and format to `plan`. Rationale for treating these as ours: each would have the same answer whoever the stakeholder was, or is a naming call — the F-023 complaint is exactly about routing these to a person.
+  - **Filed three questions and no more.** Q-001 (how an expense divides between its sharers) because it decides what every number the tool prints means, and `intake` had already refused to invent it. Q-002 (whether an expense carries a description and a date) because adding fields to what they asked for is a widening of scope and because WI-0003's CSV rows have a date and a description with nowhere to go otherwise. Q-003 (whether records can be corrected or removed) because `intake` wrote in this item's own out-of-scope list that "refinement should confirm whether it is wanted", and because it is a scope decision. Each is one decision in one file, and all three carry the same one-line frame naming the item, the round and which of three it is, with the last saying that is the whole batch (F-020, F-027).
+  - **Did not rewrite the acceptance criteria.** AC2 and AC3 depend directly on the answers to Q-001 and Q-002; rewriting them now would produce criteria that must be rewritten again, and an item whose criteria look settled while three questions are open reads as more finished than it is. The proposed AC1–AC6, written out in full against A1–A7, are in `artifacts/refinement-qa.md` so the next execution folds in three answers rather than repeating this analysis.
+  - **Wrote `refinement-qa.md` at `status: agenda`, not `recorded`.** The conversation has not happened. R8 is satisfied only by `recorded`, which is the point of the field (F-031), and this file must not be allowed to pass the item to `ready` by existing.
+  - **Left two design questions for `plan` rather than for a person:** which sharer absorbs an indivisible remainder (constrained only to be deterministic, since WI-0002's AC4 depends on it), and where the data store lives and in what format. Both are in `## Notes`. Neither has a stakeholder stake, and R10 needs them visible rather than decided.
+  - **Judged R9 a pass.** Splitting people from expenses would leave an item whose entire value is a list of names nothing can be done with, and the two cannot be ordered independently — recording an expense needs people to exist first. One data model, one store, four commands over it, is one coherent change.
+  - Asked nothing about WI-0002 or WI-0003. WI-0002's open detail depends on WI-0001's answers and refinement has not reached it; WI-0003 is at `blocked` awaiting the stakeholder's CSV sample. Filing questions about work not yet reached is not batching, it is padding.
+- **Questions raised:** three, all blocking and all to the human — `WI-0001/Q-001`, `WI-0001/Q-002`, `WI-0001/Q-003`. Recorded in `artifacts/refinement-qa.md` under "Round 1". None left `[unresolved]`: nothing was asked and abandoned; the seven items refinement settled are marked `[assumed]` with the explicit note that the stakeholder was not asked.
+- **Commands:**
+  - `scripts/validate-workspace .` → exit 1, with exactly the two findings this transition clears (`question.blocking.not-suspended` on WI-0001, `board.stale`)
+  - `scripts/transition WI-0001 --to awaiting-answer --actor refine --resume-to draft --journal-body-file …` → this entry
+- **Gates:**
+  - `workspace-valid` → **pass** — run by this transition, which judges the state the move produces.
+  - `definition-of-ready` → **fail**, per criterion: R1 pass (frontmatter complete, `type`/`epic`/`priority` set); R2 pass (role, capability and "so that" all present); R3 pass (AC1–AC5, labelled, checkboxes); **R4 fail** — every criterion says "a documented command" and names none, AC2 does not say what an amount is, AC5 says "fails" without a decidable observation; R5 pass (four exclusions, including editing and deleting); R6 pass (no question existed on this item before this round; the three filed now are what suspends it); R7 pass (no `depends-on`); R8 **fail** — `refinement-qa.md` did not exist, and now exists at `status: agenda`, which does not satisfy R8; R9 pass (see Decisions); **R10 fail** — duplicate person, empty sharer list, payer not a sharer, a name repeated in the sharer list, zero/negative/over-precise amounts, and an uneven split's remainder all had no stated behaviour. R4 and R10 are now partly closed by A1–A7 in `## Notes` and fully closed only once Q-001–Q-003 are answered. The item is **not** being passed to `ready` and no override was recorded — no criterion is being waived, they are being worked.
+  - `criteria-are-decidable` → **fail (not yet applicable)** — the criteria in `item.md` are still `intake`'s and are not decidable, which is R4's verdict above. This gate is what the next execution must pass before `draft → ready`; it is recorded as failing rather than skipped, because the criteria exist and do not meet it.
+  - `qa-recorded-verbatim` → **fail (by design, not by omission)** — `artifacts/refinement-qa.md` exists and is at `status: agenda`. Nothing in it is attributed to the stakeholder that they did not say: the only `[human]` material is quoted from `IDEA.md` and from the answered questions on EP-001, and the seven decisions refinement took are marked `[assumed — refine, not asked]`. It becomes `recorded` when the three answers arrive and are written in verbatim.
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` (new, `status: agenda`) — the per-criterion DoR table, the three questions with what each traces to, A1–A7 with the reasoning for each, and the proposed AC1–AC6
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` (new, open, blocking, to human)
+  - `tracker/items/WI-0001/item.md` — `## Notes` rewritten with A1–A7, the two open design questions for `plan`, and a pointer to the Q&A. Acceptance criteria deliberately untouched.
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** WI-0001 is suspended on three questions to the stakeholder, all of which change what the software is or what counts as correct. Everything that was refinement's own to decide has been decided and written into the item, so the next execution folds in three answers and rewrites six criteria rather than starting the analysis again. The item is not Ready and is not pretending to be.
+
+## 2026-08-26T23:46:42Z — answer-questions v0.2.0 — architect
+
+- **Item:** WI-0001
+- **Trigger:** status `awaiting-answer` with three open blocking questions to the human, all three of which now carry a reply in `## Answer`; dispatched ahead of `next` because an answered-but-unconsumed human question stops the orchestrator (`spec/question.md` §3, F-011)
+- **Inputs read:**
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the three replies, verbatim
+  - `tracker/items/WI-0001/item.md`, `history.md` (for `resume-to`), `artifacts/refinement-qa.md`
+  - `tracker/items/EP-001/item.md` and its answered `Q-001`, `Q-002`, `Q-003`
+  - `tracker/items/WI-0002/item.md`, `tracker/items/WI-0003/item.md`
+  - `docs/product/vision.md` (v2)
+  - `docs/architecture/adr/` — empty; no recorded decision could be contradicted by any of these answers
+  - `.claude/agile-skills/spec/question.md`, `ids-and-statuses.md`, `work-item.md`, `journal-and-history.md`
+- **Decisions:**
+  - **Q-001 → option A, equal split between named sharers.** Route: the human's own reply to an escalation — *"Equal split, keep it simple."* Their second sentence accepts option A's stated cost (an uneven bill becomes two expenses), so it is a choice made with the consequence in front of them rather than a default. B and C are refused. Rationale for recording it this way: this decides what every number the tool prints means, so it belongs in `item.md` and in the vision, not only in the question.
+  - **Q-001's remainder rule stays open, as `plan`'s.** Rationale: an equal split of an amount that does not divide evenly still has to sum exactly, but which sharer absorbs the odd unit has no stakeholder stake — the question said so when it was asked, and pulling it into this answer would be inventing a decision nobody made.
+  - **Q-002 → option C, optional description and a date defaulting to today.** Route: the human's reply — *"add both — description and date"* — which excludes A (neither) and B (description only, required). Rationale for keeping the description **optional**: C is what they accepted and optionality was C's defining difference from B. Reading their reason ("I'll want to know what a charge was for") as "therefore required" would tighten a criterion beyond what was said, which is the drift this record exists to catch.
+  - **Q-003 → option C narrowed: deletion yes, editing no, scheduled after WI-0002.** Route: the human's reply, which picks deletion over editing when forced to choose and delegates the timing with one constraint. Rationale for treating the delegation as C rather than B: they said explicitly it must not hold up the who-owes-whom feature, which is exactly what B would have done.
+  - **The Q-003 answer widened scope, so WI-0004 was filed rather than WI-0001 grown.** Rationale: `spec/ids-and-statuses.md` §5 gives `answer-questions` the authority precisely here, and widening an existing item hides the change from the board and from the person who asked for it. `medium` and `depends-on: WI-0002` are argued on EP-001's journal entry for this execution.
+  - **The acceptance criteria in `item.md` were deliberately NOT amended.** Rationale: they are still `intake`'s rough ones, `refine` suspended mid-round precisely to write them, and the item returns to `draft` where that is `refine`'s job. Propagation instead lands where `refine` will read it: `item.md`'s `## Notes` and the "Proposed acceptance criteria" section of `refinement-qa.md`, which now carries the folded-in text (AC2 and AC3 de-conditioned, new AC7 and AC8). Writing half-refined criteria into `item.md` would have been work `refine` must redo.
+  - **`refinement-qa.md` stays at `status: agenda`.** Rationale: DoR R8 is satisfied by `recorded`, and only `refine` can judge whether round 1 was the whole conversation. Marking it `recorded` here would assert a Definition-of-Ready verdict this skill does not own.
+- **Questions raised:** none — no part of any of the three answers needed re-addressing to the human, and nothing in them contradicts a recorded decision
+- **Commands:**
+  - `date -u +%Y-%m-%dT%H:%M:%SZ` → exit 0 (stamps on `answered-at`)
+  - `scripts/new-item --next-id work-item` → exit 0, `WI-0004`
+  - `scripts/new-item --id WI-0004 … --actor answer-questions --arose-from WI-0001/Q-003` → exit 0
+  - `scripts/journal-entry EP-001 --skill answer-questions --body-file …` → exit 0
+  - `scripts/validate-workspace .` → reported with this transition
+- **Gates:**
+  - `answer-is-propagated` → **pass**. Every file named in the three `## Consequences` sections was opened after writing and contains the change: `WI-0001/item.md` (`## Out of scope` rewritten for WI-0004 and for editing; `## Notes` carries all three answers with their quotes, the command surface carries `--description`/`--date`, the remainder constraint is restated for an equal split); `WI-0001/artifacts/refinement-qa.md` (three question sections rewritten from "awaiting" to answered, A1's surface updated, proposed AC2/AC3 de-conditioned, AC7 and AC8 added); `WI-0002/item.md` (closing note now states the settled equal split); `WI-0003/item.md` — **not named in any Consequences section and not touched**, because none of these three answers reaches it; `EP-001/item.md` (`## Scope` and `## Out of scope`); `docs/product/vision.md` at v3 with a change-log row; `tracker/items/WI-0004/` created.
+  - `answered-from-the-record` → **pass**. Every one of the three is answered by the human's own reply to an escalation, quoted verbatim in the question file — the strongest form of "from the record". `docs/architecture/adr/` is empty, so no answer could contradict a recorded decision, and no new ADR was written: nothing here is an architect's decision to make. The two genuinely architectural questions these answers expose (the remainder rule, the on-disk date format) are recorded as `plan`'s open design questions rather than decided.
+  - `escalation-is-justified` → **skipped**. Nothing was escalated; all three questions were already with the human and came back answered.
+  - `workspace-valid` → run with this transition; result recorded by the transition itself.
+  - `item-resumed-correctly` → **pass**. `history.md` row 2 records `resume-to: draft` on the `draft → awaiting-answer` suspension by `refine`; this execution returns the item to `draft`, and all three blocking questions are now `answered`, so nothing holds it at `awaiting-answer`.
+  - `a-deferral-is-not-an-answer` → **pass, not applicable**. None of the three replies defers: each selects among the options it was offered (A, C, and C-narrowed respectively). Q-003's *"Timing's up to you"* is a delegation of a sub-decision, not a refusal to answer — the question asked both whether corrections are wanted and when, and the "whether" was answered outright. Contrast EP-001/Q-001, which was a genuine deferral and left WI-0003 at `blocked`.
+- **Artifacts:**
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — `## Answer` and `## Consequences` written, `status: answered`, `answered-by: human`, `answered-at: 2026-08-26T23:44:57Z`
+  - `tracker/items/WI-0001/item.md` — `## Out of scope` and `## Notes` rewritten; acceptance criteria untouched
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — round 1 rewritten as answered; A1 amended; proposed criteria de-conditioned with AC7 and AC8 added
+  - `tracker/items/WI-0002/item.md` — the split note updated to the settled answer
+  - `tracker/items/WI-0004/` (new) — filed from Q-003
+  - `tracker/items/EP-001/item.md` and `tracker/items/EP-001/journal.md` — scope change recorded at the epic
+  - `docs/product/vision.md` — v2 → v3
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** All three of WI-0001's blocking questions are answered by the stakeholder and propagated: expenses split equally, each carries an optional description and a date defaulting to today, and deleting a mistaken record became WI-0004 rather than widening this item. WI-0001 is back at `draft` for `refine` to finish round 1 and write the criteria that are already drafted for it.
+
+## 2026-08-26T23:50:53Z — refine v0.2.1 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** status `draft`, dispatched by `next` as the only runnable item (WI-0002 and WI-0004 blocked by `depends-on`, WI-0003 at `blocked` which has no owner). This is refinement **resuming round 1**, not a fresh draft and not a send-back: `history.md` row 3 shows `answer-questions` returning the item from `awaiting-answer` to its recorded `resume-to` after the stakeholder answered the three questions this skill filed in row 2.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — five criteria still as `intake` left them, plus the notes `answer-questions` propagated
+  - `tracker/items/WI-0001/history.md` — three rows; read first, per the precondition, to establish that this is a resumption rather than a rejection
+  - `tracker/items/WI-0001/journal.md` — `intake`'s entry (the stakeholder's original answers) and round 1's own entry, so that nothing already settled was re-opened
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — round 1's analysis, A1–A7, and the proposed criteria left for this execution to fold the answers into
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the stakeholder's three replies, verbatim
+  - `tracker/items/EP-001/item.md` and its three answered questions; `tracker/items/WI-0002/item.md`, `WI-0003/item.md`, `WI-0004/item.md` — to confirm no part of this scope belongs to a sibling
+  - `docs/product/vision.md` (v3)
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `work-item.md`, `workspace-layout.md` §1.3, `journal-and-history.md`
+- **Decisions:**
+  - **Asked the stakeholder nothing, and recorded why.** Round 1's three answers closed everything with product stake. Eight further candidates were considered and each was sorted by the skill's ownership test; the table is in `refinement-qa.md` under "Round 2". One was already answered (whether the description should be required — they were shown required-vs-optional and chose optional, so re-asking would tell them their answer was not heard), five were implementation-only and are decided here as A8–A12, and two are design decisions with real trade-offs that are routed to `plan` rather than settled. Rationale: the stakeholder's attention is the scarcest thing in this loop and F-023 is precisely the complaint that technical calls get routed to a person; filing a question here would also have stopped the whole loop for a day for something no stakeholder would have an opinion about.
+  - **A8 — `--date` is `YYYY-MM-DD`, a future date is accepted, an omitted date means today.** Rationale: the format is unambiguous, sorts correctly and parses with the standard library alone; and refusing a future date would invent a rule nobody asked for, when recording something already committed to is ordinary.
+  - **A9 — `--description ""` is the same as omitting it.** Rationale: the field is optional, so there is no useful difference between absent and empty, and a refusal there would have nothing behind it.
+  - **A10 — the empty listings print `no people` and `no expenses` and exit 0.** Rationale: an empty store is not an error; and printing nothing leaves a person unable to distinguish "none recorded" from "the command did nothing". The exact strings are fixed rather than left to `plan` **because AC9 has to be decidable by someone with a terminal** — this is the one place refinement chose to constrain output wording, and it says so.
+  - **A11 — listings print in the order things were recorded.** Rationale: AC4 already requires byte-identical output across runs, so some order must be fixed; insertion order needs no further decision and matches what the person who typed the entries expects.
+  - **A12 — a name that strips to nothing is a refusal.** Rationale: A3 already makes the stripped name the identifier, so this is the boundary of a decision already taken rather than a new one.
+  - **Rewrote all five criteria and added four.** AC1 gains the duplicate-name refusal and the `Ana`/`ana` case, making A3 decidable. AC2 states the equal split and the exact shares (`Q-001`). AC3 states date, description and order (`Q-002`, A11). AC4 is now "byte-identical stdout in a new process", which is checkable without naming a data path — deliberately, since where the store lives is `plan`'s. AC5 states the refusal for an unknown sharer *and* an unknown payer and requires the listing to be unchanged. AC6 collects every invalid input in one criterion. AC7 (new) covers the description/date combinations. AC8 (new) covers a split that does not divide evenly, requiring only that the shares sum and that repeated runs agree — it deliberately does not name which sharer takes the extra unit. AC9 (new) covers the empty store.
+  - **Did not name the remainder rule or the data store path.** Both stay open design questions for `plan` in `## Notes`. Rationale: R10 requires such gaps to be *visible with who left them*, not decided; and deciding the remainder rule here would pre-empt `plan`'s ADR that WI-0002's AC4 depends on.
+  - **`refinement-qa.md` moves `agenda` → `recorded`.** Rationale: the conversation actually happened — three questions asked, three answered verbatim, and a recorded decision not to open a round 2. R8 reads this field, and it would have been wrong to set it in round 1 when nothing had been asked.
+  - **No override was recorded, and none was needed.** Every DoR criterion passes on its own terms.
+- **Questions raised:** none this round. Round 1's three (`Q-001`, `Q-002`, `Q-003`) are all `answered` and are recorded verbatim in `artifacts/refinement-qa.md`; nothing is left `[unresolved]`.
+- **Commands:**
+  - `scripts/validate-workspace .` → exit 0 with one pre-existing warning (`project.commands.test-null`, which `plan` owns), before this transition
+  - `scripts/transition WI-0001 --to ready --actor refine --journal-body-file …` → this entry
+- **Gates:**
+  - `workspace-valid` → **pass** — run by this transition, which judges the state the move produces. The only finding is the standing `project.commands.test-null` warning, which is `plan`'s to clear and is not an error.
+  - `definition-of-ready` → **pass**, criterion by criterion. **R1 pass** — frontmatter complete, `type`/`epic`/`priority` set. **R2 pass** — role, capability and "so that" all present, unchanged since `intake`. **R3 pass** — AC1–AC9, each labelled and a checkbox. **R4 fail in round 1 → now pass** — every criterion names a command and the observation that settles it; the two places wording could have drifted are pinned by exact strings (A10) and by a byte-identical repeat run (AC8) rather than by an adjective. **R5 pass** — five exclusions, two of them (deleting, editing) carrying the stakeholder's own words. **R6 pass** — all three questions on this item are `answered`; none open. **R7 pass** — no `depends-on`. **R8 fail in round 1 → now pass** — `refinement-qa.md` is at `status: recorded` and holds both rounds verbatim with every answer tagged `[human]` or `[assumed]`. **R9 pass** — one data model, one store, four commands; splitting people from expenses would leave an item whose whole value is a name list. **R10 fail in round 1 → now pass** — the full combination map is in `refinement-qa.md`'s closing table: description × date in AC7, invalid inputs in AC6, unknown payer and sharer in AC5, duplicate and case-differing person in AC1, empty store in AC9, uneven split in AC8, deleting and editing in `## Out of scope`, and exactly two things left deliberately unconstrained — the remainder rule and the store's path and format — both named in `## Notes` as `plan`'s.
+  - `criteria-are-decidable` → **pass**. Each criterion was checked by naming the command and the verdict: AC1 `person add Ana` / `person list` — exit codes and a line for `Ana`, twice-added refused, `ana` distinct; AC2 `expense add --amount 30 …` — exit 0 and three shares of 10.00 summing to 30.00; AC3 `expense list` — one entry per expense showing five named fields in recorded order; AC4 the two listings in a new process — byte-identical stdout; AC5 two `expense add` invocations with an unknown name — non-zero, `Dan` on stderr, listing unchanged; AC6 ten invocations — non-zero, stderr, both listings unchanged; AC7 four `expense add` invocations — exit 0 with the defaults and the values round-tripped; AC8 `--amount 10` over three sharers — exit 0, shares sum to 10.00, repeat run byte-identical; AC9 both listings on an empty store — exit 0 with `no people` / `no expenses` on stdout. No criterion contains an adjective without a threshold.
+  - `qa-recorded-verbatim` → **pass**. `artifacts/refinement-qa.md` at `status: recorded` carries all three round-1 questions with the stakeholder's replies quoted word for word and tagged `[human]`, and every decision refinement took itself marked `[assumed — refine, not asked]` — A1–A7 from round 1 and A8–A12 from this one. Nothing is paraphrased into agreement; where the reply was less than a full answer to what was asked (Q-003's *"Timing's up to you"*) the file says which part was answered and which was delegated. Round 2 is recorded as having asked nothing, with the eight candidates and the reason each was not asked.
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` — `## Acceptance criteria` replaced with AC1–AC9; `## Notes` updated with round 2's decisions and with refinement's completion
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — `agenda` → `recorded`; round 2 section added with the not-asked table; A8–A12 added; the proposed criteria replaced by the criteria as installed; a closing per-criterion DoR verdict added. Round 1's original assessment table is left exactly as written, since it records where the item stood then
+- **Status:** `draft` → `ready`
+- **Result:** WI-0001 is Ready. Nine criteria, each decidable from a terminal, covering the equal split, the description and date the stakeholder asked for, every refusal case, an uneven split and an empty store. Two things are deliberately undecided and named as `plan`'s: which sharer absorbs an indivisible remainder, and where the data store lives.
+
+## 2026-08-26T23:56:47Z — plan v0.3.0 — architect
+
+- **Item:** WI-0001
+- **Trigger:** status `ready`, dispatched by `next` as the only runnable item (WI-0002 and WI-0004 held by `depends-on`, WI-0003 at `blocked`, which has no owner). This is a first plan, not a re-plan: `history.md` shows `draft → ready` from `refine` with no rejection anywhere in the chain.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, the contract this design satisfies
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — A1–A12, every one tagged `[assumed]`, which is where this design's soft ground is; and the two open design questions refinement routed here by name
+  - `tracker/items/WI-0001/history.md`, `journal.md` — three executions, no send-back
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the stakeholder's answers, for the equal split and the date/description fields
+  - `tracker/items/EP-001/item.md` — the goal, the success measures, and the python3/standard-library/no-network constraint; `tracker/items/EP-001/questions/Q-001.md` for WI-0003's parked state
+  - `tracker/items/WI-0002/item.md`, `WI-0003/item.md`, `WI-0004/item.md` — what this design must leave room for
+  - `docs/product/vision.md` (v3); `docs/architecture/adr/` — **empty**, so no prior decision could be contradicted; `docs/architecture/overview.md` — did not exist, and this is the first planned item, so this execution created it
+  - `tracker/project.yaml` — `commands.test`, `lint` and `build` all `null`
+  - `IDEA.md` — the stakeholder's own words on the constraint
+  - The project's source code: **there is none.** `git ls-files` outside `.claude/` and `tracker/` returns only `.gitignore`, `docs/`, and the three prompt files. This plan is therefore written against an empty tree, and says so, rather than against code it did not read.
+- **Decisions:**
+  - **The store is one JSON file, located by `EXPENSES_STORE` then `XDG_DATA_HOME` then `~/.local/share` — ADR-0001.** Route: decided (the record was silent; `refine` routed it here explicitly). Rationale: `sqlite3` gives a schema and a binary file for a dataset of a few thousand records, and CSV cannot hold an expense's sharer list without a hand-rolled escaping scheme that the first comma in a description would break. The env-var override is load-bearing rather than a convenience: AC4, AC8 and AC9 are all stated against a fresh or empty store, and without it, verifying them would mean deleting the user's real data.
+  - **Money is an `int` of minor units, parsed by a whole-string match — ADR-0002.** Route: decided. Rationale: AC2 and AC8 say "exactly", and this makes exactness a property of the type rather than of the care taken. `Decimal` is exact here too but carries a context and a rounding mode, so "exactly" would depend on configuration; and matching the string rather than calling `float()` makes `1e3`, `nan` and `1_000` refusals with no special case.
+  - **An indivisible remainder goes one unit each to the first-named sharers — ADR-0003.** Route: decided; this is the design question `refine` named and constrained only to be deterministic. Rationale: the payer absorbing it is a policy nobody asked for, and alphabetical order is deterministic *and* systematically biased — `Ana` would pay the extra unit for ever. Order-as-typed is stable because the sharer list is stored, and it is explainable in one sentence.
+  - **`commands.test` is `python3 -m unittest discover -s tests -t .`; `lint` and `build` stay `null` with the reason recorded — ADR-0004.** Route: decided. Rationale: the epic forbids installing anything, the standard library ships no linter, and a `compileall` stand-in is exactly the "exits zero without checking anything" case the gate names. Recording `skipped` with an ADR is honest; recording a pass would not be.
+  - **Four modules, layered one way**, `cli → store → money`, with `store` and `money` doing no printing. Route: assumed, recorded in `docs/architecture/overview.md` v1 as the project's one structural rule. Rationale: it is what lets the arithmetic and the storage be tested without running commands, which is how eight of the nine criteria get cheap demonstrations.
+  - **One exception type, caught in one place.** Route: assumed. Rationale: AC5 and AC6 both require that a refusal leaves the stored data untouched; validating before the single `save()` call makes that structural instead of a promise repeated in four handlers.
+  - **Three small things left to the developer** — the wording of the two confirmation lines, the refusal exit code (2), and one-line-per-expense listing layout — each recorded under `## Assumptions` with what reversing costs. Route: assumed. Rationale: no criterion constrains any of them; the two output strings that *are* fixed (`no people`, `no expenses`) are refinement's and AC9 asserts them.
+  - **Asked the human nothing.** Every decision above was either answerable from the record or reversible at the cost of one function or one line, which is branches 1 and 2 of the preference order. Nothing here is irreversible or turns on intent no document records: refinement already extracted the three things that did.
+  - **Wrote no production code and no tests.** Step 6 says what the tests must assert and leaves the writing to `implement`.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 1, `ImportError: Start directory is not importable` (before `tests/__init__.py` existed — this is what justifies the scaffolding)
+  - `python3 -m unittest discover -s tests -t .` → exit 5, `Ran 0 tests ... NO TESTS RAN` (with the empty `tests/__init__.py`; the correct answer while no test exists)
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 1 test ... OK` (with a one-assertion file temporarily present, since removed — `plan` does not write tests)
+  - `python3 -c 'import decimal'` → exit 0; `python3 -c 'import ruff'` → exit 1, `ModuleNotFoundError` (the two facts ADR-0002 and ADR-0004 rest on)
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 1, 6 errors, then exit 0 after every flagged absolute was sourced
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings (the `project.commands.test-null` warning is cleared by this execution)
+- **Gates:**
+  - `workspace-valid` → **pass** [src: run: python3 .claude/agile-skills/scripts/validate-workspace . → exit 0, 0 errors 0 warnings]. The standing `project.commands.test-null` warning that every previous execution carried is gone, because this one set the command.
+  - `every-criterion-is-addressed` → **pass**. The evidence is the nine-row mapping table in `plan.md`, one row per AC1–AC9, each naming the step that satisfies it and the specific assertion that demonstrates it — not "tests". Checked in the other direction too: every step maps to at least one criterion except step 7 (the README), which exists because every criterion says "a documented command" and EP-001's success measures require a person to work from documented commands.
+  - `project-commands-resolved` → **pass**. `commands.test` is set to a command run in this project three times, with its output recorded above. `commands.lint` and `commands.build` remain `null` under the gate's own escape hatch — ADR-0004 records why the project has none, and the reason is the stakeholder's constraint rather than convenience.
+  - `decisions-recorded` → **pass**. Six choices; four are ADRs (0001–0004), one is `docs/architecture/overview.md` v1 (the module layout), and three small ones are under `## Assumptions` with the cost of reversal stated. Every ADR states reversibility explicitly, as `spec/doc-header.md` §4 requires: high for the store, the remainder rule and the commands; medium for the money representation, because reversing it needs a data migration and not just a code change.
+  - `claims-are-sourced` → **pass** [src: run: python3 .claude/agile-skills/scripts/lint-claims --changed-since main → exit 0, 0 errors]. It failed first with six unsourced absolutes across three new documents; each was fixed by adding a citation that resolves, and two of those citations are commands that were then actually run.
+  - `plan-is-executable-without-you` (advisory) → **pass**. Read back cold, the step where a decision would still be needed was step 5's date handling — "validate the date" left the developer to choose between `fromisoformat` and a format string, which differ on `2026-8-1`. The step now names both checks. The interfaces in `## Approach` fix the signatures so the modules can be written in any order.
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/plan.md` (new)
+  - `docs/architecture/adr/ADR-0001-one-json-file-for-the-whole-dataset.md` (new)
+  - `docs/architecture/adr/ADR-0002-money-as-integer-minor-units.md` (new)
+  - `docs/architecture/adr/ADR-0003-remainder-goes-to-the-first-named-sharers.md` (new)
+  - `docs/architecture/adr/ADR-0004-unittest-for-tests-and-no-lint-command.md` (new)
+  - `docs/architecture/overview.md` (new, v1)
+  - `tracker/project.yaml` — `commands.test` set; `lint` and `build` left `null` with a comment pointing at ADR-0004
+  - `tests/__init__.py` (new, empty) — the only file created outside `tracker/` and `docs/`, listed under `## Scaffolding` with the command that could not otherwise execute
+- **Status:** `ready` → `planned`
+- **Result:** WI-0001 is planned. Seven steps over four modules and a test package, every one of AC1–AC9 mapped to a step and a specific assertion, four ADRs recording the decisions refinement routed here, and a project that now has a test command that runs.
+
+## 2026-08-27T00:01:54Z — implement v0.2.1 — developer
+
+- **Item:** WI-0001
+- **Trigger:** status `planned`; dispatched by `next` as the only runnable candidate (EP-001 has no owner for `open`; WI-0002 and WI-0004 wait on dependencies; WI-0003 is `blocked`).
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, the command surface, and what refinement settled without asking
+  - `tracker/items/WI-0001/artifacts/plan.md` — seven steps, the four-module layout, the fixed interfaces, and the AC mapping table
+  - `tracker/items/WI-0001/history.md` — five rows, ending `ready -> planned`; no send-back, so this is a fresh start and not a resumption
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — all three `answered` and already propagated into `item.md` before `refine` rewrote the criteria; nothing unread
+  - `docs/architecture/adr/ADR-0001` … `ADR-0004` — store location and JSON shape, minor units, the remainder rule, the test command
+  - `docs/architecture/overview.md` — the one-way layering the plan assumes
+  - `tracker/project.yaml` — `trunk-branch: main`, `branch-prefix: wi/`, `commit-subject`, `commands.test`
+- **Decisions:**
+  - Treat this as a fresh start, not a resumption: `git branch -a` showed only `main`, so no partial work exists to reconcile with.
+  - Work the plan's steps in their recorded order 1–7, committing per step, rather than writing the package in one commit — the plan's steps are separable and `git log --grep WI-0001` should read as the build order.
+- **Questions raised:** none
+- **Commands:**
+  - `git branch -a` → exit 0, only `main` existed
+  - `git checkout -b wi/WI-0001` → exit 0, branched from `main` at `f5285a5`
+- **Gates:**
+  - `tests-pass` → **not yet run** (no code exists; the gates run on the branch head at step 7)
+  - `lint-clean` → **not yet run**
+  - `workspace-valid` → **not yet run** by this execution; `next` ran it at dispatch with 0 errors, 0 warnings
+  - `every-criterion-has-a-test` → **not yet run**
+  - `commits-reference-the-item` → **not yet run** (no commits on the branch yet)
+  - `no-unplanned-scope` → **not yet run**
+  - `claims-are-sourced` → **not yet run**
+- **Artifacts:**
+  - branch `wi/WI-0001`, created at `f5285a5`, no commits yet
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation has started on `wi/WI-0001`. Nothing is built yet; the item is moved to `in-progress` before any code is written so that an interruption leaves a truthful status. The closing entry at the end of this execution is the one that reports the work.
+
+## 2026-08-27T00:07:46Z — implement v0.2.1 — developer
+
+- **Item:** WI-0001
+- **Trigger:** status `in-progress`, this execution's own opening move; the plan's seven steps are all worked and the gates run on the branch head.
+- **Inputs read:**
+  - `tracker/items/WI-0001/artifacts/plan.md` — the seven steps, the fixed module interfaces, the AC mapping table, the assumptions and the risks
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, the command surface, and the three notes sections recording what the stakeholder settled and what refinement settled
+  - `docs/architecture/adr/ADR-0001` (store location and JSON shape), `ADR-0002` (minor units), `ADR-0003` (the remainder rule), `ADR-0004` (the test command and why there is no lint command)
+  - `docs/architecture/overview.md` — the one-way layering
+  - `tracker/project.yaml` — `commands.test`, `commands.lint: null`, the branch prefix and the commit subject convention
+  - `.claude/skills/implement/references/contract.md` — the seven gates and the exit criteria
+- **Decisions:**
+  - **Wrote each test module in the same commit as the code it covers**, rather than in one pass at the plan's step 6. The plan groups the tests; this skill requires the test to arrive with the change. The coverage step 6 lists is all present, so the deviation is in the *how*. Recorded as deviation 1 in `impl-report.md`.
+  - **Gave `cli.main` optional `out` and `err` parameters** defaulting to `sys.stdout` and `sys.stderr`, so the CLI tests can capture a command's output without replacing process-wide streams. AC4 still exercises the real process through `subprocess.run`, so the in-process path is not the only one tested. Deviation 3.
+  - **Named `empty_dataset()` in `store.py`** so tests can assert against the value `load()` returns for a missing file without repeating the literal. No behaviour differs from the plan. Deviation 2.
+  - **Worded the confirmation lines** `added <name>` and `added <amount> paid by <payer>`, which the plan explicitly left to the developer. Deviation 4.
+  - **Did not touch `docs/product/vision.md`**, which fails `lint-claims --all` with two `claim.unsourced` errors predating this execution. The contracted gate is `--changed-since main` and it passes; the file is outside this item's diff; and fixing what I noticed on the way is what this skill forbids. I also could not file it as a bug: `pipeline.yaml` has no `from: null → ready` creation row whose actor is `implement`, so `new-item` refuses. Left for `verify`, which has that authority, and recorded under `## What I did not do`.
+  - **Did not re-litigate anything in the plan.** Every question I met was answered by the plan, an ADR, or the item's notes, so none went to the architect.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0001` → exit 0
+  - `python3 -m expenses` (no arguments, after step 1) → exit 1, `ModuleNotFoundError: No module named 'expenses.cli'`, which is what plan step 1 says should happen at that point
+  - `python3 -m unittest discover -s tests -t .` after step 2 → exit 0, Ran 8 tests, OK
+  - `python3 -m unittest discover -s tests -t .` after step 3 → exit 0, Ran 31 tests, OK
+  - `python3 -m unittest discover -s tests -t .` after step 5 → exit 0, Ran 50 tests, OK
+  - `python3 -m unittest discover -s tests -t .` on the branch head `4aae88d` → exit 0, Ran 50 tests in 0.466s, OK
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0001 wi/WI-0001` → exit 0, "all 5 commit(s) on main..wi/WI-0001 name WI-0001"
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 0 errors (it caught one unresolved citation in `README.md` while the file was uncommitted, which was corrected before the commit)
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, 2 errors, both in `docs/product/vision.md` and both predating this execution
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - `git diff main..wi/WI-0001 --stat` → 13 files, 1042 insertions
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` → exit 0, Ran 50 tests, OK, on branch head `4aae88d`)
+  - `lint-clean` → **skipped** (`commands.lint` is `null` in `tracker/project.yaml`; ADR-0004 records why — the standard library ships no linter and the project may not install one. Nothing was checked, so this is not a pass)
+  - `workspace-valid` → **pass** (`validate-workspace .` → exit 0, 0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass** (`impl-report.md`'s evidence table names a test function for each of AC1–AC9; no criterion rests on reading the code)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs WI-0001 wi/WI-0001` → exit 0, all 5 commits)
+  - `no-unplanned-scope` (advisory) → **pass** (13 files: four modules, three test modules, `README.md` from step 7, and four tracker files carrying this execution's own record; every hunk traces to a plan step)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → exit 0). A whole-tree run reports two pre-existing errors in `docs/product/vision.md`, recorded above and in the report rather than silently fixed
+- **Artifacts:**
+  - `expenses/__init__.py`, `expenses/__main__.py`, `expenses/money.py`, `expenses/store.py`, `expenses/cli.py`
+  - `tests/test_money.py`, `tests/test_store.py`, `tests/test_cli.py` — 50 tests
+  - `README.md` — the four commands, the flags, the refusal behaviour and where the data lives
+  - `tracker/items/WI-0001/artifacts/impl-report.md`
+  - branch `wi/WI-0001`, commits `f5285a5..b7f1830` — six commits, all naming WI-0001: `7118dc1` skeleton, `f860385` money, `4d46da4` store, `dea7632` cli, `4aae88d` README, `b7f1830` the report
+- **Status:** `in-progress` → `verifying`
+- **Result:** All seven plan steps are done and all of AC1–AC9 have a named test asserting a specific value. Six of the seven gates pass on the branch head; `lint-clean` is skipped because the project has no lint command and ADR-0004 says why. Four deviations from the plan are recorded, all of them in how rather than what, and none of them needed the architect. One thing is left for `verify` to file: two pre-existing `lint-claims` errors in `docs/product/vision.md` that this item did not touch and that `implement` has no authority to raise as a bug item.
+
+## 2026-08-27T00:14:39Z — verify v0.1.3 — qa-engineer
+
+- **Item:** WI-0001
+- **Trigger:** status `verifying`, dispatched by `next` as the only runnable candidate.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, read **before** the implementation report so that what each check had to settle came from the criterion rather than from what was built
+  - `tracker/items/WI-0001/artifacts/plan.md` — the seven steps and the AC mapping table, for reading the diff against
+  - `tracker/items/WI-0001/artifacts/impl-report.md` — the claimed evidence, checked rather than trusted; not cited as evidence for any criterion
+  - `tracker/items/WI-0001/history.md` — five rows to `planned`, then this execution's own `in-progress` and `verifying` moves; no send-back, so this is a first verification
+  - the code on branch `wi/WI-0001` at `fb54eeffc3924e67008e9d48a3de7fbf060ce0a4` — `expenses/money.py`, `store.py`, `cli.py`, `__main__.py`, and the three test modules
+  - `tracker/project.yaml` — `commands.test`, and `commands.lint: null`
+  - `.claude/agile-skills/spec/doc-header.md` section 4a and `spec/dor-dod.md` section 2 — for classifying and filing BUG-0001
+- **Decisions:**
+  - **Derived each check from the criterion, then ran it, before comparing against the report.** Nine criteria, nine sets of commands, each against a fresh `EXPENSES_STORE` under `/tmp` so no result depends on data an earlier check left behind. The report agreed with what I found, but the agreement is a result here, not the method.
+  - **Checked the stream split explicitly on AC1** (`2>/dev/null` versus `2>&1 1>/dev/null`), because "writes a message naming Ana to stderr" is decidable only if you look at which stream carries it.
+  - **Compared bytes with `cmp` and `md5sum`, not by eye**, for AC4, AC5, AC6 and AC8 — the four criteria that turn on identical output.
+  - **Checked the data file's own hash across AC5's two refusals**, not only the listings. A listing that matches proves the reader is stable; the file hash proves nothing was written and then undone.
+  - **Ran nine mutations, one per criterion**, restoring the file from its original text each time, and confirmed the working tree clean and the full suite green afterwards. AC2 needed its own mutation: dropping the remainder from `split_equally` leaves AC2's even split passing, so `amount_minor` was perturbed instead. A mutation that fails nothing would have been the finding.
+  - **Filed BUG-0001 rather than sending WI-0001 back.** `lint-claims --all` exits 1 on two absolutes in `docs/product/vision.md`. Applying this skill's own test — does an acceptance criterion of *this* item say the behaviour should be different? — the answer is no: no criterion of WI-0001 mentions `vision.md`, and the `claims-are-sourced` gate it must pass is trunk-scoped and exits 0. `found-in: WI-0001`, because `vision.md` v3 records `updated-for: WI-0001`. Full reasoning in that item's own journal entry.
+  - **Recorded two observations that are not defects** rather than inflating either into one: `store.load` fills in missing `people`/`expenses` keys instead of refusing, unreachable through the tool's own commands and worth a decision only when another writer appears; and the four plan deviations, each found in the diff where the report says it is.
+  - **Judged nothing ambiguous.** Every criterion named a command and an observation, so none needed a question to the architect. That is refinement's doing, not this skill's.
+- **Questions raised:** none
+- **Commands:**
+  - `git rev-parse HEAD` → `fb54eeffc3924e67008e9d48a3de7fbf060ce0a4`; `git status --short` → clean
+  - `python3 -m unittest discover -s tests -t .` → exit 0, Ran 50 tests in 0.465s, OK
+  - AC1: `person add Ana` → exit 0; `person list` → exit 0, `Ana`; `person add Ana` again → exit 2, stderr `Ana is already in the group`, stdout empty; `person list | grep -c '^Ana$'` → `1`; `person add ana` → exit 0; `person list` → `Ana`, `ana`
+  - AC2: `expense add --amount 30 --paid-by Ana --shared-by Ana,Ben,Cara` → exit 0; the stored record reads `amount_minor 3000`, `shares_minor {'Ana': 1000, 'Ben': 1000, 'Cara': 1000}`, `sum == amount` → `True`
+  - AC3: three expenses, then `expense list` → exit 0, three lines carrying date, amount, payer, sharers and description, in recorded order — the earliest-dated one recorded last still prints last
+  - AC4: both listings run twice as separate processes → `cmp` reports no difference; hashes `d29a0147815844fc2c715ea938e608f6` (people) and `a3d3be42ee266334be19272e81b57492` (expenses), repeated from separate subshells
+  - AC5: `--shared-by Ana,Dan` → exit 2, stderr `Dan is not in the group`, listing byte-identical; `--paid-by Dan` → the same; data file md5 `e6eb87b2cb5436ee896a70a4a4d35a1a` before and after both
+  - AC6: all ten named inputs → ten exits of 2, ten stderr messages, both listings `unchanged` in every case (table in the report)
+  - AC7: four `expense add` runs → all exit 0; stored `('2026-08-27','')`, `('2026-08-27','taxi')`, `('2026-08-01','')`, `('2026-08-27','')`; entry 0 equals entry 3
+  - AC8: the same sequence against two fresh stores → `cmp` reports the two `expense list` outputs byte-identical; both hold `{'Ana': 334, 'Ben': 333, 'Cara': 333}` summing to 1000
+  - AC9: against a directory that does not exist → `no people` exit 0, `no expenses` exit 0, directory still absent; against a file holding an empty dataset → the same two answers
+  - nine mutation runs → every one `FAILED`, none `OK`; `git status --short` clean afterwards; full suite re-run → Ran 50 tests, OK
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, 2 errors in `docs/product/vision.md`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0001 ... --actor verify --found-in WI-0001` → exit 0
+  - `python3 .claude/agile-skills/scripts/journal-entry BUG-0001 --skill verify --body-file ...` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+- **Gates:**
+  - `tests-pass` → **pass** (run by this skill on `fb54eef` → exit 0, Ran 50 tests, OK)
+  - `lint-clean` → **skipped** (`commands.lint` is `null`; ADR-0004 records why the project has no linter. Nothing was checked, so this is not a pass, and `## Not verified, and why` says what it leaves unchecked)
+  - `workspace-valid` → **pass** (`validate-workspace .` → exit 0, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (each of the nine rows in the report names a command this skill ran and quotes its output; the implementation report is cited for nothing)
+  - `negative-cases-exercised` → **pass** (nineteen refusals triggered — AC1's duplicate, AC5's two unknown names, AC6's ten, and six further boundary probes)
+  - `tests-would-fail-without-the-change` (advisory) → **pass** (nine mutations, one per criterion, each making that criterion's test fail; tree restored and suite re-run green)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/verify-report.md` — `Verified-commit: fb54eeffc3924e67008e9d48a3de7fbf060ce0a4`, the nine verdicts with their evidence, the gates, the negative cases, the mutation table, the observations, and what was not verified
+  - `tracker/items/WI-0001/item.md` — AC1 to AC9 all ticked, each against a command run here
+  - `tracker/items/BUG-0001/` — filed at `ready`, `found-in: WI-0001`, with its own journal entry recording the bug Definition of Ready
+- **Status:** `verifying` → `in-review`
+- **Result:** WI-0001 passes on all nine criteria, verified against `fb54eef` by commands run here rather than by reading the implementation report. Nineteen refusals were triggered, not read about, and every criterion has a test that fails when its behaviour is removed. Two things were left unchecked and are declared: lint, because the project has none by decision, and the default store location, because verifying it for real would write into this account's own data directory. One defect was found and it belongs elsewhere — BUG-0001, against `docs/product/vision.md`, filed at `ready`.
+
+## 2026-08-27T00:19:29Z — review-close v0.4.0 — reviewer
+
+- **Item:** WI-0001
+- **Trigger:** status `in-review`, dispatched by `next` — the highest-priority runnable item, ahead of BUG-0001 on priority rank.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — the nine criteria and their tick state
+  - `tracker/items/WI-0001/journal.md` — all eight entries, in full, because certifying that the record is complete cannot be done from a skim
+  - `tracker/items/WI-0001/history.md` — eight rows, checked to chain without a gap and to end where `item.md` says
+  - `tracker/items/WI-0001/artifacts/plan.md`, `impl-report.md`, `verify-report.md`, `refinement-qa.md`
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — all `answered`, `answered-by: human`, each with `## Consequences` naming files that exist
+  - the diff `main..wi/WI-0001`, hunk by hunk — `expenses/__main__.py`, `money.py`, `store.py`, `cli.py`, the three test modules, `README.md`
+  - `docs/architecture/overview.md` and `docs/architecture/adr/ADR-0001` to `ADR-0004` — for the D12 audit and to check the change contradicts none of them
+  - `tracker/project.yaml`, `.claude/agile-skills/spec/dor-dod.md` section 3
+- **Decisions:**
+  - **Accepted.** All twelve Definition of Done criteria pass, each recorded with its own evidence in `review.md` rather than as one verdict.
+  - **Filed BUG-0002 instead of rejecting.** `store.save` lets an `OSError` escape as a traceback where `store.load` turns the same class of error into a one-line refusal — run, not inferred: an unwritable store gives exit 1 and a `PermissionError` traceback, the read path in the same situation gives exit 2 and `cannot read ...: [Errno 21] Is a directory`. It is WI-0001's own code, which normally means a send-back, but no acceptance criterion of WI-0001 covers an environment error, so a send-back would have had nothing to fail against and would have asked `implement` for behaviour with no criterion behind it. Filing gives the work its own criteria. `found-in: WI-0001`, priority medium.
+  - **Recorded two smaller findings without filing anything.** `cli.person_add` and `cli.expense_add` re-apply `.strip()` to the name they print, duplicating a rule `store.add_person` owns — they agree today and will drift the day the store's normalisation changes, and nothing asserts on the confirmation line. And `int(fraction.ljust(2, "0") or 0)` in `money.parse_amount` has a branch that cannot be reached. Both are in `review.md` `## Findings` for whoever next touches those functions; neither justifies an item.
+  - **Judged the four declared deviations acceptable.** Each is where `impl-report.md` says it is in the diff, and each is in *how* rather than *what*.
+  - **Wrote all six accepted gaps into `review.md` as a table naming where each one now lives** — an ADR, a report section, or BUG-0001 — because a gap accepted only inside a report that nobody reads again is how a paper trail stops being true.
+  - **Did the D12 audit from the citations, not from the prose.** Eight claims, each checked by opening the code it is about: the import list against "no server, no daemon, no database and no network call"; both lower modules against "never imports `cli.py` or prints"; `money.py` against "never floats"; the stored record against "stores no currency at all"; and so on. One claim needed its wording weighed rather than confirmed — "every refusal writes to stderr and exits non-zero" is true of every *refusal*, and finding 1 is precisely the case that is not one.
+  - **Ran `engagement-state` rather than reading the board.** It reports `EP-001 active`, still in flight: `BUG-0001`, `BUG-0002`, `WI-0001`, `WI-0002`, `WI-0004`. The engagement is not at rest, so no sign-off question is due and none was filed.
+  - **Merged after closing, not before.** `check-commit-refs` reads the commits not yet on the trunk, so merging first empties that range and makes the gate refuse the close it is a precondition for.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness WI-0001 wi/WI-0001` → exit 0, "verified at fb54eeff; wi/WI-0001 has moved to b10a9c9e but only the record changed (10 file(s) under tracker/ or docs/), so the verification still covers the code"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0001 wi/WI-0001` → exit 0, "all 8 commit(s) on main..wi/WI-0001 name WI-0001"
+  - `git branch trial-merge-WI-0001 main`; `git merge --no-edit wi/WI-0001` → exit 0, a clean fast-forward; `python3 -m unittest discover -s tests -t .` on the merge result → exit 0, Ran 50 tests in 0.450s, OK; `git branch -D trial-merge-WI-0001` → deleted, trial discarded
+  - `grep -c` on `item.md` → nine `- [x] AC`, zero unticked
+  - the D12 audit: `grep -nE "^(import|from) " expenses/*.py` → only `argparse`, `datetime`, `re`, `sys`, `json`, `os`, `pathlib`, `tempfile` and the package's own modules; `grep -nE "socket|http|urllib|sqlite3|requests|subprocess"` → no match; `grep` for an import of `cli` and for `print(` in `store.py` and `money.py` → no match; `grep -nE "float|Decimal"` in `money.py` → no match
+  - `mkdir -p /tmp/rc-ro; chmod 500 /tmp/rc-ro; EXPENSES_STORE=/tmp/rc-ro/expenses.json python3 -m expenses person add Ana` → exit 1 with a `PermissionError` traceback (directory restored afterwards); `EXPENSES_STORE=/tmp/rc-dir/expenses.json python3 -m expenses person list` → exit 2, `cannot read ...: [Errno 21] Is a directory`
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0002 ... --actor review-close --found-in WI-0001` → exit 0; `journal-entry BUG-0002 --skill review-close` → exit 0
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → exit 0, "EP-001 active"
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff WI-0001` → exit 0, PASS — not an epic, so the termination gate does not apply
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+- **Gates:**
+  - `definition-of-done` → **pass** — D1 to D12 each recorded with its own result and evidence in `review.md`'s table; no single overall verdict stands in for the walk
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` → exit 0, quoted above; run, not assumed)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` → exit 0, all 8 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (the suite run on the trial merge onto a copy of `main` → exit 0, Ran 50 tests, OK — on the merge result, not on the branch)
+  - `workspace-valid` → **pass** (`validate-workspace .` → exit 0, 0 errors, 0 warnings, after BUG-0002 was filed and its title shortened to the 80-character limit)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone: *what was built and why* — `item.md`'s story and `plan.md`'s problem statement, with `README.md` for the delivered surface; *which decisions were made and by which skill* — ADR-0001 to ADR-0004 all `Decided by: plan`, the command surface and the refusal convention by `refine` in `refinement-qa.md`, the confirmation wording and exit code 2 by `implement` in `impl-report.md`'s deviations; *what questions arose and how they were resolved* — `Q-001`, `Q-002` and `Q-003`, each answered by the stakeholder in their own words with `## Consequences` naming the files the answer reached, and `Q-003` visibly producing WI-0004; *what verification found* — `verify-report.md`'s nine verdicts, nineteen refusals and nine mutations, and the two bugs filed
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → exit 0)
+  - `epic-sign-off` → **pass** — not applicable to a work item, and the script says so; separately, `engagement-state EP-001` reports `active`, so no sign-off is due on the epic either
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/review.md` — what was examined, the D12 claim audit, the twelve-row Definition of Done table, four findings, six accepted gaps and the verdict
+  - `tracker/items/WI-0001/item.md` — `status: done`, `outcome: delivered`
+  - `tracker/items/BUG-0002/` — filed at `ready`, `found-in: WI-0001`, priority medium, with its own journal entry recording the bug Definition of Ready
+  - the merge of `wi/WI-0001` into `main`, performed immediately after this transition, and the record commit that follows it
+- **Status:** `in-review` → `done`
+- **Result:** WI-0001 is accepted and closed as delivered. All twelve Definition of Done criteria pass with their own evidence; the trial merge onto a copy of `main` was clean and the suite passed on the merge result. Review found one defect worth its own item — `store.save` letting an operating-system error escape as a traceback where `store.load` refuses cleanly — filed as BUG-0002 rather than held against an item whose criteria do not cover it, and two smaller findings recorded for whoever next touches those functions. The engagement is not at rest, so no sign-off question is due: `engagement-state` reports EP-001 active with BUG-0001, BUG-0002, WI-0002 and WI-0004 still in flight.

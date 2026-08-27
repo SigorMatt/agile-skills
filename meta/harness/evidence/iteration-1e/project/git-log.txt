@@ -1,0 +1,477 @@
+1b93038 tracker: the review, the ended engagement and the impasse (refs EP-001)
+ docs/product/vision.md                   |  32 ++++++---
+ tracker/board.md                         |   6 +-
+ tracker/items/EP-001/artifacts/review.md | 114 +++++++++++++++++++++++++++++++
+ tracker/items/EP-001/history.md          |   1 +
+ tracker/items/EP-001/item.md             |  12 +++-
+ tracker/items/EP-001/journal.md          |  46 +++++++++++++
+ tracker/items/EP-001/questions/Q-004.md  |  24 +++++++
+ 7 files changed, 222 insertions(+), 13 deletions(-)
+68b76c2 tracker: the answered questions and every artifact you propagated into (refs EP-001)
+ tracker/board.md                        | 12 ++++-----
+ tracker/items/EP-001/history.md         |  1 +
+ tracker/items/EP-001/item.md            | 28 ++++++++++++++++++--
+ tracker/items/EP-001/journal.md         | 40 +++++++++++++++++++++++++++++
+ tracker/items/EP-001/questions/Q-004.md | 45 ++++++++++++++++++++++++++++++---
+ tracker/items/WI-0003/item.md           |  6 +++++
+ 6 files changed, 120 insertions(+), 12 deletions(-)
+79dd950 tracker: the sign-off question and the suspended epic (refs EP-001)
+ tracker/board.md                        |  12 ++--
+ tracker/items/EP-001/history.md         |   1 +
+ tracker/items/EP-001/item.md            |   4 +-
+ tracker/items/EP-001/journal.md         |  42 +++++++++++++
+ tracker/items/EP-001/questions/Q-004.md | 105 ++++++++++++++++++++++++++++++++
+ 5 files changed, 157 insertions(+), 7 deletions(-)
+778af48 merge: BUG-0001 — the vision's two absolute claims gain resolvable citations (refs BUG-0001)
+1fd7a91 tracker: the review, the closed item, and the accepted gaps (refs BUG-0001)
+ tracker/board.md                           |   6 +-
+ tracker/items/BUG-0001/artifacts/review.md | 124 +++++++++++++++++++++++++++++
+ tracker/items/BUG-0001/history.md          |   1 +
+ tracker/items/BUG-0001/item.md             |  30 ++++++-
+ tracker/items/BUG-0001/journal.md          |  53 ++++++++++++
+ 5 files changed, 209 insertions(+), 5 deletions(-)
+129ffb9 tracker: the verification report and the ticked criteria (refs BUG-0001)
+ tracker/board.md                                  |   6 +-
+ tracker/items/BUG-0001/artifacts/verify-report.md | 125 ++++++++++++++++++++++
+ tracker/items/BUG-0001/history.md                 |   1 +
+ tracker/items/BUG-0001/item.md                    |  12 +--
+ tracker/items/BUG-0001/journal.md                 |  45 ++++++++
+ 5 files changed, 180 insertions(+), 9 deletions(-)
+76e62a6 tracker: the implementation report and the move to verifying (refs BUG-0001)
+ tracker/board.md                                |  6 +-
+ tracker/items/BUG-0001/artifacts/impl-report.md | 96 +++++++++++++++++++++++++
+ tracker/items/BUG-0001/history.md               |  2 +
+ tracker/items/BUG-0001/item.md                  |  4 +-
+ tracker/items/BUG-0001/journal.md               | 75 +++++++++++++++++++
+ 5 files changed, 178 insertions(+), 5 deletions(-)
+1235e19 docs: the vision's two absolute claims gain resolvable citations (refs BUG-0001)
+ docs/product/vision.md | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+7f5ac6c tracker: the plan and ADR-0009 (refs BUG-0001)
+ ...ts-own-bug-is-fixed-by-the-item-that-owns-it.md | 117 ++++++++++++++
+ tracker/board.md                                   |   6 +-
+ tracker/items/BUG-0001/artifacts/plan.md           | 170 +++++++++++++++++++++
+ tracker/items/BUG-0001/history.md                  |   1 +
+ tracker/items/BUG-0001/item.md                     |   5 +-
+ tracker/items/BUG-0001/journal.md                  |  53 +++++++
+ 6 files changed, 347 insertions(+), 5 deletions(-)
+c84b2d3 merge: BUG-0002 — an unwritable store is a refusal, not a traceback (refs BUG-0002)
+aef44c5 tracker: the review, the closed item, and the merge (refs BUG-0002)
+ tracker/board.md                           |   6 +-
+ tracker/items/BUG-0002/artifacts/review.md | 180 +++++++++++++++++++++++++++++
+ tracker/items/BUG-0002/history.md          |   1 +
+ tracker/items/BUG-0002/item.md             |  44 ++++++-
+ tracker/items/BUG-0002/journal.md          |  50 ++++++++
+ 5 files changed, 276 insertions(+), 5 deletions(-)
+a332c73 tracker: the verification report and the ticked criteria (refs BUG-0002)
+ tracker/board.md                                  |   6 +-
+ tracker/items/BUG-0002/artifacts/verify-report.md | 100 ++++++++++++++++++++++
+ tracker/items/BUG-0002/history.md                 |   1 +
+ tracker/items/BUG-0002/item.md                    |  14 +--
+ tracker/items/BUG-0002/journal.md                 |  50 +++++++++++
+ 5 files changed, 161 insertions(+), 10 deletions(-)
+d8b4c4e tracker: the move to verifying and its journal entry (refs BUG-0002)
+ tracker/board.md                  |  6 ++---
+ tracker/items/BUG-0002/history.md |  1 +
+ tracker/items/BUG-0002/item.md    |  4 ++--
+ tracker/items/BUG-0002/journal.md | 47 +++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 53 insertions(+), 5 deletions(-)
+f23bfda docs: the overview at version 7, and the implementation report (refs BUG-0002)
+ docs/architecture/overview.md                   | 25 ++++----
+ tracker/board.md                                |  6 +-
+ tracker/items/BUG-0002/artifacts/impl-report.md | 78 +++++++++++++++++++++++++
+ tracker/items/BUG-0002/history.md               |  1 +
+ tracker/items/BUG-0002/item.md                  |  5 +-
+ tracker/items/BUG-0002/journal.md               | 33 +++++++++++
+ 6 files changed, 129 insertions(+), 19 deletions(-)
+db45f4f fix: an unwritable store is a refusal, not a traceback (refs BUG-0002)
+ expenses/store.py | 43 +++++++++++++++++++++------------
+ tests/test_cli.py | 72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 99 insertions(+), 16 deletions(-)
+37e57f0 tracker: the plan, ADR-0008, and the overview at version 6 (refs BUG-0002)
+ ...rors-on-the-dataset-become-refusals-in-store.md | 112 +++++++++++++
+ docs/architecture/overview.md                      |  19 ++-
+ tracker/board.md                                   |   6 +-
+ tracker/items/BUG-0002/artifacts/plan.md           | 183 +++++++++++++++++++++
+ tracker/items/BUG-0002/history.md                  |   1 +
+ tracker/items/BUG-0002/item.md                     |   4 +-
+ tracker/items/BUG-0002/journal.md                  |  51 ++++++
+ 7 files changed, 367 insertions(+), 9 deletions(-)
+4abf798 tracker: the merge commit recorded on the journal, and the board (refs WI-0004)
+ tracker/items/WI-0004/journal.md | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+3fa80d4 merge: WI-0004 — person delete and expense delete (refs WI-0004)
+f6af696 tracker: the review, the accepted gaps, and the closed item (refs WI-0004)
+ tracker/board.md                          |   6 +-
+ tracker/items/WI-0004/artifacts/review.md | 170 +++++++++++++++++++++++++++++-
+ tracker/items/WI-0004/history.md          |   1 +
+ tracker/items/WI-0004/item.md             |  41 ++++++-
+ tracker/items/WI-0004/journal.md          |  51 +++++++++
+ 5 files changed, 260 insertions(+), 9 deletions(-)
+2c96f8e tracker: the second verification report and the move to in-review (refs WI-0004)
+ tracker/board.md                                 |   6 +-
+ tracker/items/WI-0004/artifacts/verify-report.md | 164 ++++++++++++++++++++++-
+ tracker/items/WI-0004/history.md                 |   1 +
+ tracker/items/WI-0004/item.md                    |   4 +-
+ tracker/items/WI-0004/journal.md                 |  45 +++++++
+ 5 files changed, 208 insertions(+), 12 deletions(-)
+beb522e tracker: round 2 of the implementation report, and the move back to verifying (refs WI-0004)
+ tracker/board.md                               |   6 +-
+ tracker/items/WI-0004/artifacts/impl-report.md | 122 ++++++++++++++++++++++++-
+ tracker/items/WI-0004/history.md               |   1 +
+ tracker/items/WI-0004/item.md                  |   4 +-
+ tracker/items/WI-0004/journal.md               |  81 ++++++++++++++++
+ 5 files changed, 207 insertions(+), 7 deletions(-)
+e2a0b3d docs: architecture overview v5 — deletion is delivered, and store.py gained three functions (refs WI-0004)
+ docs/architecture/overview.md | 50 ++++++++++++++++++++++---------------------
+ 1 file changed, 26 insertions(+), 24 deletions(-)
+af331b8 tracker: the review rejecting WI-0004 on D7 and D12 (refs WI-0004)
+ tracker/board.md                          |   6 +-
+ tracker/items/WI-0004/artifacts/review.md | 153 ++++++++++++++++++++++++++++++
+ tracker/items/WI-0004/history.md          |   1 +
+ tracker/items/WI-0004/item.md             |   4 +-
+ tracker/items/WI-0004/journal.md          |  81 ++++++++++++++++
+ 5 files changed, 240 insertions(+), 5 deletions(-)
+e50dc4f tracker: the verification report and the ticked criteria (refs WI-0004)
+ tracker/board.md                                 |   6 +-
+ tracker/items/WI-0004/artifacts/verify-report.md | 130 +++++++++++++++++++++++
+ tracker/items/WI-0004/history.md                 |   1 +
+ tracker/items/WI-0004/item.md                    |  20 ++--
+ tracker/items/WI-0004/journal.md                 |  47 ++++++++
+ 5 files changed, 191 insertions(+), 13 deletions(-)
+f4e8319 tracker: the implementation report for WI-0004 (refs WI-0004)
+ tracker/board.md                               |   6 +-
+ tracker/items/WI-0004/artifacts/impl-report.md | 113 +++++++++++++++++++++++++
+ tracker/items/WI-0004/history.md               |   1 +
+ tracker/items/WI-0004/item.md                  |   4 +-
+ tracker/items/WI-0004/journal.md               |  41 +++++++++
+ 5 files changed, 160 insertions(+), 5 deletions(-)
+ff28637 cli: person delete and expense delete, and a numbered expense list (refs WI-0004)
+ README.md                        |  50 +++++++--
+ expenses/cli.py                  |  47 ++++++++-
+ tests/test_cli.py                | 215 ++++++++++++++++++++++++++++++++++++++-
+ tracker/board.md                 |   6 +-
+ tracker/items/WI-0004/history.md |   1 +
+ tracker/items/WI-0004/item.md    |   5 +-
+ tracker/items/WI-0004/journal.md |  32 ++++++
+ 7 files changed, 342 insertions(+), 14 deletions(-)
+46dead0 store: naming_expenses, delete_person and delete_expense (refs WI-0004)
+ expenses/store.py   |  44 ++++++++++++++
+ tests/test_store.py | 163 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 207 insertions(+)
+441a9b0 tracker: the plan, any ADRs, and the documents you updated (refs WI-0004)
+ ...-is-addressed-by-its-position-in-the-listing.md |  94 ++++++++
+ ...onsistency-is-enforced-where-data-is-written.md |  95 ++++++++
+ docs/architecture/overview.md                      |  28 ++-
+ tracker/board.md                                   |   6 +-
+ tracker/items/WI-0004/artifacts/plan.md            | 248 +++++++++++++++++++++
+ tracker/items/WI-0004/history.md                   |   1 +
+ tracker/items/WI-0004/item.md                      |   4 +-
+ tracker/items/WI-0004/journal.md                   | 123 ++++++++++
+ 8 files changed, 588 insertions(+), 11 deletions(-)
+9faea55 tracker: the refined item and its Q&A record (refs WI-0004)
+ tracker/board.md                                 |   6 +-
+ tracker/items/WI-0004/artifacts/refinement-qa.md |  68 ++++++-
+ tracker/items/WI-0004/history.md                 |   1 +
+ tracker/items/WI-0004/item.md                    | 214 +++++++++++++++++------
+ tracker/items/WI-0004/journal.md                 | 127 ++++++++++++++
+ 5 files changed, 352 insertions(+), 64 deletions(-)
+80c0d5d tracker: the answered questions and every artifact you propagated into (refs WI-0004)
+ tracker/board.md                                 | 12 ++-
+ tracker/items/WI-0004/artifacts/refinement-qa.md | 95 +++++++++++++++++++-----
+ tracker/items/WI-0004/history.md                 |  1 +
+ tracker/items/WI-0004/item.md                    | 62 +++++++++-------
+ tracker/items/WI-0004/journal.md                 | 94 +++++++++++++++++++++++
+ tracker/items/WI-0004/questions/Q-001.md         | 32 +++++++-
+ 6 files changed, 241 insertions(+), 55 deletions(-)
+427a8c3 tracker: the refined item and its Q&A record (refs WI-0004)
+ tracker/board.md                                 |  12 +-
+ tracker/items/WI-0004/artifacts/refinement-qa.md | 186 +++++++++++++++++++++++
+ tracker/items/WI-0004/history.md                 |   1 +
+ tracker/items/WI-0004/item.md                    |  32 +++-
+ tracker/items/WI-0004/journal.md                 |  37 +++++
+ tracker/items/WI-0004/questions/Q-001.md         |  91 +++++++++++
+ 6 files changed, 352 insertions(+), 7 deletions(-)
+bf7de5d Merge wi/WI-0002: show who owes whom (refs WI-0002)
+1403978 tracker: the review, the closed item, and the merge (refs WI-0002)
+ tracker/board.md                          |   8 +--
+ tracker/items/WI-0002/artifacts/review.md | 114 ++++++++++++++++++++++++++++++
+ tracker/items/WI-0002/history.md          |   1 +
+ tracker/items/WI-0002/item.md             |  40 ++++++++++-
+ tracker/items/WI-0002/journal.md          |  47 ++++++++++++
+ 5 files changed, 204 insertions(+), 6 deletions(-)
+04e662c tracker: the verification report and the ticked criteria (refs WI-0002)
+ tracker/board.md                                 |   8 +-
+ tracker/items/WI-0002/artifacts/verify-report.md | 125 +++++++++++++++++++++++
+ tracker/items/WI-0002/history.md                 |   1 +
+ tracker/items/WI-0002/item.md                    |  16 +--
+ tracker/items/WI-0002/journal.md                 |  49 +++++++++
+ 5 files changed, 187 insertions(+), 12 deletions(-)
+6b2fb40 tracker: WI-0002 in-progress -> verifying, with the closing record (refs WI-0002)
+ tracker/board.md                 |  8 ++++----
+ tracker/items/WI-0002/history.md |  1 +
+ tracker/items/WI-0002/item.md    |  4 ++--
+ tracker/items/WI-0002/journal.md | 43 ++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 50 insertions(+), 6 deletions(-)
+968f6c9 tracker: the implementation report for WI-0002 (refs WI-0002)
+ tracker/board.md                               |   8 +-
+ tracker/items/WI-0002/artifacts/impl-report.md | 102 +++++++++++++++++++++++++
+ tracker/items/WI-0002/history.md               |   1 +
+ tracker/items/WI-0002/item.md                  |   5 +-
+ tracker/items/WI-0002/journal.md               |  31 ++++++++
+ 5 files changed, 141 insertions(+), 6 deletions(-)
+b873060 docs: settle.py moves into the body of the overview, v3 (refs WI-0002)
+ docs/architecture/overview.md | 41 +++++++++++++++++++++--------------------
+ 1 file changed, 21 insertions(+), 20 deletions(-)
+0982ced expenses: the settle command, its tests and its README section (refs WI-0002)
+ README.md         |  35 +++++++++++--
+ expenses/cli.py   |  19 ++++++-
+ tests/test_cli.py | 145 +++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 194 insertions(+), 5 deletions(-)
+35ba9b9 expenses: settlement(), largest debt against largest credit (refs WI-0002)
+ expenses/settle.py   | 32 +++++++++++++++++++
+ tests/test_settle.py | 88 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 119 insertions(+), 1 deletion(-)
+1e6853b expenses: positions(), each person's net in whole minor units (refs WI-0002)
+ expenses/settle.py   | 28 +++++++++++++++++++
+ tests/test_settle.py | 76 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 104 insertions(+)
+55536ec tracker: the plan, ADR-0005, and the overview at v2 (refs WI-0002)
+ ...ching-the-largest-debt-to-the-largest-credit.md | 125 +++++++++++++
+ docs/architecture/overview.md                      |  20 ++-
+ tracker/board.md                                   |   8 +-
+ tracker/items/WI-0002/artifacts/plan.md            | 200 +++++++++++++++++++++
+ tracker/items/WI-0002/history.md                   |   1 +
+ tracker/items/WI-0002/item.md                      |   4 +-
+ tracker/items/WI-0002/journal.md                   |  48 +++++
+ 7 files changed, 396 insertions(+), 10 deletions(-)
+39bf0c1 tracker: the refined item and its Q&A record (refs WI-0002)
+ tracker/board.md                                 |   8 +-
+ tracker/items/WI-0002/artifacts/refinement-qa.md | 240 +++++++++++++++++++++++
+ tracker/items/WI-0002/history.md                 |   1 +
+ tracker/items/WI-0002/item.md                    | 115 ++++++++---
+ tracker/items/WI-0002/journal.md                 |  44 +++++
+ 5 files changed, 379 insertions(+), 29 deletions(-)
+3ca3868 Merge wi/WI-0001: record people and expenses from the command line (refs WI-0001)
+dbbfd18 tracker: the review, the closed item, and BUG-0002 (refs WI-0001)
+ tracker/board.md                          |  11 +--
+ tracker/items/BUG-0002/artifacts/.gitkeep |   0
+ tracker/items/BUG-0002/history.md         |   5 ++
+ tracker/items/BUG-0002/item.md            | 108 ++++++++++++++++++++++++++++++
+ tracker/items/BUG-0002/journal.md         |  36 ++++++++++
+ tracker/items/BUG-0002/questions/.gitkeep |   0
+ tracker/items/WI-0001/artifacts/review.md | 106 +++++++++++++++++++++++++++++
+ tracker/items/WI-0001/history.md          |   1 +
+ tracker/items/WI-0001/item.md             |   5 +-
+ tracker/items/WI-0001/journal.md          |  52 ++++++++++++++
+ 10 files changed, 317 insertions(+), 7 deletions(-)
+b10a9c9 tracker: the verification report, the ticked criteria, and BUG-0001 (refs WI-0001)
+ tracker/board.md                                 |  11 +-
+ tracker/items/BUG-0001/artifacts/.gitkeep        |   0
+ tracker/items/BUG-0001/history.md                |   5 +
+ tracker/items/BUG-0001/item.md                   | 110 +++++++++++++++++
+ tracker/items/BUG-0001/journal.md                |  39 ++++++
+ tracker/items/BUG-0001/questions/.gitkeep        |   0
+ tracker/items/WI-0001/artifacts/verify-report.md | 149 +++++++++++++++++++++++
+ tracker/items/WI-0001/history.md                 |   1 +
+ tracker/items/WI-0001/item.md                    |  22 ++--
+ tracker/items/WI-0001/journal.md                 |  54 ++++++++
+ 10 files changed, 375 insertions(+), 16 deletions(-)
+fb54eef tracker: WI-0001 in-progress -> verifying, with the closing record (refs WI-0001)
+ tracker/board.md                 | 10 ++++-----
+ tracker/items/WI-0001/history.md |  1 +
+ tracker/items/WI-0001/item.md    |  4 ++--
+ tracker/items/WI-0001/journal.md | 48 ++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 56 insertions(+), 7 deletions(-)
+b7f1830 tracker: implementation report for WI-0001, with the evidence per criterion (refs WI-0001)
+ tracker/items/WI-0001/artifacts/impl-report.md | 124 +++++++++++++++++++++++++
+ 1 file changed, 124 insertions(+)
+4aae88d docs: README with the four commands and where the data lives (refs WI-0001)
+ README.md | 128 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 128 insertions(+)
+dea7632 expenses: the person and expense commands, with one failure path (refs WI-0001)
+ expenses/cli.py   | 131 ++++++++++++++++++++++++
+ tests/test_cli.py | 290 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 421 insertions(+)
+4d46da4 expenses: one JSON dataset, located, validated and written atomically (refs WI-0001)
+ expenses/store.py   | 123 +++++++++++++++++++++++++++++++
+ tests/test_store.py | 209 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 332 insertions(+)
+f860385 expenses: amounts as integer minor units, with an exact equal split (refs WI-0001)
+ expenses/money.py   | 48 ++++++++++++++++++++++++++++++++++++++++
+ tests/test_money.py | 64 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 112 insertions(+)
+7118dc1 expenses: package skeleton and __main__ entry point (refs WI-0001)
+ expenses/__init__.py             |  0
+ expenses/__main__.py             |  8 ++++++++
+ tracker/board.md                 | 10 +++++-----
+ tracker/items/WI-0001/history.md |  1 +
+ tracker/items/WI-0001/item.md    |  5 +++--
+ tracker/items/WI-0001/journal.md | 32 ++++++++++++++++++++++++++++++++
+ 6 files changed, 49 insertions(+), 7 deletions(-)
+f5285a5 tracker: the plan, any ADRs, and the documents you updated (refs WI-0001)
+ ...ADR-0001-one-json-file-for-the-whole-dataset.md | 111 +++++++++++
+ .../adr/ADR-0002-money-as-integer-minor-units.md   |  76 ++++++++
+ ...03-remainder-goes-to-the-first-named-sharers.md |  85 +++++++++
+ ...-0004-unittest-for-tests-and-no-lint-command.md |  88 +++++++++
+ docs/architecture/overview.md                      |  77 ++++++++
+ tests/__init__.py                                  |   0
+ tracker/board.md                                   |  10 +-
+ tracker/items/WI-0001/artifacts/plan.md            | 206 +++++++++++++++++++++
+ tracker/items/WI-0001/history.md                   |   1 +
+ tracker/items/WI-0001/item.md                      |   4 +-
+ tracker/items/WI-0001/journal.md                   |  52 ++++++
+ tracker/project.yaml                               |   6 +-
+ 12 files changed, 708 insertions(+), 8 deletions(-)
+9ffc7ac tracker: the refined item and its Q&A record (refs WI-0001)
+ tracker/board.md                                 |  10 +-
+ tracker/items/WI-0001/artifacts/refinement-qa.md | 170 +++++++++++++++++------
+ tracker/items/WI-0001/history.md                 |   1 +
+ tracker/items/WI-0001/item.md                    |  82 +++++++----
+ tracker/items/WI-0001/journal.md                 |  39 ++++++
+ 5 files changed, 226 insertions(+), 76 deletions(-)
+e7ca4ca tracker: propagate the stakeholder's three answers on WI-0001 (refs WI-0001)
+ docs/product/vision.md                           |  20 +++-
+ tracker/board.md                                 |  19 ++--
+ tracker/items/EP-001/item.md                     |  11 +-
+ tracker/items/EP-001/journal.md                  |  32 ++++++
+ tracker/items/WI-0001/artifacts/refinement-qa.md | 123 ++++++++++++++++-------
+ tracker/items/WI-0001/history.md                 |   1 +
+ tracker/items/WI-0001/item.md                    |  82 ++++++++++-----
+ tracker/items/WI-0001/journal.md                 |  45 +++++++++
+ tracker/items/WI-0001/questions/Q-001.md         |  40 +++++++-
+ tracker/items/WI-0001/questions/Q-002.md         |  40 +++++++-
+ tracker/items/WI-0001/questions/Q-003.md         |  57 ++++++++++-
+ tracker/items/WI-0002/item.md                    |  11 +-
+ tracker/items/WI-0004/artifacts/.gitkeep         |   0
+ tracker/items/WI-0004/history.md                 |   5 +
+ tracker/items/WI-0004/item.md                    |  73 ++++++++++++++
+ tracker/items/WI-0004/journal.md                 |  35 +++++++
+ tracker/items/WI-0004/questions/.gitkeep         |   0
+ 17 files changed, 502 insertions(+), 92 deletions(-)
+9f8b2a1 tracker: refinement round 1 on WI-0001, three questions to the stakeholder (refs WI-0001)
+ tracker/board.md                                 |  18 ++-
+ tracker/items/WI-0001/artifacts/refinement-qa.md | 175 +++++++++++++++++++++++
+ tracker/items/WI-0001/history.md                 |   1 +
+ tracker/items/WI-0001/item.md                    |  45 +++++-
+ tracker/items/WI-0001/journal.md                 |  39 +++++
+ tracker/items/WI-0001/questions/Q-001.md         |  70 +++++++++
+ tracker/items/WI-0001/questions/Q-002.md         |  63 ++++++++
+ tracker/items/WI-0001/questions/Q-003.md         |  62 ++++++++
+ 8 files changed, 460 insertions(+), 13 deletions(-)
+97ae9e9 tracker: propagate the stakeholder's three answers on EP-001 (refs EP-001)
+ docs/product/vision.md                  | 43 ++++++++++++++++++++++--------
+ tracker/board.md                        | 20 ++++++--------
+ tracker/items/EP-001/history.md         |  1 +
+ tracker/items/EP-001/item.md            | 22 ++++++++++-----
+ tracker/items/EP-001/journal.md         | 46 ++++++++++++++++++++++++++++++++
+ tracker/items/EP-001/questions/Q-001.md | 42 ++++++++++++++++++++++++++---
+ tracker/items/EP-001/questions/Q-002.md | 30 ++++++++++++++++++---
+ tracker/items/EP-001/questions/Q-003.md | 39 ++++++++++++++++++++++++---
+ tracker/items/WI-0002/item.md           | 35 +++++++++++++++++-------
+ tracker/items/WI-0002/journal.md        | 47 +++++++++++++++++++++++++++++++++
+ tracker/items/WI-0003/history.md        |  1 +
+ tracker/items/WI-0003/item.md           | 29 +++++++++++++++-----
+ tracker/items/WI-0003/journal.md        | 35 ++++++++++++++++++++++++
+ 13 files changed, 336 insertions(+), 54 deletions(-)
+0e09290 tracker: create EP-001 and its first three work items (refs EP-001)
+ IDEA.md                                  |  4 ++
+ docs/product/vision.md                   | 47 ++++++++++++++++
+ tracker/board.md                         | 25 ++++++++
+ tracker/items/EP-001/artifacts/.gitkeep  |  0
+ tracker/items/EP-001/history.md          |  6 ++
+ tracker/items/EP-001/item.md             | 59 +++++++++++++++++++
+ tracker/items/EP-001/journal.md          | 97 ++++++++++++++++++++++++++++++++
+ tracker/items/EP-001/questions/.gitkeep  |  0
+ tracker/items/EP-001/questions/Q-001.md  | 57 +++++++++++++++++++
+ tracker/items/EP-001/questions/Q-002.md  | 49 ++++++++++++++++
+ tracker/items/EP-001/questions/Q-003.md  | 51 +++++++++++++++++
+ tracker/items/WI-0001/artifacts/.gitkeep |  0
+ tracker/items/WI-0001/history.md         |  5 ++
+ tracker/items/WI-0001/item.md            | 46 +++++++++++++++
+ tracker/items/WI-0001/journal.md         | 27 +++++++++
+ tracker/items/WI-0001/questions/.gitkeep |  0
+ tracker/items/WI-0002/artifacts/.gitkeep |  0
+ tracker/items/WI-0002/history.md         |  5 ++
+ tracker/items/WI-0002/item.md            | 38 +++++++++++++
+ tracker/items/WI-0002/journal.md         | 27 +++++++++
+ tracker/items/WI-0002/questions/.gitkeep |  0
+ tracker/items/WI-0003/artifacts/.gitkeep |  0
+ tracker/items/WI-0003/history.md         |  5 ++
+ tracker/items/WI-0003/item.md            | 39 +++++++++++++
+ tracker/items/WI-0003/journal.md         | 27 +++++++++
+ tracker/items/WI-0003/questions/.gitkeep |  0
+ tracker/project.yaml                     |  2 +-
+ 27 files changed, 615 insertions(+), 1 deletion(-)
+1e42fad chore: provision the project (skills installed, workspace initialised)
+ .claude/agile-skills/VERSION                       |    9 +
+ .../agile-skills/hooks/guard-workspace-writes.py   |  201 +++
+ .claude/agile-skills/hooks/test_guard.py           |  155 +++
+ .claude/agile-skills/pipeline.yaml                 |  343 +++++
+ .claude/agile-skills/scripts/board-gen             |   81 ++
+ .claude/agile-skills/scripts/check-commit-refs     |  138 +++
+ .claude/agile-skills/scripts/check-epic-signoff    |  213 ++++
+ .../agile-skills/scripts/check-verify-freshness    |  119 ++
+ .claude/agile-skills/scripts/engagement-state      |   89 ++
+ .claude/agile-skills/scripts/export                |  255 ++++
+ .claude/agile-skills/scripts/journal-entry         |  311 +++++
+ .claude/agile-skills/scripts/lib/board.py          |  141 +++
+ .claude/agile-skills/scripts/lib/claims.py         |  238 ++++
+ .claude/agile-skills/scripts/lib/engagement.py     |  141 +++
+ .claude/agile-skills/scripts/lib/frontmatter.py    |   66 +
+ .claude/agile-skills/scripts/lib/miniyaml.py       |  510 ++++++++
+ .claude/agile-skills/scripts/lib/report.py         |  101 ++
+ .claude/agile-skills/scripts/lib/workspace.py      |  462 +++++++
+ .claude/agile-skills/scripts/lint-claims           |  248 ++++
+ .claude/agile-skills/scripts/new-item              |  290 +++++
+ .claude/agile-skills/scripts/pipeline.yaml         |  343 +++++
+ .claude/agile-skills/scripts/run-gate              |  219 ++++
+ .claude/agile-skills/scripts/transition            |  521 ++++++++
+ .claude/agile-skills/scripts/validate-workspace    | 1310 ++++++++++++++++++++
+ .claude/agile-skills/scripts/workspace-init        |  133 ++
+ .../skills/answer-questions/skill.yaml             |  114 ++
+ .claude/agile-skills/skills/implement/skill.yaml   |  110 ++
+ .claude/agile-skills/skills/intake/skill.yaml      |   95 ++
+ .claude/agile-skills/skills/next/skill.yaml        |   83 ++
+ .claude/agile-skills/skills/plan/skill.yaml        |  111 ++
+ .claude/agile-skills/skills/refine/skill.yaml      |   89 ++
+ .../agile-skills/skills/review-close/skill.yaml    |  135 ++
+ .claude/agile-skills/skills/verify/skill.yaml      |  106 ++
+ .claude/agile-skills/spec/README.md                |   49 +
+ .claude/agile-skills/spec/doc-header.md            |  220 ++++
+ .claude/agile-skills/spec/dor-dod.md               |  197 +++
+ .claude/agile-skills/spec/ids-and-statuses.md      |  278 +++++
+ .claude/agile-skills/spec/journal-and-history.md   |  207 ++++
+ .claude/agile-skills/spec/question.md              |  281 +++++
+ .claude/agile-skills/spec/request.md               |  133 ++
+ .claude/agile-skills/spec/skill-contract.md        |  304 +++++
+ .claude/agile-skills/spec/work-item.md             |  211 ++++
+ .claude/agile-skills/spec/workspace-layout.md      |  245 ++++
+ .claude/settings.json                              |   40 +
+ .claude/skills/answer-questions/SKILL.md           |  290 +++++
+ .../skills/answer-questions/references/contract.md |   74 ++
+ .claude/skills/implement/SKILL.md                  |  239 ++++
+ .claude/skills/implement/references/contract.md    |   70 ++
+ .claude/skills/intake/SKILL.md                     |  255 ++++
+ .claude/skills/intake/references/contract.md       |   68 +
+ .claude/skills/next/SKILL.md                       |  223 ++++
+ .claude/skills/next/references/contract.md         |   64 +
+ .claude/skills/plan/SKILL.md                       |  256 ++++
+ .claude/skills/plan/references/contract.md         |   72 ++
+ .claude/skills/refine/SKILL.md                     |  283 +++++
+ .claude/skills/refine/references/contract.md       |   67 +
+ .claude/skills/review-close/SKILL.md               |  329 +++++
+ .claude/skills/review-close/references/contract.md |   78 ++
+ .claude/skills/verify/SKILL.md                     |  240 ++++
+ .claude/skills/verify/references/contract.md       |   70 ++
+ .gitignore                                         |    7 +
+ CONSUMER-PROMPT.md                                 |  125 ++
+ SIMULATION-NOTICE.md                               |   18 +
+ docs/architecture/.gitkeep                         |    0
+ docs/architecture/adr/.gitkeep                     |    0
+ docs/process/.gitkeep                              |    0
+ docs/product/.gitkeep                              |    0
+ tracker/items/.gitkeep                             |    0
+ tracker/project.yaml                               |   17 +
+ tracker/requests/.gitkeep                          |    0
+ 70 files changed, 12490 insertions(+)

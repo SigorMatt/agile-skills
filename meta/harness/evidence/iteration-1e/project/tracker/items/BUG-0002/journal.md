@@ -1,0 +1,267 @@
+# Journal — BUG-0002
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T00:17:21Z — review-close v0.4.0 — reviewer
+
+- **Item:** BUG-0002
+- **Trigger:** filed by `review-close` while reviewing WI-0001 — step 4 of that procedure, reading the diff hunk by hunk and asking of each whether it is something this project should live with.
+- **Inputs read:**
+  - `expenses/store.py` — `load()`'s `except OSError` branch and `save()`'s lack of one
+  - `expenses/cli.py` — `main()`, which catches `ExpensesError` and nothing else
+  - `tracker/items/WI-0001/item.md` — AC1 to AC9, to establish that none of them covers an environment error
+  - `docs/architecture/overview.md` — the claim about what every refusal does, which this contradicts in shape though not in letter
+  - `.claude/agile-skills/spec/dor-dod.md` section 2 — the bug Definition of Ready
+- **Decisions:**
+  - **Filed as a bug rather than sent back to WI-0001.** The behaviour belongs to WI-0001's own delivery, which normally means a send-back. But no acceptance criterion of WI-0001 speaks to an operating-system error — AC5 and AC6 are about inputs the user got wrong — so a send-back would have had nothing to fail against and would have asked `implement` to add behaviour with no criterion behind it. Filing it gives the work its own criteria, which is what it lacked.
+  - **Priority `medium`, above BUG-0001's `low`.** A person hitting it sees a traceback and reasonably concludes the tool is broken. It is not `high` because nothing is lost: the atomic-replace write means the previous dataset is untouched, and the tool fails rather than appearing to succeed.
+  - **Wrote the reproduction against `/tmp` with a `chmod` and a restore step**, rather than against the user's real store, so that running it costs nothing and leaves nothing behind.
+  - **AC4 asks for the regression test to skip when the process can write regardless of the permission bits.** A test that assumes `chmod 500` stops the writer fails for anyone running the suite as root, and a suite that fails for a legitimate reason gets ignored.
+- **Questions raised:** none
+- **Commands:**
+  - `mkdir -p /tmp/rc-ro; chmod 500 /tmp/rc-ro; EXPENSES_STORE=/tmp/rc-ro/expenses.json python3 -m expenses person add Ana` → exit 1, an eleven-line traceback ending `PermissionError: [Errno 13] Permission denied`; directory restored with `chmod 700` afterwards
+  - `mkdir -p /tmp/rc-dir/expenses.json; EXPENSES_STORE=/tmp/rc-dir/expenses.json python3 -m expenses person list` → exit 2, `cannot read /tmp/rc-dir/expenses.json: [Errno 21] Is a directory: ...` — the read path, for contrast
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0002 ... --actor review-close --found-in WI-0001` → exit 0, created at `ready`
+- **Gates:**
+  - Bug Definition of Ready, applied at filing time per `spec/dor-dod.md` section 2:
+  - `RB1` (numbered, runnable reproduction) → **pass** — four numbered steps including the restore, each runnable from anywhere
+  - `RB2` (actual behaviour quotes real output) → **pass** — the traceback's first and last lines and the exit code, from the run above, with the middle frames elided; and the contrasting read-path output in full
+  - `RB3` (expected behaviour cites what it contradicts) → **pass** — `docs/architecture/overview.md` on what every refusal does, and `store.py`'s own docstring
+  - `RB4` (`found-in` names the delivering item) → **pass** — `found-in: WI-0001`, the item that delivered `store.py`
+  - `RB5` (regression test, or why none is possible) → **pass** — AC4 specifies one, including the condition under which it must skip
+- **Artifacts:**
+  - `tracker/items/BUG-0002/item.md` — summary, four reproduction steps, expected and actual behaviour, AC1 to AC5, and the notes
+  - `tracker/items/BUG-0002/history.md` — the creation row
+- **Status:** `—` → `ready`
+- **Result:** BUG-0002 is filed at `ready` against WI-0001's delivered code: `store.save` lets an `OSError` escape as a traceback where `store.load` turns the same class of error into a one-line refusal, so an unwritable store exits 1 with a stack trace instead of 2 with a message. No data is at risk. The bug Definition of Ready passes on all five criteria, so it can be planned without refinement.
+
+## 2026-08-27T01:51:54Z — plan v0.3.0 — architect
+
+- **Item:** BUG-0002
+- **Trigger:** status `ready` with a non-null owner in `pipeline.yaml`; dispatched by `next`, which ranked it above BUG-0001 on priority (medium beats low) and found nothing else runnable.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — the summary, the four reproduction steps, AC1 to AC5, and the notes, which name the `mkdir` question as part of this decision
+  - `tracker/items/BUG-0002/history.md` — the single creation row, `— → ready`, actor `review-close`
+  - `tracker/items/BUG-0002/journal.md` — `review-close`'s filing entry, including why this was filed rather than sent back to WI-0001 and what the bug DoR check found
+  - no `artifacts/refinement-qa.md` — a bug enters at `ready` and this one was never refined (`spec/dor-dod.md` §2), so there is no Q&A to read
+  - `docs/architecture/overview.md` v5 — the layering rule, the `expenses/store.py` and `expenses/cli.py` pieces, and the refusal claim this bug contradicts
+  - ADR-0001 (one JSON file, atomic replace), ADR-0004 (unittest, no lint command), ADR-0006 and ADR-0007 (read to establish that neither speaks to error handling and that nothing here is superseded)
+  - `expenses/store.py` — `load`'s `except OSError` branch, `save`'s absent one, the `NamedTemporaryFile`/`os.replace` write and its `except BaseException` cleanup
+  - `expenses/cli.py` — `main`, which catches `ExpensesError` alone; and all four writing handlers, establishing that every `print` of a success line comes after its `store.save` call
+  - `expenses/money.py` — `ExpensesError`, to establish it derives from `Exception` and not from `OSError`
+  - `tests/test_cli.py` — `CommandTestCase`, and the three existing subprocess helpers (`run_in_a_new_process` at line 137 and its two siblings) that the new fixture is modelled on
+  - `tests/test_store.py` — the existing store-level tests, to decide whether the regression belongs there
+  - `tracker/project.yaml` — `commands.test` already set, `lint` null with ADR-0004 as the record
+  - `.claude/agile-skills/spec/dor-dod.md` §3 (D7, D12) and `spec/doc-header.md` §4a, §5 — §5 is why the overview is updated by this execution rather than left to `implement`
+- **Decisions:**
+  - **[documented → decided] An `OSError` on the dataset becomes an `ExpensesError` inside `expenses/store.py`, not in `cli.main` and not in the handlers.** The documents rule out one option but do not settle the boundary: `docs/architecture/overview.md` says refusals are raised as a single type from the layers below and translated in exactly one place, which forbids the CLI knowing about `OSError`, but nothing anywhere says where an environment error is caught. `load`'s branch and `save`'s lack of one were both accidents of implementation, recorded as the finding in BUG-0002. Decided and written as **ADR-0008**, with four options — store boundary, CLI, per-handler, and leave it alone — and their costs.
+  - **[decided] The parent-directory creation is inside the boundary.** BUG-0002's `## Notes` asks explicitly for this to be part of the same decision rather than discovered later; `target.parent.mkdir` fails on the same class of error as the write. ADR-0008 §1.
+  - **[decided] The temporary-file cleanup keeps precedence over the translation.** The existing `except BaseException` unlink stays nested inside the new wrapper, so a refused write leaves neither a changed dataset nor a `.expenses-` file. This is what AC3 turns on. ADR-0008 §3.
+  - **[assumed, reversible] The message reads `cannot write <path>: <error>`,** mirroring `load`'s `cannot read <path>: <error>`, with the path as the caller gave it. Reversing it is one string literal and whatever asserts on it. Recorded under `## Assumptions` with the accepted wart: Python's error text names the temporary file the OS refused.
+  - **[assumed, reversible] The regression tests run the tool in a subprocess.** In process, removing the handling makes an `OSError` propagate — which fails a test, so AC4 would still be met — but nothing would ever observe a `Traceback` on stderr or an exit status, which is what AC1 is written about. Reversing it is three short test methods against the existing `run_command` helper.
+  - **[assumed, reversible] `person delete` and `expense delete` are fixed by the same wrapper and are not tested here.** They call the same `save`; no criterion names them, and testing them would be work with no criterion behind it.
+  - **[decided] The regression lives in `tests/test_cli.py`, not `tests/test_store.py`.** AC4 asks for a test covering AC1, which is a criterion about a command. A second store-level unit test is recorded under `## Out of scope for this item` rather than written.
+  - **[decided] `docs/architecture/overview.md` is updated now, at plan time, under "What is coming".** `spec/doc-header.md` §5 makes `plan` and `answer-questions` the only writers of that document, and the overview currently carries a claim about refusals that the write path does not honour; leaving it unmarked until the fix lands would leave a false absolute in the record. The move into the body is step 9 of the plan, following this project's own precedent for versions 3 and 5.
+  - **[decided] No human question.** Every decision here is reversible in one file with no data migration and no interface change, which is the middle branch of the preference order; nothing turns on stakeholder intent that BUG-0002's criteria have not already fixed.
+- **Questions raised:** none
+- **Commands:**
+  - `mkdir -p /tmp/bug2ro; chmod 500 /tmp/bug2ro; EXPENSES_STORE=/tmp/bug2ro/expenses.json python3 -m expenses person add Ana` → exit 1, an eleven-line traceback ending `PermissionError: [Errno 13] Permission denied: '/tmp/bug2ro/.expenses-43qi2spl.tmp'`, and the directory left empty; restored with `chmod 700` and removed. The bug reproduces on the current trunk, before planning against it.
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 120 tests`, `OK` — the baseline the plan's step 7 is measured against, and the evidence that `commands.test` is a command this execution actually ran
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 7 items, 10 documents, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 2 documents checked, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0; 0 errors, 0 warnings over 7 items and 10 documents, the tenth being ADR-0008)
+  - `every-criterion-is-addressed` → **pass** — five criteria, five rows in `plan.md`'s mapping table, each naming the step that satisfies it and the observation that demonstrates it: AC1 → steps 1 and 4 (the new AC1 test, plus the hand-run reproduction pasted into the report); AC2 → steps 1 and 5 (the AC2 test); AC3 → steps 1 and 6 (bytes compared either side of the refusal, and the directory listed for `.expenses-` leftovers); AC4 → steps 3 and 4 (the write-probe skip, and a recorded check that reverting step 1 turns the test red); AC5 → step 7 (the suite's own exit code and summary line)
+  - `project-commands-resolved` → **pass** — `commands.test` is `python3 -m unittest discover -s tests -t .`, run in this execution to exit 0 with 120 tests; `commands.lint` stays null with ADR-0004 as the record, which is the ADR the gate's own wording admits
+  - `decisions-recorded` → **pass** — seven decisions listed above and in `plan.md`'s `## Decisions and ADRs` table; three point at ADR-0008 and its numbered clauses, three at entries under `## Assumptions` that state what reversal costs, and one at ADR-0004
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0 over the two documents this execution wrote)
+  - `plan-is-executable-without-you` (advisory) → **pass** — nine numbered steps, each naming the file it touches and what is true afterwards; the two things a reader could get wrong are hoisted into `## Approach` as named hazards (the write-probe skip, and the cleanup registration order that `unittest`'s reverse-order rule makes counter-intuitive) rather than left inside a step
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/plan.md` — new: problem, approach, nine steps, the five-row mapping table, three assumptions, the decision table, `## Scaffolding` = none, four risks, four things out of scope
+  - `docs/architecture/adr/ADR-0008-os-errors-on-the-dataset-become-refusals-in-store.md` — new, version 1: four options, the decision in three checkable clauses, consequences including cheap reversibility
+  - `docs/architecture/overview.md` — version 5 → **6**: a paragraph under "What is coming" recording ADR-0008 and stating plainly that the refusal claim in the `expenses/cli.py` piece does not yet hold on the write path; change-log row added
+  - `tracker/board.md` — regenerated
+  - no file created outside `tracker/` and `docs/`; no production code written
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0002 is planned. The fix is one wrapper: `save`'s whole body, `mkdir` included, catches `OSError` and raises `ExpensesError("cannot write <path>: <error>")`, with the existing temporary-file cleanup nested inside so it still runs first. The decision that was actually open — where an operating-system error stops being an exception and becomes a refusal — is ADR-0008, chosen against three named alternatives, and the plan carries three regression tests in `tests/test_cli.py` behind a write-probe skip so the suite does not fail for a user who can write regardless of the permission bits.
+
+## 2026-08-27T01:52:45Z — implement v0.2.1 — developer
+
+- **Item:** BUG-0002
+- **Trigger:** status `planned`, dispatched by `next`; the plan written by `plan` at 2026-08-27T01:51:54Z is the thing being executed.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — AC1 to AC5, the four reproduction steps, and the notes
+  - `tracker/items/BUG-0002/artifacts/plan.md` — the nine steps, the mapping table, the three assumptions, and the two hazards hoisted into `## Approach`
+  - `tracker/items/BUG-0002/history.md` — two rows, `— → ready` (review-close) then `ready → planned` (plan); no send-back, so this is a fresh execution and not a defect fix
+  - `tracker/items/BUG-0002/questions/` — empty; nothing was ever asked on this item
+  - `docs/architecture/adr/ADR-0008-os-errors-on-the-dataset-become-refusals-in-store.md` — the decision this execution implements, in three checkable clauses
+  - `docs/architecture/overview.md` v6 — the "What is coming" paragraph plan step 9 tells me to move into the body
+  - `tracker/project.yaml` — branch prefix `wi/`, commit subject `<scope>: <summary> (refs <ITEM-ID>)`, `commands.test` set, `commands.lint` null with ADR-0004
+  - `expenses/store.py`, `expenses/cli.py`, `tests/test_cli.py` — the three files the plan touches, read before touching any of them
+- **Decisions:**
+  - **Branch `wi/BUG-0002`, from `main` at `37e57f0`.** The convention's prefix is `wi/` for every item type, which is what WI-0001, WI-0002 and WI-0004 used; a bug gets no separate prefix because `tracker/project.yaml` names only one.
+  - **Nothing else decided yet.** The plan's steps are executed in order from here; any choice made inside their latitude is recorded in the closing entry and in `impl-report.md`.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0002 main` → exit 0, branch created at `37e57f0`
+- **Gates:**
+  - `tests-pass` → **not yet run** — this entry opens the execution; the gate runs on the branch head at step 7
+  - `lint-clean` → **not yet run** (and will be `skipped`: `commands.lint` is null, ADR-0004)
+  - `workspace-valid` → **not yet run** by this execution as a completion gate; the transition that writes this entry runs it, and it passed
+  - `every-criterion-has-a-test` → **not yet run** — no test has been written yet
+  - `commits-reference-the-item` → **not yet run** — the branch has no commits of its own yet
+  - `claims-are-sourced` → **not yet run**
+  - `no-unplanned-scope` (advisory) → **not yet run** — there is no diff yet
+- **Artifacts:**
+  - branch `wi/BUG-0002`, created from `main` at `37e57f0`; no commits of its own yet
+  - no file created or changed by this entry — the opening entry records the branch, not work
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of BUG-0002 has started on `wi/BUG-0002`, branched from `main` at `37e57f0`. No code has been written; the next entry reports the work.
+
+## 2026-08-27T01:56:45Z — implement v0.2.1 — developer
+
+- **Item:** BUG-0002
+- **Trigger:** status `in-progress` on `wi/BUG-0002`; the plan's nine steps are executed and the gates pass on the branch head.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/artifacts/plan.md` — the nine steps, the mapping table, the three assumptions, and the two hazards named in `## Approach`
+  - `tracker/items/BUG-0002/item.md` — AC1 to AC5 and the reproduction, re-read against the finished diff rather than from memory
+  - `docs/architecture/adr/ADR-0008-...md` — the three numbered clauses of the decision, which are what the code was checked against
+  - `expenses/store.py` — `load`'s `except OSError` branch as the shape to mirror, and `save`'s temporary-file cleanup
+  - `expenses/cli.py` — `main`, and all four writing handlers, to establish that each prints its success line only after `store.save` returns
+  - `tests/test_cli.py` — `AC4ARerunInANewProcessPrintsTheSameBytes.run_in_a_new_process` and its two siblings, the model for the new subprocess helper
+  - `README.md` — the "When something is wrong" section, checked for a claim this change makes false; it makes one true instead
+- **Decisions:**
+  - **The fixture records `Zoe`, not `Ana`, while the directory is still writable.** AC1's literal command is `person add Ana`; if the fixture had recorded `Ana`, that command would have been refused by `add_person` with "Ana is already in the group" — a refusal raised before `save` is ever called, naming no path, and the test would have passed for entirely the wrong reason. Recording a different name keeps the criterion's own command and still leaves a dataset for AC3 to protect. Recorded as a deviation.
+  - **The AC3 test does not restore the permissions before asserting**, though the plan's step 6 says to. Listing the directory and reading the file both work at mode 500, the restore is already a cleanup, and doing it inside the test would hide which permission the assertion actually needs. Recorded as a deviation.
+  - **The `except OSError` catches the base class, not `PermissionError`.** ADR-0008 says `OSError`; a full disk and a read-only mount reach the same clause, and only the permission case is tested — which is what the plan's second risk already says.
+  - **The nested cleanup was left exactly where it was.** It would have been tidier to fold it into the new wrapper; folding it would have translated the `OSError` before unlinking the temporary file, which is what AC3 forbids. ADR-0008 §3 anticipated this.
+  - **Nothing was tidied.** `expense delete 01`, the non-blocking finding from WI-0004's review, was left alone; it is not this item's and it has no criterion here.
+  - **No question was filed and none was needed.** Every choice above is inside the plan's latitude and is recorded in `impl-report.md` under `## Deviations from the plan`.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0002 main` → exit 0, at `37e57f0`
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 123 tests in 1.475s`, `OK` — the three new tests on top of the 120 that were already green
+  - `cp expenses/store.py /tmp/store.fixed.py; git show main:expenses/store.py > expenses/store.py; python3 -m unittest tests.test_cli.BUG0002AnUnwritableStoreIsRefusedNotATraceback` → `Ran 3 tests`, `FAILED (failures=3)`, each `AssertionError: 1 != 2 : expected a refusal; stderr was b'Traceback ... PermissionError: [Errno 13] Permission denied'`; restored with `cp /tmp/store.fixed.py expenses/store.py` and the suite re-run green. This is AC4's "fails if the handling is removed", performed rather than asserted.
+  - the bug's own reproduction, by hand: `mkdir -p /tmp/rc-ro; chmod 500 /tmp/rc-ro; EXPENSES_STORE=/tmp/rc-ro/expenses.json python3 -m expenses person add Ana` → `cannot write /tmp/rc-ro/expenses.json: [Errno 13] Permission denied: '/tmp/rc-ro/.expenses-ls2wcmxl.tmp'`, exit 2; `ls -a /tmp/rc-ro` → `.` and `..` only; the same command with stderr discarded into `wc -c` → `0`; `chmod 700` and both directories removed afterwards
+  - the read path, unchanged, for contrast: `EXPENSES_STORE=/tmp/rc-dir/expenses.json python3 -m expenses person list` → `cannot read /tmp/rc-dir/expenses.json: [Errno 21] Is a directory: ...`, exit 2
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0002 wi/BUG-0002` → exit 0, "all 2 commit(s) on main..wi/BUG-0002 name BUG-0002"
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 1 document, 0 errors
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - `git diff --stat main..wi/BUG-0002` → 8 files, 228 insertions, 35 deletions; the code half is `expenses/store.py`, `tests/test_cli.py` and `docs/architecture/overview.md`
+- **Gates:**
+  - `tests-pass` → **pass** — `python3 -m unittest discover -s tests -t .` exit 0, `Ran 123 tests`, `OK`, run on the branch head `f23bfda` after the last change
+  - `lint-clean` → **skipped** — `commands.lint` is null in `tracker/project.yaml`; ADR-0004 records that this project installs nothing and the standard library ships no linter. Nothing was run, so nothing is claimed
+  - `workspace-valid` → **pass** — `validate-workspace .` exit 0, 7 items, 10 documents, 0 errors, 0 warnings
+  - `every-criterion-has-a-test` → **pass** — AC1 `test_ac1_person_add_is_refused_with_one_line_naming_the_path`; AC2 `test_ac2_expense_add_is_refused_with_one_line_naming_the_path`; AC3 `test_ac3_the_dataset_and_the_directory_are_left_as_they_were`; AC4 the revert-and-run above, which produced three failures with the handling removed and three passes with it; AC5 the suite command and its own summary line. All three test functions are in `tests.test_cli.BUG0002AnUnwritableStoreIsRefusedNotATraceback`
+  - `commits-reference-the-item` → **pass** — `check-commit-refs BUG-0002 wi/BUG-0002` exit 0 over both commits
+  - `claims-are-sourced` → **pass** — `lint-claims --changed-since main` exit 0 over `docs/architecture/overview.md` v7, the one document this branch changes
+  - `no-unplanned-scope` (advisory) → **pass** — every hunk traces to a step: `store.py` to 1 and 2, `tests/test_cli.py` to 3 to 6 plus one line of the module docstring naming the new class, `overview.md` to 9, and the rest is this item's own tracker record
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/impl-report.md` — what was built, the five-row evidence table, two deviations, the seven gates, and four things deliberately not done
+  - `expenses/store.py` — `save`'s body inside the refusal boundary, and the module docstring stating the rule
+  - `tests/test_cli.py` — `BUG0002AnUnwritableStoreIsRefusedNotATraceback`: the read-only fixture with its write probe, the subprocess helper, and three tests
+  - `docs/architecture/overview.md` — version 6 → **7**: ADR-0008's rule moved from "What is coming" into the `expenses/store.py` piece
+  - branch `wi/BUG-0002`, commits `db45f4f` (fix and tests) and `f23bfda` (overview and report); range `main..wi/BUG-0002`
+- **Status:** `in-progress` → `verifying`
+- **Result:** BUG-0002 is implemented on `wi/BUG-0002`. `store.save`'s whole body, the parent-directory creation included, now turns an `OSError` into `ExpensesError("cannot write <path>: <error>")`, with the temporary-file cleanup still nested inside so a refused write leaves neither a changed dataset nor a `.expenses-` file. The bug's own reproduction now prints one line and exits 2 where it used to print an eleven-line traceback and exit 1. Three subprocess regression tests guard it, behind a probe that skips them where mode 500 does not stop the writer; 123 tests pass and every hard gate is green on the branch head except `lint-clean`, which is skipped with ADR-0004 as the reason.
+
+## 2026-08-27T02:00:08Z — verify v0.1.3 — qa-engineer
+
+- **Item:** BUG-0002
+- **Trigger:** status `verifying` on `wi/BUG-0002`; dispatched by `next` as the highest-ranked runnable item.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — AC1 to AC5, read first and used to design each check before any report was opened
+  - `tracker/items/BUG-0002/history.md` — four rows, ending `in-progress → verifying`; no send-back, so this is a first verification
+  - `tracker/items/BUG-0002/artifacts/plan.md` — read after the criteria, for the step-to-file mapping the diff was judged against
+  - `tracker/items/BUG-0002/artifacts/impl-report.md` — read last, and used for nothing except to compare against findings already reached
+  - no `refinement-qa.md` — a bug enters at `ready` and this one was never refined; no criterion's wording turned out to be contested
+  - branch head **`d8b4c4e89af854a2894097af195a423d24213b0e`** — the commit every verdict below is against
+  - the diff `main..d8b4c4e` over `expenses/`, `tests/`, `docs/` and `README.md`: three files, 110 insertions, 30 deletions
+- **Decisions:**
+  - **Every criterion was decided from its own text, with my own fixtures.** `/tmp/vb2/a` is a mode-500 directory holding a dataset recorded while it was still writable, and `/tmp/vb2/b` is a mode-500 directory with nothing in it — the bug's literal reproduction. AC1 was run against both.
+  - **AC2 uses a payer who is already recorded.** With an unknown name, `add_expense` would refuse before `save` is ever reached and the criterion would have passed on a refusal that has nothing to do with this fix.
+  - **AC3 was measured around two refusals, not one**, with `md5sum` and `wc -c` either side and a `grep -c '^\.expenses-'` on the directory listing.
+  - **AC4's third clause was demonstrated by injection.** The criterion's condition is "the test process can write regardless of the permission bits". Rather than becoming root, I made the fixture's directory writable, which creates exactly that condition, and watched all three tests skip with `OK (skipped=3)`. Recorded in the report as an injection, not as a root run.
+  - **The docstring inaccuracy is a finding, not a send-back and not a bug.** `tests/test_cli.py`'s module docstring says each test starts from a store that does not exist yet; the new fixture records `Zoe` first, so that is now false for three tests. No acceptance criterion of this item speaks to it, so the send-back mechanism does not apply; it was made inaccurate by this diff rather than delivered by another item, so `found-in` would have nothing to name. It is recorded under `## Defects found` as non-blocking, for the reviewer.
+  - **No criterion was judged ambiguous**, so no question was filed. AC1's four clauses, AC3's two and AC4's three were each measured separately rather than judged as a whole.
+- **Questions raised:** none
+- **Commands:**
+  - `git rev-parse HEAD` → `d8b4c4e89af854a2894097af195a423d24213b0e`; `git status --short` → empty, before and after every injection
+  - setup: `EXPENSES_STORE=/tmp/vb2/a/expenses.json python3 -m expenses person add Zoe` → `added Zoe`, exit 0; `md5sum` → `c21ac18dc401812361a7da5baec700af`, `wc -c` → `66`; `chmod 500 /tmp/vb2/a /tmp/vb2/b`
+  - **AC1:** `EXPENSES_STORE=/tmp/vb2/a/expenses.json python3 -m expenses person add Ana >out 2>err` → exit 2; `wc -c < out` → `0`; `wc -l < err` → `1`; `cat err` → `cannot write /tmp/vb2/a/expenses.json: [Errno 13] Permission denied: '/tmp/vb2/a/.expenses-n_otdx3u.tmp'`; `grep -c -F` the path → `1`; `grep -c Traceback` → `0`
+  - **AC1, literal reproduction:** the same against `/tmp/vb2/b`, an empty mode-500 directory → exit 2, `0` bytes on stdout, `1` line on stderr, `cannot write /tmp/vb2/b/expenses.json: ...`, `Traceback count: 0`
+  - **AC2:** `... expense add --amount 12.50 --paid-by Zoe --shared-by Zoe --date 2026-08-01 --description dinner` → exit 2, `0` bytes on stdout, `1` line, `cannot write /tmp/vb2/a/expenses.json: [Errno 13] Permission denied: '/tmp/vb2/a/.expenses-riuzuxmj.tmp'`, path `1`, Traceback `0`
+  - **AC3:** `md5sum /tmp/vb2/a/expenses.json` after both → `c21ac18dc401812361a7da5baec700af`, `66` bytes, unchanged; `ls -a /tmp/vb2/a` → `.`, `..`, `expenses.json`; `ls -a | grep -c '^\.expenses-'` → `0`
+  - **AC4 (i):** `python3 -m unittest -v tests.test_cli.BUG0002AnUnwritableStoreIsRefusedNotATraceback` → three tests `ok`, `Ran 3 tests`, `OK`
+  - **AC4 (ii):** `cp expenses/store.py /tmp/vb2/store.branch.py`; `git show main:expenses/store.py > expenses/store.py`; `grep -c "cannot write" expenses/store.py` → `0`; the same class → `Ran 3 tests`, `FAILED (failures=3)`, each `AssertionError: 1 != 2 : expected a refusal; stderr was b'Traceback ... PermissionError: [Errno 13] Permission denied'`; restored, `md5sum -c` → `expenses/store.py: OK`
+  - **AC4 (iii):** `sed -i 's/self.directory.chmod(0o500)/self.directory.chmod(0o700)/' tests/test_cli.py`; the same class → three × `skipped 'this process writes to a mode-500 directory anyway; nothing to test'`, `OK (skipped=3)`; restored, `md5sum -c` → `tests/test_cli.py: OK`
+  - **AC5:** `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 123 tests in 1.479s`, `OK`, on the restored tree
+  - boundary: `EXPENSES_STORE=/tmp/vb2/a/sub/expenses.json python3 -m expenses person add Ana` with the parent at mode 500 → exit 2, `cannot write /tmp/vb2/a/sub/expenses.json: [Errno 13] Permission denied: '/tmp/vb2/a/sub'`, Traceback `0` — ADR-0008's `mkdir` clause, triggered
+  - boundary: with the directory writable again, `person add Ana` on a dataset already holding Ana → `Ana is already in the group`, exit 2 — an ordinary refusal is not re-wrapped
+  - boundary: `EXPENSES_STORE=/tmp/vb2/isdir/expenses.json python3 -m expenses person list` where the path is a directory → `cannot read /tmp/vb2/isdir/expenses.json: [Errno 21] Is a directory: ...`, exit 2 — the read path unchanged
+  - recovery: `chmod 700`, then `person add Ana` → `added Ana`, exit 0; `person list` → `Zoe`, `Ana`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+- **Gates:**
+  - `tests-pass` → **pass** — `python3 -m unittest discover -s tests -t .` exit 0, `Ran 123 tests`, `OK`, run by this skill on `d8b4c4e`
+  - `lint-clean` → **skipped** — `tracker/project.yaml` line 16 is `lint: null`, by ADR-0004; nothing ran, so nothing is claimed, and `## Not verified, and why` says what that leaves unchecked
+  - `workspace-valid` → **pass** — `validate-workspace .` exit 0, 7 items, 10 documents
+  - `every-criterion-independently-checked` → **pass** — five rows in the report, each naming a command run in this session and quoting its output; none cites `impl-report.md`, which was opened last
+  - `negative-cases-exercised` → **pass** — every criterion here is a negative case and each was triggered; four further conditions (the `mkdir` refusal, an ordinary refusal passing through, the read path, and recovery) are recorded with their output
+  - `tests-would-fail-without-the-change` (advisory) → **pass** — AC4 (ii) above: three failures with the handling reverted, restored and checksummed afterwards
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/verify-report.md` — `Verified-commit: d8b4c4e89af854a2894097af195a423d24213b0e`, the verdict, five criterion rows, the six gates, four boundary cases, the two-direction sensitivity check, one non-blocking finding, and five declared gaps
+  - `tracker/items/BUG-0002/item.md` — AC1 to AC5 ticked, each against a command in this entry
+  - no bug item filed; nothing found belonged to another item
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0002 passes verification on `d8b4c4e`. The store the operating system will not let this tool write now produces one line on stderr, nothing on stdout and exit 2, leaving the previous dataset byte-identical and no `.expenses-` file behind; the regression tests fail when the handling is reverted and skip — without failing the suite — when the process can write regardless. One non-blocking finding is left for the reviewer: a sentence in the test module's docstring that this diff made inaccurate.
+
+## 2026-08-27T02:10:02Z — review-close v0.4.0 — reviewer
+
+- **Item:** BUG-0002
+- **Trigger:** status `in-review` on `wi/BUG-0002`; dispatched by `next` as the highest-ranked runnable item (priority rank 3, ahead of BUG-0001's rank 4; every other item is `done`, `blocked`, or an epic whose status has no owner).
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — the summary, the four reproduction steps, AC1–AC5 and their tick state, and the four notes the filing review left
+  - `tracker/items/BUG-0002/history.md` — five rows, read as a chain: `— → ready → planned → in-progress → verifying → in-review`, each `from` matching the previous `to`, the last matching `item.md`
+  - `tracker/items/BUG-0002/journal.md` — **read in full**, all five entries; five entries against five rows, one-to-one by timestamp and actor
+  - `tracker/items/BUG-0002/questions/` — `.gitkeep` alone; no question was ever filed on this item
+  - `tracker/items/BUG-0002/artifacts/plan.md`, `impl-report.md` (including `## Deviations from the plan` and `## What I did not do`), `verify-report.md` (including `## Defects found` and `## Not verified, and why`)
+  - **the diff `main..wi/BUG-0002`, hunk by hunk** over `expenses/`, `tests/` and `docs/` — three files; every hunk mapped to a plan step, recorded as F4 in `review.md`
+  - `expenses/store.py` in full on the branch head; `expenses/cli.py`'s `main` and its two `except` clauses; `expenses/money.py:12`; `tests/test_cli.py`'s `CommandTestCase` and all eleven `setUp` methods
+  - `docs/architecture/overview.md` v7, ADR-0008, ADR-0001, `docs/product/vision.md`, `README.md` `## When something is wrong`, `tracker/project.yaml`
+  - `tracker/items/WI-0004/artifacts/review.md` — for its finding F4, which fixes how a trial merge is done in this project (detached checkout, never `git worktree add <path> <trunk>`)
+- **Decisions:**
+  - **Accepted, and closed `delivered`.** Twelve of twelve Definition of Done criteria pass, each recorded with its own evidence in `review.md`'s table rather than as one verdict.
+  - **`verify`'s one non-blocking finding was opened, and it does not hold.** It reported that this diff made `tests/test_cli.py`'s module docstring ("each test starts from a store that does not exist yet") inaccurate, because the new fixture records `Zoe` first, and handed the decision here. Checking it rather than accepting it: seven pre-existing classes already record data in their own `setUp` through `CommandTestCase.succeed`, which calls `main()` in process and writes the file. So under the strict reading the sentence has been inaccurate since WI-0001 for roughly twenty tests, and under the reading that makes it true of those seven it is true of the new class too. **Not a defect this change introduced**, so not a send-back; and not a bug against another item, since it is a matter of reading rather than of delivered behaviour. Recorded as F1 and in `item.md`'s `## Notes`. This was the one finding handed up on trust, and it is the one that failed when opened — which is why D12 says to read the source rather than the sentence.
+  - **Two precision findings recorded, neither a send-back.** F2: `overview.md` v7's "the whole of `save` is inside that boundary" overstates by one statement — `target = pathlib.Path(path)` at `expenses/store.py:67` is above the `try`, performs no file-system access and cannot raise `OSError`, so no claim about behaviour is false. F3: `target.parent.mkdir(parents=True)` is inside the boundary as ADR-0008 §1 requires, and it *creates* directories, so a `mkdir` that succeeds before a refused write leaves directories behind — an edge the "changes nothing on disk" sentence does not cover. Not reproducible with permission bits; the dataset itself is safe in every case because `os.replace` is the last statement and is never reached. Both written into `item.md`'s `## Notes`.
+  - **Seven accepted gaps, all moved out of the reports and into `item.md`'s `## Notes`** — the two above plus `lint-clean` checking nothing (ADR-0004), only the permission case ever triggered, AC4's skip demonstrated by injection rather than as root, `os.replace`-after-write untested, and the two `delete` commands untested against an unwritable store. Each is a limit on what was checked or a consequence of a decision already recorded; none is a statement in the record that is untrue.
+  - **No bug filed and no ADR superseded.** Nothing in the diff contradicts ADR-0008's three checkable clauses or ADR-0001's description of the atomic write, and nothing found belongs to another item.
+  - **The trial merge was detached**, per WI-0004's F4: `git worktree add --detach /tmp/trial-bug2 main`, with `git rev-parse --short main` confirmed at `37e57f0` before and after. The item was closed while the branch was still unmerged, and only then was the branch merged, because `check-commit-refs` inspects `main..wi/BUG-0002` and merging first empties that range.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 7 items, 10 documents, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0002 wi/BUG-0002` → exit 0: `verified at d8b4c4e8; wi/BUG-0002 has moved to a332c738 but only the record changed (5 file(s) under tracker/ or docs/), so the verification still covers the code`
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0002 wi/BUG-0002` → exit 0, `all 4 commit(s) on main..wi/BUG-0002 name BUG-0002`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked 1 document(s)`, 0 errors, 0 warnings
+  - `git diff --stat f23bfda..a332c73 -- expenses/ tests/ README.md docs/` → **empty**, so `d8b4c4e` and `a332c73` are record-only and the gates ran on the final state of the code (D3, D10, checked independently of the script)
+  - `git worktree add --detach /tmp/trial-bug2 main` → detached at `37e57f0`; `git -C /tmp/trial-bug2 merge --no-edit wi/BUG-0002` → clean, 9 files changed, 432 insertions, 40 deletions; `python3 -m unittest discover -s tests -t .` **on the merge result** → exit 0, `Ran 123 tests in 1.521s`, `OK`; `git rev-parse --short main` → `37e57f0`, unmoved; `git worktree remove --force /tmp/trial-bug2` → exit 0
+  - the bug's own reproduction, re-run by hand against the merge-result code: `person add Zoe` into a writable directory (`md5sum` → `c21ac18dc401812361a7da5baec700af`), `chmod 500`, then `person add Ana` → `exit=2`, `stdout bytes: 0`, `stderr lines: 1`, `cannot write /tmp/rv2/a/expenses.json: [Errno 13] Permission denied: '/tmp/rv2/a/.expenses-6kszkq_z.tmp'`, `Traceback count: 0`; `ls -a` → `.`, `..`, `expenses.json`; `md5sum` after → `c21ac18dc401812361a7da5baec700af`, unchanged
+  - `grep -n "^def " expenses/store.py` → eleven functions, only `load` (:37) and `save` (:61) touching the file; `grep -n "except" expenses/cli.py` → `:82` (a `ValueError` re-raised as `ExpensesError` inside `parse_date`) and `:188` (the one place a refusal becomes a message and an exit code)
+  - `grep -c "^- \[x\] AC" tracker/items/BUG-0002/item.md` → 5; `grep -c "^- \[ \] AC"` → 0
+  - `grep -c "    def setUp" tests/test_cli.py` → 11, of which seven pre-existing ones record data — the check that disproved `verify`'s finding
+- **Gates:**
+  - `definition-of-done` → **pass** — walked criterion by criterion in `review.md`'s table, twelve rows with twelve separate results and evidence. D1 by `grep` counts; D2 against `verify-report.md`'s per-criterion commands; D3 by the empty `git diff --stat` after `f23bfda` plus three independent suite runs; D4 by the empty questions directory; D5 by the five-row/five-entry correspondence; D6 by ADR-0008 and its citation from `plan.md`; D7 by `overview.md` v7 and its change-log row, with `README.md` and `vision.md` checked rather than assumed; D8, D10 and D12's mechanical half by their scripts; D9 by the detached trial merge and the real one; D11 by this review; D12's human half by the fourteen-row claim audit
+  - `verification-postdates-the-code` → **pass** — `check-verify-freshness BUG-0002 wi/BUG-0002` exit 0, and independently the empty `git diff --stat f23bfda..a332c73` over code and docs
+  - `commits-reference-the-item` → **pass** — `check-commit-refs BUG-0002 wi/BUG-0002` exit 0, all four commits, run while the branch was still unmerged
+  - `tests-pass-on-the-merge-result` → **pass** — `python3 -m unittest discover -s tests -t .` inside the detached trial merge → exit 0, `Ran 123 tests`, `OK`
+  - `workspace-valid` → **pass** — `validate-workspace .` exit 0, 0 errors, 0 warnings
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone. *What was built and why:* BUG-0002's summary and ADR-0008. *Which skill decided what:* five journal entries, one per history row, each naming its decisions and their route. *What questions arose:* none, and the empty questions directory says so rather than leaving it to be inferred. *What verification found:* five criteria decided by quoted commands, four boundary cases, a two-direction sensitivity check, five declared gaps and one finding — which this review then opened and disproved. `git log --grep BUG-0002` returns the filing, the plan, the fix, the docs, the verification and this close
+  - `claims-are-sourced` → **pass** — `lint-claims --changed-since main` exit 0 over the one document this branch changed; the fourteen-row audit in `review.md` is the half it cannot check
+  - `epic-sign-off` → **not applicable** — this execution closed a `bug`, not an epic. Whether EP-001 has reached rest is `next`'s step 6 to ask `scripts/engagement-state`, on its next run, now that this item is terminal
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/review.md` — new: what was examined, the fourteen-row D12 claim audit, the twelve-row Definition of Done table, five findings, seven accepted gaps, the verdict
+  - `tracker/items/BUG-0002/item.md` — `status: done`, `outcome: delivered`, and a `### Added at close by review-close` section carrying all seven accepted gaps
+  - the merge of `wi/BUG-0002` into `main`
+  - no bug filed, no ADR written or superseded, no question filed
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0002 is delivered and closed. `store.save` now turns an `OSError` into the same refusal `store.load` has always raised, with the temporary-file cleanup still running first, so a store the operating system will not let this tool write produces one line on stderr, nothing on stdout and exit 2, and leaves the previous dataset byte-identical — re-run by hand on the merge result, not taken from a report. Twelve of twelve Definition of Done criteria pass; the diff maps hunk-for-hunk onto the plan's nine steps; the trial merge was detached, clean and green at 123 tests. The one finding `verify` handed up was opened and did not survive, and F1 records why rather than dropping it quietly.
