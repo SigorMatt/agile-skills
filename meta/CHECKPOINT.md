@@ -1,6 +1,6 @@
 # CHECKPOINT
 
-## Current unit: META-118 — H-009, a W3 false positive on a heredoc body
+## META-118 is complete. There is no next unit.
 
 Iteration 2 (`iteration-2-tidy`) is **in flight and stopped** at turn 6 on a contamination
 violation that is not one. Scope is one finding; the run is **not** to be resumed here — the
@@ -23,13 +23,26 @@ document between the introducer and its delimiter is treated as content. W1 and 
 unchanged: they read the whole blob, and writing a forbidden token into a document is still
 evidence.
 
-- Regression test named after this run, reading the **real** transcript at
-  `harness/runs/iteration-2-tidy/turns/006-worker.stream.jsonl`.
-- The residual hole gets said plainly rather than papered over: a read of an outside path
-  performed *inside* a heredoc body (`bash <<'EOF'`, or a python program in one) is no longer
-  visible to the transcript scrape.
-- File **H-009** in `meta/findings/FINDINGS.md`, evidence: that transcript and this stop.
-- Run `harness/tests/test_harness.py`. Commit, push, **stop**.
+Done, in commits `e81582d` and `2cd1a65`:
+
+- `strip_heredoc_bodies()` in `harness/audit.py`, wired into `_paths_in`.
+- Two tests, both confirmed to fail with the fix reverted — the synthetic shape and
+  `test_iteration_2_tidy_turn_6_is_clean`, which audits the **real** transcript with `exists`
+  pinned to "every path is real" so it asserts the structural rule rather than the existence
+  filter it replaces. **55 tests**, was 53. `./scripts/check` green.
+- **H-009** filed in `meta/findings/FINDINGS.md`, fixed, with the residual hole stated rather
+  than buried: a read of an outside path performed *inside* a heredoc body (`bash <<'EOF'`, or
+  a python program in one) is no longer visible to the transcript scrape.
+
+## What the owner does next
+
+**`iteration-2-tidy` is stopped at turn 6** with `stop-reason: contamination`, and that stop is
+a verdict rather than an interruption. The violation it stopped on is not one, and the rule that
+produced it is fixed — so the run is resumable on its merits, but restarting it is the owner's
+call and was deliberately not done here. The project is
+`/home/msi/agile-skills-throwaway/tidy`; `next-role` is `worker`.
+
+Findings: **50 fixed, 15 open**, 1 rejected, 1 deferred.
 
 ## Standing instructions (still in force)
 
