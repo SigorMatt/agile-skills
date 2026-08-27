@@ -1,60 +1,55 @@
 # CHECKPOINT
 
-## Phase II is complete. There is no next unit.
+## Current unit: META-113 — F-050, part 1: `applies_to` completeness becomes a gate
 
-Builder session 2.5 derived the termination model, closed the correctness batch, and ran
-iteration 1e as its regression gate. Everything is on `main` and pushed. Read
-[`meta/FINAL-REPORT-2.5.md`](FINAL-REPORT-2.5.md) first.
+Phase III is builder micro-session 2.6 (`meta/BUILDER-2.6-PROMPT.md`): the three findings
+FINAL-REPORT-2.5 §9 named as conditions on the iteration-2 go, and nothing else. Scope is
+closed — anything new is filed and left open.
 
-Where things stand:
+**Intent of this unit.** F-050 is F-013's shape in this repo's own work: a validator rule that
+names a status was written for every item type while the transition that satisfies it was scoped
+to two of them, so an epic-level deferral produced a workspace no legal move could repair. The
+instance is one line; the class is what the mission asks for. So this unit builds the mechanism
+first:
 
-- **ADR-0006** derives the four legal endings of an engagement, the termination gate, and the
-  creation-authority table. **ADR-0007** resolves `plan`'s scaffolding conflict. F-013's class —
-  F-029 (+F-042), F-045, F-046 — is closed by derivation rather than by exception.
-- **46 findings fixed**, each citing a commit `./scripts/check` verifies. **18 open**, 1 rejected,
-  1 deferred.
-- `./scripts/check`: **16 assertions across 14 steps**, all passing — including three new ones:
-  the termination gate at every ending, the pipeline invariants under injected faults, and the
-  derived model exercised by execution against a real workspace.
-- **Iteration 1e** ended at E3, the impasse, **through the stakeholder** — the sign-off fired
-  naming every child, the stakeholder refused, and the ending was recorded on the epic. 20 turns,
-  $100.23, zero contamination violations. Banked at `meta/harness/evidence/iteration-1e/`,
-  read-only.
+- `methodology/pipeline.yaml` gains a `rule_obligations:` block. Each entry names a validator
+  rule that requires an item to be at one of a fixed set of statuses, the item types it applies
+  to, and the transition that must be legal for those types if the rule is to be satisfiable.
+- `scripts/validate-workspace` **reads** the obligation's `applies_to` rather than deciding for
+  itself which item types a status rule constrains, and reports `pipeline.obligation.missing`
+  when an obligation it depends on is absent.
+- `scripts/lint-skills` checks each obligation against the transition table in both directions:
+  a transition the obligation names and no row provides (`obligation.unsatisfiable`), and a
+  scope the rule claims and the transitions do not permit (`obligation.applies_to.mismatch`) —
+  which is F-050 exactly, and, in the other direction, F-013.
+- Two injected faults in `scripts/check`'s pipeline-invariant step, one per code.
 
-## What the owner does next
+META-114 then fixes the instance: the epic branch of the deferral, in the spec and in
+`answer-questions`, with the by-execution must-fail case.
 
-**The report's verdict is GO for iteration 2** (`iteration-2-tidy`), with three conditions:
+## The units of this session
 
-1. **Fix F-050 first** — an epic-level question cannot legally be `deferred`. It is a live
-   contradiction, it was introduced by this session, and `tidy`'s adversarial stakeholder is
-   exactly the kind to produce an epic-level deferral.
-2. **Fix F-049** — five `## Journaling` sections say the tool *writes* the `**Status:**` bullet
-   when it *requires* it. Six failed transitions in one run; a one-word fix.
-3. **Fix F-055** — `review-close` says "trial-merge into a throwaway copy of the trunk" without
-   saying how, and `git worktree add <path> main` advanced the real trunk. Name `--detach`.
+- **META-113** — F-050 part 1: the obligation registry and its gate (this unit).
+- **META-114** — F-050 part 2: the instance — spec, `answer-questions`, by-execution fixtures.
+- **META-115** — F-049: the `**Status:**` bullet, all occurrences, plus the class check if cheap.
+- **META-116** — F-055: name `git worktree add --detach` in `review-close`, with the must-fail case.
+- **META-117** — findings statuses with citations that resolve, `./scripts/check` green,
+  `meta/FINAL-REPORT-2.5.md` §11.
 
-Then run `iteration-2-tidy`. It has no blocked seed, so it should reach a **clean** ending (E1 or
-E2) — 1e exercised E3 only, and three of the four endings still have no run behind them.
-
-Do **not** start the Codex adapter or the content packs: ROADMAP §2 condition 1 (a full consumer
-run with zero version bumps) does not hold and is not close.
+Then **stop**. Do not run iteration 2 — the owner launches it.
 
 ## Standing instructions (still in force)
 
 - **The unit cycle ends with `git push`, not `git commit`.** `origin` is
   `git@github.com:SigorMatt/agile-skills.git`; `main` tracks it.
 - **Never record a commit sha by amending the commit being cited** (F-024). Commit the work, then
-  record the sha in a follow-up commit. `scripts/check` enforces it — and note that the step
-  itself was blind to the plural `commits a, b, c` form until META-109.
+  record the sha in a follow-up commit.
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
-- **Do not modify the toolkit while a harness run is in flight.** `meta/` and `harness/` are
-  exempt from the W4 rule; everything else trips it.
 - Every change traces to an F-### or H-###. Behavioural skill change ⇒ version bump. Spec change
   ⇒ a `## Revisions` row. Re-render after any of it.
 - Every enforcement fix ships a must-fail fixture, and — where a rule could be satisfied
   vacuously — a fixture proving it can be passed.
-- **New, from F-050:** when you add a rule, enumerate the item types it applies to, and check it
-  against the transitions that are legal for each. That is the one check that would have caught
-  this session's own defect.
-- Toolkit commits and harness commits stay separate.
+- **From F-050:** when you add a rule, enumerate the item types it applies to, and check it
+  against the transitions that are legal for each. This session's job is to stop that being a
+  thing a person has to remember.
