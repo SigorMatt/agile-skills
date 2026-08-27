@@ -370,3 +370,38 @@ content rule checkably, and turned up the `terminal`-versus-`suspendable` confus
 caught by a lint rule this time instead of by a run. It also, in the same session, let me
 introduce one more instance of the class it was written to close. Both of those are results, and
 the second one is the more useful of the two to have written down.
+
+---
+
+## 11 — Preconditions met, 2026-08-27
+
+Builder micro-session 2.6 (`meta/BUILDER-2.6-PROMPT.md`) closed the three findings §9 named as
+conditions on the go. Commits `a0e7db5`, `e1c55e9`, `5b615ec`, `63f8917`, `4c4ac37`.
+
+- **F-050** — the class before the instance. `pipeline.yaml` 0.5.0 carries `rule_obligations`:
+  every validator rule that requires an item to be at one of a fixed set of statuses declares the
+  item types it applies to and the transition that satisfies it. `validate-workspace` reads that
+  scope instead of deciding it; `lint-skills` checks it against the transition table in both
+  directions. The instance follows from ADR-0006 and from 1e's own evidence: a deferred blocking
+  question returns an **epic** to `open`, because `blocked` on an epic is the E3 ending and only
+  `review-close` reaches it. The engagement is then ended through the stakeholder when it comes
+  to rest — which `check-epic-signoff` already handled, accepting a deferred acknowledgment for
+  `open → blocked` and refusing one for `open → done`. §9's standing instruction — *enumerate the
+  item types a rule applies to* — is now a gate rather than a thing a person remembers.
+- **F-049** — both sides gave. The `**Status:**` bullet is the transition tool's to write, so a
+  body passed to it need not carry one; standalone `journal-entry` still requires it, and a body
+  missing a bullet the tool does *not* write is still refused. All seven `## Journaling` sections
+  now say what the body must actually contain, `**Commands:**` and `**Artifacts:**` included.
+- **F-055** — `review-close` 0.5.0 prints the trial-merge sequence with `git worktree add
+  --detach`, says in a paragraph why that flag is the whole of it, and requires a `git rev-parse`
+  of the trunk before and after. The must-fail case is extracted from the contract's own fenced
+  block, so dropping `--detach` from the procedure fails the gate.
+
+`./scripts/check` is green at **19 assertions across 17 steps** — three of them new: a dropped
+rule obligation is refused, a journal body needs no `**Status:**` bullet, and a trial merge
+leaves the trunk alone. Versions bumped: `pipeline.yaml` 0.5.0, `review-close` 0.5.0,
+`answer-questions` 0.3.1, `plan` 0.3.1, `implement` 0.2.2, `refine` 0.2.2, `intake` 0.2.1,
+`verify` 0.1.4. Findings: **49 fixed, 15 open, 1 rejected, 1 deferred.**
+
+Nothing else was touched, and nothing new was found worth filing. The go in §9 stands, with its
+conditions met; `iteration-2-tidy` is the owner's to launch.
