@@ -3199,3 +3199,33 @@ Phase II ends here.
   0.2.2, `intake` 0.2.1, `plan` 0.3.1, `refine` 0.2.2, `review-close` 0.4.1, `verify` 0.1.4 —
   `spec/journal-and-history.md` §2.2 + Revisions row 3, `scripts/check`
   (`check_journal_body`, renumbered docstring), re-rendered `adapters/claude-code/dist`.
+
+---
+
+## 2026-08-27 — META-116 — F-055: name the mechanism the trial merge needs
+
+- **Unit:** META-116
+- **Inputs read:** `meta/findings/FINDINGS.md` F-055,
+  `methodology/skills/review-close/process.md` step 8, `scripts/check-commit-refs`,
+  `meta/harness/evidence/iteration-1e/` (turns 12, 13, 16).
+- **Decisions:**
+  - **Print the commands.** "A throwaway copy of the trunk" names an outcome and leaves the
+    mechanism to the reader, and `git worktree add <path> main` reads exactly like a copy while
+    being a checkout of the real branch. Step 8.1 now prints the four-line sequence with
+    `--detach`, and says in one paragraph why that flag is the whole of it: detached, the
+    worktree has no branch to advance.
+  - **And check afterwards.** Step 8.2 became "discard the trial *and* check `{{trunk}}` did not
+    move", with a matching self-check entry. Naming the safe command protects the reader who
+    follows the procedure; the rev-parse protects the one who improvises.
+  - **The must-fail case is extracted from the contract, not written beside it.** The check
+    reads the fenced block out of `review-close`'s own `process.md`, runs it against a throwaway
+    git repository with the item branch checked out — which is where `review-close` runs, and
+    the reason `main` was free to be taken — and asserts the trunk sha is unchanged. Then it
+    runs the same block with `--detach` stripped and asserts the trunk **does** move. Without
+    the second half the case would pass whatever the procedure said.
+  - **MINOR, not PATCH.** Step 8.2 gained a required action, which is more than a rewording.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` — 19 assertions across 17 steps, all PASS.
+- **Artifacts:** `methodology/skills/review-close/process.md` (step 8.1, 8.2, self-check 8) and
+  `skill.yaml` 0.4.1 → **0.5.0**, `scripts/check` (`trial_merge_commands`, `check_trial_merge`,
+  renumbered docstring), re-rendered `adapters/claude-code/dist`.

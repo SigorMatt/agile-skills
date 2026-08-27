@@ -86,11 +86,33 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 8. **Trial-merge, then close, then merge — in that order.** The order is not arbitrary and
    getting it wrong deadlocks the close:
 
-   1. **Trial-merge** the branch into a throwaway copy of `{{trunk}}` and run
+   1. **Trial-merge** the branch into a throwaway checkout of `{{trunk}}` and run
       `{{commands.test}}` **on the merge result**. A change that passed on its branch can still
       fail after merging, and the merge result is what the project actually gets. If it fails,
       discard the trial and send the item back with the failure — do not "fix it quickly".
-   2. **Discard the trial merge.** It was never published; nothing depends on it.
+
+      Do it exactly like this:
+
+      ```
+      git worktree add --detach <trial> {{trunk}}
+      git -C <trial> merge --no-ff <branch>
+      git -C <trial> rev-parse HEAD
+      git worktree remove --force <trial>
+      ```
+
+      — running `{{commands.test}}` inside `<trial>` between the merge and the removal.
+
+      **`--detach` is the whole of it.** `git worktree add <trial> {{trunk}}` *checks out the
+      real branch* in a second directory rather than copying it, so the trial merge
+      fast-forwards the real `{{trunk}}` ref, and removing the worktree does not move it back. A
+      review did exactly that and advanced the real trunk; `check-commit-refs` caught it
+      immediately and the rewind cost nothing, but the procedure had told a skill to do
+      something dangerous without saying how (F-055). Detached, the worktree has no branch to
+      advance and the merge has nowhere to land but a temporary HEAD.
+   2. **Discard the trial merge, and check that `{{trunk}}` did not move.** `git rev-parse
+      {{trunk}}` must return the same sha it returned before the trial. The trial was never
+      published and nothing depends on it — *provided* nothing was pointing at it, which is the
+      part worth confirming rather than assuming.
    3. **Close the item while the branch is still unmerged** (step 9). This is the part that is
       easy to get wrong: `commits-reference-the-item` inspects the commits on the branch that
       are *not yet* on the trunk, and once the branch is merged that range is **empty**. Merging
@@ -257,6 +279,8 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
    looked?
 7. If you ended an engagement: does the epic's `outcome` say what actually happened, and does the
    sign-off you are relying on name **every** child item?
+8. Is `git rev-parse {{trunk}}` the same sha it was before the trial merge? A trial that moved
+   the trunk was not a trial, and the worktree removal did not undo it (F-055).
 
 **The two ways this skill goes wrong:**
 

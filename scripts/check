@@ -31,14 +31,18 @@ Steps, in order:
                                                that was made; standalone journal-entry still
                                                requires it, and a body missing a bullet the tool
                                                does not write is still refused (F-049)
- 13. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+ 13. a trial merge leaves the trunk alone   — the command block review-close's procedure prints,
+                                               run against a throwaway repository: the trunk sha
+                                               is unchanged, and the same block with --detach
+                                               removed moves it (F-055)
+ 14. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
- 14. findings citations resolve             — every `commit <sha>` cited in
+ 15. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 15. export profiles                        — scripts/export leaves the workspace behind, and
+ 16. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 16. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 17. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -657,6 +661,116 @@ def check_journal_body(runner: Runner) -> None:
         return
     runner.emit("a journal body needs no Status bullet (F-049, 4 cases)", True)
 
+def trial_merge_commands() -> list:
+    """The trial-merge sequence, read out of `review-close`'s own procedure.
+
+    Extracting it is what makes the step below a gate rather than a demonstration: edit the
+    contract to drop `--detach` and this fails, which is exactly the edit that cost a real run
+    its trunk (F-055).
+    """
+    path = os.path.join(ROOT, "methodology", "skills", "review-close", "process.md")
+    if not os.path.isfile(path):
+        return []
+    with open(path, "r", encoding="utf-8") as handle:
+        lines = handle.read().split("\n")
+    block, inside = [], False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if inside:
+                break
+            continue
+        if stripped.startswith("git worktree add"):
+            inside = True
+        if inside and stripped:
+            block.append(stripped)
+    return block
+
+
+def check_trial_merge(runner: Runner) -> None:
+    """A trial merge must not move the trunk, and the contract must say how (F-055).
+
+    The only finding in iteration 1e that caused real damage: step 8 said to merge into "a
+    throwaway copy of the trunk" and left the mechanism to the reader, so a review ran
+    `git worktree add <path> main` — which checks out the real branch — and the trial merge
+    fast-forwarded the real `main`.
+
+    Both halves are asserted, because either alone proves nothing. The sequence the contract now
+    prints leaves the trunk where it was; the same sequence with `--detach` removed moves it. A
+    guard that would pass whatever the procedure said is not a guard.
+    """
+    import shutil
+    import tempfile
+    if shutil.which("git") is None:
+        runner.skip("a trial merge leaves the trunk alone (F-055)", "git is not on PATH")
+        return
+    commands = trial_merge_commands()
+    if not any("worktree add" in line for line in commands):
+        runner.emit("a trial merge leaves the trunk alone (F-055)", False,
+                    detail="  - review-close's procedure no longer prints a trial-merge command "
+                           "block; the case, not the rule, is stale")
+        return
+    if not any("--detach" in line for line in commands):
+        runner.emit("a trial merge leaves the trunk alone (F-055)", False,
+                    detail="  - the trial-merge block in review-close's procedure does not name "
+                           "--detach, so it tells a skill to check out the real trunk (F-055)")
+        return
+
+    def trunk_moved(detached: bool) -> str:
+        """Run the contract's sequence in a throwaway repository; report the trunk's movement."""
+        with tempfile.TemporaryDirectory() as base:
+            repo = os.path.join(base, "repo")
+            os.makedirs(repo)
+
+            def git(*args, cwd=repo):
+                return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+
+            git("init", "--initial-branch=main")
+            git("config", "user.email", "check@example.invalid")
+            git("config", "user.name", "check")
+            with open(os.path.join(repo, "a.txt"), "w", encoding="utf-8") as handle:
+                handle.write("one\n")
+            git("add", "-A")
+            git("commit", "-m", "base")
+            git("checkout", "-b", "wi/WI-0001")
+            with open(os.path.join(repo, "b.txt"), "w", encoding="utf-8") as handle:
+                handle.write("two\n")
+            git("add", "-A")
+            git("commit", "-m", "the change")
+            # The item branch stays checked out, which is where `review-close` runs: `main` is
+            # free, so `git worktree add <trial> main` will happily take it. That is the whole
+            # trap — it reads like a copy and it is a checkout.
+
+            before = git("rev-parse", "main").stdout.strip()
+            trial = os.path.join(base, "trial")
+            for line in commands:
+                argv = line.split("#", 1)[0].split()
+                if not argv or argv[0] != "git":
+                    continue
+                argv = [("main" if token == "{{trunk}}" else
+                         trial if token == "<trial>" else
+                         "wi/WI-0001" if token == "<branch>" else token)
+                        for token in argv]
+                if not detached:
+                    argv = [token for token in argv if token != "--detach"]
+                subprocess.run(argv, cwd=repo, capture_output=True, text=True)
+            after = git("rev-parse", "main").stdout.strip()
+            return "moved" if before != after else "unchanged"
+
+    problems = []
+    if trunk_moved(detached=True) != "unchanged":
+        problems.append("the procedure as written moved the trunk — the trial merge is not a "
+                        "trial")
+    if trunk_moved(detached=False) != "moved":
+        problems.append("the procedure with --detach removed left the trunk alone, so this "
+                        "case would pass whatever the contract said; git's behaviour, or the "
+                        "extraction, has changed")
+    if problems:
+        runner.emit("a trial merge leaves the trunk alone (F-055)", False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit("a trial merge leaves the trunk alone (F-055, 2 cases)", True)
+
 def check_guard(runner: Runner) -> None:
     tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
     if not os.path.isfile(tests):
@@ -781,6 +895,7 @@ def main() -> int:
     check_obligation_binding(runner)
     check_derived_model(runner)
     check_journal_body(runner)
+    check_trial_merge(runner)
     check_guard(runner)
     check_findings_citations(runner)
     check_export(runner)
