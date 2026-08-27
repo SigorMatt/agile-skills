@@ -1633,3 +1633,50 @@ something had gone wrong."*
   `answer-questions` took step 3a's *first* move — deciding under the deferral — so the status
   itself, and `question.deferred.not-blocked` with it, still has only fixture coverage. **F-050 is
   what the second move would have hit.**
+
+---
+
+# Iteration 2 — findings during the run (2026-08-27)
+
+## H-009 — W3 scrapes paths out of heredoc bodies, so a document that names a real folder is contamination
+- Severity: correctness of the harness, severe for the evidence — it stops a run for something that did not happen
+- Component: harness/audit.py (`_paths_in`, W3)
+- Symptom: found by the driver, at turn 6 of `iteration-2-tidy`, which stopped with
+  `stop-reason: contamination`. The turn wrote BUG-0002's report into
+  `tracker/items/BUG-0002/item.md` with `python3 - <<'PYEOF'`, and the report contains the
+  sentence *"Anything scripting the tool — `tidy ~/Downloads --apply && notify-send done` —
+  silently treats a completely successful run as a failure there."* `HOME_PATH_RE` scraped
+  `~/Downloads` out of the command string and W3 reported *"reached for
+  /home/msi/Downloads, which is outside the project"*. The worker never touched it; it was
+  describing who the bug bites.
+- Cause: the existence filter in `plausible()` is what separates prose from a command for a
+  `bash`-sourced path, and it separates them by asking whether the path is real. That works for
+  the case it was written against — a question's `## Context` quoting `~/trips/ski` — and stops
+  working the moment the prose names a folder that exists. Nothing was distinguishing *"the
+  session named this path"* from *"the session wrote a document that contains this path"*, and
+  a heredoc body is always the second.
+- Consequence: the driver's contamination stop is a **verdict**, not an interruption, so the run
+  does not resume itself. A false positive here costs the run, and the more accurate the
+  worker's writing is about the real world the likelier it is to trip.
+- Evidence: harness/runs/iteration-2-tidy/turns/006-worker.stream.jsonl (the `python3 - <<'PYEOF'`
+  call writing BUG-0002); harness/runs/iteration-2-tidy/state.json — `stop-reason:
+  contamination`, `turn: 6`.
+- Status: fixed (commit __COMMIT__). `strip_heredoc_bodies()` removes the contents of every
+  heredoc from a Bash command string before paths are scraped out of it; the introducer's own
+  line keeps its paths, because `cd`, redirect targets and an interpreter's arguments are
+  commands. W1 and W2 are untouched — they read the whole tool input, so naming harness content
+  inside a document is still caught.
+  Two tests, both of which fail if the fix is reverted: the synthetic shape, and
+  `test_iteration_2_tidy_turn_6_is_clean`, which audits the **real** transcript above with
+  `exists` pinned to "every path is real" so that it asserts the structural rule rather than
+  passing because of the existence filter it is replacing (55 tests, was 53).
+- **What this gives up, stated rather than buried.** A heredoc body may also be a program —
+  `bash <<'EOF'` and `python3 - <<'PYEOF'` both execute what they are handed — so a read of an
+  outside path performed from inside one is no longer visible to the transcript scrape. It was
+  never reliably visible: a regex over a program's source cannot tell a string literal from an
+  `open()`, which is exactly the confusion that produced this finding. The alternative is a rule
+  that fires on prose, and a rule that fires on prose gets switched off. `audit_repo_tree` still
+  catches a write that reaches the toolkit repository by any route, and W1/W2 still read the
+  whole input.
+- **Not resumed here.** The fix was made while the run sat stopped at turn 6; restarting
+  `iteration-2-tidy` is the owner's call, not this session's.

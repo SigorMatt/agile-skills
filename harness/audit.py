@@ -129,6 +129,58 @@ def _blob(tool_input):
 TRAILING = "\\.,;:)]}'\"`*_"
 
 
+# A heredoc introducer: `<<WORD`, `<<'WORD'`, `<<"WORD"`, `<<-WORD`. `<<<` is a here-string and
+# is deliberately excluded, and the introducer must end the word cleanly — otherwise `echo "a <<
+# b"` would be read as opening a heredoc and swallow the rest of the command.
+HEREDOC_RE = re.compile(r"<<(-?)\s*(?:'([^']*)'|\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_]*))"
+                        r"(?=$|[\s>|&;])")
+
+
+def strip_heredoc_bodies(command):
+    """A Bash command string with the *contents* of its heredocs removed.
+
+    A heredoc body is a document, not a command. `python3 - <<'PYEOF'` writing a bug report is
+    the ordinary way a worker turn produces a file, and the report can perfectly well contain a
+    sentence with a path in it — turn 6 of iteration 2 wrote *"anything scripting the tool —
+    `tidy ~/Downloads --apply` — silently treats a completely successful run as a failure"*, and
+    W3 scraped `~/Downloads` out of the command string and stopped the run (H-009).
+
+    This is the same principle as `plausible()`'s prose filter, one step further in. That filter
+    separates a document from a command by asking whether the path exists; here the path was
+    real, so existence could not tell them apart. The structure can: everything between an
+    introducer and its delimiter was being *written*, not reached for.
+
+    Only the body is removed. The line carrying the introducer keeps its own paths — `cd`,
+    redirect targets, the interpreter's arguments — because those are commands.
+
+    **What this gives up, plainly.** A heredoc body may also be a program: `bash <<'EOF'` and
+    `python3 - <<'PYEOF'` both execute what they are handed. A read of an outside path performed
+    from inside one is no longer visible to this scrape. It was never reliably visible — a regex
+    over a program's source cannot tell a string literal from an `open()` — and the alternative
+    is a rule that fires on prose, which is a rule that gets switched off. W1 and W2 still read
+    the whole input, so naming harness content inside a document is still caught, and
+    `audit_repo_tree` still catches a write that reaches the toolkit repository by any route.
+    """
+    lines = command.split("\n")
+    kept, index = [], 0
+    while index < len(lines):
+        line = lines[index]
+        kept.append(line)
+        index += 1
+        delimiters = [(match.group(2) if match.group(2) is not None
+                       else match.group(3) if match.group(3) is not None
+                       else match.group(4), match.group(1) == "-")
+                      for match in HEREDOC_RE.finditer(line)]
+        for delimiter, strips_tabs in delimiters:
+            while index < len(lines):
+                body = lines[index]
+                index += 1
+                candidate = body.lstrip("\t") if strips_tabs else body
+                if candidate.strip() == delimiter:
+                    break
+    return "\n".join(kept)
+
+
 def _paths_in(tool_name, tool_input):
     """[(path, source)] this tool call names, as written. `source` is "key" or "bash"."""
     found = []
@@ -140,8 +192,10 @@ def _paths_in(tool_name, tool_input):
     if tool_name == "Bash":
         command = tool_input.get("command")
         if isinstance(command, str):
+            # Heredoc bodies are documents this command writes, not paths it reaches for
+            # (H-009). The introducer line itself is kept and still scraped.
             found.extend((match.rstrip(TRAILING), "bash")
-                         for match in HOME_PATH_RE.findall(command))
+                         for match in HOME_PATH_RE.findall(strip_heredoc_bodies(command)))
     return [(path, source) for path, source in found if path]
 
 

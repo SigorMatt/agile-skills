@@ -165,6 +165,53 @@ class WorkerBoundary(unittest.TestCase):
             ("Bash", {"command": "cat ~/secrets.txt"}),
             exists=lambda path, source: True)), ["W3"])
 
+    def test_a_heredoc_body_is_a_document_not_a_path(self):
+        """H-009: the body of a heredoc is being written, not reached for.
+
+        `plausible()` separates prose from a command by asking whether the path exists. That
+        stops working the moment the prose names a real folder, which is what iteration 2 did.
+        The structure is what tells them apart, so `exists` is pinned to "everything is real"
+        here — this asserts the structural rule, not the existence filter standing in for it.
+        """
+        command = ("cd " + PROJECT + "\n"
+                   "python3 - <<'PYEOF'\n"
+                   "body = 'Anything scripting the tool — `tidy ~/Downloads --apply` — "
+                   "treats a successful run as a failure.'\n"
+                   "PYEOF")
+        self.assertEqual(worker_violations(("Bash", {"command": command})), [])
+        # the introducer's own line is still a command, and still scraped
+        self.assertEqual(rules(worker_violations(
+            ("Bash", {"command": f"cat {HOME}/notes.md <<'EOF'\n~/Downloads\nEOF"}))), ["W3"])
+        # an unterminated heredoc swallows the rest rather than reopening the hole
+        self.assertEqual(worker_violations(
+            ("Bash", {"command": "cat <<'EOF'\n~/Downloads"})), [])
+        # `<<<` is a here-string, not a heredoc
+        self.assertEqual(rules(worker_violations(
+            ("Bash", {"command": "grep x <<< ~/Downloads/list.txt"}))), ["W3"])
+
+    def test_iteration_2_tidy_turn_6_is_clean(self):
+        """The real transcript that stopped iteration 2, audited by the fixed rule (H-009).
+
+        Turn 6 wrote BUG-0002's report with `python3 - <<'PYEOF'`, and the report says that
+        anything scripting the tool — `tidy ~/Downloads --apply` — treats a successful run as a
+        failure. W3 scraped that out of the command string, `/home/msi/Downloads` exists on the
+        machine the run was on, and the driver stopped the run for contamination at turn 6.
+
+        Pinning `exists` to "everything is real" is the point: this file must fail if the fix is
+        reverted, on a machine where that folder does not exist as much as on the one where it
+        does.
+        """
+        path = os.path.join(HARNESS, "runs", "iteration-2-tidy", "turns",
+                            "006-worker.stream.jsonl")
+        if not os.path.isfile(path):
+            self.skipTest("iteration 2's turn-6 transcript is not in this checkout")
+        tool_uses = audit.tool_uses(audit.load_transcript(path))
+        self.assertTrue(tool_uses, "the transcript parsed to no tool calls")
+        found = audit.audit_worker(tool_uses, "/home/msi/agile-skills-throwaway/tidy",
+                                   HARNESS, REPO, home="/home/msi",
+                                   exists=lambda path, source: True)
+        self.assertEqual(found, [], "iteration 2 turn 6 is clean; it was stopped by H-009")
+
     def test_the_agents_own_state_directory_is_tolerated(self):
         self.assertEqual(worker_violations(
             ("Bash", {"command": f"cat {HOME}/.claude/settings.json"})), [])
