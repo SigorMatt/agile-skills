@@ -175,6 +175,13 @@ Rules:
   that `**Status:**` states the move that was actually made rather than the move that was
   intended. An entry that accompanies no status change is written on its own, and its
   `**Status:**` says `X` → `X` (unchanged).
+- **`**Status:**` is the transition tool's bullet, and a body passed to it need not carry one.**
+  Supply one and it is replaced; leave it out and it is inserted. Every other bullet in the
+  table above is required of the caller, `none` included — the tool has no way to know what a
+  skill read or ran. Requiring the caller to supply a bullet the tool immediately overwrites
+  cost six failed transitions in one run, across four skills, because every skill's prose said
+  the tool wrote it (F-049). Standalone `journal-entry` still requires it: there, nothing else
+  would write it.
 
 ### 2.3 Journals on epics
 
@@ -205,3 +212,4 @@ That is the test `examples/toy-project/AUDIT.md` applies to a real run.
 |---|------|--------|
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §0 added: every self-reported header field comes from a machine, timestamps are read from a clock and never estimated, and the restamp exception now covers `journal.md` as well as `history.md` (F-017). |
+| 3 | 2026-08-27 | §2.2: `**Status:**` is the transition tool's bullet — a body passed to it need not carry one, and every other bullet is still required of the caller (F-049). |

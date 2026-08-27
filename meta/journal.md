@@ -3163,3 +3163,39 @@ Phase II ends here.
   `methodology/skills/answer-questions/process.md` (step 3a's epic branch, step 7, self-check
   3a) and `skill.yaml` 0.2.0 → **0.3.0**, `scripts/check` (two cases),
   re-rendered `adapters/claude-code/dist`.
+
+---
+
+## 2026-08-27 — META-115 — F-049: the `**Status:**` bullet, prose against tool
+
+- **Unit:** META-115
+- **Inputs read:** `meta/findings/FINDINGS.md` F-049, `scripts/journal-entry`,
+  `scripts/transition`, `spec/journal-and-history.md` §2.2, all seven `## Journaling` sections.
+- **Decisions:**
+  - **Both sides were wrong, in different places, and the split is what the worker's complaint
+    points at.** The prose says the transition writes the `**Status:**` bullet; `check_body`
+    refused a body without one first. `force_status_bullet` was *already* able to insert a
+    missing bullet — `journal-entry` runs it before the check, `transition` ran the check first —
+    so the refusal protected nothing. When a transition supplies the move, the bullet is no
+    longer required of the caller: it is inserted, before `**Result:**`, where the schema puts
+    it. Standalone `journal-entry` still requires it, because there nothing else would write it.
+  - **The exemption is one bullet wide.** Everything else in the entry is the caller's — the
+    tool has no way to know what a skill read or ran — so a body missing `**Gates:**` is still
+    refused, and the check proves that in the same step.
+  - **The prose now says what is required rather than what is written.** Turn 14's second hit
+    was an `implement` entry refused for a missing `**Artifacts:**` bullet on an execution that
+    had produced no artifacts. Every `## Journaling` section now says that every bullet
+    `--template` prints is structurally required and `none` is the honest content, which is the
+    sentence that would have saved that turn.
+  - **No new prose-versus-contract lint.** That is F-059's class fix and the mission closes
+    scope; what this unit ships instead is the by-execution step, which makes the prose's
+    promise a thing the gate checks rather than a thing a reader hopes.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` — 18 assertions across 16 steps, all PASS, including the new
+  four-case step.
+- **Artifacts:** `scripts/journal-entry` (`check_body(status_supplied=...)`,
+  `force_status_bullet` inserts in schema order), `scripts/transition` (passes it; docstring),
+  seven `process.md` files and their skill versions — `answer-questions` 0.3.1, `implement`
+  0.2.2, `intake` 0.2.1, `plan` 0.3.1, `refine` 0.2.2, `review-close` 0.4.1, `verify` 0.1.4 —
+  `spec/journal-and-history.md` §2.2 + Revisions row 3, `scripts/check`
+  (`check_journal_body`, renumbered docstring), re-rendered `adapters/claude-code/dist`.

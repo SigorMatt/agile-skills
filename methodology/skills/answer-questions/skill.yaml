@@ -1,5 +1,5 @@
 name: answer-questions
-version: 0.3.0
+version: 0.3.1
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 

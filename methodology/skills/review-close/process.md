@@ -205,16 +205,20 @@ scripts/journal-entry <ITEM-ID> --skill review-close --body-file <path>
 
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
-bullet itself from the move it actually made:
+bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
+is inserted:
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor review-close --reason "..." \
                    --journal-body-file <path>
 ```
 
-`scripts/journal-entry --template --skill review-close` prints the shape. A heading you write yourself
-is a fabrication risk with nothing behind it, and `validate-workspace` rejects a timestamp no
-clock produced (`spec/journal-and-history.md` §0).
+`scripts/journal-entry --template --skill review-close` prints the shape, and it is the shortest way
+to get this right: **every bullet it prints is structurally required** and both tools refuse a
+body missing one. That includes `**Commands:**` and `**Artifacts:**` on an execution that ran
+no command and produced no artifact — the bullet is required, `none` is the honest content
+(F-049). A heading you write yourself is a fabrication risk with nothing behind it, and
+`validate-workspace` rejects a timestamp no clock produced (`spec/journal-and-history.md` §0).
 
 ### Commit what you wrote
 

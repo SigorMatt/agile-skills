@@ -1,4 +1,4 @@
-# Contract — verify v0.1.3
+# Contract — verify v0.1.4
 
 Rendered from `methodology/skills/verify/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 

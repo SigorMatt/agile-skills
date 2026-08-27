@@ -26,14 +26,19 @@ Steps, in order:
  11. the derived model, by execution         — creation authority refused and permitted through
                                                new-item, and an engagement refused an ending
                                                while nobody had asked the stakeholder
- 12. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+ 12. the journal body the prose promises     — a body with no `**Status:**` bullet goes through
+                                               the transition and comes back carrying the move
+                                               that was made; standalone journal-entry still
+                                               requires it, and a body missing a bullet the tool
+                                               does not write is still refused (F-049)
+ 13. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
- 13. findings citations resolve             — every `commit <sha>` cited in
+ 14. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 14. export profiles                        — scripts/export leaves the workspace behind, and
+ 15. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 15. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 16. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -553,6 +558,105 @@ def check_derived_model(runner: Runner) -> None:
     runner.emit("the derived model, by execution (14 cases)", True)
 
 
+JOURNAL_BODY = "\n".join([
+    "- **Item:** WI-0001",
+    "- **Trigger:** draft, dispatched by next",
+    "- **Inputs read:**",
+    "  - item.md",
+    "- **Decisions:**",
+    "  - none",
+    "- **Questions raised:** none",
+    "- **Commands:**",
+    "  - none",
+    "- **Gates:**",
+    "  - definition-of-ready → **pass** (checked by hand)",
+    "- **Artifacts:**",
+    "  - item.md",
+    "- **Result:** the item meets the Definition of Ready.",
+    "",
+])
+
+
+def check_journal_body(runner: Runner) -> None:
+    """The `**Status:**` bullet, tool against prose (F-049).
+
+    Every `## Journaling` section says the transition writes this bullet from the move it made.
+    It does — and `check_body` used to refuse the body first, so believing the prose cost a
+    failed transition. Six of them, across five turns and four skills, in one run. So the prose
+    is now true and this is what says so: a body with no `**Status:**` bullet goes through the
+    transition and comes back carrying the move that was actually made.
+
+    Two companions keep the relaxation honest. Standalone `journal-entry` still requires the
+    bullet, because there nothing else would write it; and a body missing a bullet the tool does
+    *not* write is still refused, so this is a scoped exemption rather than a weakened check.
+    """
+    import tempfile
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "new-item", "transition", "journal-entry")}
+    if not all(os.path.isfile(path) for path in tools.values()):
+        runner.skip("a journal body needs no Status bullet (F-049)", "one of the scripts is absent")
+        return
+
+    problems = []
+    with tempfile.TemporaryDirectory() as root:
+        def tool(name, *args):
+            return subprocess.run([sys.executable, tools[name], *args],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        tool("workspace-init", root)
+        tool("new-item", "--root", root, "--id", "EP-001", "--type", "epic", "--title", "A goal",
+             "--status", "open", "--actor", "intake", "--reason", "from the raw idea")
+        tool("new-item", "--root", root, "--id", "WI-0001", "--type", "work-item",
+             "--epic", "EP-001", "--title", "Do the thing", "--status", "draft",
+             "--actor", "intake", "--reason", "refined from the idea")
+
+        body = os.path.join(root, "body.md")
+        with open(body, "w", encoding="utf-8") as handle:
+            handle.write(JOURNAL_BODY)
+
+        moved = tool("transition", "WI-0001", "--to", "ready", "--actor", "refine",
+                     "--reason", "the Definition of Ready passes", "--journal-body-file", body,
+                     "--root", root, "--force")
+        if "not a legal entry" in (moved.stdout + moved.stderr):
+            problems.append("the transition refused a body with no '**Status:**' bullet, which "
+                            "is the bullet it writes itself (F-049):\n      "
+                            + (moved.stdout + moved.stderr).strip()[-300:])
+        else:
+            journal = os.path.join(root, "tracker", "items", "WI-0001", "journal.md")
+            written = ""
+            if os.path.isfile(journal):
+                with open(journal, "r", encoding="utf-8") as handle:
+                    written = handle.read()
+            if "- **Status:** `draft` → `ready`" not in written:
+                problems.append("the entry does not carry the move the transition made; the "
+                                "bullet the tool owns has to end up in the file")
+
+        standalone = tool("journal-entry", "WI-0001", "--skill", "refine",
+                          "--body-file", body, "--root", root)
+        if (standalone.returncode == 0
+                or "missing the '**Status:**' bullet" not in (standalone.stdout
+                                                              + standalone.stderr)):
+            problems.append("journal-entry accepted a body with no '**Status:**' bullet, or "
+                            "refused it for some other reason; standalone there is nothing "
+                            "else to write it")
+
+        partial = os.path.join(root, "partial.md")
+        with open(partial, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(line for line in JOURNAL_BODY.split("\n")
+                                   if not line.startswith("- **Gates:**")))
+        refused = tool("transition", "WI-0001", "--to", "planned", "--actor", "plan",
+                       "--reason", "planned", "--journal-body-file", partial,
+                       "--root", root, "--force")
+        if refused.returncode == 0 or "not a legal entry" not in (refused.stdout + refused.stderr):
+            problems.append("the transition accepted a body missing '**Gates:**' — the "
+                            "exemption is for the bullet the tool writes, not for the schema")
+
+    if problems:
+        runner.emit("a journal body needs no Status bullet (F-049)", False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit("a journal body needs no Status bullet (F-049, 4 cases)", True)
+
 def check_guard(runner: Runner) -> None:
     tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
     if not os.path.isfile(tests):
@@ -676,6 +780,7 @@ def main() -> int:
     check_pipeline_faults(runner)
     check_obligation_binding(runner)
     check_derived_model(runner)
+    check_journal_body(runner)
     check_guard(runner)
     check_findings_citations(runner)
     check_export(runner)

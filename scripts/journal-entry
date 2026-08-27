@@ -132,8 +132,17 @@ def template(skill: str, item_id: str) -> str:
     ]) + "\n"
 
 
-def check_body(body: str, item_id: str):
-    """Reject a body that is not a legal entry, before it reaches the file."""
+def check_body(body: str, item_id: str, status_supplied: bool = False):
+    """Reject a body that is not a legal entry, before it reaches the file.
+
+    `status_supplied` is true when a transition is passing the move it just made. The
+    `**Status:**` bullet is then the tool's to write — `force_status_bullet` puts the real move
+    in whatever the caller wrote — so demanding the caller supply one first is a formality that
+    costs a failed transition and teaches nothing. It cost six of them in one run, across four
+    skills, because every `## Journaling` section says the transition writes this bullet and the
+    check said otherwise (F-049). Standalone, the requirement stands: nothing else would write
+    it.
+    """
     problems = []
     for line in body.split("\n"):
         if line.startswith("## "):
@@ -142,6 +151,8 @@ def check_body(body: str, item_id: str):
             break
     labels = set(re.findall(r"^-\s+\*\*([^*]+?):\*\*", body, re.MULTILINE))
     for required in REQUIRED_BULLETS:
+        if required == "Status" and status_supplied:
+            continue
         if required not in labels:
             problems.append(f"missing the '**{required}:**' bullet")
     named = re.search(r"^-\s+\*\*Item:\*\*\s*(\S+)", body, re.MULTILINE)
@@ -152,10 +163,18 @@ def check_body(body: str, item_id: str):
 
 
 def force_status_bullet(body: str, status_line: str) -> str:
-    """Replace the caller's `**Status:**` bullet with the one the transition actually made."""
+    """Write the move that was actually made into the entry, replacing anything the caller said.
+
+    A body with no `**Status:**` bullet is the normal case when a transition supplies the move
+    (F-049), so the bullet is inserted where the schema puts it — before `**Result:**` — rather
+    than appended after it.
+    """
     replacement = f"- **Status:** {status_line}"
     if re.search(r"^-\s+\*\*Status:\*\*", body, re.MULTILINE):
         return re.sub(r"^-\s+\*\*Status:\*\*.*$", replacement, body, count=1, flags=re.MULTILINE)
+    if re.search(r"^-\s+\*\*Result:\*\*", body, re.MULTILINE):
+        return re.sub(r"^(-\s+\*\*Result:\*\*)", replacement + r"\n\1", body, count=1,
+                      flags=re.MULTILINE)
     return body.rstrip("\n") + "\n" + replacement + "\n"
 
 

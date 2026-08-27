@@ -1,5 +1,5 @@
 name: refine
-version: 0.2.1
+version: 0.2.2
 persona: product-analyst
 purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
 
