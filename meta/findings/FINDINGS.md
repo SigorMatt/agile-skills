@@ -1385,7 +1385,21 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   prints the bullet. Say **"rewrites"** rather than "writes" in every `## Journaling` section,
   name the structurally mandatory bullets, and have the error message say the bullet's content is
   ignored so the reader knows the template is the answer.
-- Status: open
+- Status: fixed (commit 5b615ec) — **both sides gave, in different places.** The tool
+  first: `force_status_bullet` could already insert a missing bullet, and `journal-entry` runs it
+  *before* `check_body` while `transition` ran the check first — so the refusal protected
+  nothing. When a transition supplies the move, the `**Status:**` bullet is no longer required of
+  the caller; it is inserted where the schema puts it, before `**Result:**`. Standalone
+  `journal-entry` still requires it, because there nothing else would write it, and a body
+  missing `**Gates:**` is still refused either way — the exemption is one bullet wide.
+  Then the prose, in all seven `## Journaling` sections: the transition writes the bullet
+  "supply one and it is replaced, leave it out and it is inserted", and — for turn 14's second
+  hit — **every** bullet `--template` prints is structurally required, `**Commands:**` and
+  `**Artifacts:**` included, with `none` as the honest content. `spec/journal-and-history.md`
+  §2.2 says the same thing normatively. Proven by execution in `./scripts/check` (4 cases):
+  the body with no `**Status:**` bullet goes through the transition and the entry comes back
+  carrying the move that was actually made. No new prose-versus-contract lint — that is F-059's
+  class fix and it stays open.
 
 ## F-050 — an epic-level question cannot legally be `deferred`, and this session built that
 - Severity: correctness, structural — **a defect in this session's own work**, and F-013's shape again
@@ -1410,7 +1424,22 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   it is an *ending* and must be gated) — or it is not, and `question.deferred.not-blocked` must
   exempt epics while `answer-questions` is told what to do with an epic-level deferral instead.
   The second is probably right: a deferred sign-off is E3, and E3 belongs to `review-close`.
-- Status: open
+- Status: fixed (commits a0e7db5, e1c55e9) — the second reading, and the class before the
+  instance. **The class:** `pipeline.yaml` 0.5.0 carries a `rule_obligations` block naming, per
+  validator rule that requires an item to be at one of a fixed set of statuses, the item types it
+  applies to and the transition that satisfies it. `validate-workspace` *reads* that scope rather
+  than deciding it, and refuses a pipeline that dropped an obligation it depends on
+  (`pipeline.obligation.missing`); `lint-skills` checks each entry against the transition table
+  in both directions — `obligation.unsatisfiable` when no row provides the move, and
+  `obligation.applies_to.mismatch` when the scopes disagree, which is this finding in one
+  direction and F-013 in the other. Two injected faults and one new `./scripts/check` step.
+  **The instance:** a deferred blocking question on an epic returns it to `open` —
+  `spec/question.md` §2, `answer-questions` 0.3.0 step 3a. That is not the resumption move 2
+  forbids: an epic advances only through its children, so nothing proceeds on the strength of the
+  missing thing; the engagement comes to rest, `next` step 6 dispatches `review-close`, and
+  `check-epic-signoff` already accepts a deferred acknowledgment for `open → blocked` and refuses
+  one for `open → done`. By execution: the move 1e's architect would have made on the other
+  branch is refused, and the branch that is legal validates clean.
 
 ## F-051 — `new-item` writes the creation row and no journal entry, so a new item fails validation immediately
 - Severity: correctness, minor but hit on every item created
@@ -1491,7 +1520,19 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   `--detach` matters, and a self-check that the trunk ref is unchanged after the trial. A
   procedure that says "a throwaway copy" and leaves the mechanism to the reader will be
   implemented differently every time.
-- Status: open
+- Status: fixed (commit 63f8917), as filed. `review-close` 0.5.0 step 8.1 prints the four-line
+  sequence — `git worktree add --detach <trial> {{trunk}}`, the `--no-ff` merge, the rev-parse,
+  `worktree remove --force` — with a paragraph on why `--detach` is the whole of it: detached,
+  the worktree has no branch to advance. Step 8.2 became "discard the trial **and** check
+  `{{trunk}}` did not move", with a matching self-check entry, because naming the safe command
+  protects the reader who follows the procedure and the rev-parse protects the one who
+  improvises.
+  The must-fail case is **extracted from the contract**, which is what makes it a gate: the check
+  reads the fenced block out of `process.md`, runs it against a throwaway repository with the
+  item branch checked out — where `review-close` runs, and the reason `main` was free to be taken
+  — and asserts the trunk sha is unchanged; then runs the same block with `--detach` stripped and
+  asserts the trunk **does** move. Without that second half the case would pass whatever the
+  procedure said.
 
 ## F-056 — `validate-workspace` does not notice a duplicated section heading
 - Severity: correctness, low — but it is a silent one

@@ -311,3 +311,25 @@ outranks completeness in a .5 session.
       `expenses-1e`, max-turns 18) and run.
 - [x] **META-111** — findings pass over 1e's trail; anything new filed as F-049+/H-###.
 - [x] **META-112** — `meta/FINAL-REPORT-2.5.md`, with the go/no-go for iteration 2.
+
+---
+
+## Phase III — builder micro-session 2.6 (`meta/BUILDER-2.6-PROMPT.md`)
+
+Exactly the three conditions FINAL-REPORT-2.5 §9 put on the iteration-2 go, and nothing else.
+Scope closed: anything new is filed and left open.
+
+- [x] **META-113** — F-050 part 1, the class: `pipeline.yaml` 0.5.0 `rule_obligations`, read by
+      `validate-workspace` and checked against the transition table by `lint-skills`; two
+      injected faults and a step that refuses a pipeline which dropped an obligation.
+- [x] **META-114** — F-050 part 2, the instance: a deferred blocking question returns an epic to
+      `open`, because `blocked` on an epic is the E3 ending. `spec/question.md`,
+      `answer-questions` 0.3.0, two by-execution cases.
+- [x] **META-115** — F-049: the `**Status:**` bullet is the transition tool's, so a body need not
+      carry one; the prose in all seven `## Journaling` sections says what is actually required.
+- [x] **META-116** — F-055: `review-close` 0.5.0 names `git worktree add --detach` and checks the
+      trunk did not move; the must-fail case is extracted from the contract itself.
+- [x] **META-117** — findings statuses with citations that resolve, `./scripts/check` green,
+      `meta/FINAL-REPORT-2.5.md` §11.
+
+Then stop. `iteration-2-tidy` is the owner's to launch.
