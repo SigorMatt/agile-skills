@@ -1,37 +1,36 @@
 # CHECKPOINT
 
-## Current unit: META-115 — F-049: the `**Status:**` bullet, prose against tool
+## Current unit: META-116 — F-055: name the mechanism the trial merge needs
 
-META-113 and META-114 closed F-050 — the class (`rule_obligations`, checked against the
-transition table) and the instance (a deferral returns an epic to `open`). Both pushed.
+META-113/114 closed F-050; META-115 closed F-049. All pushed, `./scripts/check` green at 18
+assertions across 16 steps.
 
-**Intent of this unit.** Every `## Journaling` section says the transition *"writes the
-`**Status:**` bullet itself"*, which reads as *you need not write one*; `check_body` then
-refuses a body without it. Six failed transitions across five turns and four skills in one run.
+**Intent of this unit.** `review-close` step 8 says to trial-merge into *"a throwaway copy of
+`{{trunk}}`"* and never says how. A run used `git worktree add /tmp/trial4 main`, which checks
+out the **real** branch in a second directory rather than copying it, so the trial merge
+fast-forwarded the real `main` — and removing the worktree did not move it back. It was the only
+finding in iteration 1e that caused real damage. `check-commit-refs` caught it, the worker
+rewound, and turn 13 used `--detach`.
 
-The mission says decide which side is right. **Both are, in different respects**, and the split
-is what the worker's own complaint points at:
+- Step 8.1 names the command sequence literally, with one line on why `--detach` is the whole of
+  it: a detached worktree has no branch to advance, so the merge has nowhere to land but a
+  temporary HEAD.
+- Step 8.2 becomes "discard the trial **and check the trunk did not move**" — `git rev-parse
+  {{trunk}}` before and after — and a self-check entry says the same thing.
+- `review-close` 0.4.1 → **0.5.0** (MINOR: a required action inside a step, not a rewording).
 
-- **The tool.** `force_status_bullet` already appends the bullet when it is absent, so requiring
-  the caller to supply one the tool immediately overwrites is a formality — the duplication
-  F-019 was meant to remove. When a transition supplies the status line, a missing
-  `**Status:**` bullet stops being an error, and the tool inserts its own before `**Result:**`.
-  Standalone `journal-entry` keeps the requirement, because there nothing else would write it.
-- **The prose.** Seven `## Journaling` sections say what the tool does inaccurately and say
-  nothing about the bullets that are structurally mandatory (`**Commands:**` and
-  `**Artifacts:**` refused an execution in the same run). Say what the body must carry, and
-  point at `--template` as the answer rather than as a footnote.
-
-Must-fail and must-pass, by execution: a body with no `**Status:**` bullet is accepted through
-`transition` and the entry carries the move actually made; the same body is refused by
-`journal-entry` on its own; and a body missing `**Gates:**` is still refused by both.
+**The must-fail case, tied to the contract text.** A new `scripts/check` step extracts the fenced
+command block from `review-close`'s own `process.md`, runs it against a throwaway git repository,
+and asserts the trunk sha is unchanged — then runs the same sequence with `--detach` removed and
+asserts the trunk **does** move. Extracting from the contract is what makes it a gate rather than
+a demonstration: drop `--detach` from the procedure and the step fails.
 
 ## The units of this session
 
 - [x] **META-113** — F-050 part 1: the obligation registry and its gate.
 - [x] **META-114** — F-050 part 2: a deferral returns an epic to `open`.
-- **META-115** — F-049 (this unit).
-- **META-116** — F-055: name `git worktree add --detach` in `review-close`, with the must-fail case.
+- [x] **META-115** — F-049: the `**Status:**` bullet, tool and prose.
+- **META-116** — F-055 (this unit).
 - **META-117** — findings statuses with citations that resolve, `./scripts/check` green,
   `meta/FINAL-REPORT-2.5.md` §11.
 
