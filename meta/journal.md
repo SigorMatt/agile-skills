@@ -3229,3 +3229,26 @@ Phase II ends here.
 - **Artifacts:** `methodology/skills/review-close/process.md` (step 8.1, 8.2, self-check 8) and
   `skill.yaml` 0.4.1 → **0.5.0**, `scripts/check` (`trial_merge_commands`, `check_trial_merge`,
   renumbered docstring), re-rendered `adapters/claude-code/dist`.
+
+---
+
+## 2026-08-27 — META-117 — statuses, the plan, and §11
+
+- **Unit:** META-117
+- **Inputs read:** `meta/findings/FINDINGS.md`, `meta/plan.md`, `meta/FINAL-REPORT-2.5.md` §9,
+  `git log`.
+- **Decisions:**
+  - F-049's citation is `5b615ec` alone. META-116's commit touched the step numbering in
+    `scripts/check` for the F-049 case, but the fix was META-115's; citing an incidental commit
+    would make the paper trail slightly false in the direction F-024 exists to prevent.
+  - **A closing note, not a report.** The mission asked for §11 appended to FINAL-REPORT-2.5
+    rather than a FINAL-REPORT-2.6, and that is right: this session decided nothing new. It
+    discharged three conditions on a verdict already given.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` — 19 assertions across 17 steps, all PASS, 29 citations resolving
+  (25 before this unit).
+- **Artifacts:** `meta/findings/FINDINGS.md` (F-049, F-050, F-055 → fixed; **49 fixed, 15 open**,
+  1 rejected, 1 deferred), `meta/plan.md` Phase III, `meta/FINAL-REPORT-2.5.md` §11,
+  `meta/CHECKPOINT.md` closed.
+
+Phase III ends here. Scope held: three findings fixed, nothing else touched, nothing new filed.
