@@ -1,48 +1,58 @@
 # CHECKPOINT
 
-## Current unit: META-116 — F-055: name the mechanism the trial merge needs
+## Phase III is complete. There is no next unit.
 
-META-113/114 closed F-050; META-115 closed F-049. All pushed, `./scripts/check` green at 18
-assertions across 16 steps.
+Builder micro-session 2.6 closed the three findings `meta/FINAL-REPORT-2.5.md` §9 named as
+conditions on the iteration-2 go, and nothing else. Everything is on `main` and pushed. Read
+**§11 of `meta/FINAL-REPORT-2.5.md`** first — the closing note, not a new report.
 
-**Intent of this unit.** `review-close` step 8 says to trial-merge into *"a throwaway copy of
-`{{trunk}}`"* and never says how. A run used `git worktree add /tmp/trial4 main`, which checks
-out the **real** branch in a second directory rather than copying it, so the trial merge
-fast-forwarded the real `main` — and removing the worktree did not move it back. It was the only
-finding in iteration 1e that caused real damage. `check-commit-refs` caught it, the worker
-rewound, and turn 13 used `--detach`.
+Where things stand:
 
-- Step 8.1 names the command sequence literally, with one line on why `--detach` is the whole of
-  it: a detached worktree has no branch to advance, so the merge has nowhere to land but a
-  temporary HEAD.
-- Step 8.2 becomes "discard the trial **and check the trunk did not move**" — `git rev-parse
-  {{trunk}}` before and after — and a self-check entry says the same thing.
-- `review-close` 0.4.1 → **0.5.0** (MINOR: a required action inside a step, not a rewording).
+- **F-050 fixed** (`a0e7db5`, `e1c55e9`) — the class before the instance. `pipeline.yaml` 0.5.0
+  carries `rule_obligations`: a validator rule that requires an item to be at one of a fixed set
+  of statuses declares the item types it applies to and the transition that satisfies it.
+  `validate-workspace` reads that scope; `lint-skills` checks it against the transition table
+  both ways. The instance: a deferred blocking question returns an **epic** to `open`, because
+  `blocked` on an epic is the E3 ending and only `review-close` reaches it.
+- **F-049 fixed** (`5b615ec`) — the `**Status:**` bullet is the transition tool's, so a body
+  passed to it need not carry one. Standalone `journal-entry` still requires it; a body missing
+  a bullet the tool does not write is still refused. Seven `## Journaling` sections rewritten.
+- **F-055 fixed** (`63f8917`) — `review-close` 0.5.0 prints `git worktree add --detach ...` and
+  requires a `git rev-parse` of the trunk before and after. The must-fail case is extracted from
+  the contract's own fenced block.
+- `./scripts/check`: **19 assertions across 17 steps**, all passing.
+- Findings: **49 fixed, 15 open**, 1 rejected, 1 deferred.
 
-**The must-fail case, tied to the contract text.** A new `scripts/check` step extracts the fenced
-command block from `review-close`'s own `process.md`, runs it against a throwaway git repository,
-and asserts the trunk sha is unchanged — then runs the same sequence with `--detach` removed and
-asserts the trunk **does** move. Extracting from the contract is what makes it a gate rather than
-a demonstration: drop `--detach` from the procedure and the step fails.
+## What the owner does next
 
-## The units of this session
+**Launch `iteration-2-tidy`.** §9's go stands and its three conditions are met. `tidy` has no
+blocked seed, so it should reach a **clean** ending (E1 or E2) — 1e exercised E3 only, and three
+of the four endings still have no run behind them. It also has an adversarial DoR-override
+variant, and the epic-level deferral F-050 was filed against is now a legal, tested path rather
+than a trap.
 
-- [x] **META-113** — F-050 part 1: the obligation registry and its gate.
-- [x] **META-114** — F-050 part 2: a deferral returns an epic to `open`.
-- [x] **META-115** — F-049: the `**Status:**` bullet, tool and prose.
-- **META-116** — F-055 (this unit).
-- **META-117** — findings statuses with citations that resolve, `./scripts/check` green,
-  `meta/FINAL-REPORT-2.5.md` §11.
+Do **not** start the Codex adapter or the content packs: ROADMAP §2 condition 1 (a full consumer
+run with zero version bumps) does not hold, and this session bumped eight contracts.
 
-Then **stop**. Do not run iteration 2 — the owner launches it.
+The fifteen open findings — F-008, F-030, F-035, F-036, F-043, F-048 and F-051…F-060 minus the
+three closed here — ride along into iteration 2's evidence and are prioritised by what that run
+does with them.
 
 ## Standing instructions (still in force)
 
-- **The unit cycle ends with `git push`, not `git commit`.**
+- **The unit cycle ends with `git push`, not `git commit`.** `origin` is
+  `git@github.com:SigorMatt/agile-skills.git`; `main` tracks it.
 - **Never record a commit sha by amending the commit being cited** (F-024).
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
+- **Do not modify the toolkit while a harness run is in flight.** `meta/` and `harness/` are
+  exempt from the W4 rule; everything else trips it.
 - Every change traces to an F-### or H-###. Behavioural skill change ⇒ version bump. Spec change
-  ⇒ a `## Revisions` row **appended in order**. Re-render after any of it.
+  ⇒ a `## Revisions` row **appended in order** — twice now the row has been inserted above the
+  one before it. Re-render after any of it.
 - Every enforcement fix ships a must-fail fixture, and — where a rule could be satisfied
-  vacuously — a fixture proving it can be passed.
+  vacuously — a fixture proving it can be passed. Where the rule *is* a written procedure, the
+  case reads the commands out of the contract, so editing the contract breaks the gate (F-055).
+- **When you add a rule, enumerate the item types it applies to.** A program does this now for
+  status rules (`rule_obligations`); nothing does it for the next shape of rule.
+- Toolkit commits and harness commits stay separate.
