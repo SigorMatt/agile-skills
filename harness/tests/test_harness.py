@@ -420,6 +420,65 @@ class StopClassification(unittest.TestCase):
         self.assertFalse(run_iteration.looks_api_rejected(""))
 
 
+class EngagementRest(unittest.TestCase):
+    """H-008: an impasse is a fact about the engagement, not about one item.
+
+    The driver used to stop on `any item is blocked`. That coincided with the truth in iteration
+    1d, where the blocked item was the last one standing. It stopped coinciding the moment the
+    deferral fix parked a blocked item at turn 4 with three items still to build — and the run
+    would have ended, terminally, with most of its work unwritten.
+    """
+
+    @staticmethod
+    def observed(items, questions=()):
+        return {"items": items,
+                "questions": [dict({"status": "open"}, **q) for q in questions]}
+
+    def test_a_blocked_item_beside_work_in_flight_is_not_rest(self):
+        observed = self.observed({
+            "EP-001": {"type": "epic", "status": "open"},
+            "WI-0001": {"type": "work-item", "status": "planned"},
+            "WI-0003": {"type": "work-item", "status": "blocked"},
+        })
+        self.assertFalse(run_iteration.engagement_at_rest(observed))
+
+    def test_every_child_stopped_and_nothing_open_is_rest(self):
+        observed = self.observed({
+            "EP-001": {"type": "epic", "status": "open"},
+            "WI-0001": {"type": "work-item", "status": "done"},
+            "WI-0003": {"type": "work-item", "status": "blocked"},
+        })
+        self.assertTrue(run_iteration.engagement_at_rest(observed))
+
+    def test_an_open_question_anywhere_is_not_rest(self):
+        observed = self.observed(
+            {"EP-001": {"type": "epic", "status": "open"},
+             "WI-0001": {"type": "work-item", "status": "done"}},
+            [{"status": "open"}])
+        self.assertFalse(run_iteration.engagement_at_rest(observed))
+
+    def test_an_epic_with_no_children_is_not_rest(self):
+        observed = self.observed({"EP-001": {"type": "epic", "status": "open"}})
+        self.assertFalse(run_iteration.engagement_at_rest(observed))
+
+    def test_an_open_epic_has_not_recorded_its_ending(self):
+        """F-045: at rest with the epic still open is one turn short of the point."""
+        observed = self.observed({
+            "EP-001": {"type": "epic", "status": "open"},
+            "WI-0001": {"type": "work-item", "status": "blocked"},
+        })
+        self.assertTrue(run_iteration.engagement_at_rest(observed))
+        self.assertFalse(run_iteration.engagements_ended(observed))
+
+    def test_an_epic_at_blocked_or_done_has_recorded_its_ending(self):
+        for ending in ("blocked", "done"):
+            observed = self.observed({
+                "EP-001": {"type": "epic", "status": ending},
+                "WI-0001": {"type": "work-item", "status": "blocked"},
+            })
+            self.assertTrue(run_iteration.engagements_ended(observed), ending)
+
+
 class WipeSafety(unittest.TestCase):
     """H-003: --wipe deletes a directory, so it refuses everything it did not create."""
 

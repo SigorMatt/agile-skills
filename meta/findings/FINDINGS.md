@@ -1286,6 +1286,46 @@ A **deferral** is non-empty: 1d's stakeholder answered "I'll send you a sample l
 So the fix is right for the case it addresses and blind to a case the same run produced
 immediately. See **F-028**.
 
+## H-008 — the driver calls an impasse on one blocked item, not on the engagement
+- Severity: correctness, severe for the evidence — it ends a run with most of its work unbuilt
+- Component: harness/run_iteration.py (`decide`)
+- Symptom: found live, during iteration 1e, at turn 6. `WI-0003` was parked at `blocked` on turn
+  4 (the F-028 deferral fix working exactly as designed), while `WI-0001` was at `planned` and
+  `WI-0002`/`WI-0004` were still at `draft`. The driver's rule is
+  `if observed["blocked-items"] and not open-human-questions` → give the sim its one closing turn,
+  then stop with `blocked-no-recourse`. It announced *"an item is blocked with nothing open to the
+  stakeholder; giving the sim one closing turn before accepting the impasse"* with three of four
+  items still to build, spent H-007's single closing turn, and would have stopped terminally after
+  the next worker turn.
+- Cause: the rule tests a fact about **one item** — "an item is blocked" — and calls it a fact
+  about the **engagement** — "the run reached an impasse". Those coincided in every run so far
+  because the blocked item was always the last one standing: 1d reached `blocked` at turn 14 of
+  16. F-028's fix removed the coincidence by parking the blocked item ten turns earlier.
+- Consequence beyond the run: the stop is **terminal**, so a rerun refuses to continue it. Had
+  this been noticed after the fact rather than during, 1e's evidence would have been a run that
+  stopped two thirds of the way through for a reason with nothing to do with the toolkit.
+- Evidence: harness/runs/iteration-1e-expenses/iteration-log.jsonl turn 6; the workspace at that
+  moment (`WI-0001` planned, `WI-0002`/`WI-0004` draft, `WI-0003` blocked, `EP-001` open).
+- Direction: test the engagement, not the item. The toolkit already defines it
+  (`spec/ids-and-statuses.md` §3.5, ADR-0006 §4): **at rest** = every non-epic item at a terminal
+  status and no question open anywhere. And a second condition the derivation supplies — at rest
+  with the epic still `open` means the engagement is over and its ending is **not recorded**, so
+  the next turn belongs to the worker, which is the turn that asks the stakeholder (F-045).
+  Stopping there is stopping one turn before the thing the run exists to observe.
+- Status: fixed (commit RECORDED-BELOW). `engagement_at_rest()` and `engagements_ended()` in
+  `harness/run_iteration.py`, computed from what the driver already scans rather than by calling
+  the toolkit — the driver must keep working against a project whose toolkit is broken. Three
+  branches now: not at rest → say so and carry on; at rest with the ending unrecorded → a
+  **worker** turn; ended → the closing turn, then the stop. Six new tests in
+  `harness/tests/test_harness.py` (53, was 47), including the exact 1e shape: a blocked item
+  beside work in flight is not rest.
+- Recovery applied to the in-flight run, recorded here because it was a hand edit of
+  `state.json`: `closing-turn-given` was cleared (H-007's one closing turn had been spent by the
+  defect, on a run that had not ended), and `next-role`/`next-job` were changed from
+  `sim`/`closing` to `worker`/`null` — the decision the fixed code makes at that state. The
+  killed turn 7 sim wrote nothing to `SIM-LOG.md`; its partial transcript is left in place under
+  `turns/007-sim.*` rather than deleted, and turn 7 re-ran as a worker turn.
+
 ### Addendum to F-013 (2026-08-27, builder 2.5) — re-derived, not reversed
 F-013's fix stands exactly as it was: `terminal` and `suspendable` are different questions, and an
 epic at `open` is both. What changed is that it is now a **consequence** rather than a repair.

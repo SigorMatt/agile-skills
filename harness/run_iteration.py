@@ -262,6 +262,40 @@ def epic_complete(observed):
     return all(item["status"] == "done" for item in items.values())
 
 
+TERMINAL_CHILD_STATUSES = ("done", "blocked")
+
+
+def engagement_at_rest(observed):
+    """Is there nothing left for a worker turn to advance?
+
+    The toolkit's own test, restated where the driver can compute it (`spec/ids-and-statuses.md`
+    §3.5): every non-epic item at a terminal status, and no question open anywhere.
+
+    H-008: this used to be `any item is blocked`. That coincided with the truth in iteration 1d,
+    where the blocked item was the last one standing — and stopped coinciding the moment the
+    deferral fix parked a blocked item at turn 4 with three items still to build. "An item is
+    blocked" is a fact about one item; "the run reached an impasse" is a fact about the
+    engagement, and they are not the same fact.
+    """
+    children = [item for item in observed["items"].values() if item["type"] != "epic"]
+    if not children:
+        return False
+    if any(item["status"] not in TERMINAL_CHILD_STATUSES for item in children):
+        return False
+    return not [q for q in observed["questions"] if q["status"] == "open"]
+
+
+def engagements_ended(observed):
+    """Every epic has recorded its ending — `done` or `blocked`.
+
+    An engagement at rest whose epic is still `open` is over and *unrecorded*: the worker's next
+    turn is what asks the stakeholder and writes the ending down (F-045). Stopping there is
+    stopping one turn before the thing the run exists to observe.
+    """
+    epics = [item for item in observed["items"].values() if item["type"] == "epic"]
+    return bool(epics) and all(item["status"] in TERMINAL_CHILD_STATUSES for item in epics)
+
+
 def worker_report(project_dir, not_before=None):
     """The worker's self-report: the last fenced json block in HARNESS-STATUS.md.
 
@@ -877,19 +911,33 @@ class Run:
                     f"{len(observed['unanswered-human-questions'])} human question(s) are open")
             return {"stop": False, "next-role": "sim", "next-job": "answer"}
 
-        if observed["blocked-items"]:
-            # A blocked item with nothing outstanding for the human is the impasse DESIGN §2
-            # calls "blocked with no recourse": the stakeholder has not been asked anything, so
-            # there is nothing another sim turn could *answer*.
+        if observed["blocked-items"] and not observed["open-human-questions"]:
+            # The impasse DESIGN §2 calls "blocked with no recourse": nothing is outstanding for
+            # the human, so there is nothing another sim turn could *answer*.
             #
-            # H-007, extended: there is still something a sim turn can *say*. An impasse is an
-            # ending, and the stakeholder should see the ending of every run rather than only
-            # the ones that finish cleanly — the same argument that gave `epic-done` a closing
-            # turn. One turn, once, then the stop stands.
-            if not observed["open-human-questions"]:
+            # H-008: the test is whether the ENGAGEMENT is over, not whether an item is blocked.
+            # Those coincided in 1d, where the blocked item was the last one standing. They stop
+            # coinciding as soon as an item is parked early — and then this branch ends a run
+            # with most of its work unbuilt.
+            if not engagement_at_rest(observed):
+                say(f"    blocked: {', '.join(observed['blocked-items'])} — but the engagement "
+                    f"is not at rest; there is still work for a worker turn")
+            elif not engagements_ended(observed):
+                # F-045: at rest with the epic still `open` means the engagement is over and its
+                # ending is not recorded. The worker's next turn is the one that asks the
+                # stakeholder and writes it down. Stopping here is stopping one turn before the
+                # thing the run exists to observe — which is what 1d did.
+                say("    the engagement is at rest and its ending is not recorded; the worker "
+                    "runs to end it through the stakeholder")
+                return {"stop": False, "next-role": "worker", "next-job": None}
+            else:
+                # H-007, extended: there is still something a sim turn can *say*. An impasse is
+                # an ending, and the stakeholder should see the ending of every run rather than
+                # only the ones that finish cleanly — the same argument that gave `epic-done` a
+                # closing turn. One turn, once, then the stop stands.
                 if not self.state.get("closing-turn-given"):
-                    say("    an item is blocked with nothing open to the stakeholder; giving "
-                        "the sim one closing turn before accepting the impasse")
+                    say("    the engagement has ended at an impasse; giving the sim one closing "
+                        "turn before accepting it")
                     self.state["closing-turn-given"] = True
                     return {"stop": False, "next-role": "sim", "next-job": "closing"}
                 return {"stop": True, "reason": "blocked-no-recourse",
