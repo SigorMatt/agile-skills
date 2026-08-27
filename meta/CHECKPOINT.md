@@ -4,29 +4,20 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-111 — the findings pass over 1e
+## Current unit — META-112 — the final report
 
-Read the banked trail at `meta/harness/evidence/iteration-1e/` and file what it found. Nothing is
-fixed silently; anything new is **F-049+** or **H-009+**.
+`meta/FINAL-REPORT-2.5.md` §§1–5 are drafted (commit `4a9e15f`-ish, see git log for META-110).
+Finish it:
 
-Sources, in the order USAGE §5 gives them:
-1. `project/tracker/board.md` — where the work got to.
-2. `run/SIM-LOG.md` — `[PLANTED:` is coverage, `[ORGANIC]` is signal. The stakeholder's
-   "As a stakeholder I noticed" lines are the highest-yield part.
-3. `run/iteration-log.jsonl` — durations, costs, the driver's observed status per turn.
-4. `run/*-worker.status.md` — the worker's own account of what it hit.
-5. The item trail — `history.md`, `journal.md`, `questions/`.
+- **§6 What 1e proved**, and what it did not. The headline is the epic's three history rows. Say
+  plainly what was *not* exercised (`status: deferred`, the DoR override).
+- **§7 What 1e found** — F-049…F-060 and H-008, with F-050 named as this session's own defect.
+- **§8 ROADMAP §2, an honest read** — three conditions, each judged against 1e.
+- **§9 Go / no-go for iteration 2.** `iteration-2-tidy` runs only on a go. Say which, and why.
 
-Already filed from this run and **not** to be re-filed: **H-008** (the driver's impasse test).
-Already known and stated: `status: deferred` had no organic occurrence — the fork fired instead.
+Done when: the report is complete and committed, plan ticked, journalled, checkpoint closed.
 
-Done when: new findings appended with evidence citations, FINDINGS statuses current,
-committed and pushed, plan ticked, journalled.
-
-## Next unit — META-112
-
-`meta/FINAL-REPORT-2.5.md` — finish §6 onward: what 1e proved, the honest ROADMAP §2 read, and an
-explicit go/no-go for iteration 2 (`iteration-2-tidy` runs only on a go).
+## Next unit — none. Phase II ends here.
 
 ## Standing instructions (still in force)
 
