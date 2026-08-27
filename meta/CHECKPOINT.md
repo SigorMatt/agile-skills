@@ -4,50 +4,29 @@
 
 Read `meta/BUILDER-2.5-PROMPT.md`, then `meta/plan.md` § Phase II, then this file.
 
-## Current unit — META-110 — iteration 1e
+## Current unit — META-111 — the findings pass over 1e
 
-**The regression gate.** 1d's config and probe, unchanged; fresh project `expenses-1e`;
-max-turns 18. The probe file is **byte-identical** to `probes/iteration-1d-expenses.md`
-(sha256 `9f51368f…`), so the toolkit is the only variable.
+Read the banked trail at `meta/harness/evidence/iteration-1e/` and file what it found. Nothing is
+fixed silently; anything new is **F-049+** or **H-009+**.
 
-```
-harness/provision.py --iteration iteration-1e-expenses --wipe
-harness/run_iteration.py --iteration iteration-1e-expenses
-```
+Sources, in the order USAGE §5 gives them:
+1. `project/tracker/board.md` — where the work got to.
+2. `run/SIM-LOG.md` — `[PLANTED:` is coverage, `[ORGANIC]` is signal. The stakeholder's
+   "As a stakeholder I noticed" lines are the highest-yield part.
+3. `run/iteration-log.jsonl` — durations, costs, the driver's observed status per turn.
+4. `run/*-worker.status.md` — the worker's own account of what it hit.
+5. The item trail — `history.md`, `journal.md`, `questions/`.
 
-Expected shape: the run reaches the impasse as 1d did — and this time **ends through the
-termination gate**. `next` step 6 dispatches `review-close` on the epic at rest; the sign-off
-fires naming every child; the sim answers "no, not as it stands"; the ending is recorded on the
-epic; the driver stops on a terminal reason with zero contamination violations.
+Already filed from this run and **not** to be re-filed: **H-008** (the driver's impasse test).
+Already known and stated: `status: deferred` had no organic occurrence — the fork fired instead.
 
-**While the run is in flight, do not touch the toolkit.** An uncommitted change under
-`methodology/`, `spec/`, `scripts/`, `adapters/`, `examples/`, `fixtures/` or the top-level docs
-trips the harness's own W4 rule and stops the run. `meta/` and `harness/` are exempt.
+Done when: new findings appended with evidence citations, FINDINGS statuses current,
+committed and pushed, plan ticked, journalled.
 
-**Deviation, recorded 2026-08-27T01:30Z:** the turn budget was raised from the mission's **18**
-to **24** at turn 13, by restarting the driver with `--max-turns 24`. Stated plainly rather than
-buried, with the reason:
+## Next unit — META-112
 
-- 18 came from 1d finishing in 16 turns. 1e is doing **more work per turn's worth of budget**,
-  not less: 1d spent ten turns re-asking about a sample and built almost nothing, while 1e's
-  deferral fix parked that item at turn 4 and the run has since delivered WI-0001 and WI-0002,
-  filed two bugs, and carried WI-0004 to `in-progress`. The budgets are not comparable.
-- At turn 12 the remaining work was WI-0004, two bugs and the ending — about eight turns against
-  six left. Stopping at 18 would have failed the acceptance criterion for a reason that has
-  nothing to do with the toolkit, and a `turn-budget` stop is terminal.
-- 24 is not an arbitrary number: it is the ceiling **1d itself was configured with**. This is a
-  restoration of the equivalent run's budget, not an open-ended extension.
-- Cost: roughly $9 per worker turn. The run stood at ~$60 when the change was made.
-
-The iteration config still says 18; the raise is a command-line flag, so the file records what
-the mission asked for and the log records what was actually run.
-
-Done when: the run has stopped, the trail is copied to `meta/harness/evidence/iteration-1e/`
-and committed, plan ticked, journalled.
-
-## Next unit — META-111
-
-Findings pass over 1e's trail: anything new filed as F-049+/H-###.
+`meta/FINAL-REPORT-2.5.md` — finish §6 onward: what 1e proved, the honest ROADMAP §2 read, and an
+explicit go/no-go for iteration 2 (`iteration-2-tidy` runs only on a go).
 
 ## Standing instructions (still in force)
 
