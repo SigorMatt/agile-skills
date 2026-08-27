@@ -1312,7 +1312,7 @@ immediately. See **F-028**.
   with the epic still `open` means the engagement is over and its ending is **not recorded**, so
   the next turn belongs to the worker, which is the turn that asks the stakeholder (F-045).
   Stopping there is stopping one turn before the thing the run exists to observe.
-- Status: fixed (commit RECORDED-BELOW). `engagement_at_rest()` and `engagements_ended()` in
+- Status: fixed (commit 3b6a94b). `engagement_at_rest()` and `engagements_ended()` in
   `harness/run_iteration.py`, computed from what the driver already scans rather than by calling
   the toolkit — the driver must keep working against a project whose toolkit is broken. Three
   branches now: not at rest → say so and carry on; at rest with the ending unrecorded → a
