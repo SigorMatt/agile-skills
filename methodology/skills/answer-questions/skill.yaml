@@ -1,5 +1,5 @@
 name: answer-questions
-version: 0.2.0
+version: 0.3.0
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
@@ -93,7 +93,7 @@ quality_gates:
     on_failure: stay
   - name: a-deferral-is-not-an-answer
     description: A reply of "not yet" is recorded as a deferral and the item is parked, or it is enough to decide on and the question is answered citing it. Never both, never neither.
-    manual_check: For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, the item must be at blocked with what would unblock it in Consequences. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop.
+    manual_check: For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, a work item or bug must be at blocked and an epic must be back at open, with what would unblock it in Consequences either way. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop; and an epic parked at blocked is a move only review-close may make (F-050).
     enforcement: hard
     on_failure: stay
 
@@ -103,7 +103,7 @@ escalation:
   impasse: If the human is unavailable and the question is blocking, leave the item at awaiting-answer and report it. An unanswerable question is not a reason to unblock the item.
 
 exit_criteria:
-  - Every question this execution handled is either answered with consequences, deferred with the item parked and what would unblock it recorded, or addressed to the human with the condition stated.
+  - Every question this execution handled is either answered with consequences, deferred with what would unblock it recorded and the item where the deferral puts it - blocked for a work item or bug, open for an epic - or addressed to the human with the condition stated.
   - Work an answer implied and no item records exists as a work-item at draft, with arose-from naming the question.
   - Every file named in a Consequences section actually contains the change.
   - Items whose blocking questions are all resolved are returned to their recorded resume-to status.

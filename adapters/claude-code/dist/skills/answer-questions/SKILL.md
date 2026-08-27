@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question - or deferred it - and the reply must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.2.0
+  methodology-version: 0.3.0
   persona: architect
   human-interaction: direct
 ---
@@ -116,6 +116,23 @@ information.
     (`question.deferred.not-blocked`). A deferred **non-blocking** question changes nothing about
     the item; it simply stops being asked.
 
+    **On an epic, move 2 parks nothing.** You cannot send an epic to `blocked`: on an epic that
+    status is not a suspension but the engagement's impasse *ending*, and only `review-close`
+    reaches it, after the stakeholder has been asked (`spec/ids-and-statuses.md` §3.5). So a
+    deferred blocking question on an epic returns the epic to `open` — its `resume-to` — and
+    `## Consequences` says what the engagement is doing meanwhile and what would unblock it.
+    That is not the resumption move 2 forbids: an epic advances only through its children, so
+    nothing proceeds on the strength of the missing thing. If the children can still move, they
+    move; when they cannot, the engagement comes to rest and the orchestrator dispatches
+    `review-close`, which ends it at E3 and puts the deferral in front of the stakeholder.
+
+    Do not reach for the alternatives. Marking the question `answered` to make the epic
+    parkable is move 1 without the decision behind it; leaving the epic at `awaiting-answer` on
+    a question that is no longer open deadlocks the loop, which is the failure `deferred` exists
+    to remove. The rule used to be written for every item type, and on an epic it was impossible
+    to execute — the validator demanded `blocked` and the transition table permitted no move
+    there (F-050).
+
 3b. **When an answer widens the scope.** An answer sometimes implies work no item records — the
     stakeholder says yes to something nobody had scoped. File it: a `work-item` at `draft` under
     the same epic, with `arose-from: <ITEM>/Q-###` naming the question whose answer produced it.
@@ -154,8 +171,9 @@ information.
 
 7. **Return the item to its recorded `resume-to` status** — once **every blocking** question on
    it is answered. If a blocking question remains, or one was escalated to the human, the item
-   stays at `awaiting-answer`; if one was **deferred**, the item goes to `blocked` instead
-   (step 3a).
+   stays at `awaiting-answer`; if one was **deferred**, a work item or bug goes to `blocked`
+   instead, and an epic goes to its `resume-to` — `open` — where the engagement waits to be
+   ended by `review-close` rather than parked by you (step 3a).
 
    Read `resume-to` from the history row that suspended the item. Do not infer it from which
    skill asked: a question from `review-close` and a question from `verify` both look like "it
@@ -236,8 +254,9 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
 3. For each escalation: which of the four conditions applies? If the honest answer is "answering
    would have taken a while", it is not an escalation.
 3a. For each deferral: is the item where the deferral puts it — `blocked` if you recorded a
-   deferral, resumed if you decided under it? A question marked `deferred` on an item that
-   carried on is a claim that the work can proceed without the thing that is missing.
+   deferral on a work item or a bug, `open` if it was on an epic, resumed if you decided under
+   it? A question marked `deferred` on a *work item* that carried on is a claim that the work can
+   proceed without the thing that is missing.
 4. Did you return the item to the status recorded in `resume-to`, or to the one that seemed
    natural?
 5. Did you amend an acceptance criterion? If so, is that amendment journaled with its reason,

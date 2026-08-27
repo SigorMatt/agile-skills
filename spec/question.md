@@ -150,11 +150,28 @@ must take one:
    would be a claim that the work can proceed, which is the guess the whole protocol exists to
    prevent.
 
+**On an epic, move 2 parks nothing.** `blocked` on an epic is not a suspension — it *is* the
+impasse ending of the engagement, reached only through `review-close` and only after the
+stakeholder has been asked (`ids-and-statuses.md` §3.5). So a deferred blocking question on an
+epic returns the epic to `open`, and `## Consequences` says what the engagement is doing
+meanwhile. That is not the resumption move 2 forbids: `open` is where an engagement lives, not
+where it works, and an epic advances only through its children, so nothing proceeds on the
+strength of the missing thing. If the children can still move, they move; when they cannot, the
+engagement comes to rest, the orchestrator dispatches `review-close`, and the deferral is part of
+what the stakeholder is shown at the ending.
+
+Writing move 2 for every item type was legal to write and impossible to execute: the validator
+required `blocked` and the transition table permitted no move that reached it, so an epic-level
+deferral produced a workspace no legal move could repair (F-050). The scope now lives in
+`pipeline.yaml`'s `rule_obligations` and is checked against the transition table
+(`ids-and-statuses.md` §4).
+
 A **non-blocking** question that is deferred changes nothing about the item; it simply stops
 being asked.
 
-`validate-workspace` enforces the pairing: `question.deferred.not-blocked` fires when an item
-carries a deferred blocking question and is not at `blocked` (or already closed).
+`validate-workspace` enforces the pairing on the item types that can be parked:
+`question.deferred.not-blocked` fires when a **work item or bug** carries a deferred blocking
+question and is not at `blocked` (or already closed).
 
 A deferred **sign-off** (below) is the one deferral with a further consequence: the engagement
 does not end, because the acknowledgment did not happen. The honest record is E3, the impasse
@@ -248,8 +265,9 @@ Rules:
    handled by filing a new question that cites the old one.
 7. **A deferral is a reply, not silence.** `status: deferred` records that the person answered
    and their answer was "not yet". The loop does not stop on it and the item does not resume:
-   a deferred *blocking* question leaves its item at `blocked` with what would unblock it
-   written down.
+   a deferred *blocking* question leaves a work item or a bug at `blocked` with what would
+   unblock it written down, and returns an **epic** to `open`, where the engagement waits to be
+   ended through the stakeholder rather than parked by the answerer (§2, F-050).
 
 ---
 
@@ -279,3 +297,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 3 | 2026-08-22 | §2: `## Answer` and `## Consequences` must exist from the moment a question is filed (F-032). |
 | 4 | 2026-08-22 | §2: one decision per question (F-027); questions for one item in one round are presented as one ask (F-020). |
 | 5 | 2026-08-27 | §2: `status: deferred` — the reply that is neither an answer nor silence, and what it does to the item (F-028). `kind: sign-off` becomes the **termination** question: triggered by rest rather than by closure, and it must name every child item (F-045, F-046). Derived in ADR-0006. |
+| 6 | 2026-08-27 | §2: what a deferral does to an **epic** — it returns the epic to `open`, because `blocked` on an epic is the impasse ending and only `review-close` reaches it. Move 2 as written was impossible to execute on an epic (F-050). |

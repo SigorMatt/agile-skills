@@ -485,12 +485,57 @@ def check_derived_model(runner: Runner) -> None:
                run("transition", "EP-001", "--to", "blocked", "--actor", "intake",
                    "--resume-to", "open", "--reason", "giving up"),
                False)
-        # F-013: the move `intake`'s own instruction requires, which used to be refused.
+        # F-013: the move `intake`'s own instruction requires, which used to be refused. The
+        # question has to exist first — the deferral cases below are about what happens to it.
+        epic_questions = os.path.join(root, "tracker", "items", "EP-001", "questions")
+        os.makedirs(epic_questions, exist_ok=True)
+        epic_question = os.path.join(epic_questions, "Q-001.md")
+
+        def write_epic_question(status: str) -> None:
+            answered = ("answered-at: 2026-08-27T00:00:10Z\nanswered-by: human\n"
+                        if status != "open" else "")
+            body = ("I'll send you the sample later." if status != "open" else "")
+            consequence = ("- `tracker/items/EP-001/item.md` — the engagement waits at open; "
+                           "the sample would unblock it\n" if status != "open" else "")
+            with open(epic_question, "w", encoding="utf-8") as handle:
+                handle.write(f"---\nid: Q-001\nitem: EP-001\nfrom-skill: intake\n"
+                             f"addressed-to: human\nblocking: true\nstatus: {status}\n"
+                             f"created: 2026-08-27T00:00:00Z\n{answered}---\n\n"
+                             f"## Context\n\nThe goal names an export nobody has seen.\n\n"
+                             f"## Question\n\nCan you send a sample of the file?\n\n"
+                             f"## Options considered\n\n- A\n- B\n\n"
+                             f"## Answer\n\n{body}\n\n## Consequences\n\n{consequence}")
+
+        write_epic_question("open")
         suspend = run("transition", "EP-001", "--to", "awaiting-answer", "--actor", "intake",
                       "--resume-to", "open", "--reason", "an epic-level question")
         if "EP-001 open → awaiting-answer" not in suspend.stdout:
             problems.append("an epic could not be suspended by a blocking question (F-013):\n"
                             "      " + (suspend.stdout + suspend.stderr).strip()[-300:])
+
+        # F-050: the move 1e's architect would have made had they taken step 3a's second branch.
+        # `blocked` on an epic is the impasse ENDING, not a parking space, and only review-close
+        # reaches it — so the deferral may not park the engagement.
+        expect("a deferral may not park an epic (F-050)",
+               run("transition", "EP-001", "--to", "blocked", "--actor", "answer-questions",
+                   "--resume-to", "open", "--reason", "the stakeholder deferred"),
+               False)
+        # ...and the branch that is legal has to actually be legal: the deferral is recorded, the
+        # epic goes back to `open`, and the workspace validates. A rule nobody can satisfy is not
+        # a rule, and that is the state F-050 was filed against.
+        write_epic_question("deferred")
+        resumed = run("transition", "EP-001", "--to", "open", "--actor", "answer-questions",
+                      "--reason", "the stakeholder deferred; the engagement waits at open")
+        if "EP-001 awaiting-answer → open" not in resumed.stdout:
+            problems.append("a deferral could not return the epic to open (F-050):\n"
+                            "      " + (resumed.stdout + resumed.stderr).strip()[-300:])
+        deferred = run("validate-workspace")
+        stranded = [line for line in (deferred.stdout + deferred.stderr).split("\n")
+                    if "question.deferred.not-blocked" in line]
+        if stranded:
+            problems.append("an epic carrying a deferred blocking question is reported as "
+                            "misplaced, and no legal move would repair it (F-050):\n      "
+                            + "\n      ".join(stranded[:3]))
 
         # And the provenance rules must be satisfiable: nothing this sequence created may be
         # reported as missing or dangling. A rule nobody can satisfy is not a rule.
@@ -505,7 +550,7 @@ def check_derived_model(runner: Runner) -> None:
         runner.emit("the derived model, by execution", False,
                     detail="\n".join(f"  - {problem}" for problem in problems))
         return
-    runner.emit("the derived model, by execution (12 cases)", True)
+    runner.emit("the derived model, by execution (14 cases)", True)
 
 
 def check_guard(runner: Runner) -> None:

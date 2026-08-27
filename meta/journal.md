@@ -3127,3 +3127,39 @@ Phase II ends here.
   (`obligation_types`, `STATUS_RULE_CODES`, both rules scoped), `scripts/check`
   (`check_obligation_binding`, two faults, renumbered docstring),
   `spec/ids-and-statuses.md` §4 + Revisions row 4, re-rendered `adapters/claude-code/dist`.
+
+---
+
+## 2026-08-27 — META-114 — F-050 part 2: what a deferral does to an epic
+
+- **Unit:** META-114
+- **Inputs read:** `spec/question.md` §2, `spec/ids-and-statuses.md` §3.5/§4,
+  `methodology/skills/answer-questions/{process.md,skill.yaml}`, `scripts/lib/engagement.py`,
+  `scripts/check-epic-signoff`, `meta/harness/evidence/iteration-1e/` (the turn-4 report).
+- **Decisions:**
+  - **The epic goes back to `open`, and that is not "resuming".** Move 2 of step 3a forbids
+    resuming because it would claim the work can proceed without the missing thing. An epic at
+    `open` is not working: it advances only through its children, so returning it there claims
+    nothing. `blocked` on an epic is the impasse *ending*, and 1e's own evidence says what
+    happens next — the children come to rest, `next` step 6 dispatches `review-close`, and
+    `check-epic-signoff` already accepts a **deferred** acknowledgment for `open → blocked` and
+    refuses one for `open → done`. So the deferral reaches the stakeholder at the ending rather
+    than being parked by the answerer.
+  - **The loop still terminates**, which is the thing to check before accepting that answer. A
+    deferred question is not open, so `engagement.state` can still reach `at-rest`, and both of
+    `review-close`'s moves from `open` leave `open`.
+  - **Named the two wrong answers in the process file**, because they are the tempting ones:
+    marking the question `answered` to make the epic parkable is move 1 without the decision
+    behind it, and leaving the epic at `awaiting-answer` on a question that is no longer open is
+    the deadlock `deferred` exists to remove.
+  - The by-execution case is the move 1e's architect *would* have made on the other branch —
+    `transition EP-001 --to blocked --actor answer-questions` — asserted to be refused, paired
+    with the branch that is legal actually working and validating clean. A rule nobody can
+    satisfy is not a rule, and that was F-050's whole complaint.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` — 17 assertions across 15 steps, all PASS; the derived-model step
+  is now 14 cases.
+- **Artifacts:** `spec/question.md` §2 + rule 7 + Revisions row 6,
+  `methodology/skills/answer-questions/process.md` (step 3a's epic branch, step 7, self-check
+  3a) and `skill.yaml` 0.2.0 → **0.3.0**, `scripts/check` (two cases),
+  re-rendered `adapters/claude-code/dist`.
