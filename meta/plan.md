@@ -307,7 +307,7 @@ outranks completeness in a .5 session.
 
 ### The regression gate
 
-- [ ] **META-110** — iteration 1e configured (1d's config and probe unchanged, project
+- [x] **META-110** — iteration 1e configured (1d's config and probe unchanged, project
       `expenses-1e`, max-turns 18) and run.
 - [ ] **META-111** — findings pass over 1e's trail; anything new filed as F-049+/H-###.
 - [ ] **META-112** — `meta/FINAL-REPORT-2.5.md`, with the go/no-go for iteration 2.

@@ -2985,3 +2985,44 @@ The general lesson is the one this project keeps relearning: a gate that silentl
 scope reports success for the part it can still see. `lint-claims` did it with a file path
 (F-033), `run-gate` does it with an unresolved placeholder and says so loudly, and this step did
 it with a plural.
+
+## META-110 — iteration 1e
+
+**It ended through the stakeholder.** That is the whole result, and the epic's `history.md`
+carries it in three rows that were not a legal sequence before this session: `open →
+awaiting-answer` filing the sign-off, `awaiting-answer → open` propagating the refusal, `open →
+blocked` recording ending E3. 20 turns, 200 minutes, $100.23, 1120 tool calls, **zero
+contamination violations**, and the final workspace validates clean.
+
+Three things worth recording beyond the result.
+
+**The run found a defect in the harness, live, and it was one my own fix caused to surface.**
+At turn 6 the driver announced the impasse with three of four items still to build. Its rule was
+`any item is blocked` → the run reached an impasse. That had coincided with the truth in every
+previous run because the blocked item was always the last one standing; F-028's deferral fix
+parked WI-0003 at turn 4 instead of turn 14 and the coincidence evaporated. Filed as **H-008**,
+fixed mid-run using the toolkit's own test (`engagement_at_rest` / `engagements_ended`), six new
+harness tests. I stopped the driver before it spent an $8 turn on a doomed path, and I recorded
+the `state.json` repair in the finding, because editing driver state is normally not the recovery.
+
+The general shape is worth keeping: **a fix that makes the pipeline behave better can invalidate
+an assumption elsewhere that was only ever true by coincidence.** Nothing in the harness was
+wrong on the day it was written.
+
+**I raised the turn budget and said so.** 18 came from 1d finishing in 16 turns, but 1d spent ten
+turns re-asking about a sample and built almost nothing. 1e parked that item at turn 4 and went
+on to deliver five items — so the two budgets measure different amounts of work. At turn 12 the
+remaining work was about eight turns against six left, and a `turn-budget` stop is terminal. I
+restored **1d's own ceiling of 24** rather than inventing a number, left the config file saying
+18 so it records what the mission asked for, and wrote the reasoning into the checkpoint before
+restarting. Total cost of the deviation: about $40.
+
+**What the run did not exercise, said plainly.** `status: deferred` never appeared. The deferral
+*fork* did — `answer-questions` took step 3a's first move, deciding under the deferral and
+recording the decision — which is the right move for what the stakeholder said and is the branch
+I was less worried about. The status itself, and `question.deferred.not-blocked` with it, still
+has only fixture coverage.
+
+The sentence I would keep if I could keep one is the stakeholder's, from the closing turn:
+*"The epic sits at `blocked`, not `done`, which is the correct place for it to sit given my
+answer."* In 1d the same persona wrote that the question never came.
