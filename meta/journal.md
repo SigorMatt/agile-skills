@@ -3064,3 +3064,26 @@ rule rather than two edits.
 Also worth recording, because a green result would otherwise imply the opposite: **`status:
 deferred` was never exercised.** The fork fired, the status did not — and F-050 is what the other
 branch would have hit.
+
+## META-112 — the final report, and the go
+
+`meta/FINAL-REPORT-2.5.md` is complete. The go/no-go is a **go for iteration 2**, with three
+findings named as conditions rather than suggestions: F-050 because it is a live contradiction and
+`tidy`'s adversarial stakeholder is exactly the kind to produce an epic-level deferral; F-049 and
+F-055 because they are a one-word fix and a one-line fix that would otherwise cost another $100
+run to rediscover.
+
+The reason iteration 2 is worth running *now* rather than after a bigger fix pass is coverage:
+1e exercised **E3 only**. `tidy` has no blocked seed, so it should reach E1 or E2 — a clean
+ending — and three of the four endings still have no run behind them.
+
+What I want the next reader to take from §10: the derivation worked as a *method*. Starting from
+"enumerate every legal ending" rather than "make F-045 pass" found a third occurrence of F-029
+nobody had filed, dissolved F-046 into a consequence of stating the content rule checkably, and
+caught the `terminal`/`suspendable` confusion a third time with a lint rule instead of a run. And
+it did not stop me introducing one more instance of the class while doing it (F-050). Both are
+results. The second is the more useful one to have written down, because it says exactly how much
+of this is mechanical: the model is on paper, and applying it to a new rule is still something a
+person has to remember to do.
+
+Phase II ends here.
