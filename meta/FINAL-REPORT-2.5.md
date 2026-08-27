@@ -156,7 +156,8 @@ Fixed: 17 cited → 24, all resolving.
 leave. Their statuses are honest and iteration 2+ evidence will prioritise them naturally. Scope
 discipline outranks completeness in a .5 session.
 
-**45 fixed, 6 open, 1 rejected, 1 deferred.**
+**At the end of the fix work: 45 fixed, 6 open, 1 rejected, 1 deferred.** Iteration 1e then added
+twelve more open findings and one fixed (H-008); §7 has the final tally.
 
 ---
 
