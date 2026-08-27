@@ -3252,3 +3252,42 @@ Phase II ends here.
   `meta/CHECKPOINT.md` closed.
 
 Phase III ends here. Scope held: three findings fixed, nothing else touched, nothing new filed.
+
+---
+
+## 2026-08-27 — META-118 — H-009: a heredoc body is a document, not a path
+
+- **Unit:** META-118
+- **Inputs read:** `harness/runs/iteration-2-tidy/turns/006-worker.stream.jsonl`,
+  `harness/runs/iteration-2-tidy/state.json`, `harness/audit.py`,
+  `harness/tests/test_harness.py`.
+- **Decisions:**
+  - **Structure, not existence.** `plausible()` tells prose from a command by asking whether the
+    path is real. That is the right instinct and it has a ceiling: iteration 2's bug report named
+    `~/Downloads`, which exists, so the filter passed it and W3 stopped the run. What actually
+    distinguishes them is that a heredoc body is *being written*. So `strip_heredoc_bodies()`
+    removes it before paths are scraped, and the introducer's own line keeps its paths — `cd`,
+    redirect targets, an interpreter's arguments are commands.
+  - **W1 and W2 untouched.** They read the whole tool input. Writing `harness/runs` into a
+    document is still evidence the worker has seen something it must not; only *path scraping*
+    is a claim about filesystem access.
+  - **The residual hole is in the docstring and in the finding, not implied.** A heredoc body
+    may be a program, so a read of an outside path from inside one is no longer visible to the
+    scrape. It never reliably was — a regex over source cannot tell a string literal from an
+    `open()`, which is the confusion that produced this finding — and the alternative is a rule
+    that fires on prose, which is a rule that gets switched off.
+  - **The regression test pins `exists` to "every path is real".** Otherwise
+    `test_iteration_2_tidy_turn_6_is_clean` would pass on any machine without a `~/Downloads`
+    for the wrong reason. Both new tests were confirmed to fail with the fix reverted.
+  - Three smaller cases went in with the synthetic one, each a way the strip could be wrong:
+    the introducer line is still scraped, an unterminated heredoc swallows the rest rather than
+    reopening the hole, and `<<<` is a here-string rather than a heredoc.
+- **Questions raised:** none.
+- **Gates:** `harness/tests/test_harness.py` — **55 tests** (was 53), all pass.
+  `./scripts/check` green; 30 citations resolving.
+- **Artifacts:** `harness/audit.py` (`HEREDOC_RE`, `strip_heredoc_bodies`, `_paths_in`),
+  `harness/tests/test_harness.py` (two tests), `meta/findings/FINDINGS.md` H-009 under a new
+  "Iteration 2 — findings during the run" heading.
+
+**The run is not resumed.** `iteration-2-tidy` sits stopped at turn 6 with
+`stop-reason: contamination`; restarting it is the owner's call.

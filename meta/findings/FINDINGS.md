@@ -1661,7 +1661,7 @@ something had gone wrong."*
 - Evidence: harness/runs/iteration-2-tidy/turns/006-worker.stream.jsonl (the `python3 - <<'PYEOF'`
   call writing BUG-0002); harness/runs/iteration-2-tidy/state.json — `stop-reason:
   contamination`, `turn: 6`.
-- Status: fixed (commit __COMMIT__). `strip_heredoc_bodies()` removes the contents of every
+- Status: fixed (commit e81582d). `strip_heredoc_bodies()` removes the contents of every
   heredoc from a Bash command string before paths are scraped out of it; the introducer's own
   line keeps its paths, because `cd`, redirect targets and an interpreter's arguments are
   commands. W1 and W2 are untouched — they read the whole tool input, so naming harness content
