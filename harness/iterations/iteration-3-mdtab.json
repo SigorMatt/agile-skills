@@ -6,5 +6,5 @@
   "probe": "iteration-3-mdtab",
   "max-turns": 24,
   "worker-model": "opus",
-  "sim-model": "sonnet"
+  "sim-model": "opus"
 }

@@ -1680,3 +1680,67 @@ something had gone wrong."*
   whole input.
 - **Not resumed here.** The fix was made while the run sat stopped at turn 6; restarting
   `iteration-2-tidy` is the owner's call, not this session's.
+
+## F-061 — A conditional acceptance costs a full engagement cycle, and the stakeholder noticed
+- Severity: UX/design observation, low — filed so the cost is on the record, not to force a change
+- Component: methodology (review-close, ADR-0006 §3.4), spec/dor-dod.md (DE7)
+- Symptom: iteration 2's first sign-off was "ship it, and add the default rules-file location."
+  The engagement correctly reopened (done → open), built WI-0004 through the full pipeline,
+  reached rest, and filed a fresh sign-off because the earlier answer predated the new rest.
+  Correct by ADR-0006 — a conditional acceptance is not an acceptance — and the stakeholder's
+  verdict carries both sides: "more process than I expected for one follow-up request," and
+  "I wasn't asked to take anything on faith either time." One small follow-up costs a full
+  reopen/re-sign cycle.
+- Evidence: meta/harness/evidence/iteration-2/ — tracker/items/EP-001/history.md (the five
+  ending rows), SIM-LOG run segments 2 and 3 (the stakeholder's notes at both sign-offs).
+- Direction: none required now. Candidate for later: a lightweight amendment path for
+  follow-ups the stakeholder marks minor — but any such path must preserve "nothing on faith,"
+  and the burden of proof is on the shortcut. Revisit when the retro skill exists.
+- Status: open (observation)
+
+## H-010 — A turn-budget stop mid-acknowledgment is terminal, and only --fresh continues it
+- Severity: harness, UX/semantics (three occurrences in one iteration)
+- Component: harness/run_iteration.py (stop classification), USAGE
+- Symptom: iteration 2 hit turn-budget three times, twice landing exactly between the
+  termination gate filing a blocking sign-off question and the sim answering it. The driver
+  treats turn-budget as "a verdict on the run, not an interruption," refuses a rerun even with
+  a raised --max-turns, and offers only --fresh. The workaround works — workspace state makes a
+  fresh run against the same project a true continuation — but the engagement's trail then
+  spans multiple run directories (iteration-2 spans three), and the semantics conflate "this
+  run's budget is spent" with "this engagement is over."
+- Evidence: meta/harness/evidence/iteration-2/ — the three run segments; the driver's refusal
+  text in iteration-2-tidy-continuation.log.
+- Direction: budget stops become resumable when the workspace holds an open human-addressed
+  question or the epic is not terminal — a plain rerun with a larger --max-turns continues the
+  run in place. Keep the terminal reading only when the engagement itself is at an ending.
+- Status: open
+
+## H-011 — A fresh run's first job is "open" regardless of workspace state
+- Severity: harness, scheduling, minor
+- Component: harness/run_iteration.py (first-turn dispatch)
+- Symptom: every fresh run leads with sim job=open even when the workspace already contains an
+  answered engagement mid-endgame or an open blocking human question. In iteration 2's
+  continuations this cost one near-no-op turn once, and once the open-job sim absorbed the
+  pending answer itself (correct outcome, accidental route). H-004 fixed answers-first for
+  resumes; fresh starts do not read the workspace before choosing the first job.
+- Evidence: meta/harness/evidence/iteration-2/ — run segments 2 and 3, turn-1 entries;
+  ops-session reports 2026-08-28.
+- Direction: derive the first job from workspace state exactly as mid-run scheduling does:
+  unanswered human questions → sim answer; otherwise no IDEA.md → sim open; otherwise worker.
+- Status: open
+
+---
+
+### Coverage addendum (2026-08-28, iteration 2) — two probes starved by the fixes
+P1 (dor-override-adversarial) never met its own trigger: refine never stacked a second or
+third question batch on any item — at most two questions per item per round, all engagement.
+That starvation is F-020/F-023's fix visible from the stakeholder's side and should be read as
+regression evidence, not a coverage debt; the DoR override itself remains covered by 1d.
+P2 (send-back-archives) proved structurally unfirable: the team categorized archives correctly
+without ever asking, so the wrong answer the probe existed to correct never had a vehicle. The
+probe assumed a team error this team did not make. Retired for tidy; the requirement-change
+send-back class remains covered organically (1, 1e, and tidy's reopen). Iteration 3's
+contradiction probes are unaffected — they plant the wrongness in the stakeholder, not the team.
+Endings scoreboard after iteration 2: E1 (tidy, twice-signed), E3 (1e). E2 and E4 remain
+fixture-only; E4 (abandoned) still has no queue entry — decide after iteration 3.
+
