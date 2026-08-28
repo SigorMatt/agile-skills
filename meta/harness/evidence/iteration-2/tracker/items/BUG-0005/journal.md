@@ -1,0 +1,377 @@
+# Journal — BUG-0005
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T20:06:47Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0005
+- **Trigger:** Filed by `review-close` while reviewing BUG-0002 at `in-review`; this is the item's creation entry, not a dispatch.
+- **Inputs read:**
+  - `README.md` — the exit-status paragraph, in full; the enumeration a reader uses to predict an exit code
+  - `tidy/cli.py` on `wi/BUG-0002` — `return 1 if any(outcome.kind == "failed" for outcome in outcomes) else 0`; nothing distinguishes a partial failure from a total one
+  - `tracker/items/BUG-0002/artifacts/verify-report.md` `## Defects found` item 1 — `verify` looked at this sentence and deliberately did not file it, inviting the review to disagree with the evidence in front of it
+  - `tracker/items/BUG-0001/item.md` AC2 — what the exit-2 half of the paragraph was last made to satisfy
+  - `git log -S"while others were" -- README.md` → `068cecd`, and `git show 49be3d7 -- README.md` — the clause is WI-0001's and survived BUG-0001's rewrite, which is why `found-in` is WI-0001
+  - `docs/architecture/adr/ADR-0006-report-an-unusable-target-at-the-cli-boundary.md` §3 — the exit-code vocabulary is 0, 1 and 2, so a fourth code would need an ADR
+- **Decisions:**
+  - **Filed rather than accepted, disagreeing with `verify`'s recorded judgement.** `verify` reasoned that "some file could not be moved" is *true* in an all-fail run, so the sentence is loose rather than false. That is right about the clause read alone and misses what the paragraph is for: it is an enumeration a reader consults to predict an exit code, and there is a run — reproduced in this execution — whose code it does not let them predict. The disagreement and its reasoning are both in the item's `## Notes`, so a reader can side with `verify` instead.
+  - **`found-in: WI-0001`, not BUG-0001.** BUG-0001 rewrote the exit-2 sentence in the same paragraph and left this clause untouched; WI-0001 delivered both the wording and the exit-1 behaviour it describes.
+  - **Priority `low`.** No behaviour is wrong and nothing a user does breaks; the document is incomplete about one case. BUG-0003 — prose that is actively false after age routing landed — is `medium`, and this ranks below it.
+  - **A regression test is required (AC3) rather than exempted.** The behaviour is reachable through `python3 -m tidy` and was reached in this execution, so `spec/work-item.md` §3's "cannot be tested" exemption does not apply. The `0o500` skip guard is named in the criterion because the existing suite already needs it.
+  - **AC2 pins what must *not* regress.** The natural fix is deleting three words, and a rewrite of the paragraph could easily lose BUG-0001's exit-2 wording; naming BUG-0001 AC2 as the standard makes that checkable.
+- **Questions raised:** none on this item. Two questions were filed on BUG-0002, about `docs/`, and neither concerns this defect.
+- **Commands:**
+  - `mkdir -p .harness/rc/allfail/recent`, two files written, `chmod 0500 .harness/rc/allfail/recent`, then `python3 -m tidy .harness/rc/allfail --apply; echo "EXIT: $?"` → `EXIT: 1` with two `[Errno 13] Permission denied` lines (RB2)
+  - `find .harness/rc/allfail -type f` → both files still at the top level; nothing moved
+  - `chmod 0700 .harness/rc/allfail/recent && rm -rf .harness/rc` → fixture removed
+  - `git log -S"while others were" --oneline -- README.md` → `068cecd`; `git show 49be3d7 -- README.md` → the clause's first appearance (RB4)
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0005 --type bug ... --actor review-close --found-in WI-0001 --arose-from BUG-0002` → exit 0, created at `ready`
+- **Gates:**
+  - `RB1` — steps to reproduce are runnable without further questions → **pass** (five numbered steps, each an exact command, including the cleanup; the platform caveat is stated)
+  - `RB2` — actual behaviour quotes real output → **pass** (the block in `## Actual behaviour` is this execution's terminal output, command and exit code included, not a paraphrase)
+  - `RB3` — expected behaviour cites what it contradicts → **pass** (`README.md`'s exit-status paragraph, quoted; BUG-0001 AC2 for the half that must not regress)
+  - `RB4` — `found-in` names the item that delivered the behaviour → **pass** (`WI-0001`, established from `git log -S` rather than assumed)
+  - `RB5` — a regression test is among the criteria → **pass** (AC3, with the skip condition the existing suite already uses)
+- **Artifacts:**
+  - `tracker/items/BUG-0005/item.md` — created and filled in
+  - `tracker/items/BUG-0005/history.md`, `tracker/items/BUG-0005/journal.md` — created by `new-item`
+- **Status:** `—` → `ready`
+- **Result:** BUG-0005 is filed at `ready`. `README.md`'s exit-status paragraph describes 1 only as the partial-failure code, and a run in which no file moved also exits 1 — reproduced in this execution with a `0o500` destination folder. The bug Definition of Ready passes on all five criteria. It disagrees with a judgement `verify` recorded and explains why, so the stakeholder sees the case at sign-off rather than it resting in a closed item's report.
+
+## 2026-08-27T22:20:01Z — plan v0.3.1 — architect
+
+- **Item:** BUG-0005
+- **Trigger:** `ready` since it was filed by `review-close` on 2026-08-27T20:05:34Z; dispatched by `next` at orchestrator step 5 as the best-keyed runnable item — priority-rank 4 shared with BUG-0006, decided on `created` (20:05:34Z against 21:12:51Z).
+- **Inputs read:**
+  - `tracker/items/BUG-0005/item.md` — the three criteria, the reproduction, and `## Notes`' statement that a distinct exit code would need an ADR; `history.md` (one row, filed at `ready`, so there is no `refinement-qa.md` to read)
+  - `README.md:35` — the live exit-status paragraph, which is **not** the version quoted in the item: WI-0003 extended its exit-2 clause to name `--rules`
+  - `tidy/cli.py` — `main` in full, particularly the closing `return 1 if any(outcome.kind == "failed" …) else 0` and the three `return 2` paths above it
+  - `tests/test_cli.py` — `FallbackExitStatusTests`, both methods, for the probe-based skip guard AC3 points at, and `NothingToDoTests` for the exit-0 cases
+  - ADR-0001 (stdlib only), ADR-0003 (the fallback), ADR-0004 (the test and lint commands), ADR-0006 (exit 2 at the CLI boundary, and its rejection of a new status), ADR-0007 (tagged outcomes and the predicate), ADR-0009 (a `leave` is not a failure)
+  - `docs/architecture/overview.md` v9, to decide whether it needed a version bump — it did not
+  - `tracker/items/BUG-0001/item.md` AC2 and `tracker/items/WI-0003/item.md` AC12, both of which constrain the same paragraph
+  - `tracker/project.yaml`
+- **Decisions:**
+  - **Keep three exit statuses and state 1 as the predicate `cli.py` evaluates — "at least one file that was going to move could not be moved" — rather than adding a fourth status for the all-fail run.** *Decided*, and recorded as **ADR-0012**. This is the one choice in the item that is not an edit: BUG-0005 `## Notes` names the alternative, and adding a number to a contract `README.md` and ADR-0006 both bound to 0, 1 and 2 changes a published interface. ADR-0006 already declined the same growth for the unusable-target case ("the contract grows faster than the tool"), and a script that needs to distinguish "nothing moved" from "some moved" can count the `could not be moved` lines on stderr. The ADR states the cost of that plainly rather than hiding it.
+  - **No production code changes.** *Documented*: `cli.main` ends with a single `any(...)` over `outcome.kind == "failed"`, so 1 has always meant "at least one intended move failed" and the README's "while others were" is a condition the code never evaluated [src: tidy/cli.py; src: ADR-0007]. The behaviour is right; only its description is incomplete.
+  - **Replace the paragraph's third clause only, leaving the rest character-identical.** *Assumed and reversible* (A2). The paragraph is load-bearing for two closed items — BUG-0001 AC2 fixed the exit-2 clause's form, and WI-0003 AC12 requires this paragraph to name `--rules` — so the readable rewrite is the dangerous one: it can satisfy AC1 and AC2 as written while invalidating verification two other items passed. Making the diff one clause turns AC2's check into a diff rather than a re-derivation. This is the risk I would most expect an implementer to walk into, so it is a step, an assumption and a risk rather than a remark.
+  - **The regression test is a new `AllMovesFailExitStatusTests` in `tests/test_cli.py`, built from the item's own reproduction — a band folder at mode `0o500` so every `os.makedirs` fails — with the probe-based skip guard the existing test uses.** *Assumed and reversible* (A1, A3). The guard is copied rather than replaced by an `os.geteuid()` check because AC3 asks it to skip on a non-enforcing filesystem too, which a uid check would not catch.
+  - **`docs/architecture/overview.md` is deliberately not touched.** *Documented*: it describes modules and boundaries, and this item moves neither. A version bump with no substantive change devalues every other one.
+  - **Nothing was asked of the human.** Neither branch-3 condition holds: the decision is not irreversible — rewording again is one paragraph, and ADR-0012 says so — and it depends on no intent the record lacks, because ADR-0006 and ADR-0007 already fix the contract's shape and the predicate.
+- **Questions raised:** none
+- **Commands:**
+  - `grep -n "Exit status" -A6 README.md` → exit 0; the live clause is at `README.md:38-39` and differs from the version BUG-0005 quotes
+  - `grep -n "return " tidy/cli.py` → exit 0, nine hits; the numeric returns are 2, 2, 2, 0, 0 and the final 1-or-0
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 157 tests in 0.162s / OK`
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `.claude/agile-skills/scripts/lint-claims docs/architecture/adr/ADR-0012-…md` → exit 0 after two fixes; the first draft failed on an unsourced "exactly three" and on a `run:` citation whose command contained a `]`, which closes the `[src: …]` marker early — worth knowing before writing another one
+  - `.claude/agile-skills/scripts/lint-claims tracker/items/BUG-0005/artifacts/plan.md` → exit 0 after sourcing three absolute claims
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 1 document
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 10 items, 14 documents
+  - `.claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, 0 errors, 0 warnings)
+  - `every-criterion-is-addressed` → **pass** — the `## Acceptance criteria mapping` table in `plan.md` has one row per AC, each naming a step and a specific demonstration: AC1 → step 2, demonstrated by step 5 running the item's own reproduction and reading the amended clause against it; AC2 → step 2, demonstrated by `git diff README.md` showing exactly one changed clause; AC3 → step 3, demonstrated by `python3 -m unittest tests.test_cli.AllMovesFailExitStatusTests -v` reporting `ok` rather than `skipped`. No AC is demonstrated by "tests"
+  - `project-commands-resolved` → **pass** — `commands.test` and `commands.lint` were already set by ADR-0004 and I ran both in this project during this execution, exit 0 each; neither is a command that exits zero without checking anything, as the 157-test count shows
+  - `decisions-recorded` → **pass** — `plan.md` `## Decisions and ADRs` lists four choices: the exit-status contract points at ADR-0012 (new), "no code changes" points at ADR-0012 `## Decision` and `tidy/cli.py`, and the two remaining choices point at `## Assumptions` A1, A2 and A3, each stating what reversal costs
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0; `plan.md` linted separately, exit 0)
+  - `plan-is-executable-without-you` (advisory) → **pass** — read cold, the plan leaves no decision to the implementer: step 2 gives the replacement clause verbatim, step 3 names the class, the method, the fixture, the guard and the four assertions, and step 4 says what proves the test ran rather than skipped. The one thing it deliberately does not write is the test's code
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0012-exit-1-means-at-least-one-intended-move-failed.md` — created, v1: three options (reword, a fourth status, leave it), decision A, and reversibility stated as cheap for the prose and dearer for the contract
+  - `tracker/items/BUG-0005/artifacts/plan.md` — created; five steps, the AC mapping, three assumptions, four risks and the out-of-scope list
+  - `tracker/board.md` — regenerated
+  - `docs/architecture/overview.md` — **not** updated, deliberately; no version bump
+  - a commit of this execution's tracker and docs files, per `conventions.commit-subject`
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0005 is planned. The fix is one clause of `README.md` plus one regression test, and no production code: `cli.main` already returns 1 on the predicate the new wording states. The only real decision — whether an all-fail run deserves its own exit status — is taken and recorded as ADR-0012, which keeps three statuses and names the cost of doing so. The plan's sharpest instruction is a negative one: change the third clause and nothing else in that paragraph, because BUG-0001 AC2 and WI-0003 AC12 are both verified against the rest of it.
+
+## 2026-08-28T13:21:19Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0005
+- **Trigger:** status `planned`, dispatched by `next` — the highest-ranked runnable item (BUG-0005 and BUG-0006 are both priority `low`, so the key fell to `created`, and 2026-08-27T20:05:34Z precedes 2026-08-27T21:12:51Z).
+- **Inputs read:**
+  - `tracker/items/BUG-0005/item.md` — three acceptance criteria; AC1 the paragraph must account for an all-fail run, AC2 the other three clauses must survive unchanged, AC3 a regression test that skips rather than fails where mode `0o500` is not enforced
+  - `tracker/items/BUG-0005/artifacts/plan.md` — five steps, the AC mapping, assumptions A1-A3, four risks, and the out-of-scope list
+  - `tracker/items/BUG-0005/history.md` — two rows, `— → ready` (review-close, filed against BUG-0002) and `ready → planned` (plan). No send-back, so this is a fresh execution and not a defect fix
+  - `tracker/items/BUG-0005/journal.md` — `plan`'s entry, including its warning that a `run:` citation whose command contains `]` breaks `lint-claims`
+  - `tracker/items/BUG-0005/questions/` — the directory does not exist; no question has ever been filed on this item
+  - `tracker/project.yaml` — `commands.test` and `commands.lint` are both set (ADR-0004), so neither gate will be skipped; branch prefix `wi/`, commit subject `<scope>: <summary> (refs <ITEM-ID>)`
+  - `README.md:35-39` — the live exit-status paragraph, whose third clause is the one thing this item changes
+  - `tests/test_cli.py` — `FallbackExitStatusTests` (lines 419-482), the probe-based skip guard the new test copies, and `tests/support.py` / `tests/cli_support.py` for `FolderTestCase` and `run`
+  - `tidy/apply.py` — the failure messages, to know which one an all-fail run actually emits (`could not create the folder for %s: %s; %s was left where it is`, not `could not be moved`)
+- **Decisions:**
+  - **Branched `wi/BUG-0005` from `main` at `5dc1799` and moved to `in-progress` before writing anything.** The plan changes one prose clause and adds one test; there is no reason to deviate from the branch convention, and moving first is what makes an interruption recoverable.
+  - **No reconciliation was needed.** `git branch` showed no `wi/BUG-0005` before this execution and the history's last row is `plan`'s, so nothing partial exists to reconcile with.
+  - **One thing to settle inside the plan's latitude, noted now and decided at step 3:** the plan's step 3 asks the test to assert "one `could not be moved`-class line per file", but an all-fail run under a `0o500` band folder fails at `os.makedirs`, whose line is `could not create the folder for …; <file> was left where it is`. The plan's own wording says "-class" and forbids asserting the operating system's string, so the assertion will be on a per-file failure line naming the file and saying it was left where it is. That is *how*, not *what*; it will be recorded as a deviation-of-wording in the implementation report if it ends up reading as one.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0005 main` → exit 0, `Switched to a new branch 'wi/BUG-0005'`, head `5dc1799`
+  - `grep -n "Exit status" -A6 README.md` → exit 0, the paragraph is at lines 35-39
+  - `grep -n "could not" tidy/apply.py` → exit 0, five message templates
+- **Gates:**
+  - `tests-pass` → **not yet run** — the completion gates run at step 7, on the branch head after the last change
+  - `lint-clean` → **not yet run** — as above
+  - `workspace-valid` → **not yet run** — as above
+  - `every-criterion-has-a-test` → **not yet run** — as above
+  - `commits-reference-the-item` → **not yet run** — as above
+  - `no-unplanned-scope` (advisory) → **not yet run** — as above
+  - `claims-are-sourced` → **not yet run** — as above
+- **Artifacts:**
+  - branch `wi/BUG-0005`, created from `main` at `5dc1799`; no commit on it yet
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of BUG-0005 has started on `wi/BUG-0005`. Nothing is built yet; this entry records what was read and that the branch exists, so an interruption here leaves a truthful status.
+
+## 2026-08-28T13:24:29Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0005
+- **Trigger:** status `in-progress`, this execution's own opening move; the work of `plan.md` is complete and the completion gates have run on the branch head.
+- **Inputs read:**
+  - `tracker/items/BUG-0005/artifacts/plan.md` — five steps, executed in order
+  - `tracker/items/BUG-0005/item.md` — AC1-AC3, unchanged by this execution
+  - `README.md:35-40` — the exit-status paragraph, before and after the edit
+  - `tests/test_cli.py` — `FallbackExitStatusTests` for the probe-based skip guard, and the module docstring
+  - `tests/support.py`, `tests/cli_support.py` — `FolderTestCase.write`/`make_folder` and the in-process `run`
+  - `tidy/apply.py` — the five failure-message templates, to find which one an all-fail run actually emits
+  - `tidy/cli.py` — the final `return 1 if any(...) else 0`, read to confirm the plan's claim that no code change is needed
+- **Decisions:**
+  - **The replacement clause went in verbatim from the plan, em dash and all.** The plan writes the sentence out in full and this skill does not re-litigate it. The one thing worth flagging — that an em dash inside a clause list already delimited by em dashes can read for an instant as a fourth exit-code clause opening — is written into the implementation report's `## Deviations` rather than acted on, so `verify` and `review-close` can take their own view.
+  - **The test asserts `was left where it is`, not `could not be moved`.** Plan step 3 asks for "one `could not be moved`-class line per file", but an all-fail run under a `0o500` band folder fails at `os.makedirs`, whose message is `could not create the folder for …; <file> was left where it is` — the plan's literal string never appears. Asserting a per-file failure line naming the file is what the step asks for in substance, and the step separately forbids asserting the operating system's wording. Recorded as deviation 1.
+  - **`tests/test_cli.py`'s module docstring gained `and BUG-0005 AC3`.** Not in the plan; the docstring enumerates which criteria the module covers and would have been false without it. Recorded as deviation 2.
+  - **The new test was mutation-checked before it was trusted.** With `cli.main`'s final statement temporarily replaced by `return 0`, the test failed `AssertionError: 0 != 1`; `tidy/cli.py` was then restored from a copy and `git status --porcelain` confirmed it clean. A regression test for behaviour that already works proves nothing until you have seen it go red, and this one exists precisely because the code was not going to change.
+  - **AC1's evidence is the item's own reproduction, not a test.** AC1 is a claim about whether a paragraph lets a reader predict a run's exit code; there is no test function that can decide it. The plan's step 5 says the same, and the report gives the command and its output.
+  - **Nothing outside the plan was fixed.** The `--rules ""` no-op that `review-close` accepted into WI-0003's `## Notes`, and BUG-0006's citation, were both left alone.
+- **Questions raised:** none — nothing in the plan was silent on a decision this skill is not entitled to make. ADR-0012 had already taken the only real one.
+- **Commands:**
+  - `git checkout -b wi/BUG-0005 main` → exit 0, branch created at `5dc1799`
+  - `grep -n "Exit status" -A6 README.md` → exit 0, the paragraph is at lines 35-39
+  - `grep -n "could not" tidy/apply.py` → exit 0, five message templates; none of them is `could not be moved` for the `makedirs` case
+  - `git diff README.md` → exit 0, 5 lines changed, all within the third clause and the reflow it forced
+  - `python3 -m unittest tests.test_cli.AllMovesFailExitStatusTests -v` → exit 0, `… ok` (**not** `skipped`)
+  - mutation check: `cli.main`'s `return 1 if any(...) else 0` → `return 0`, same `-v` run → `FAILED (failures=1)`, `AssertionError: 0 != 1`; `tidy/cli.py` restored, `git status --porcelain tidy/cli.py` → empty
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 158 tests in 0.167s / OK` (157 before this item)
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - the item's `## Steps to reproduce`, steps 1-4 → `EXIT: 1`, `find` showing `doc.pdf` and `photo.jpg` still at the top level, then cleaned up with `chmod 0700` and `rm -rf .harness/rc`
+  - `git commit` → exit 0, `05be040 docs: say exit 1 covers an all-fail run, and pin it with a test (refs BUG-0005)`
+  - `.claude/agile-skills/scripts/check-commit-refs BUG-0005 wi/BUG-0005` → exit 0, `all 1 commit(s) on main..wi/BUG-0005 name BUG-0005`
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked no documents changed since main`
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 10 items, 14 documents, 0 errors, 0 warnings
+- **Gates:** all seven run on the branch head `05be040`, after the last change.
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` exit 0, `Ran 158 tests / OK`)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, 0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass** — AC3 is `tests.test_cli.AllMovesFailExitStatusTests.test_a_run_in_which_every_move_fails_exits_1`, shown `ok` under `-v` and shown red under a mutation of the predicate it tests. AC1 and AC2 are claims about prose, so each names an exact command and its output instead: AC1 the item's reproduction (`EXIT: 1`, both files unmoved) read against the amended clause, AC2 `git diff main..wi/BUG-0005 -- README.md` showing one clause changed. Neither is demonstrated by reading the code
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 1 commit). It failed at step 3, correctly and unavoidably: the branch had no commits yet, so `main..wi/BUG-0005` was empty and the script reported the branch as already merged. `transition` states in its own output that `implement` gates only its completion move, so it did not block the opening transition
+  - `no-unplanned-scope` (advisory) → **pass** — `git diff main..wi/BUG-0005 --stat` is `README.md 5 +++--` and `tests/test_cli.py 52 +++`. Every hunk traces to a plan step: README to step 2, the test class to step 3, the docstring line to deviation 2. Nothing under `tidy/` is in the diff
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0). The gate is scoped to headed documents under `docs/` and this branch changes none, so it is a pass on an empty set; `README.md` is not a headed document and is not linted by it. Stated plainly because "0 errors on 0 documents" is weaker evidence than it looks
+- **Artifacts:**
+  - `README.md` — the third clause of the exit-status paragraph replaced; nothing else in the paragraph changed
+  - `tests/test_cli.py` — `AllMovesFailExitStatusTests` added after `FallbackExitStatusTests`, and the module docstring extended by `and BUG-0005 AC3`
+  - `tracker/items/BUG-0005/artifacts/impl-report.md` — created: what was built, the AC evidence table, two deviations, the seven gates, and six things deliberately not done
+  - branch `wi/BUG-0005`, commit range `main..wi/BUG-0005` = `05be040` (one commit, from `5dc1799`)
+  - `tracker/board.md` — regenerated by the transitions
+- **Status:** `in-progress` → `verifying`
+- **Result:** BUG-0005 is implemented in one commit: the README's exit-1 clause now covers the all-fail run explicitly, and `AllMovesFailExitStatusTests` pins the behaviour it describes. No production code changed, so the new test was mutation-checked rather than trusted. Two wording deviations from the plan are recorded, and one observation the plan's own text invites — the internal em dash — is left for `verify` to judge rather than silently repaired.
+
+## 2026-08-28T13:29:57Z — verify v0.1.4 — qa-engineer
+
+- **Item:** BUG-0005
+- **Trigger:** status `verifying`, dispatched by `next` as the highest-ranked runnable item (BUG-0005 and BUG-0006 are both priority `low`; `created` decided it).
+- **Inputs read:**
+  - `tracker/items/BUG-0005/item.md` — AC1-AC3, read **first** and used to derive what would settle each one before any artifact describing the change was opened
+  - `tracker/items/BUG-0005/history.md` — three rows; the last is `in-progress → verifying`, so this is a first verification and not a re-check after a send-back
+  - `tracker/items/BUG-0005/artifacts/plan.md` — five steps, three assumptions, four risks, the out-of-scope list; read to know what the diff should and should not contain
+  - `tracker/items/BUG-0005/artifacts/impl-report.md` — the claims to check, not to cite
+  - `tracker/items/BUG-0005/questions/` — does not exist; no question has been filed on this item
+  - the code at `wi/BUG-0005` head `4835edfcb24c8af424332b754298ea19e704f3d8` — `README.md:35-40`, `tests/test_cli.py` (`AllMovesFailExitStatusTests` and `FallbackExitStatusTests`), `tidy/apply.py:38-89` (all five failure outcomes), `tidy/cli.py:114`
+  - `tracker/items/BUG-0001/item.md` AC2 and `tracker/items/WI-0003/item.md` AC12 — the two closed criteria AC2 is checkable against
+  - `tracker/project.yaml` — the two commands this skill ran itself
+  - no `refinement-qa.md` on this item; no criterion's wording was contested
+- **Decisions:**
+  - **AC2 was verified as a claim about behaviour, not only as a claim about a diff.** The criterion says the other three codes must still be described *correctly*, and a diff can only establish *unchanged*. So every status the paragraph enumerates was produced on this branch — all four exit-2 cases, both exit-0 cases, and a partial failure — and each was checked against what the paragraph promises. The word-diff was run as well, to show the descriptions are untouched, but it is the second half of the evidence rather than the whole of it.
+  - **AC3's skip guard was attacked, not read.** The half of AC3 that is easy to assert and hard to demonstrate is "skips rather than fails". Changing the test's own `os.chmod(band, 0o500)` to `0o700` makes the probe write succeed, which is exactly the condition the guard exists for; the test reported `skipped` and the run stayed `OK`. Without that, AC3's second clause would have been verified by reading the guard's source, which is what this skill is not for.
+  - **Two mutations rather than one.** The obvious one — `return 0` in place of the exit predicate — proves the status assertion is live. The second, relaxing the blocking mode, proves the test cannot pass for the wrong reason if its fixture stops biting. Both files were restored and `git status --porcelain` confirmed clean after each.
+  - **The 0-clause phrase collision was examined and deliberately not filed.** `tidy/apply.py:46` prints `… ; %s was left where it is` on a run that exits 1, and the README's 0 clause says `0 on success — including … when some files were left where they are`. A reader matching on that phrase could reach 0 for a run that exits 1. Not a defect: the clause is governed by "on success", its "including" items elaborate what success is rather than triggering independently, and nothing in it is false — which is the bar. Not a send-back either: AC2 and `plan.md` step 2 both forbid this item from touching the 0 clause, because BUG-0001 AC2 and WI-0003 AC12 are verified against it, so BUG-0005 could not have fixed it. Recorded in `verify-report.md` `## Defects found` with its provenance (`1156654` for the phrase, `49be3d7` for the message) so `review-close` can take a different view with the evidence in front of it, exactly as BUG-0002's verification did on the sentence that became this item.
+  - **The copied-but-not-removed outcome was checked against the new wording and found sound.** That outcome is `kind="failed"`, so the run exits 1 while the file *is* at its destination, which reads oddly against "a file that was going to move could not be". ADR-0007 and the comment at `tidy/apply.py:64-66` both hold that a file at its destination and still at its source is a duplicate rather than a completed move. The old wording had the identical property, so this item neither introduced nor worsened it. Recorded rather than raised.
+  - **No question was filed.** No criterion was ambiguous: AC1 and AC2 name the checks they want, and AC3 names the existing test its guard must imitate.
+  - **The report declares that implementation and verification ran in the same session.** That is a property of how this pipeline is being driven, not a choice made here, and an undeclared version of it would let a reader credit the record with more independence than it has. Every command was re-run and its real output quoted, and AC2's and AC3's checks were built to differ from the ones the implementation report used.
+- **Questions raised:** none
+- **Commands:** all run at `4835edf`, the branch head.
+  - `git rev-parse HEAD` → `4835edfcb24c8af424332b754298ea19e704f3d8`; `git branch --show-current` → `wi/BUG-0005`
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 158 tests in 0.160s / OK`
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - AC1: the item's reproduction rebuilt under `.harness/vfy/allfail`, `python3 -m tidy .harness/vfy/allfail --apply` → `EXIT: 1`, two `could not create the folder …; <file> was left where it is` lines; `find` → both files still at the top level
+  - AC2: `python3 -m tidy .harness/vfy/empty --apply` → `Nothing to do…`, `EXIT: 0`; `.../leaves` with `notes.xyz` + `photo.jpg` → `leave` + `move`, `EXIT: 0`; `.../nosuch` → `is not a folder`, `EXIT: 2`; `.../afile` (a regular file) → `is not a folder`, `EXIT: 2`; `.../unreadable` at `chmod 000` → `cannot be read: Permission denied`, `EXIT: 2`; `--rules .harness/vfy/bad.ini` (no section headers) → `cannot be used: File contains no section headers…`, `EXIT: 2`; `.../partial` with `recent/documents` at `0o500` → `doc.pdf could not be moved to …`, `EXIT: 1`, `photo.jpg` landed
+  - AC2: `git diff --word-diff=plain main..wi/BUG-0005 -- README.md` → exit 0; every changed word inside the third clause, the 0 and 2 clauses and the closing sentence word-identical
+  - AC3: `python3 -m unittest tests.test_cli.AllMovesFailExitStatusTests -v` → exit 0, `… ok` (not `skipped`)
+  - AC3: same test with the fixture's mode relaxed to `0o700` → `… skipped '…does not enforce the mode'`, `OK (skipped=1)`; `tests/test_cli.py` restored, `git status --porcelain` empty
+  - AC3: same test with `tidy/cli.py:114` replaced by `return 0` → `FAILED (failures=1)`, `AssertionError: 0 != 1`; `tidy/cli.py` restored, `git status --porcelain` empty
+  - `git blame -L 35,36 main -- README.md` → `1156654` (BUG-0004) and `fbf23de` (WI-0003); `git log -L 35,36:README.md` → the four commits that touched those lines
+  - `git diff main..wi/BUG-0005 --stat` → `README.md | 5`, `tests/test_cli.py | 52`; nothing under `tidy/`
+  - `chmod -R 0700 .harness/vfy; rm -rf .harness/vfy` → fixtures removed; `git status --porcelain` empty
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 10 items, 14 documents, 0 errors, 0 warnings
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` exit 0, `Ran 158 tests / OK`; the count matches the implementation report's, so its gates were not run against an earlier state)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** — every row of `## Criteria` names a command run in this execution and quotes its actual output; no row cites `impl-report.md`. AC1 is the item's own reproduction, AC2 is seven runs of the tool plus a word-diff, AC3 is three runs of the test under three different conditions
+  - `negative-cases-exercised` → **pass** — nine cases triggered, each with its output in `## Negative and boundary cases exercised`: an all-fail run, a partial-failure run, an empty folder, a run that leaves a file, a missing path, a regular file, an unreadable folder, an unusable `--rules` file, and the test's own skip guard
+  - `tests-would-fail-without-the-change` (advisory) → **pass** — two independent mutations, both restored: the exit predicate → `AssertionError: 0 != 1`; the fixture's blocking mode → `skipped`, not a spurious pass
+- **Artifacts:**
+  - `tracker/items/BUG-0005/artifacts/verify-report.md` — created, with `Verified-commit: 4835edfcb24c8af424332b754298ea19e704f3d8`, the three criteria rows, the six gates, nine negative cases, the sensitivity check, two examined-and-not-filed findings, and five declared gaps
+  - `tracker/items/BUG-0005/item.md` — AC1, AC2 and AC3 ticked, each against the evidence in its row
+  - no bug items filed — see `## Defects found` for the one candidate and why it is not one
+  - a commit of this execution's tracker files, per `conventions.commit-subject`
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0005 passes all three criteria on evidence gathered here. The README's exit-1 clause now names the all-fail run, the other three descriptions are word-identical and were each re-confirmed against a real run, and the regression test both fails when the behaviour is removed and skips when its fixture stops biting. One prose collision — the 0 clause's "left where they are" being the exact phrase a failing run prints — was examined, judged not a defect and not this item's to fix, and recorded with its provenance for `review-close`.
+
+## 2026-08-28T13:35:23Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0005
+- **Trigger:** status `in-review`, dispatched by `next` as the highest-ranked runnable item (BUG-0005 and BUG-0006 are both priority `low`; `created` decided it).
+- **Inputs read:**
+  - `tracker/items/BUG-0005/item.md` — three ticked criteria, `found-in: WI-0001`, `arose-from: BUG-0002`, `branch: wi/BUG-0005`
+  - `tracker/items/BUG-0005/history.md` — five rows, chaining without a gap; the last matches the item's status
+  - `tracker/items/BUG-0005/journal.md` — read in full, all five entries: `review-close v0.5.0` filing the item, `plan v0.3.1`, `implement v0.2.2` twice, `verify v0.1.4`
+  - `tracker/items/BUG-0005/artifacts/plan.md` — five steps, the AC mapping, A1-A3, four risks, the out-of-scope list
+  - `tracker/items/BUG-0005/artifacts/impl-report.md` — two declared deviations and six things not done
+  - `tracker/items/BUG-0005/artifacts/verify-report.md` — three criteria rows, nine negative cases, two mutations, two examined-and-not-filed findings, five declared gaps
+  - `tracker/items/BUG-0005/questions/` — did not exist before this execution
+  - the diff `main..wi/BUG-0005`, hunk by hunk: `README.md:38-40`, `tests/test_cli.py:1-5` and `tests/test_cli.py:485-534`
+  - `docs/architecture/adr/ADR-0012-…md` in full, plus ADR-0003, ADR-0006, ADR-0007 and ADR-0009 for contradictions, and `docs/architecture/overview.md:48-68` and `:133` for D7
+  - `tidy/cli.py:105-120` and `tidy/apply.py:38-89` — opened to audit ADR-0012's claims against the code rather than against the sentences
+  - `tracker/items/BUG-0001/item.md` AC2 and `tracker/items/WI-0003/item.md` AC12 — the two closed criteria the untouched half of the paragraph is verified against
+- **Decisions:**
+  - **D12 fails, and it fails on this item's own ADR rather than on the change.** ADR-0012 (`status: current`, `updated-for: BUG-0005`) says twice — in `## Consequences` and inside option B's rejection — that a script can tell an all-fail run from a partial one by counting `could not be moved` lines on stderr. `tidy/apply.py` has five distinct `Outcome("failed", …)` messages and one contains that string; the all-fail run fails at `os.makedirs` and emits none of it. Run here: the run exits 1, nothing moved, and `grep -c "could not be moved"` on its stderr returns `0`. The advice returns the inverse of the truth in the exact scenario the ADR exists to describe. This is the failure mode `spec/dor-dod.md` §3 gives as D12's whole reason for existing.
+  - **Escalated rather than repaired, and rather than sent back.** Correcting a factual clause of a current ADR in place is established here (BUG-0002/Q-002), but the second occurrence is part of why option B was rejected, so reweighing it touches the reasoning behind decision A — the architect's, not the reviewer's; "you do not supersede decisions". A send-back to `in-progress` would be wrong twice over: `implement` does not own ADRs, and there is nothing wrong with the code or the README clause. `Q-001` filed to the architect, `blocking: true`, with four options and a recommendation.
+  - **Not merged, and no trial merge run.** Step 8 follows an acceptance and step 7 did not produce one. `main` is unmoved at `5dc17990df42c2a12664225bca0e77ee1e14b4d3`, and the branch is intact at `dd49e59550ca20f6eeb77044036553105dff088d`. Reaching for the merge first is exactly what deadlocks the close.
+  - **The other six absolute claims in ADR-0012 were audited from their citations and all hold.** Including the one most likely to have rotted: `grep -n "return " tidy/cli.py` returns nine hits with numeric returns `2, 2, 2, 0, 0` and the final 1-or-0, character-for-character what the citation asserts, so "exactly three exit statuses" is true. `cli.py:114` is `main`'s last statement and matches the quoted predicate.
+  - **D7 passes without a version bump.** `docs/architecture/overview.md`'s exit-status sentences are about ADR-0003's fallback and the two error boundaries; none describes `README.md`'s paragraph, and `only a "failed" outcome makes the process exit non-zero` is still true against `cli.py:114`. `plan` predicted this and deliberately did not touch the overview; a bump with nothing behind it devalues every other one.
+  - **Three findings, one blocking.** F1 is the ADR claim. F2 — the new test class's docstring quotes the README clause verbatim and can drift — is accepted: the project's answer to that class of risk (derive the expectation from what the tool routes by, as the help-text test does) does not transfer to a docstring, and the cost is a stale comment, not a test that passes wrongly. F3 — the 0 clause and a failing run sharing "left where they are" — was raised by `verify`, re-checked here, and I reach the same conclusion: governed by "on success", nothing false, and forbidden to this item by AC2 anyway.
+  - **All four accepted gaps are written into `review.md` `## Accepted gaps`** and are to go into the item's `## Notes` at close, because a gap that lives only in a report is forgotten the moment the item is `done`.
+  - **The clause's internal em dash is accepted, not repaired.** `implement` flagged it rather than silently changing it, which was the right call; it is the architect's wording, delivered verbatim as the plan demanded, and AC1 asks only that a reader can predict the exit code.
+- **Questions raised:** Q-001 (blocking, to the architect) — how to correct ADR-0012's two `could not be moved` sentences, and whether the correction weakens option B's rejection enough to need more than a version bump.
+- **Commands:**
+  - `.claude/agile-skills/scripts/check-verify-freshness BUG-0005 wi/BUG-0005` → exit 0, `verified at 4835edfc; wi/BUG-0005 has moved to dd49e595 but only the record changed (5 file(s) under tracker/ or docs/), so the verification still covers the code`
+  - `.claude/agile-skills/scripts/check-commit-refs BUG-0005 wi/BUG-0005` → exit 0, `all 4 commit(s) on main..wi/BUG-0005 name BUG-0005`
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked no documents changed since main`
+  - `.claude/agile-skills/scripts/check-epic-signoff BUG-0005` → exit 0, `BUG-0005 is a 'bug', not an epic — the termination gate applies to an engagement's ending only. PASS.`
+  - `git diff main..wi/BUG-0005 -- README.md tests/test_cli.py` → exit 0, three hunks; `--stat` → `README.md | 5`, `tests/test_cli.py | 52`, nothing under `tidy/`
+  - `grep -c "^- \[ \]" tracker/items/BUG-0005/item.md` → `0` unticked criteria
+  - `grep -n "^## 2026" tracker/items/BUG-0005/journal.md` → five entries, matching the five history rows
+  - `grep -n "return " tidy/cli.py` → exit 0, nine hits — ADR-0012's own cited command, re-run
+  - `sed -n 105,120p tidy/cli.py` → `return 1 if any(outcome.kind == "failed" …) else 0` is `main`'s last statement
+  - `grep -c "could not be moved" tidy/apply.py` → `1`, against five `Outcome("failed", …)` messages
+  - the all-fail run rebuilt under `.harness/rv/allfail`: `python3 -m tidy … --apply 2>err.txt` → `EXIT: 1`; `grep -c "could not be moved" err.txt` → `0`; stderr carries two `could not create the folder for …; <file> was left where it is` lines. Fixtures removed with `chmod -R 0700 .harness/rv; rm -rf .harness/rv`
+  - `git rev-parse main` → `5dc17990df42c2a12664225bca0e77ee1e14b4d3`; `git rev-parse wi/BUG-0005` → `dd49e59550ca20f6eeb77044036553105dff088d`
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0 before the question was filed; afterwards it reported `question.blocking.not-suspended`, which this execution's transition resolves
+  - `git worktree add --detach …` → **not run**; see `tests-pass-on-the-merge-result`
+- **Gates:**
+  - `definition-of-done` → **fail** — walked D1-D12 individually with evidence for each, in `review.md` `## Definition of Done`. Ten pass, D9 is not reached (no acceptance, so no merge), and **D4 and D12 fail**: D12 on ADR-0012's `could not be moved` claim, D4 as the direct consequence of the question D12 required
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; the script itself distinguished record-only commits from code, so D10 was run rather than judged by eye)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 4 commits)
+  - `tests-pass-on-the-merge-result` → **not run**, deliberately, and this is not a silent skip. The trial merge is step 8, which follows an acceptance; step 7 did not produce one. Running a trial merge over a failed D12 would put a merge result on record for a change that is not being merged, and `main` must stay where it is. It will run when the question is answered and the review resumes
+  - `workspace-valid` → **pass** — exit 0 at the start of this execution and again after the transition; between filing `Q-001` and transitioning it reported `question.blocking.not-suspended`, which is the validator correctly describing an item that has an open blocking question and has not yet been suspended, and which the transition in this command resolves
+  - `record-is-reconstructible` → **pass** — from `tracker/`, `docs/` and `git log --grep BUG-0005` alone I can answer all four. *What was built and why*: `impl-report.md` `## What was built` and the item's `## Summary`. *Which skill decided what*: `plan`'s journal entry and `plan.md` `## Decisions and ADRs` take the exit-status decision to ADR-0012; `implement`'s two entries record the branch and the two wording deviations; `verify`'s records the checks and the two examined-and-not-filed findings. *What questions arose and how they were resolved*: none until this execution, and `Q-001` is open with its context, four options and a recommendation. *What verification found*: `verify-report.md`, with a `Verified-commit` line, real output per criterion and five declared gaps
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0). Recorded plainly: the gate is scoped to headed documents under `docs/` and this branch changes none, so it is a pass on an empty set. It is also the gate that cannot catch F1 — `lint-claims` proves a citation resolves, and D12's read is what says whether it *supports* the sentence. Here the citations resolved and the sentence was still false, which is the division of labour working as `spec/dor-dod.md` §3 describes it
+  - `epic-sign-off` → **pass** (`check-epic-signoff BUG-0005` exit 0 — not an epic). No engagement decision was due: `next` reported EP-001 `active`, with BUG-0005 and BUG-0006 still in flight, and this execution leaves it active
+- **Artifacts:**
+  - `tracker/items/BUG-0005/artifacts/review.md` — created: what was examined (including the six-claim ADR audit table), the twelve Definition of Done rows, three findings, four accepted gaps, and a verdict that says what was deliberately not done
+  - `tracker/items/BUG-0005/questions/Q-001.md` — created, `blocking: true`, `addressed-to: architect`, four options and a recommendation
+  - `tracker/board.md` — regenerated
+  - **no merge**; `main` unmoved at `5dc1799`; branch `wi/BUG-0005` intact at `dd49e595`
+  - no bug item filed — F2 and F3 are accepted gaps on this item, not defects belonging elsewhere
+  - a commit of this execution's tracker files, per `conventions.commit-subject`
+- **Status:** `in-review` → `awaiting-answer`
+- **Result:** The change is good and I would merge it; the ADR it produced is not yet true, so it is not merged. D12's audit — opening what each claim cites instead of reading the sentence — found that ADR-0012 twice tells a reader to count a stderr line the run it describes never prints, and that the second occurrence props up the rejection of option B. Ten Definition of Done criteria pass, D9 is not reached, and D4 and D12 fail. `Q-001` is with the architect; the review resumes at step 8 once its consequence has reached ADR-0012.
+
+## 2026-08-28T13:43:06Z — answer-questions v0.3.1 — architect
+
+- **Item:** BUG-0005
+- **Trigger:** `awaiting-answer` since `review-close` filed Q-001 against D12; dispatched by `next` step 4, Q-001 being the only open question in the workspace and addressed to the architect.
+- **Inputs read:**
+  - `tracker/items/BUG-0005/questions/Q-001.md` — the only question on the item; its context, four options and recommendation
+  - `tracker/items/BUG-0005/item.md` (three criteria, all ticked), `history.md` (six rows; the suspending row carries `resume-to: in-review`), `journal.md` (`plan`'s decision entry, `implement`'s deviation 1, `review-close`'s D12 entry)
+  - `tracker/items/BUG-0005/artifacts/review.md` — the D12 claim-audit table, to see which claims were already checked and which were not; `plan.md` step 3, for its "`could not be moved`-class line" wording
+  - `docs/architecture/adr/ADR-0012-…md` v1 — the whole document, both occurrences of the claim, and the six other absolute claims the review audited
+  - `docs/architecture/adr/ADR-0006-…md` v2 — `ADR-0006:51-52`, to confirm the "the contract grows faster than the tool" quote option B rests on; and `:26-29`, found while grepping
+  - `tidy/apply.py` (all five `Outcome("failed", …)` messages and the `fell-back` one), `tidy/cli.py` (what reaches stdout and stderr, and in what order)
+  - `tracker/items/BUG-0002/questions/Q-002.md` and `tracker/items/BUG-0004/questions/Q-001.md`, `Q-002.md` — the precedents for correcting a factual clause of a `status: current` ADR in place
+  - `spec/doc-header.md` §2-§4, `spec/question.md` §4
+- **Decisions:**
+  - **Q-001 answered: option A, but not with the replacement wording the review proposed — ADR-0012 corrected in place at v2, both sentences, no supersession.** *Decided*, on the record's own precedent: `spec/doc-header.md` §4's "never edited" rule is about the **decision**, §3 requires every content change to bump the version and add a change-log row, and BUG-0002/Q-002 and BUG-0004/Q-001 both settled exactly this. No escalation: none of `spec/question.md` §4's four conditions applies — the decision does not move, the edit reverses in one commit, no ADR is contradicted, the record is not silent.
+  - **The review's own proposed replacement was rejected because it is false in the same way.** It recommended "count the failure lines `tidy` prints on stderr — there is one per file that could not be moved". Two things checked here rather than read: no phrase runs through all five failure messages (`was left where it is` in three, `could not` in three, not the same three), and the failure lines are not alone on stderr. Forcing the mixed case — one `os.makedirs` denial plus an injected `os.link` refusal — gave three `tidy: ` lines for a run in which one of two files moved: the banner, one failure, and ADR-0003's fall-back notice, which reports a **success**. Repairing a false line count with a second false line count would have left D12 where it found it.
+  - **The replacement names an observable that exists:** stdout carries one `move` line per intended move, printed before anything is attempted, so a script reads those and then looks at the folder — every source named in a `move` line that is still where it was is a file the run did not move away. Confirmed on the all-fail run the ADR is about. The ADR now also names the one case that reading does not separate (`tidy/apply.py:67` — a copy landed and the original could not be removed).
+  - **Second half of the question — no, a version bump is enough.** Option B's rejection was never carried by the workaround: the load-bearing argument is ADR-0006's, quoted correctly and verified at `ADR-0006:51-52`. The workaround is a secondary argument and it is dearer than v1 implied, so option B's risk clause now rests on ADR-0006 and states the real cost — and states in terms that this is a weaker case against B than v1 recorded, so that a later reader who judges a per-file check too dear can reopen B on that ground honestly instead of finding the ground was never there. Recording a weakened argument as weakened is the correction; concealing it would be a second defect.
+  - **A stale paraphrase in ADR-0006 `## Context` was found and deliberately not edited.** `ADR-0006:26-29` paraphrases `README.md`'s exit-status contract in words that match neither the exit-2 clause (since BUG-0001) nor the exit-1 clause (since BUG-0005), under a `[src: README.md]` that resolves and no longer supports it. It is genuinely ambiguous: the paragraph narrates the world as it stood while BUG-0001 was open, which is what a context section is for and what §4 preserves, so D12 may well hold. That call is D12's, which is `review-close`'s gate and not this skill's; it is recorded in Q-001's `## Consequences` with both readings so the second D12 pass decides it rather than missing it. Editing another item's ADR context on my own reading, inside an answer to an unrelated question, would have been the over-reach.
+  - No acceptance criterion was amended, no bug filed, no scope widened: nothing in `README.md` or `tidy/` is affected, and the delivered clause says nothing about stderr.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m tidy .harness/aq/allfail --apply` with the band folder at `0500` → exit 1; stdout two `move` lines; stderr the banner and two `could not create the folder for …; <file> was left where it is` lines; `find -maxdepth 1 -type f` → both sources still at the top level. The evidence for the replacement observable
+  - the same folder shape with `os.link` monkeypatched to raise `OSError(18)` and `recent/documents` at `0500` → exit 1; three `tidy: ` lines on stderr (banner, `doc.pdf could not be moved to …`, `photo.jpg was moved … without a hard link`); `doc.pdf` still at the top level, `photo.jpg` gone. The evidence that a line count over-counts
+  - `grep -n 'Outcome("failed"' tidy/apply.py` → exit 0, five hits (`:45, :54, :66, :79, :85`)
+  - `grep -n "contract grows faster" docs/architecture/adr/ADR-0006-…md` → exit 0, line 52 — option B's quote is accurate
+  - `grep -rn "could not be moved" docs/` → five hits: three in ADR-0012 that are the README clause being quoted, the corrected change-log row, and `ADR-0006:28`
+  - `python3 .claude/agile-skills/scripts/lint-claims --root . --all` → exit 0, 0 errors, 0 warnings (run after the edit, on the whole tree)
+  - fixtures removed: `chmod -R 0700 .harness/aq; rm -rf .harness/aq` and the four capture files; `git status --short` clean of them
+- **Gates:**
+  - `answered-from-the-record` → **pass** (the mechanism from `spec/doc-header.md` §3-§4 and the two precedents BUG-0002/Q-002 and BUG-0004/Q-001, both cited in the answer; the facts from `tidy/apply.py`, `tidy/cli.py` and two runs, not from reading the prose. No new decision, so no new ADR — the existing one is corrected and its change log says what was wrong)
+  - `answer-is-propagated` → **pass** (each of the three files in `## Consequences` opened after the edit: ADR-0012 carries `version: 2`, `updated-by: answer-questions`, `updated: 2026-08-28T13:39:28Z`, change-log row 2, the rewritten `## Consequences` bullet and the rewritten option B risk clause; Q-001 carries the answer and the stamps; this row and this entry are the third)
+  - `escalation-is-justified` → **skipped** — nothing was escalated. The answer states which of `spec/question.md` §4's four conditions were considered and why none applies
+  - `a-deferral-is-not-an-answer` → **skipped** — no reply deferred; Q-001 is architect-addressed and was decided here
+  - `item-resumed-correctly` → **pass** (`resume-to: in-review` on the suspending row of 2026-08-28T13:35:23Z; the transition target is `in-review`)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 after the transition; it failed before it with `board.stale` and `question.awaiting.none-open`, both of which the transition and `board-gen` resolve)
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0012-exit-1-means-at-least-one-intended-move-failed.md` — v1 → **v2**. `## Consequences` bullet 2: the "must count the `could not be moved` lines on stderr" sentence replaced with why stderr will not answer the question and with the stdout-plus-filesystem observable that does, including the case it does not separate. `## Options considered`, option B's risk: the workaround clause rewritten to rest on ADR-0006, with the real cost of the workaround and the weakening recorded. Frontmatter and change-log row 2
+  - `tracker/items/BUG-0005/questions/Q-001.md` — `status: answered`, `answered-at: 2026-08-28T13:41:30Z`, `answered-by: answer-questions`; `## Answer` and `## Consequences` written, the latter naming three files and the ADR-0006 observation
+  - `tracker/items/BUG-0005/history.md`, `tracker/items/BUG-0005/journal.md` — this row and this entry
+  - `tracker/board.md` — regenerated
+  - one commit on `wi/BUG-0005` naming BUG-0005, containing only `tracker/` and `docs/`
+- **Status:** `awaiting-answer` → `in-review`
+- **Result:** ADR-0012 is at v2 and both false sentences are gone: the ADR now tells a reader to compare stdout's `move` lines with the folder rather than to count stderr lines that no run emits, and option B's rejection rests on ADR-0006's contract-growth argument with the workaround's real cost stated and its weakening recorded. The review's own suggested replacement was tested and rejected — it fails the same way — which is why the corrected wording is not the one Q-001 recommended. Decision A, the three exit statuses and BUG-0005's delivered `README.md` clause are all untouched, and the item returns to `in-review` for `review-close` to re-run D12, with one further stale paraphrase in ADR-0006 `## Context` handed to it in writing rather than decided here.
+
+## 2026-08-28T13:47:59Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0005
+- **Trigger:** `in-review` — round 2 of this review, resumed after `answer-questions` answered `Q-001` and corrected ADR-0012 to v2; dispatched by `next` step 5 (BUG-0005 and BUG-0006 both `low`, so `created` decided).
+- **Inputs read:**
+  - `tracker/items/BUG-0005/item.md`, `history.md` (6 rows before this one), `journal.md` (6 entries, read in full including `answer-questions`' entry from this turn), `artifacts/plan.md`, `artifacts/impl-report.md`, `artifacts/verify-report.md`, `artifacts/review.md` round 1
+  - `tracker/items/BUG-0005/questions/Q-001.md` — the answer and its `## Consequences`, including the ADR-0006 observation handed to this round
+  - the diff `git diff main...wi/BUG-0005`, hunk by hunk: `README.md` (1 hunk), `tests/test_cli.py` (2 hunks), `docs/architecture/adr/ADR-0012-…md` (v1 → v2), and tracker files. Nothing under `tidy/`
+  - `docs/architecture/adr/ADR-0012-…md` v2 in full; `ADR-0006-…md:26-29` and `:51-52`; `docs/architecture/overview.md:57-61, :67, :133`
+  - `tidy/apply.py` (all six outcome messages and the `os.unlink` branch), `tidy/cli.py` (the stdout write loop's position relative to `apply_plan`, and the last statement)
+  - `tracker/items/BUG-0004/` — how a two-round review recorded its merge, for the shape of this entry
+- **Decisions:**
+  - **Accept and merge.** Twelve of twelve Definition of Done criteria pass on the final state, walked one by one with their own evidence in `review.md` `## Definition of Done — round 2`. Round 1's D4 and D12 failures are both closed and D9 is now reached.
+  - **D12 re-audited from the citations, not from the answer.** Seven claims in ADR-0012 v2, each decided by opening the cited code or running the cited command: the phrase counts in `apply_plan`'s five failure messages (`:46, :55, :80` and `:46, :67, :86`), the interleaving on stderr, the stdout `move` lines' position, the all-fail observable, the `os.unlink` caveat, ADR-0006's quote at `:51-52`, and the workaround's real cost. All seven hold. The six v1 claims the edit did not touch were re-read and still stand.
+  - **A finding against round 1 of this review, accepted.** `Q-001` did not take the replacement wording round 1 recommended, and was right not to: "count the failure lines `tidy` prints on stderr" is false in a second way round 1 never tested. Demonstrated again here — the mixed run (`recent/documents` at mode `0500`, `os.link` monkeypatched to raise `OSError(18)`) prints **three** `tidy: ` lines for a run in which **one of two** files moved: the banner, one failure, and ADR-0003's fall-back line, which reports a success. Round 1 checked that its target string was absent and did not check that its own replacement was present; that is recorded in `review.md` F1 rather than quietly fixed.
+  - **F4 — `ADR-0006:26-29` — examined and not filed.** The architect found it while answering and handed it here in writing rather than editing another item's ADR on their own reading, which was the right division: D12 is this skill's gate. Judged **not** a defect: the sentence continues "and the current exit 1 contradicts it, because no file failed to move", which is the BUG-0001 defect ADR-0006's own decision removed, so the paragraph cannot be read as a description of today. It is `## Context` narrating the state at decision time, which `spec/doc-header.md` §4 preserves. Distinguished from BUG-0004/Q-002, which corrected ADR-0009's citations precisely because those were pointers a reader follows rather than a record of a past belief. Recorded as accepted gap 5 in `item.md` `## Notes`, with what would change the verdict (a `ways-of-working` convention on ADR tense, which no document in this project yet states).
+  - **Round 1's four accepted gaps carried unchanged** and written into `item.md` `## Notes` on close, so none of the five survives only inside a report.
+  - No bug filed, no send-back, no criterion amended, no ADR edited by this skill.
+- **Questions raised:** none
+- **Commands:**
+  - `grep -n "was left where it is\|could not\|was moved to" tidy/apply.py` → exit 0, six messages at `:46, :55, :67, :80, :86, :89`; `grep -c` each phrase → `3` and `3`
+  - `python3 -m tidy .harness/rv2/allfail --apply` with the band folder at `0500` → exit 1; stdout two `move` lines; both sources still at the top level; `recent/` still empty — the run ADR-0012 v2 cites, reproduced
+  - the mixed run with `os.link` monkeypatched to `OSError(18)` and `recent/documents` at `0500` → exit 1; `grep -c '^tidy: '` → `3`; `doc.pdf` still at the top level, `photo.jpg` at `recent/images/photo.jpg`
+  - `check-verify-freshness BUG-0005 wi/BUG-0005` → exit 0, "verified at 4835edfc; wi/BUG-0005 has moved to eb4a32bf but only the record changed (8 file(s) under tracker/ or docs/)"
+  - `check-commit-refs BUG-0005 wi/BUG-0005` → exit 0, "all 6 commit(s) on main..wi/BUG-0005 name BUG-0005"
+  - `lint-claims --changed-since main` → exit 0, 1 document checked, 0 errors; `check-epic-signoff BUG-0005` → exit 0 (not an epic)
+  - `git worktree add --detach .harness/trial main` → exit 0, "HEAD is now at 5dc1799"; `git -C .harness/trial merge --no-ff wi/BUG-0005` → exit 0; `git -C .harness/trial rev-parse HEAD` → `730f2c00191f6f285f3179900258365bce76f731`; `python3 -m unittest discover -s tests -t . -q` **inside** the trial → exit 0, `Ran 158 tests`, `OK`; `git worktree remove --force .harness/trial` → exit 0
+  - `git rev-parse main` before the trial and after the removal → `5dc17990df42c2a12664225bca0e77ee1e14b4d3` both times; `git worktree list` → one entry, this checkout
+  - `git merge --no-ff wi/BUG-0005` on `main`, after this transition — recorded under Artifacts
+  - fixtures removed: `chmod -R 0700 .harness/rv2; rm -rf .harness/rv2` and the four capture files; `git status --short` clean of them
+- **Gates:**
+  - `definition-of-done` → **pass** — walked criterion by criterion in `review.md` `## Definition of Done — round 2`, twelve rows with twelve results and twelve pieces of evidence. D3 and D9 are evidenced on the merge result `730f2c00`, not on the branch
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0, run on this round's head `eb4a32b` rather than carried over from round 1)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 6 commits on `main..wi/BUG-0005`; run before the merge, while that range was still non-empty)
+  - `tests-pass-on-the-merge-result` → **pass** — `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 158 tests`, `OK`, run inside the detached trial worktree at `730f2c00`, not on the branch
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 as part of this transition, and again after the merge)
+  - `record-is-reconstructible` → **pass** — from the tracker, `docs/` and `git log --grep BUG-0005` alone: *what was built and why* — one clause of `README.md`'s exit-status paragraph, because the paragraph is an enumeration a reader uses to predict a code and an all-fail run had no entry in it (`item.md`, `plan.md`); *which skill decided what* — `review-close` filed the item from BUG-0002's review, `plan` decided three statuses over four and recorded ADR-0012, `implement` changed no production code and mutation-checked the new test, `verify` re-ran every status the paragraph claims, `answer-questions` corrected ADR-0012 to v2 (six history rows, six journal entries, actors matching); *what questions arose and how they were resolved* — `Q-001` alone, from this review's round 1, answered from `spec/doc-header.md` §3-§4 and the BUG-0002/Q-002 precedent, with its consequences opened and confirmed; *what verification found* — three criteria passing on nine negative cases and two mutations, with five declared gaps, all five now in `item.md` `## Notes`
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0)
+  - `epic-sign-off` → **pass**, trivially (`check-epic-signoff BUG-0005` exit 0: BUG-0005 is a bug, not an epic). EP-001 is untouched by this execution; the engagement's ending is `next`'s step 6 to dispatch, and BUG-0006 is still open, so it is not at rest
+- **Artifacts:**
+  - `tracker/items/BUG-0005/artifacts/review.md` — round 2 appended: what was examined including the seven-row ADR-0012 v2 audit, the twelve-row Definition of Done, F1 closed with a finding against round 1, F4 examined and not filed, a fifth accepted gap, and the verdict. Round 1's sections left exactly as written, with a new header sentence saying there are two rounds
+  - `tracker/items/BUG-0005/item.md` — `outcome: delivered`; `## Notes` gains `### Gaps accepted at review, 2026-08-28` with all five
+  - the merge of `wi/BUG-0005` into `main` — `10db1f64`, a `--no-ff` merge commit made after this transition, with `main` moving `5dc17990` → `10db1f64`. The suite was re-run on the merged trunk: exit 0, `Ran 158 tests`, `OK`. (The sha was filled into this bullet after the merge, which is the only thing in this entry not true at the moment the entry was stamped; nothing else in it was changed.)
+  - no bug items filed, no questions filed, no ADR edited
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0005 is delivered. `README.md`'s exit-status paragraph now accounts for a run in which nothing moved — "1 when a file that was going to move could not be — whether that is one of them, some of them, or all of them" — and `AllMovesFailExitStatusTests` pins it, so a later change to `cli.py`'s last statement fails the suite rather than quietly making the document wrong. No production code changed. The one thing that failed round 1 was this item's own ADR, and it was fixed by correcting the document rather than by accepting the gap: ADR-0012 v2 tells a reader to compare stdout's `move` lines with the folder, which was checked here by running it, instead of counting a stderr line no all-fail run prints. Round 1's own proposed replacement was tested and rejected in the same audit — a line count returns 3 for a half-successful run — which is the D12 read doing the thing `lint-claims` cannot: every citation in v1 resolved, and the sentence was still false.

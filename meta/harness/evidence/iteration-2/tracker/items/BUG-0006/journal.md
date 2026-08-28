@@ -1,0 +1,271 @@
+# Journal — BUG-0006
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T21:18:25Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0006
+- **Trigger:** created by `review-close` while reviewing BUG-0004 at `in-review`, round 2. `new-item` writes the creation row into `history.md` but no journal entry, so this entry is the one that row requires.
+- **Inputs read:**
+  - `docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` — the option-A risk paragraph on lines 44-50 and its `[src: tidy/cli.py:52]` citation
+  - `tidy/cli.py` lines 44-56 at `main` — what line 52 actually is, and where the cited statement went
+  - `docs/architecture/adr/ADR-0009-…md` v2 `## Consequences` — the rule this project has just recorded for citations of this shape, which is what makes the remedy arguable rather than obvious
+  - `.claude/agile-skills/spec/doc-header.md` §4a (the citation table: `path` and `path:line` are one form with one test) and §5 (an ADR is "superseded only" outside `plan` and `answer-questions`)
+  - `.claude/agile-skills/spec/work-item.md` §3 — a bug's regression-test criterion is required unless `## Notes` records why the behaviour cannot be tested
+  - `.claude/agile-skills/spec/ids-and-statuses.md` §5 — this skill's authority to file a bug it observed the need for
+  - `tracker/items/BUG-0005/item.md` — the precedent for a documentation-only bug in this project, and the shape its criteria take
+- **Decisions:**
+  - **Filed as a bug against BUG-0003, not as a send-back on BUG-0004 and not as an edit.** `tidy/cli.py` is not in BUG-0004's diff and no BUG-0004 criterion covers it, so this is not that item's defect. A send-back would put the fix with `implement`, which may not write to `docs/`. And the remedy is an ADR amendment, which `spec/doc-header.md` §5 puts outside this skill.
+  - **`found-in: BUG-0003`, established by running rather than read off the diff.** `git show b76b27c:tidy/cli.py | sed -n '52p'` prints `args = build_parser().parse_args(argv)` — exact when the ADR was written — and `git show 46e5fd0:tidy/cli.py | sed -n '52p'` prints a blank line. `b76b27c` wrote the ADR and `46e5fd0` moved the line, two commits apart, both on BUG-0003's own branch.
+  - **The regression-test criterion a bug normally carries is deliberately absent, with the reason in `## Notes`** (`spec/work-item.md` §3). The defect is in prose, not in `tidy/`; there is no behaviour to pin, and a line-number lint would belong in `.claude/agile-skills/scripts/`, which is outside `EP-001`'s scope.
+  - **The remedy is left to `plan`.** Repointing to `:54`, applying ADR-0009 v2's own file-and-symbol rule, or leaving it and adding a lint are all live, and AC1 states the observable rather than the fix.
+  - **AC2 widens the item to the whole of `docs/` by one grep, deliberately.** There are exactly three `path:line` citations left; fixing one and leaving two of the same class would be the shape of defect this item is about.
+  - **Priority `low`, matching BUG-0005.** It costs a reader of one ADR one wrong hop; nothing a user of `tidy` can see.
+- **Questions raised:** none
+- **Commands:**
+  - `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` → exit 0, three hits: `ADR-0008:48`, `ADR-0009:23`, `ADR-0009:106`
+  - `grep -n "" tidy/cli.py | sed -n '52,54p'` → `52:` blank, `53:def main(argv=None):`, `54:    args = build_parser().parse_args(argv)`
+  - `git show b76b27c:tidy/cli.py | sed -n '52p'` → `    args = build_parser().parse_args(argv)`; `git show 46e5fd0:tidy/cli.py | sed -n '52p'` → blank
+  - `git log --oneline -- tidy/cli.py` and `git log --oneline -- docs/architecture/adr/ADR-0008-…md` → the four commits that touched the file and the one that wrote the ADR
+  - `python3 .claude/agile-skills/scripts/lint-claims .` → exit 0, 0 errors 0 warnings — the gate this defect passes
+  - `python3 .claude/agile-skills/scripts/new-item --next-id bug` → `BUG-0006`; `new-item --id BUG-0006 --type bug --title "…" --epic EP-001 --priority low --status ready --actor review-close --arose-from BUG-0004 --found-in BUG-0003 --reason "…"` → exit 0
+- **Gates:** none of this skill's gates apply to filing an item — they are gates on closing the item under review, and this execution's full gate walk is in `BUG-0004/journal.md` for the same timestamped run. Recorded rather than omitted: `definition-of-done`, `verification-postdates-the-code`, `commits-reference-the-item`, `tests-pass-on-the-merge-result`, `workspace-valid`, `record-is-reconstructible`, `claims-are-sourced` and `epic-sign-off` were all evaluated there, against BUG-0004.
+- **Artifacts:**
+  - `tracker/items/BUG-0006/item.md` — filled in: summary with the two `git show` runs, three reproduction steps, expected and actual behaviour with verbatim output, four acceptance criteria, and `## Notes` recording the absent regression-test criterion and the disagreement with an earlier check
+  - `tracker/items/BUG-0006/history.md` — the creation row `— → ready`, written by `new-item`
+  - no branch, no code, no question
+- **Status:** created at `ready`
+- **Result:** BUG-0006 exists at `ready`: ADR-0008 line 48 cites `tidy/cli.py:52`, which is a blank line, for a claim whose statement moved to line 54 when BUG-0003's own commit edited the file two commits after the ADR was written. It is the last surviving `path:line` citation of the class BUG-0004/Q-002 was about, it passes `lint-claims` because §4a tests only that the file exists, and it is `ready` because a bug with reproduction steps already meets the Definition of Ready.
+
+## 2026-08-28T13:55:32Z — plan v0.3.1 — architect
+
+- **Item:** BUG-0006
+- **Trigger:** `ready` — dispatched by `next` step 5 as the only runnable item once BUG-0005 closed; no question is open anywhere in the workspace.
+- **Inputs read:**
+  - `tracker/items/BUG-0006/item.md` (four criteria, the reproduction, and the `## Notes` that rule out a regression test and a toolkit gate), `history.md` (one row, filed by `review-close` during BUG-0004's review). No `refinement-qa.md` exists: the item was filed at `ready` by `review-close`, which the bug creation row permits
+  - `docs/architecture/adr/ADR-0008-…md` v2 — the whole of option A, and the sentence at line 48 the citation is attached to
+  - `docs/architecture/adr/ADR-0009-…md` v2 — lines 23 and 106 and their bracket groups, and `## Consequences` line 125-131, which is where this project's citation rule is already written
+  - `docs/architecture/adr/ADR-0006-…md` (the target-folder boundary the second citation is about), `ADR-0007` (the exit predicate the third is about)
+  - `tracker/items/BUG-0004/questions/Q-002.md` — the answer that made ADR-0009's six `planner.py` citations file-level and deliberately left the two `cli.py` ones alone
+  - `tidy/cli.py` in full — `build_parser`, `render`, `main`, and the three statements the three citations mean
+  - `docs/architecture/overview.md` — to decide whether the system's shape moves (it does not)
+  - `tracker/project.yaml` — `commands.test` and `commands.lint`, both already set and both run in this project today
+- **Decisions:**
+  - **ADR-0013 — citations in `docs/` name a file and the prose names the symbol; line numbers do not appear in a `src` citation.** *Decided*, with four options costed. It generalises to the whole of `docs/` the rule ADR-0009 v2 recorded for one document, and it is the one real choice in this item: BUG-0006 leaves the remedy to `plan` in terms.
+  - **The evidence that settled it, and it is measurement rather than taste.** All *three* surviving `path:line` citations now point at lines that do not support their sentences — not just the one the item was filed about. `ADR-0008:48` cites `:52`, a docstring in `render`, for a statement now at `:62`. `ADR-0009:23` cites `:67`, a `--rules` comment, for the `except OSError` handler now at `:88`. `ADR-0009:106` cites `:93`, a blank line, for the module's last statement at `:114`. The last two are the ones BUG-0006 AC2 calls "exact and must stay so", and `git show` at two refs shows exactly when they stopped being exact: both were correct at `cea3b907` (BUG-0004's close, the day the item was written) and both had drifted twenty-one lines by `82a7d26` (WI-0003's merge), before any work on this item began. Repointing is choosing a remedy with a measured half-life of one item.
+  - **Against BUG-0006 AC2's parenthetical, deliberately and on the record.** AC2's normative sentence — no `path:line` citation points at a line that does not support its sentence — is satisfied by construction under this design, because after the change there are none. Its parenthetical, "the latter two are exact and must stay so", rested on a fact that `82a7d26` falsified. `plan` may not amend a criterion, so it does not: the departure is stated in ADR-0013 `## Consequences`, in the plan's `## Risks`, and in the AC mapping table, with the git evidence, and `verify` decides. That is the honest handling of a criterion whose premise died between filing and planning.
+  - **No sentence is reworded.** *From the documents*: `spec/doc-header.md` §4 forbids editing an ADR to change its decision, and line 48 is option A's decisive risk in a `status: current` record. Checked rather than assumed that the citation still gets a reader there: `grep -c` gives one hit for `parse_args` and one for `except OSError`; `apply_plan` gives two (the import and the call), with the statement five lines below the call — recorded as the weakest of the three rather than glossed.
+  - **`implement` makes the two ADR edits; `plan` wrote only ADR-0013.** *From the documents* (`spec/workspace-layout.md` §5): the repairs are the deliverable and belong on the branch so `git log --grep BUG-0006` shows them.
+  - **`docs/architecture/overview.md` is not touched.** No module or boundary moves.
+  - **Three assumptions recorded with their reversal costs** (A1 the sentences' subjects are named well enough, A2 who makes the edits, A3 nothing can pin this in a test) rather than escalated: none is irreversible and none needs intent no document records.
+  - **No question to the human.** The record holds the intent — ADR-0009 v2's consequence, BUG-0004/Q-002's answer, and the item's own `## Expected behaviour` and `## Notes`, which both name the file-level rule as the durable remedy.
+- **Questions raised:** none
+- **Commands:**
+  - `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` → exit 0, three hits: `ADR-0008:48`, `ADR-0009:23`, `ADR-0009:106`, all `tidy/cli.py`. This is the sweep AC2 prescribes, run before the fix
+  - `grep -n "" tidy/cli.py | sed -n '52p;67p;93p'` and the surrounding lines → line 52 is `"""The stdout line for one action."""`, line 67 a `--rules` comment, line 93 blank; the three statements the citations mean are at `:62`, `:88` and `:114`
+  - `git show cea3b907:tidy/cli.py | grep -n "" | sed -n '67p;93p'` → exit 0, `except OSError as error:` and `return 1 if any(outcome.kind == "failed" ...)`, both exactly as ADR-0009 cites them
+  - `git show 82a7d26:tidy/cli.py | grep -n "" | sed -n '67p;93p'` → exit 0, a `--rules` comment and a blank line. The pair is the whole case for option B
+  - `grep -c "parse_args" tidy/cli.py` → `1`; `grep -c "except OSError" tidy/cli.py` → `1`; `grep -c "apply_plan" tidy/cli.py` → `2`
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 158 tests`, `OK`; `python3 -m compileall -q tidy tests` → exit 0. Both run on `main` at `c747c8a` during this turn, which is what makes `project-commands-resolved` a fact rather than a copy
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0; `--all` → exit 0, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 10 items, 15 documents
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0, 15 documents — ADR-0013 is the fifteenth)
+  - `every-criterion-is-addressed` → **pass** — `plan.md` `## Acceptance criteria mapping` has one row per criterion, four rows for four criteria: AC1 → step 1, demonstrated by the item's own two commands; AC2 → steps 1 and 3, demonstrated by the sweep printing nothing; AC3 → step 2, demonstrated by `head -8` and the change log's top row, with step 4 doing the same for ADR-0009 because `spec/doc-header.md` §3 requires it of every document changed; AC4 → step 5, demonstrated by both commands' real output. AC2's row states the departure from its parenthetical rather than hiding it in a pass
+  - `project-commands-resolved` → **pass** — `commands.test` and `commands.lint` were already set by WI-0001's plan and both were run in this project during this turn, exit 0 each. Nothing in `project.yaml` needed changing
+  - `decisions-recorded` → **pass** — one ADR (ADR-0013, four options, decision, consequences including reversibility) and three assumptions (A1-A3), each with what reversing it would cost. Every other choice in the plan cites a document
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0; `--all` also exit 0, so ADR-0013's citations resolve against the whole tree and not only against the changed set)
+  - `plan-is-executable-without-you` *(advisory)* → **pass** — the six steps name their files, their exact replacement strings, and what is true afterwards. The one place a reader could stall is step 5's sweep, where `grep` exiting 1 *is* the pass, and the step says so
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0013-citations-name-files-and-symbols-not-line-numbers.md` — created, v1: citations under `docs/` name a file and the prose names the symbol; four options, the git evidence for rejecting a repoint, and the record of why BUG-0006 AC2's parenthetical is not honoured
+  - `tracker/items/BUG-0006/artifacts/plan.md` — created: problem, approach with a three-row table of how a reader reaches each cited statement, six steps, the AC mapping, three assumptions, four risks and five out-of-scope entries
+  - `tracker/project.yaml` — unchanged; `docs/architecture/overview.md` — unchanged, deliberately
+  - one commit on `main` naming BUG-0006, containing only `tracker/` and `docs/`
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0006 is planned as a prose repair with no code: three citations lose their line numbers and the sentences that already name their subjects carry the precision, per ADR-0013, which generalises the rule ADR-0009 v2 recorded once. Planning found the defect is three times the size the item records — the two citations AC2 asks to keep exact had already drifted twenty-one lines under WI-0003's merge, before this item was touched — and that fact is what rejects the repoint remedy rather than an opinion about line numbers. The one place the design departs from the item's words is AC2's parenthetical, and it departs loudly: in the ADR, in the plan's risks, and in the mapping table, with the two `git show` outputs that falsify the premise.
+
+## 2026-08-28T13:57:36Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0006
+- **Trigger:** `planned` — dispatched by `next`, the only runnable item on the board
+- **Inputs read:**
+  - `tracker/items/BUG-0006/item.md` — four acceptance criteria, and the `## Notes` recording why no regression test is required
+  - `tracker/items/BUG-0006/artifacts/plan.md` — six steps, all in `docs/architecture/adr/`, nothing under `tidy/` or `tests/`
+  - `tracker/items/BUG-0006/history.md` — two rows, `ready` at filing and `planned` at 13:55Z; no send-back, so this is a fresh execution
+  - `tracker/items/BUG-0006/questions/` — empty; no question has ever been filed on this item
+  - `tracker/project.yaml` — `commands.test` and `commands.lint` are both set, so no gate is skipped for want of a command
+  - `docs/architecture/adr/ADR-0013-citations-name-files-and-symbols-not-line-numbers.md` — the decision this execution applies, already on `main` from `plan`
+  - `tidy/cli.py` — the file all three citations point into, read to confirm the plan's line numbers before editing
+- **Decisions:**
+  - Started fresh rather than reconciling: `git branch` showed no `wi/BUG-0006`, and the history's last row is `plan`'s, not a send-back from `verifying` or `in-review`.
+  - Confirmed the plan's premises by running its own commands before touching anything, because the plan's `## Risks` warns that the item's recorded line numbers are stale. `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` returns the three citations the plan names, and `grep -n` on `tidy/cli.py` puts `parse_args` at 62, `except OSError` at 88 and the `"failed"` return at 114 — exactly as the plan states, and none of them at the cited 52, 67 or 93.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0006 main` → 0, branch at `828a63a`
+  - `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` → 0, three hits (ADR-0008:48, ADR-0009:23, ADR-0009:106)
+  - `grep -n "parse_args\|except OSError\|apply_plan\|failed" tidy/cli.py` → 0, five hits
+- **Gates:**
+  - `tests-pass` → **skipped** (not yet run; no change has been made — step 5 of the plan runs it on the branch head)
+  - `lint-clean` → **skipped** (not yet run, same reason)
+  - `workspace-valid` → **skipped** (not yet run; the closing entry reports it)
+  - `every-criterion-has-a-test` → **skipped** (not yet assessable; no edit exists to map to an AC)
+  - `commits-reference-the-item` → **skipped** (not yet run; the branch has no commits of its own)
+  - `claims-are-sourced` → **skipped** (not yet run)
+  - `no-unplanned-scope` (advisory) → **skipped** (not yet run; the diff is empty)
+- **Artifacts:**
+  - branch `wi/BUG-0006`, created from `main` at `828a63a`; no commits yet
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation has started. The branch exists, the plan's three target citations and their real subjects in `tidy/cli.py` are confirmed present as the plan describes, and no file has been changed yet.
+
+## 2026-08-28T14:00:38Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0006
+- **Trigger:** `in-progress` — this execution's own opening entry at 13:57:36Z; no send-back, no interruption
+- **Inputs read:**
+  - `tracker/items/BUG-0006/item.md`, `artifacts/plan.md`, `history.md`, `questions/` (empty), `tracker/project.yaml`
+  - `docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` — the citation on line 48 and the frontmatter and change log
+  - `docs/architecture/adr/ADR-0009-one-entry-that-cannot-be-examined-is-a-leave.md` — the citations on lines 23 and 106, and the same headers
+  - `docs/architecture/adr/ADR-0013-citations-name-files-and-symbols-not-line-numbers.md` — the decision applied
+  - `tidy/cli.py` — read to locate each sentence's real subject before and after editing
+  - `git show cea3b907:…ADR-0008….md` — to establish what AC3's "version: 2" meant at filing time
+- **Decisions:**
+  - **Rewrote ADR-0008's change-log row after the plan's step-5 sweep failed on it.** The row as first written quoted the citation it removed, verbatim, so `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` matched it and exited 0 where the plan predicts exit 1. Treated as a real AC2 hit rather than a false positive — AC2 says the grep lists every one and each surviving entry is opened — and fixed by naming the form and the number separately, which is how ADR-0009 v2's own row was already written. This is inside the plan's latitude: it changes how step 2's row is phrased, not what it records.
+  - **Read AC3's literal `version: 2` as "the version bump", and bumped both ADRs to 3.** `git show cea3b907:…ADR-0008….md | sed -n '3p'` → `version: 1`, so at filing time one bump meant 2; ADR-0008 reached 2 forty-five minutes later under WI-0003. Bumping to 2 is now impossible, and AC3's normative words ask for a bump and a row. Named in the report because a literal reading would fail an item that did what AC3 meant.
+  - **Carried the plan's departure from AC2's parenthetical rather than reopening it.** ADR-0013 records the choice with the git evidence; `implement` does not re-litigate the plan. Confirmed the premise by running rather than on trust: `tidy/cli.py:67` is a comment about the `--rules` file and `:93` is blank.
+  - **Escalated nothing, and one thing deliberately.** ADR-0009 line 106's sentence names `apply_plan` and `"failed"` but not the `return` statement, so a reader lands on the call at `:109` and reads five lines down. The plan's `## Risks` says a prose change to a `status: current` ADR wants a question to the architect, not a unilateral edit — so it stands unchanged and is named in `## What I did not do` for `verify`, rather than being quietly improved.
+- **Questions raised:** none
+- **Commands:**
+  - `sed -i` on ADR-0008 line 48 and ADR-0009 lines 23 and 106 → 0
+  - `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` → **1**, no output (the pass; `grep` exits 1 on no match). First run after the header edits exited **0** on this execution's own ADR-0008 change-log row — see `**Decisions:**`
+  - `grep -n "parse_args" tidy/cli.py` → 0, one hit at `62:    args = build_parser().parse_args(argv)`
+  - `grep -n "except OSError" tidy/cli.py` → 0, one hit at `88`
+  - `grep -n "apply_plan" tidy/cli.py` → 0, two hits: the import at `12`, the call at `109`
+  - `grep -n "cli.py:" ADR-0009…md` → 0, one hit and it is the change-log row, never a citation
+  - `git diff main -- docs/architecture/overview.md` → 0, empty, as plan step 6 requires
+  - `python3 -m unittest discover -s tests -t . -q` → 0, `Ran 158 tests`, `OK`
+  - `python3 -m compileall -q tidy tests` → 0
+  - `python3 .claude/agile-skills/scripts/lint-claims .` → 0, `0 errors, 0 warnings`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0, 10 items, 15 documents, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0006 wi/BUG-0006` → 0, `all 2 commit(s) on main..wi/BUG-0006 name BUG-0006`
+  - `git commit` ×2 → 0, `971f1cc` and `d8e293f`
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` exit 0, 158 tests, on branch head `d8e293f`)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0: 10 items, 15 documents, 0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass**, on the item's own recorded terms. There is no test and BUG-0006's `## Notes` is the standing record of why — the defect is in prose, there is no behaviour to pin, and a line-number lint belongs to the toolkit, outside EP-001. Each AC is instead an exact command with its output: AC1 two greps, AC2 one grep and its exit status, AC3 a `head -8`, AC4 the two suite commands. None is satisfied by reading code, which is what this gate forbids
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0 on the branch head; it failed at step 3 only because the branch then had no commits, and the message it printed blamed a merge)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0)
+  - `no-unplanned-scope` (advisory) → **pass** (`git diff main --stat` names the two ADRs and this item's tracker files and nothing else; every ADR hunk traces to a plan step or to `spec/doc-header.md` §3)
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` → v3, one citation and the header
+  - `docs/architecture/adr/ADR-0009-one-entry-that-cannot-be-examined-is-a-leave.md` → v3, two citations and the header
+  - `tracker/items/BUG-0006/artifacts/impl-report.md` → written
+  - branch `wi/BUG-0006`, commits `828a63a..d8e293f` — `971f1cc` (the three citations) and `d8e293f` (the report)
+- **Status:** `in-progress` → `verifying`
+- **Result:** All three surviving `[src: <path>:<line>]` citations in `docs/` now name their files, with the sentences' own symbols carrying the precision; each was pointing at a line that did not support it, and each resolves in one `grep` now. No claim was reworded, nothing under `tidy/` or `tests/` changed, and the suite is unmoved at 158 passing. Four things `verify` should look at rather than take on trust are in the report's `## Deviations` and `## What I did not do`: the sweep that first failed on this execution's own change-log row, AC2's and AC3's stale premises, and ADR-0009 line 106's weaker resolution, left unedited on purpose.
+
+## 2026-08-28T14:05:49Z — verify v0.1.4 — qa-engineer
+
+- **Item:** BUG-0006
+- **Trigger:** `verifying` — dispatched by `next`, the only runnable item
+- **Inputs read:**
+  - `tracker/items/BUG-0006/item.md` — the four acceptance criteria, read from disk **before** the implementation report, so each check was derived from the criterion rather than from what was built
+  - `tracker/items/BUG-0006/artifacts/plan.md` — the six steps and the `## Risks` section, to read the diff against
+  - `tracker/items/BUG-0006/artifacts/impl-report.md` — the claimed evidence, checked rather than trusted
+  - `tracker/items/BUG-0006/history.md`; no `refinement-qa.md` exists on this item
+  - the branch `wi/BUG-0006` at **`64010239257c5eb51a7feedf97ae22687c1a30b4`**, which is the state every command below ran against
+  - `docs/architecture/adr/ADR-0008…md` and `…ADR-0009…md` on the branch head and, via `git show`, at `f459e72` and `cea3b907`
+  - `tidy/cli.py` at the branch head and at `main`; `.claude/agile-skills/spec/doc-header.md` §3; `tracker/project.yaml`
+- **Decisions:**
+  - **AC2 passes, and AC2's parenthetical is not honoured.** The operative sentence — "no `path:line` citation anywhere in `docs/` points at a line that does not support its sentence" — is demonstrably satisfied, and the parenthetical's "must stay so" is a preservation instruction whose property was already destroyed before this item's branch existed. Established by running `git`, not by reading the plan: BUG-0006 was filed at `f459e72` (2026-08-28T00:18:34+03:00) and WI-0003 merged at `82a7d26` **57 minutes later**; at filing, `tidy/cli.py:67` was `except OSError as error:` and `:93` was the `"failed"` return, and on `main` they are a `--rules` comment and a blank line. Nothing `plan` or `implement` could do would make those citations *stay* exact; only restore them, which the clause does not say.
+  - **That decision is recorded for `review-close` to overrule rather than settled quietly.** ADR-0013 is an architectural decision, and no skill may amend an acceptance criterion — so whether an ADR may override a clause of an AC is a Definition of Done judgement, not a QA one. `## The two stale premises` in the report states the departure, the evidence and where to push back.
+  - **No question was filed, and that was a close call.** `verify`'s escalation route is for a criterion that is ambiguous *and* that the record does not settle. The record settles this one: ADR-0013, written by the architect for this item before any edit, names BUG-0006 AC2 explicitly and gives the git evidence. A question would ask the architect to restate a decision they had just written down.
+  - **AC3 read as its normative words, not its worked example.** `git show f459e72:…ADR-0008….md | sed -n '3p'` → `version: 1`, so "version: 2" meant one bump at filing time; the document reached v2 under WI-0003 forty-nine minutes later. Bumping to 2 today is prohibited by the `spec/doc-header.md` §3 that AC3's own sentence invokes, so the literal reading is unsatisfiable while the normative one — a bump plus a row naming the item — is met exactly.
+  - **No verdict was recorded `ambiguous`, and no defect was sent back or filed.** Every hunk in the diff traces to a plan step or to a §3 header obligation, and there is no code in the change to fail.
+  - **Corrected the implementation report in the item's favour.** It calls `ADR-0009:106` "the weak one" because `apply_plan` has two hits; the sentence also quotes `"failed"`, and `grep -n '"failed"' tidy/cli.py` returns one hit — line 114, the statement itself. Recorded so a later reader does not inherit a concern the file does not support.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t . -q` → 0, `Ran 158 tests in 0.163s`, `OK`
+  - `python3 -m compileall -q tidy tests` → 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0, 10 items, 15 documents, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims .` → 0, `0 errors, 0 warnings`
+  - `sed -n '48p' ADR-0008…md | grep -o "src: [^];]*"` → 0, `src: tidy/cli.py` — no line number
+  - `grep -n "build_parser\|parse_args" tidy/cli.py` → 0, `20:def build_parser():` and `62:    args = build_parser().parse_args(argv)`
+  - `sed -n '20,32p' tidy/cli.py` and `sed -n '58,66p' tidy/cli.py` → 0; the `epilog` is composed inside `build_parser`, `--rules` is unknown until `parse_args` returns
+  - `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` → **1**, no output (the pass; `grep` exits 1 on no match)
+  - `git grep -n "src: [a-z/]*\.py:[0-9]" main -- docs/` → 0, three hits — the sensitivity check against real prior state
+  - wrote `docs/_verify_probe.md` with `x [src: tidy/cli.py:999] y`; sweep → 0, one hit; removed it; sweep → 1, no output; `git status --short` clean
+  - `git show main:tidy/cli.py | grep -n "" | sed -n '52p'` → 0, `52:    """The stdout line for one action."""` — the item says blank; it is a docstring in `render`
+  - `git show cea3b907:tidy/cli.py | grep -n "" | sed -n '67p;93p'` → 0, both exact at filing
+  - `git show main:tidy/cli.py | grep -n "" | sed -n '67p;93p'` → 0, a comment and a blank line
+  - `git show f459e72:…ADR-0008….md | sed -n '3p'` → 0, `version: 1`
+  - `git log -1 --format='%h %ad %s' --date=iso 82a7d26` → 0, `2026-08-28 01:15:41 +0300 merge: user-supplied sorting rules, reviewed and closed (refs WI-0003)`
+  - `head -8 ADR-0008…md`, `sed -n '/^## Change log/,$p' … | sed -n '3,5p'` on both ADRs → 0, `version: 3` in each frontmatter and as each change log's top row
+  - `grep -n '"failed"' tidy/cli.py` → 0, one hit at 114; `grep -n "apply_plan" tidy/cli.py` → 0, hits at 12 and 109; `grep -n "except OSError" tidy/cli.py` → 0, one hit at 88
+  - `git diff main..HEAD --stat` and `git diff main..HEAD -- docs/` → 0; `git diff main..HEAD -- docs/architecture/overview.md` → 0, empty
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 158 tests`, `OK`, exit 0, on `6401023`)
+  - `lint-clean` → **pass** (`compileall` exit 0)
+  - `workspace-valid` → **pass** (10 items, 15 documents, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** — every verdict names a command run here with its quoted output. Three rest on evidence the implementation report does not contain at all: the `git show f459e72` frontmatter check behind AC3, the `git grep … main` sensitivity check behind AC2, and reading `build_parser`'s body to confirm AC1's sentence rather than merely locate its subject
+  - `negative-cases-exercised` → **pass** — three: the sweep against `main`'s three real broken citations; a synthetic `[src: tidy/cli.py:999]` probe introduced and removed; and AC1's named blank-line failure mode checked against what `main`'s line 52 actually holds
+  - `tests-would-fail-without-the-change` (advisory) → **pass, by the only means this item admits.** There is no test and BUG-0006's `## Notes` records why. The check that stands in for one is AC2's sweep, and it was shown sensitive twice — a `grep` that had silently stopped matching would produce the same empty output as a clean tree, which is the failure mode this gate exists for
+- **Artifacts:**
+  - `tracker/items/BUG-0006/artifacts/verify-report.md` — written, `Verified-commit: 64010239257c5eb51a7feedf97ae22687c1a30b4`
+  - `tracker/items/BUG-0006/item.md` — AC1, AC2, AC3 and AC4 ticked, each against a command in this entry
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0006 passes verification on all four criteria, checked against the branch head rather than against the implementation report. All three `[src: <path>:<line>]` citations in `docs/` are gone and the sweep that proves it was shown to discriminate. Two criteria carry premises falsified between filing and building, and both are documented rather than smoothed over: AC2's "must stay so" was unsatisfiable by the time this item's branch existed, and AC3's "version: 2" is prohibited by the spec AC3 itself cites. The AC2 departure rests on ADR-0013, and `review-close` is where it should be confirmed or overruled.
+
+## 2026-08-28T14:11:01Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0006
+- **Trigger:** `in-review` — dispatched by `next`, the only runnable item on the board
+- **Inputs read:**
+  - `tracker/items/BUG-0006/item.md`, `history.md` (five rows), `journal.md` (five entries, read in full), `plan.md`, `artifacts/impl-report.md`, `artifacts/verify-report.md`; the item has no `questions/` directory
+  - the diff `git diff main..wi/BUG-0006 -- docs/`, read hunk by hunk — seven hunks, each mapped to a plan step or a `spec/doc-header.md` §3 obligation in `review.md` `## What I examined`
+  - `tidy/cli.py` in full (114 lines) and `tidy/planner.py:55-80`, to audit the three claims whose citations this change re-pointed
+  - `docs/architecture/adr/ADR-0012-exit-1-means-at-least-one-intended-move-failed.md` and `README.md:35-40`, to decide the one finding
+  - `docs/architecture/adr/ADR-0013-citations-name-files-and-symbols-not-line-numbers.md`, the decision the change implements
+  - `.claude/agile-skills/spec/dor-dod.md` §3 and `spec/doc-header.md` §3 and §4
+- **Decisions:**
+  - **Accept, merge, close, `outcome: delivered`.** All twelve Definition of Done criteria pass with their own evidence; the table is in `review.md`.
+  - **Upheld `verify`'s departure from AC2's parenthetical, on evidence checked here rather than inherited.** `git log -1 82a7d26` → 2026-08-28 01:15:41 +0300, and `git log -1 f459e72` → 2026-08-28 00:18:34 +0300: WI-0003 merged fifty-seven minutes after BUG-0006 was filed and moved both cited lines. "Must stay so" is a preservation instruction whose property was destroyed before this item's branch existed, so no execution could obey it — only reverse it. ADR-0013 governs the choice of remedy, which the item's own `## Expected behaviour` delegates to `plan` in terms. This is a reading of the criterion, not an amendment of it, and it is recorded where a later reader will find it.
+  - **Upheld the AC3 reading.** `git show f459e72:…ADR-0008….md | sed -n '3p'` → `version: 1`; setting `version: 2` today would violate the §3 that AC3's own sentence invokes.
+  - **One finding, examined and not actioned:** `ADR-0009:106`'s clause "only a `"failed"` outcome from `apply_plan` makes the process exit non-zero" is true in its paragraph and false quoted alone — `tidy/cli.py` returns 2 at 76, 80 and 90. Not this item's defect (v1 prose; this change only re-pointed the citation), explicitly out of the item's scope, and already disambiguated by ADR-0012, which is `status: current` and cites ADR-0009 by name. No bug filed; recorded in the item's `## Notes` so it survives the close.
+  - **Closed `verify`'s third declared gap rather than accepting it.** It said nobody had checked the `run:` citations still reproduce. For D12's actual scope — the documents this item touched — both of ADR-0008's were re-run and reproduce exactly, and ADR-0009's three are dated observations of the defect BUG-0004 removed, correctly historical under `spec/doc-header.md` §4's past-tense definition of `## Context`.
+  - **Accepted gaps 1, 2 and 4 with a durable record.** ADR-0013 `## Consequences` already carries "nothing enforces this" and lives in `docs/`; the item's own stale reproduction steps are left as filed, because that text is the filing evidence, with a `## Notes` line pointing a later reader at the discrepancy.
+  - **Merged after closing, not before.** `check-commit-refs` inspects `main..wi/BUG-0006`, which a merge empties.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0006 wi/BUG-0006` → 0, "verified at 64010239; wi/BUG-0006 has moved to 8564d441 but only the record changed"
+  - `git show --name-only --format="" 8564d44` → 0, five files, all under `tracker/`; nothing under `docs/`, which on this item is the deliverable — so D10 was checked, not accepted on the script's word
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0006 wi/BUG-0006` → 0, "all 4 commit(s) on main..wi/BUG-0006 name BUG-0006"
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → 0, "checked 2 document(s) changed since main", 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0, 10 items, 15 documents, 0 errors, 0 warnings
+  - `grep -c "^- \[x\] AC" item.md` → 4; `grep -c "^- \[ \] AC" item.md` → 0
+  - `cat -n tidy/cli.py` → 0; `grep -n "OSError\|stat()\|leave\|except" tidy/planner.py` → 0
+  - `grep -rn "epilog\|description=" tidy tests --include=*.py` → 0, two hits, both `tidy/cli.py` — ADR-0008's `run:` citation, exact
+  - `grep -nE "^(from|import).*\brules\b" tidy/cli.py` → 1, no output — ADR-0008's other `run:` citation, exact
+  - `grep -n '"failed"' tidy/cli.py` → 0, one hit at 114
+  - `git worktree add --detach /tmp/bug6-trial main` → 0, detached at `828a63a`
+  - `git -C /tmp/bug6-trial merge --no-ff wi/BUG-0006` → 0, 8 files changed, trial HEAD `4c5d9588a12eeb0f86bb1c27433899ad6f29090a`
+  - `python3 -m unittest discover -s tests -t . -q` **inside the trial** → 0, `Ran 158 tests in 0.165s`, `OK`
+  - `python3 -m compileall -q tidy tests` inside the trial → 0; `grep -rn "src: [a-z/]*\.py:[0-9]" docs/` inside the trial → 1, no output
+  - `git worktree remove --force /tmp/bug6-trial` → 0; `git rev-parse main` → `828a63a5c20a06703f14d41028e0e9ce8d7f7326`, identical before and after the trial
+- **Gates:**
+  - `definition-of-done` → **pass** — D1 to D12 each recorded with its own evidence in `review.md` `## Definition of Done`, plus the five-claim D12 audit performed by opening each citation against `tidy/cli.py`
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0, and independently: the only post-verification commit touches five files, all under `tracker/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 4 commits, run while the branch was still unmerged)
+  - `tests-pass-on-the-merge-result` → **pass** (158 tests `OK` inside the detached trial worktree at `4c5d958`, not on the branch)
+  - `workspace-valid` → **pass** (10 items, 15 documents, 0 errors, 0 warnings)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone. *What was built and why*: three citations made file-level, from `plan.md` and ADR-0013. *Which skill decided what*: five history rows and five matching journal entries, the design in ADR-0013 by `plan`, the departure from AC2 taken by `plan` and upheld by `verify` and here. *What questions arose*: none, and the journal says so at each stage. *What verification found*: `verify-report.md`, four criteria with commands and output, two stale premises named, one correction to the implementation report
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0)
+  - `epic-sign-off` → **pass**, not applicable to this move: BUG-0006 is a bug, not an epic. EP-001's state is examined separately after this close
+- **Artifacts:**
+  - `tracker/items/BUG-0006/artifacts/review.md` — written
+  - `tracker/items/BUG-0006/item.md` — two `## Notes` paragraphs added recording the accepted gaps, `outcome: delivered`
+  - the merge of `wi/BUG-0006` into `main`, made after this transition
+  - no bug filed, no question filed
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0006 is accepted and closed as delivered. The three `[src: <path>:<line>]` citations that remained in `docs/` now name their files, with the sentences' own symbols carrying the precision; all twelve Definition of Done criteria pass, the trial merge left 158 tests green and the trunk unmoved, and the D12 audit opened every claim the change re-asserted against `tidy/cli.py` rather than reading the prose. One finding — an elliptical exit-status clause in ADR-0009 that ADR-0012 already disambiguates — was examined, judged not this item's defect, and written into the item's `## Notes` rather than left in a report nobody reopens.

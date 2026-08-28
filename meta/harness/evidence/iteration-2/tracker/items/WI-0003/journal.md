@@ -1,0 +1,517 @@
+# Journal — WI-0003
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T15:47:22Z — intake v0.2.1 — product-analyst
+
+- **Item:** WI-0003
+- **Trigger:** invoked directly by the caller on the stakeholder's stated idea; no status, the item did not exist yet
+- **Inputs read:**
+  - `IDEA.md` — the stakeholder's opening statement
+  - `tracker/project.yaml`
+  - `tracker/items/` (empty — new workspace)
+- **Decisions:**
+  - "Rules should be configurable" made its own item rather than folded into WI-0001 and WI-0002.
+    Rationale: it is separately observable (change a rule, see a different preview over the same
+    folder), and building configurability into the first item would have meant designing a rule
+    format before we knew everything it has to express. See EP-001's entry for the full split.
+  - Criteria state what the rules must be able to *express*, not how they are written down — no
+    mention of a file format. Rationale: the stakeholder did not name one, and choosing between a
+    config file, flags or environment is a design decision that belongs to `plan`.
+  - `depends-on: WI-0001` only, deliberately **not** WI-0002. Rationale: there must be rules before
+    there is anything to configure, so WI-0001 is a real dependency; but this item works whether or
+    not age handling exists (the rule set simply covers less), so adding a dependency on WI-0002
+    would have silently answered the ordering question instead of asking it. Keeping them
+    independent is what makes EP-001/Q-004 a genuine question.
+  - AC1 fixes only the no-rules-supplied case; whether user rules *replace* or *layer on top of* the
+    built-in ones is recorded in `## Notes` as undecided for `refine`. Rationale: recording it as
+    unknown is a question `refine` can pick up; inventing an answer would be a false requirement.
+  - Priority `medium`, same as siblings — the stakeholder stated no ordering. EP-001/Q-004 asks them.
+- **Questions raised:** none on this item; four on EP-001 (`EP-001/Q-001`–`Q-004`), all open and
+  addressed to the human, of which Q-004 asks whether this item or WI-0002 comes second
+- **Commands:**
+  - `scripts/new-item --id WI-0003 --type work-item --epic EP-001 --priority medium --status draft --actor intake` → exit 0, created at `draft`
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace`, exit 0 — evidence on EP-001's entry)
+  - `epic-has-success-measures` → **pass** (an epic-level gate; evidence recorded on EP-001)
+  - `items-are-separable` (advisory) → **pass** — buildable after WI-0001; independent of WI-0002
+  - `no-solution-in-the-problem` (advisory) → **pass** — no file format, syntax or data structure
+    named anywhere in the title, story or criteria. This is the item where that was hardest to hold
+    to and where it matters most
+- **Artifacts:**
+  - `tracker/items/WI-0003/item.md` (new)
+  - `tracker/items/WI-0003/history.md`, `journal.md` (new, headers written by `scripts/new-item`)
+- **Status:** `—` → `draft`
+- **Result:** WI-0003 exists at `draft` — the user supplies the sorting rules rather than the tool's
+  author. It states what the rules must express and leaves the format to `plan`.
+
+## 2026-08-27T21:23:41Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0003
+- **Trigger:** `draft` — `next` dispatched `refine` as the status owner. All three runnable items sit at priority rank 4 (low), so the tie fell to `created` ascending and WI-0003 (2026-08-27T15:44:24Z) beat BUG-0005 (20:05:34Z) and BUG-0006 (21:12:51Z). A fresh draft, not a send-back: `history.md` holds one row, `— → draft` by `intake`.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the story, five rough criteria, four out-of-scope entries and five paragraphs of `## Notes`
+  - `tracker/items/WI-0003/history.md` — one row, so this is a first refinement and not a return from a later stage
+  - `tracker/items/WI-0003/journal.md` — `intake`'s entry in full, including its reasons for leaving the rule format to `plan` and the replace-or-layer question to `refine`
+  - `tracker/items/WI-0003/artifacts/` — empty; no prior Q&A
+  - `tracker/items/EP-001/questions/Q-001.md` through `Q-004.md` in full, with their `## Answer` and `## Consequences` sections — the stakeholder's verbatim words on the technology, the never-overwrite invariant, recursion, and the delivery order
+  - `tracker/items/WI-0002/questions/Q-002.md` — the two-bands-at-a-year decision in the stakeholder's own words, and what that answer explicitly did *not* settle
+  - `tracker/items/WI-0002/item.md` `## Out of scope` — which named user-supplied band names and boundaries as belonging to this item, and more-than-two-bands as belonging to neither
+  - `docs/architecture/adr/ADR-0005-age-bands-as-a-table.md` — the shape the band rule already has, and its stated reason: that WI-0003 would otherwise design its rule format twice
+  - `tidy/rules.py` — `DEFAULT_RULES`, `DEFAULT_BANDS`, `folder_for` and `band_for`, the two tables this item makes user-supplied
+  - `README.md` "Where each file goes" and "What it will not do" — the seven type folders, the two bands, and the promise that an unmatched file is never swept into a catch-all
+  - `.claude/agile-skills/spec/dor-dod.md` §1 (R1-R10 and the override), `spec/question.md` §1 and §2
+- **Decisions:**
+  - **The agenda was built before anything was asked, and it is on disk.** R1, R2, R3, R5, R6, R7 and R9 pass as the item stands; R4, R8 and R10 fail. The per-criterion verdicts and their reasons are a table in `artifacts/refinement-qa.md`, so the interrogation has a stated scope rather than wandering.
+  - **R9 checked rather than assumed: this is one item, not two.** The type table and the band table are already one mechanism behind two lookups — that is what ADR-0005 was written to achieve, explicitly so that WI-0003 would not design a rule format twice. Splitting them would re-incur the cost that ADR was avoiding.
+  - **Two questions to the stakeholder, and only two.** Q-001, whether user rules replace or layer over the built-in ones: it decides whether a two-line rule file tidies the whole folder or leaves nearly all of it alone, which is the first thing they would see. Q-002, whether a rule file may decide how many bands there are: WI-0002 promised band *names* and the *boundary* to this item and said nothing either way about the count, so the scope of their control is genuinely open.
+  - **One decision per question, and one grouped ask.** The two are separate because the answers need not match — the type table could be handed over entirely while the age behaviour stays fixed. Each `## Context` opens with the same frame ("WI-0003, round 1, question N of 2") and Q-002 closes by saying that is all of them, so it reads as one conversation rather than two letters.
+  - **Four things not asked because they are already answered.** Never-overwrite [src: EP-001/Q-002], top-level-only [src: EP-001/Q-003], two bands at a year [src: WI-0002/Q-002], and that this item ships [src: EP-001/Q-004]. Q-002 asks only whether a *user* may change the band count; it does not re-open the default, and it says so in its own text.
+  - **Three things decided here under the stakeholder's standing deferral** — "Whatever's easiest for you to build and test — you know this better than me" [src: EP-001/Q-001], which is an answer about a category, not about one question. The rule file's format, the mechanism for pointing at a rule set, and the exit status of a rejected rule file are all inside it. Asking anyway would tell them their answer was not heard (F-023).
+  - **Five design questions routed to `plan` through `## Notes`, not to a person.** The band-name/type-name collision (`old/old/report.pdf`), one rule file or two, how an ordered band list is validated, where rules are looked for, and the rejected-rule-file exit code. Each has the same answer whoever the stakeholder is, which is the test.
+  - **A catch-all rule is excluded rather than asked about.** `README.md` promises an unmatched file is left alone and "not swept into a catch-all folder". Letting a rule file introduce one would change a documented promise, and nothing the stakeholder has said asks for it. Recorded in `## Notes` and destined for `## Out of scope`, so a reader can see it was considered rather than missed.
+  - **The acceptance criteria were deliberately not rewritten.** Both answers change what AC1 through AC4 must say — Q-001 decides what "behaves exactly as before" means when a partial rule set is supplied, and Q-002 decides what a well-formed rule file may express, which is what AC4 must reject the complement of. Sharpening them now would mean inventing the answers, and R4 and R10 cannot honestly close before then.
+  - **`refinement-qa.md` declares `status: agenda`, not `recorded`.** The conversation has not happened. R8 reads that field precisely so an agenda cannot pass an item to `ready` by existing, and writing `recorded` on a file intended to be finished later would defeat it (`spec/workspace-layout.md` §1.3).
+  - **Suspended rather than blocked.** Nothing is at an impasse; two answers are outstanding, and `resume-to: draft` brings the item back to this skill rather than past it.
+- **Questions raised:** 2 — `Q-001` and `Q-002`, both `addressed-to: human`, both blocking, both filed in this round. Neither is `[unresolved]`; they are unanswered, which is a different thing. Full text and options in `tracker/items/WI-0003/questions/`, summarised in `artifacts/refinement-qa.md` `## Round 1`
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, "checked 10 item(s), 11 document(s), 0 errors, 0 warnings", run before the questions were filed; the transition runs it again with the pending move declared
+  - `date -u +%Y-%m-%dT%H:%M:%SZ` → `2026-08-27T21:20:53Z`, the `created` stamp on Q-001 and the basis for Q-002's
+  - `awk '/^## 1\./,/^## 2\./' .claude/agile-skills/spec/dor-dod.md` → R1-R10 and the override procedure, read rather than remembered
+  - `awk '/^## Question/,0' tracker/items/EP-001/questions/Q-00*.md` → the four intake answers verbatim, which is what made three of this round's candidate questions unnecessary
+  - `awk '/^## Out of scope/,/^## Notes/' tracker/items/WI-0002/item.md` → "User-supplied age boundaries and user-supplied band names; that is WI-0003", which is what narrows Q-002 to the band *count*
+  - `cat tidy/rules.py`, `awk '/^## Where each file goes/,0' README.md` → the two tables and the user-facing promises the questions quote
+- **Gates:**
+  - `workspace-valid` → **pass** (exit 0 as the transition ran it, with the pending move declared)
+  - `definition-of-ready` → **fail, and that is why this execution suspends rather than transitions to `ready`.** Walked criterion by criterion, results recorded in `artifacts/refinement-qa.md`: **R1 pass** (frontmatter complete), **R2 pass** (role, capability, outcome all present), **R3 pass** (AC1-AC5 labelled checkboxes), **R4 fail** (AC2's "fixed sample folder" is fixed nowhere; AC3's "predictable" is undefined; AC4's "identifying what is wrong" names no observable; AC5's "somewhere a user can read" names no file), **R5 pass** (four out-of-scope entries, two of them invariants the stakeholder set), **R6 pass** before this round — and now failing by design, since Q-001 and Q-002 are blocking, which is exactly what suspends the item, **R7 pass** (`depends-on: WI-0001`, `done`), **R8 fail** (no Q&A existed; the file now written declares `status: agenda`, which R8 does not accept and must not), **R9 pass** (one coherent change, argued from ADR-0005), **R10 fail** (rules-supplied × preview/`--apply`, × an unnamed extension, × the never-overwrite invariant, × a destination colliding with a band folder name — none stated, excluded, or recorded as unconstrained)
+  - `criteria-are-decidable` → **fail** — four of the five criteria are not decidable by observation, which is R4's finding above. Not repaired in this execution: both open answers change what those criteria must say
+  - `qa-recorded-verbatim` → **not applicable this round** — there is nothing verbatim to record, because nothing has been said. Recorded rather than omitted: `refinement-qa.md` exists and is honest about that, declaring `status: agenda` and marking both answers "*not yet given*". It becomes applicable when the answers arrive
+- **Artifacts:**
+  - `tracker/items/WI-0003/questions/Q-001.md` — replace or layer; three options with their real costs, recommendation B, and a stated consequence of B (removing a built-in mapping becomes out of scope)
+  - `tracker/items/WI-0003/questions/Q-002.md` — how far control over the age side goes; three options, recommendation B, with ADR-0005's existing shape given as why the step is small
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — created, `status: agenda`: the per-criterion R1-R10 table, the triage of every gap by who it belongs to, what was not asked and why, and what each answer will change
+  - `tracker/items/WI-0003/item.md` — `## Notes` gains the round-1 block: the two open questions, the five design questions routed to `plan`, and the catch-all exclusion with its reasoning
+  - no criteria rewritten, no item split, no override, no document under `docs/` touched
+  - commit of this execution's tracker files, per `conventions.commit-subject`
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** WI-0003 is suspended on two questions to the stakeholder, with `resume-to: draft`. Its Definition of Ready fails on R4, R8 and R10, and none of the three can be closed without knowing whether a user's rules replace the built-in ones or layer over them, and whether a rule file may decide how many age bands there are. Everything that could be settled without asking was: three gaps decided under the stakeholder's standing delegation, four not re-asked because they are already answered in the record, five routed to `plan` as design questions, and one — a catch-all rule — excluded with its reasoning written down.
+
+## 2026-08-27T21:29:30Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** status `awaiting-answer`; both blocking questions had a reply from the stakeholder in `## Answer`, so the item was runnable for this skill (SKILL.md precondition 1, second limb)
+- **Inputs read:**
+  - `tracker/items/WI-0003/questions/Q-001.md` and `Q-002.md` — both `addressed-to: human`, both `status: open` with `## Answer` filled in
+  - `tracker/items/WI-0003/item.md`, `history.md` (the suspending row records `resume-to: draft`)
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` (`status: agenda`) — the round-1 agenda and the DoR verdicts behind it
+  - `tracker/items/WI-0002/item.md` `## Out of scope` — what WI-0002 promised this item on the age side
+  - `docs/architecture/adr/ADR-0005-age-bands-as-a-table.md`; the ADR index `ADR-0001` … `ADR-0009` checked for contradictions with either answer
+  - `README.md` — "there are two bands and no others", and the catch-all promise
+  - `docs/product/vision.md`
+  - No `artifacts/plan.md` exists; the item has never been planned
+- **Decisions:**
+  - **Q-001 answered from the stakeholder's own reply** (route: the human replied to an escalation `refine` filed). Option **B**: supplied rules layer over the built-in table, the user's entries winning. Propagated as prose into `item.md` `## Notes` — replacing the paragraph intake had left explicitly undecided — rather than left in the question file, because `refine` re-reads `item.md`, not `questions/`.
+  - **Q-001's cost recorded as scope, not silence.** B cannot express "stop filing `.md` at all", and `refine` had undertaken in the question that this would go on `## Out of scope` if B were taken. It is now there, with the reason. Recording a known gap as scope is what stops a later `verify` filing it as a defect.
+  - **Q-002 answered from the stakeholder's own reply.** Option **A**, against `refine`'s recommendation of B: two bands always, the user choosing the two names and the one boundary. Propagated to `## Notes` and `## Out of scope`.
+  - **No ADR written, and none superseded.** Neither answer contradicts a recorded decision, and neither is an architecture decision this skill had to take: both were taken by the stakeholder. A is in fact the option that leaves ADR-0005 and `README.md` most exactly true — the ordered band table stays at length two, with its two names and its one number becoming user-supplied. Writing an ADR to restate a product decision would put a second authority on the same fact.
+  - **No new work item filed.** Neither answer widens scope: B is the layering this item already existed to build, and A is the smaller of the three options on the age side. Nothing was implied that no item records.
+  - **The acceptance criteria were deliberately not rewritten.** AC1–AC5 are still intake's rough ones and R4/R10 still fail. This skill may amend a criterion, but the item is going back to `draft`, where rewriting criteria is `refine`'s job under a Definition of Ready it must then demonstrate; doing it here would have hidden a refinement pass inside a triage, and would have produced criteria no `refinement-qa.md` records the reasoning for. Both the item and the artifact now say so in as many words.
+  - **`refinement-qa.md` stays at `status: agenda`.** The two answers are recorded in it verbatim, but the conversation is not closed: the criteria the agenda demands have not been written and whether a round 2 is needed is `refine`'s call. Flipping the field would assert R8 is satisfiable, and R8 exists precisely to stop an item reaching `ready` on a conversation that has not happened (`spec/workspace-layout.md` §1.3, F-031). The banner now states which of the two things is done and which is not.
+  - **One stale routing note corrected.** `## Notes` routed "how an ordered band list is validated if Q-002 is answered B or C" to `plan`; answer A makes that list moot, so it now names the validation that actually applies — two names, one boundary — and says why the old wording is gone.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 1, before the transition: `board.stale` and `question.awaiting.none-open`, both being the state this execution was mid-way through resolving
+  - `.claude/agile-skills/scripts/board-gen .` → exit 0
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0
+- **Gates:**
+  - `answer-is-propagated` → **pass**. Every file named in a `## Consequences` section was reopened and the change confirmed present: `item.md` — `## Notes` ¶1 now states the layering decision and quotes it, `## Notes` ¶2 states the two-band decision, `## Out of scope` carries three new entries (removing a built-in mapping; changing the band count or turning age routing off; a catch-all rule); `artifacts/refinement-qa.md` — both round-1 sections carry the stakeholder's words as block quotes and the closing section is now a rewrite brief for `refine`. Q-002's Consequences also names two files it asserts are *unchanged* (ADR-0005, `README.md`), and both were checked against answer A and are still true.
+  - `answered-from-the-record` → **pass**. Neither answer was derived by this skill: both are the stakeholder's reply to an escalation `refine` filed, quoted verbatim in the artifact and cited as `[src: WI-0003/Q-001]` / `[src: WI-0003/Q-002]` at each place they were propagated. The record was not silent, so no ADR was needed.
+  - `escalation-is-justified` → **skipped**. No question was re-addressed to the human; both were answerable from the reply on file.
+  - `a-deferral-is-not-an-answer` → **pass**, vacuously. Neither reply defers: each names one lettered option and gives a reason for it ("I don't want to retype your whole seven-folder list"; "Recent and old is all I need"). Neither says "later" and neither leaves anything for the stakeholder to supply, so step 3a did not apply and the item was resumed rather than parked.
+  - `item-resumed-correctly` → **pass**. The suspending row (2026-08-27T21:23:41Z, `draft` → `awaiting-answer`, actor `refine`) records `resume-to: draft`; this execution's row targets `draft`.
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0 after the transition and `board-gen`).
+- **Artifacts:**
+  - `tracker/items/WI-0003/questions/Q-001.md` — `status: answered`, `answered-by: human`, `answered-at` stamped; `## Consequences` written
+  - `tracker/items/WI-0003/questions/Q-002.md` — same, and its Consequences records the two documents answer A leaves untouched and why
+  - `tracker/items/WI-0003/item.md` — `## Notes` ¶1 and ¶2 rewritten from undecided to decided; the refinement round-1 heading rewritten from "suspended awaiting the stakeholder" to "asked, and answered", with a paragraph stating that the criteria are still intake's and belong to `refine`; one `plan`-routed design question corrected; `## Out of scope` gains three entries
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — banner rewritten to say which half is done, round 1 answers recorded verbatim, closing section replaced with a rewrite brief; `status: agenda` deliberately unchanged
+  - `tracker/board.md` — regenerated
+  - commit on `main` (tracker and docs only; this skill produces no code)
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** Both of WI-0003's blocking questions are answered by the stakeholder and propagated: user rules layer over the built-in table with the user's entries winning, and the age side stays at exactly two bands whose names and boundary become user-supplied. The item returns to `draft` for `refine` to close round 1 by rewriting AC1–AC5 against R4 and R10; nothing is now waiting on the stakeholder.
+
+## 2026-08-27T21:34:09Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0003
+- **Trigger:** status `draft`, dispatched by `next` — the earliest-created of three candidates all ranked `low` (BUG-0005 20:05:34Z and BUG-0006 21:12:51Z are the other two)
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md`, `history.md`, `journal.md`
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — this execution's own round 1 agenda, and the two answers `answer-questions` recorded into it
+  - `tracker/items/WI-0003/questions/Q-001.md`, `Q-002.md` — the stakeholder's replies, verbatim
+  - `tracker/items/EP-001/questions/Q-001.md` … `Q-004.md` — the standing delegation and the invariants settled at intake
+  - `tracker/items/WI-0002/item.md` — its AC1, AC4 and AC5 in particular, and its `## Out of scope`
+  - `README.md` — the extension table, the band table, the exit statuses, the four "what it will not do" promises
+  - `docs/architecture/adr/ADR-0001-python-3-stdlib-cli.md`, `ADR-0005-age-bands-as-a-table.md`, `ADR-0006-report-an-unusable-target-at-the-cli-boundary.md`
+  - `docs/product/vision.md`
+  - `.claude/agile-skills/spec/dor-dod.md` §1
+- **Decisions:**
+  - **Round 2 asked the stakeholder nothing, deliberately.** Round 1's two questions closed the product-stake gaps; what remained of R4 and R10 was a consequence of those answers, or covered by the standing delegation "whatever's easiest for you to build and test" [src: EP-001/Q-001], or an implementation choice whose answer is the same whoever the stakeholder is. Step 3's triage routes each of those away from a person, and asking anyway would have told them their delegation was not heard (F-023).
+  - **AC1–AC5 replaced by AC1–AC12.** Every criterion now names a command, a rule file and an output line. The old ones were rough by intake's own admission and four of the five were undecidable: "a fixed sample folder" fixed nowhere, "predictable previews" with no test, "an error identifying what is wrong" with no observable, "stated somewhere a user can read" naming no file.
+  - **A sample folder `S` is defined in the criteria preamble** — six files, mtimes and present destinations tabulated — because three criteria are about *differences* between runs and a difference needs a fixed baseline. Style taken from WI-0002's criteria, which already fix timestamps with `os.utime`.
+  - **The malformed-rule-file classes are enumerable now and were not before.** AC8 lists six, and a band count other than two is one of them precisely because the stakeholder chose A. The exit status is left as "non-zero, and `README.md` accounts for it" rather than pinned to 1 or 2: ADR-0006 bounds the vocabulary and choosing within it is the delegated category.
+  - **A destination is a single folder name — an assumption, recorded as one.** WI-0002 AC1 was verified against destination paths of exactly three components, so a deeper destination would break a criterion an earlier item already passed. The stakeholder was not asked; the narrowing is on `## Out of scope` with its reasoning and tagged `[assumed]` in the Q&A, which is step 5's remedy for a decision taken without them. It is the entry most likely to be the one they would want changed, and it says so.
+  - **Either table may be supplied without the other (AC6), moved out of `plan`'s list.** The agenda had routed it to `plan` as implementation; it is not. It is Q-001's layering answer applied to the age side, and a user who writes two lines about `.csv` would be surprised to find their bands reset. Only the mechanism — one rule file or two — stays with `plan`.
+  - **Two combinations left deliberately unconstrained, with `refine` named as who left them so.** A type destination colliding with a band folder name, and which error wins when a rule file and the target folder are both bad. R10 requires the combinations to be visible, not decided; AC11 still binds the two modes to agree and AC12 binds `README.md` to say which behaviour was chosen, so `verify` has something to check either way.
+  - **Scope excluded, on the stakeholder's authority where it exists:** removing a built-in mapping (a consequence of their B, which cannot express it), changing the band count or turning age routing off (their A), a catch-all folder (excluded because introducing one would break a `README.md` promise and nothing they said asks for it), and a multi-level destination (`refine`'s assumption, marked as one).
+  - **No override, and none needed.** Every criterion is met on its own terms.
+- **Questions raised:** none this round. Round 1's two — `Q-001` and `Q-002`, both to the human, both blocking — were answered by the stakeholder and propagated by `answer-questions` before this execution; both are recorded verbatim in `artifacts/refinement-qa.md`. Nothing is left `[unresolved]`.
+- **Commands:**
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0
+  - `.claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .`, exit 0, 10 items and 11 documents checked)
+  - `definition-of-ready` → **pass**, criterion by criterion against `spec/dor-dod.md` §1:
+    - R1 pass — frontmatter complete; `type: work-item`, `epic: EP-001`, `priority: low` all set (auto)
+    - R2 pass — "As someone whose folder does not look like anybody else's, I want to write my own rules for where files go, so that the tool sorts my files the way I want": role, capability, outcome
+    - R3 pass — AC1-AC12, labelled, as checkboxes (auto)
+    - R4 **was fail, now pass** — four of the old five were undecidable; AC1-AC12 each name a command, a named rule file and an output line or a resulting path. No unmeasurable adjective survives: the one place the old criteria said "predictable" is now AC4's "differ in exactly one line", quoted
+    - R5 pass — `## Out of scope` names seven things, three of them new and each something a reader could reasonably assume is included: removing a built-in mapping, a third band, a deeper destination
+    - R6 pass — no open question on the item; both round 1 questions are `status: answered` (auto)
+    - R7 pass — `depends-on: WI-0001`, which is `done` and merged (auto)
+    - R8 **was fail, now pass** — `artifacts/refinement-qa.md` declares `status: recorded` and holds both rounds: round 1's replies verbatim as the stakeholder wrote them, round 2's seven decisions each tagged `[assumed]` with the delegation or delivered criterion it rests on (auto)
+    - R9 pass — one coherent change: one rule source feeding the two tables that already sit behind one lookup each [src: ADR-0005]. Not a split candidate; splitting would mean designing the rule format twice
+    - R10 **was fail, now pass** — the one new axis is "rules supplied, or not", and `## Notes` carries a table crossing it with every existing behaviour, each row pointing at the criterion that states it, or marked deliberately unconstrained with `refine` named
+  - `criteria-are-decidable` → **pass**. Each criterion, with what settles it: AC1 the existing suite plus PREVIEW/APPLY over `S`; AC2/AC3/AC4 a PREVIEW over `S` with `F1`, `F2`, `F3` and a named line to compare; AC5 a PREVIEW with `F4` plus three boundary files at 90 days exactly, minus a minute and plus a minute; AC6 two runs, `F1` and `F4`, each checking the table that was *not* supplied; AC7 a three-band and a one-band file, exit code and stdout; AC8 six files, one per class, stderr line and untouched folder in both modes; AC9 a pre-existing `recent/papers/report.pdf`, its size and contents after APPLY; AC10 `.hidden.jpg`'s absence, a pre-existing subfolder's contents, and `notes.xyz` left; AC11 PREVIEW's (name, destination) pairs compared with the tree after APPLY, over five rule files; AC12 reading `README.md` against AC2, AC5, AC7, AC8 and AC11. Two criteria — AC11's collision case and AC8's exit status — deliberately name the *shape* of the answer rather than the answer, so that `plan`'s freedom does not cost `verify` its verdict
+  - `qa-recorded-verbatim` → **pass**. Both round 1 answers are block-quoted as the stakeholder wrote them, including the sentence in Q-002 that rejects `refine`'s own recommendation; neither is paraphrased and neither hesitation is tidied into confidence. Every round 2 decision is tagged `[assumed]` and names its basis, and R2.4 says in as many words that it is a narrowing the stakeholder was not asked about
+- **Artifacts:**
+  - `tracker/items/WI-0003/item.md` — `## Acceptance criteria` rewritten (AC1-AC5 → AC1-AC12, with a preamble defining `S`, `RULES(F)` and the destination path); `## Out of scope` gains a multi-level-destination entry; `## Notes` gains the R10 combinations table, and its `plan`-routed list is updated for what the criteria now settle
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — `status: agenda` → `status: recorded`; banner rewritten; round 2 added with seven decisions; `## Override` added, stating there is none
+  - `tracker/board.md` — regenerated
+  - commit on `main` (tracker only; this skill produces no code)
+- **Status:** `draft` → `ready`
+- **Result:** WI-0003 is Ready. Twelve criteria replace intake's five rough ones, each settled by a named rule file and an output line over a sample folder fixed in the item itself; R4, R8 and R10 all closed without a second round trip to the stakeholder. `plan` inherits four implementation choices, named in `## Notes` — the rule format, one file or two, the band-name collision, and the rejection exit status — each already bounded by a criterion that says what `verify` will check whichever way it goes.
+
+## 2026-08-27T21:40:42Z — plan v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** status `ready`, dispatched by `next` — earliest-created of three `ready` items all ranked `low`
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — AC1-AC12 and the `## Notes` routing list, which named the four decisions left to this skill
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — both stakeholder answers verbatim, and round 2's seven `[assumed]` entries, R2.4 in particular
+  - `tracker/items/WI-0003/history.md`, `journal.md`
+  - `tracker/items/EP-001/questions/Q-001.md` (the standing delegation), `Q-002.md`, `Q-003.md`
+  - `tracker/items/WI-0002/item.md` — AC1's three-component destination, which constrains what a rule file may name
+  - `docs/architecture/overview.md` (v7) and every ADR: ADR-0001 (stdlib, 3.9 floor), ADR-0002 (the planner decides destinations), ADR-0003, ADR-0004, ADR-0005 (the band table's shape, written for this item), ADR-0006 (the CLI error boundary and exit 2), ADR-0007, ADR-0008 (help text is prose, guarded by a test), ADR-0009
+  - `docs/product/vision.md`, `README.md`
+  - Source: `tidy/rules.py`, `tidy/planner.py`, `tidy/cli.py`, `tidy/apply.py` (head), `tidy/__main__.py`; `tests/test_cli.py`'s help-guard tests; `tracker/project.yaml`
+- **Decisions:**
+  - **The rule file is INI via `configparser`, not JSON and not TOML** — ADR-0010, route: decided, from ADR-0001's constraint plus who writes the file. TOML would raise the 3.9 interpreter floor, which is an ADR-0001 supersession rather than a choice available here; JSON forbids comments, and the one thing a person hand-writing a rule file wants is a note about why `.csv` goes to `data`.
+  - **`[bands]` has three fixed keys — `newer`, `older`, `boundary-days` — rather than an ordered list** — ADR-0010, route: decided from the stakeholder's answer. Their A fixes the count at two [src: WI-0003/Q-002], and fixed keys make a third band *unrepresentable* rather than validated-against. AC7 then falls out of AC8's unknown-option rule instead of needing its own check.
+  - **`--rules PATH`, no default location** — ADR-0010, route: decided. A rule file discovered rather than named could change what a run does without appearing anywhere the user looked, on a tool whose whole promise is that there are no surprises [src: docs/product/vision.md]. Adding a default later is additive, which is why this was the safe half to choose first.
+  - **A bad rule file exits 2, checked before the target folder** — ADR-0010, route: from the documents. ADR-0006 already draws the boundary: an event that ends the run before there is a run is the CLI's, one line on stderr, empty stdout, exit 2. Checking the rule file first also means a mistyped `--rules` is reported even when the folder is unusable, which is the more useful message. The exit vocabulary stays at the three values `README.md` documents, so `refine`'s "non-zero, and README accounts for it" is satisfied without widening it.
+  - **A `Ruleset` value passed into `build_plan`, not module state** — ADR-0011, route: decided. Rebinding `DEFAULT_RULES` at load time would make what `folder_for` returns depend on what ran before it in the same process, and AC4 requires two rule files over the same folder in one test run.
+  - **The merge is a dict update on the extension-to-folder index, not on `DEFAULT_RULES`** — ADR-0011. `DEFAULT_RULES` maps folder → extensions, so redirecting `.csv` through it means removing it from one tuple and adding a key; merging on the inverted index makes the stakeholder's "mine win" one assignment per entry.
+  - **`build_plan`'s parameter defaults to `None`, not to `BUILT_IN`.** This looks like a style choice and is not. ADR-0008 states its own checkable condition as a grep over `tidy/cli.py`'s imports; a `from .rules import BUILT_IN` there to supply a default would falsify it with every test still green. Recorded in ADR-0011, in the plan's step 3 and step 5, in `## Risks`, and in the overview, because it is the one way to get this item wrong that no gate catches.
+  - **A type folder named the same as a band is used verbatim** — Assumption A1, route: reversible assumption. `refine` left it deliberately unconstrained and routed it here. Rejecting it would be wrong for a user who renamed their bands to `current`/`archive` and legitimately wants a folder called `old`; nothing can be overwritten either way, and the preview shows the real destination first. Reversal is one check in the loader plus its test.
+  - **`boundary-days` may be fractional** — Assumption A2, reversible: `float` → `int` in one line.
+  - **The sample folder `S` is built by the tests** — Assumption A3. The item fixes its contents and mtimes; the suite already sets mtimes with `os.utime` [src: tests/support.py], and a shipped fixture could not hold ages relative to the run.
+  - **No new item filed and no ADR superseded.** Nothing in the design contradicts a recorded decision; ADR-0005's prediction that one mechanism would serve both tables held, and is now recorded as having held rather than merely restated.
+  - **`docs/architecture/overview.md` updated rather than left.** The change adds a module and a second source for both tables, so the shape does change. It is written as a forecast — the code does not exist — and `implement` bumps it again when it does.
+- **Questions raised:** none. Every decision was answerable from the documents or as a reversible assumption; nothing here is irreversible or depends on intent no document records, so `question.md` §1's third branch was not reached. The two decisions that *were* the stakeholder's were already answered in round 1 of refinement.
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, 72 tests, OK
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 3 documents checked, 0 errors (twice before that: one `claim.unsourced` in ADR-0010 and one in `overview.md`, both fixed by sourcing the claim rather than hedging it)
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0
+  - `.claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .`, exit 0, 10 items and 13 documents)
+  - `every-criterion-is-addressed` → **pass**. All twelve criteria have a row in `plan.md`'s mapping table, each naming the step that satisfies it and a specific demonstration rather than "tests": AC1 → steps 3, 5 (the existing suite unedited plus a no-flag run over `S`); AC2 → 2, 9 (`F1`, one named line); AC3 → 2, 9 (`F2`); AC4 → 9 (`F1` vs `F3`, exactly one differing line); AC5 → 4, 9 (`F4` plus three boundary mtimes); AC6 → 2, 9 (each section alone); AC7 → 4, 7, 9 (a fourth band key); AC8 → 4, 5, 7, 9 (one file per class, both modes); AC9 → 3, 9 (`F5` and a pre-existing destination); AC10 → 3, 9 (hidden file, subfolder, unmatched extension); AC11 → 3, 8, 9 (preview pairs vs the tree after apply, five rule files); AC12 → 10 (README read against AC2, AC5, AC7, AC8, AC11). No step exists that no AC maps to
+  - `project-commands-resolved` → **pass**, and unchanged. `commands.test` is `python3 -m unittest discover -s tests -t . -q` and `commands.lint` is `python3 -m compileall -q tidy tests` [src: tracker/project.yaml]; both were run in this execution and both exited 0, on 72 tests. ADR-0004 records what a passing lint means here. Nothing needed filling in
+  - `decisions-recorded` → **pass**. Nine choices, each pointed at an ADR or an assumption, in `plan.md`'s `## Decisions and ADRs` table: five to ADR-0010, two to ADR-0011, two to `## Assumptions` (A1, A2) with what reversal costs. A3 is recorded as an assumption too. Both ADRs list three options each and both state reversibility, which `plan`'s own escalation rule turns on
+  - `plan-is-executable-without-you` → **pass** (advisory). Eleven numbered steps, each naming the files it touches and what is true afterwards. The two places a developer would otherwise have to decide something are pre-decided and marked: step 3's `None` default with the reason, and step 4's ordered list of validations. `## Risks` names the `configparser` sharp edges — duplicate keys, `%` interpolation — as notes rather than leaving them to be discovered
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, exit 0, 3 documents)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/plan.md` (new) — problem, approach, 11 steps, the 12-row mapping table, 3 assumptions, the decision table, `## Scaffolding: none`, 5 risks, out of scope
+  - `docs/architecture/adr/ADR-0010-rules-come-from-one-ini-file-named-on-the-command-line.md` (new, v1) — format, source, band-key shape, and the exit-2 boundary
+  - `docs/architecture/adr/ADR-0011-a-ruleset-is-a-value-passed-into-the-planner.md` (new, v1) — the `Ruleset` value, the merge, and the import that would break ADR-0008 silently
+  - `docs/architecture/overview.md` v7 → **v8** — the two "deliberately not here" entries now say what is coming and cite it; the WI-0003 forecast is replaced with the two ADRs and the import trap; change-log row added
+  - `tracker/board.md` — regenerated
+  - commit on `main` (tracker and docs only; no code, and `## Scaffolding` is `none`)
+- **Status:** `ready` → `planned`
+- **Result:** WI-0003 is planned. Two ADRs settle how rules get in (one INI file, `--rules PATH`, no default location, rejected at the CLI boundary with exit 2) and what happens to them once read (a `Ruleset` value passed into `build_plan`, merged once). Eleven steps cover all twelve criteria with a named demonstration each; three assumptions are recorded with their reversal costs, and the one failure mode no gate would catch — importing `BUILT_IN` into `cli.py` and quietly falsifying ADR-0008 — is called out in the ADR, the plan, the risks and the overview.
+
+## 2026-08-27T21:42:51Z — implement v0.2.2 — developer
+
+- **Item:** WI-0003
+- **Trigger:** status `planned`; dispatched by `next` as the best-ranked runnable item (priority rank 4 shared with BUG-0005 and BUG-0006, decided on `created` ascending).
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — AC1–AC12, `## Out of scope`, and the R10 combination table
+  - `tracker/items/WI-0003/artifacts/plan.md` — the eleven steps, the AC-to-step mapping, assumptions A1–A3 and the five risks
+  - `tracker/items/WI-0003/history.md` — a fresh start at `planned`, no send-back, no branch
+  - `tracker/items/WI-0003/questions/Q-001.md`, `Q-002.md` — both `answered` and already propagated into `item.md` and `plan.md`; read for the frame, not acted on directly
+  - `tracker/project.yaml` — `commands.test`, `commands.lint`, `conventions.branch-prefix`, `conventions.commit-subject`
+  - `docs/architecture/adr/ADR-0010-*.md`, `ADR-0011-*.md` — the INI format, `--rules`, and the `Ruleset` value
+  - `tidy/rules.py`, `tidy/planner.py`, `tidy/cli.py` — the code the plan's steps 1–5 change
+  - `tests/support.py`, `tests/cli_support.py`, `tests/test_rules.py`, and the outline of `tests/test_cli.py`, `tests/test_planner.py` — the helpers and call sites steps 6–9 touch
+  - `README.md` — the promises AC10 and AC12 bind, and the exit-status sentence step 10 extends
+- **Decisions:**
+  - Start fresh rather than reconcile: `git branch` showed no `wi/WI-0003`, and the history's last row is `ready → planned` by `plan`, so no branch or partial work exists.
+  - Take the plan's step order as written. Steps 1–3 are a refactor with no behaviour change, so the existing suite is the guard for them before any new behaviour is added.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0003 main` → 0
+- **Gates:**
+  - `tests-pass` → **not yet run** (no code written yet; runs on the branch head at step 7)
+  - `lint-clean` → **not yet run** (same)
+  - `workspace-valid` → **not yet run** (same)
+  - `every-criterion-has-a-test` → **not yet run** (same)
+  - `commits-reference-the-item` → **not yet run** (no commits on the branch yet)
+  - `claims-are-sourced` → **not yet run** (nothing changed since `main` yet)
+- **Artifacts:**
+  - branch `wi/WI-0003`, from `main` at `0a56b7a`
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of WI-0003 has started on `wi/WI-0003`. Nothing is built yet; this entry records the branch and what was read, and the closing entry at `verifying` will report the work and the gates.
+
+## 2026-08-27T21:53:03Z — implement v0.2.2 — developer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-progress`, opened by this skill's own entry earlier in this execution; the plan's eleven steps are complete and the gates ran on the branch head.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — AC1–AC12 and the R10 combination table
+  - `tracker/items/WI-0003/artifacts/plan.md` — steps 1–11, the AC-to-step mapping, assumptions A1–A3, the five risks
+  - `docs/architecture/adr/ADR-0010-*.md`, `ADR-0011-*.md` — the INI format and the `Ruleset` value
+  - `docs/architecture/adr/ADR-0002`, `ADR-0005`, `ADR-0006`, `ADR-0008`, `ADR-0009` (via the overview) — the constraints the plan assumes but does not restate
+  - `tidy/rules.py`, `tidy/planner.py`, `tidy/cli.py`, `tidy/apply.py`, `tests/support.py`, `tests/cli_support.py`, `tests/test_rules.py`, `tests/test_planner.py`, `tests/test_cli.py`, `README.md`, `docs/architecture/overview.md`
+- **Decisions:**
+  - Rejected `[DEFAULT]` by name as an unknown section. The plan says "a section other than `[types]` or `[bands]`", and `configparser` does not list `DEFAULT` in `sections()` — its keys leak into both sections instead — so checking `parser.defaults()` first is what makes the plan's rule true rather than nearly true.
+  - Left `configparser`'s comment handling at its default: a comment is a whole line, and a `#` part-way through a line is part of the value. ADR-0010 chose "INI via `configparser`" and neither it nor the plan overrode this, so the default is the decision. Documented in `README.md` and pinned by a test rather than left to be discovered.
+  - Read ADR-0008's condition as "no line importing the `rules` module" rather than as a literal substring search. `cli.py` imports `.ruleset_file`, whose name begins with those five letters, so the plan's literal grep now gives a false hit; the anchored form `grep -nE "^(from|import).*\brules\b" tidy/cli.py` exits 1. What ADR-0008 decided — `cli.py` imports no rule table — holds. Recorded in `overview.md` v9 so the next reader does not have to re-derive it; the ADR itself is untouched, which is not this skill's to change.
+  - Asserted AC5's exactly-on-the-boundary case at the value level rather than through the CLI. A file whose mtime is set to exactly 90 days ago is fractionally older than 90 days by the time `build_plan` reads the clock, so no clock-driven test can pin the exact case; the CLI test does AC5's three files and `test_ruleset_file` does the exact one.
+  - Escalated nothing. Every gap the plan left was a "how": the six malformed classes, the message wording, and the test layout were all determined by the criteria and the ADRs, and assumption A1 (`old/old/report.pdf`) was already `plan`'s recorded decision rather than mine to take.
+  - Fixed two of my own tests rather than the code when they failed: an inline comment is not a comment, and a subfolder named `holiday` shares a substring with `holiday.jpg` so its assertion would have passed for the wrong reason. Both are recorded in the commits that carry them.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0003 main` → 0
+  - `python3 -m unittest discover -s tests -t . -q` → 0, after every step; final run `Ran 157 tests in 0.163s / OK`
+  - `python3 -m compileall -q tidy tests` → 0, no output
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → 0, `all 7 commit(s) on main..wi/WI-0003 name WI-0003`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → 0, `checked 1 document(s), 0 errors, 0 warnings`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0, `10 item(s), 13 document(s), 0 errors, 0 warnings`
+  - `grep -nE "^(from|import).*\brules\b" tidy/cli.py` → 1, no output (ADR-0008's condition)
+  - `git commit` × 8, all on `wi/WI-0003`
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` exited 0; 157 tests, 37 of them new)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` exited 0)
+  - `workspace-valid` → **pass** (`validate-workspace .` exited 0: 10 items, 13 documents, 0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass** (`impl-report.md`'s evidence table names test functions for all of AC1–AC12; none is demonstrated by reading code. AC1 additionally rests on the pre-existing suite passing with no assertion edited)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs WI-0003 wi/WI-0003` exited 0)
+  - `no-unplanned-scope` → **pass**, advisory (10 files under `tidy/`, `tests/`, `README.md` and `docs/`; every hunk traces to one of plan steps 1–11. No acceptance criterion edited — `item.md`'s only diff is the `status`, `updated` and `branch` fields the transition script writes)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exited 0)
+- **Artifacts:**
+  - `tidy/ruleset_file.py` (new), `tidy/rules.py`, `tidy/planner.py`, `tidy/cli.py`
+  - `tests/test_ruleset_file.py` (new), `tests/test_cli.py`, `tests/test_planner.py`, `tests/test_rules.py`
+  - `README.md` — the "Your own rules" section, and the exit-status paragraph
+  - `docs/architecture/overview.md` — v9, with a change-log row
+  - `tracker/items/WI-0003/artifacts/impl-report.md`
+  - branch `wi/WI-0003`, commits `58c4607` through the head of this branch, all naming WI-0003
+- **Status:** `in-progress` → `verifying`
+- **Result:** All eleven plan steps are on the branch and every hard gate passes on its head. A user's rules now arrive as one INI file named with `--rules PATH`, layer over the built-in tables with their entries winning, and are rejected before anything moves when they are malformed; every one of AC1–AC12 has named tests. Five deviations are recorded in `impl-report.md`, all of them "how" rather than "what", and four things a reader might be surprised by — an infinite boundary, a meaningless-but-valid rule file, whole-line-only comments, and ADR-0008's grep needing its word-boundary form — are declared rather than left for `verify` to find.
+
+## 2026-08-27T21:58:30Z — verify v0.1.4 — qa-engineer
+
+- **Item:** WI-0003
+- **Trigger:** status `verifying`; dispatched by `next` as the best-ranked runnable item (priority rank 4 shared with BUG-0005 and BUG-0006, decided on `created` ascending).
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — AC1–AC12, read **before** the implementation report, so that what settles each criterion was derived from the criterion
+  - `tracker/items/WI-0003/history.md` — a first verification, no send-back to answer
+  - `tracker/items/WI-0003/artifacts/plan.md` — steps 1–11 and assumptions A1–A3, for the diff read at step 6
+  - `tracker/items/WI-0003/artifacts/impl-report.md` — read after the criteria, and checked rather than trusted
+  - `tracker/project.yaml` — `commands.test` and `commands.lint`
+  - the code on `wi/WI-0003` at `d870cb1649333e90af727b26cf5d8b1c1f483b06`: `tidy/rules.py`, `tidy/ruleset_file.py`, `tidy/planner.py`, `tidy/cli.py`, `README.md`, and the full `main..HEAD` diff
+- **Decisions:**
+  - Gathered the evidence outside the test suite. `S` was built from the **item's** preamble by a script of my own, the six rule files were written from the item's own descriptions of them, and `python3 -m tidy` was driven as a real command. The suite was used only for the sensitivity check, so that no criterion's verdict rests on a test whose relevance I had assumed.
+  - Judged AC1 a **pass** despite `tests/test_rules.py` differing from `main`. The criterion asks that no test be edited to accommodate this item; every removed line there is paired with the same assertion prefixed `BUILT_IN.`, no expected value changed anywhere, and the other four pre-existing test files have zero removed lines. That is the rename ADR-0011 predicted and `plan` Risk 1 flagged, and it is exactly the case the risk told a reviewer to distinguish from a changed assertion.
+  - Judged the four oddities `implement` declared to be **inside** the criteria rather than defects, and reproduced each rather than taking the report's word. `boundary-days = inf` is a positive number, so AC8 does not require rejecting it; `.csv = .csv` is unconstrained and `plan` predicted it; an inline `#` is part of the value and the two modes still agree, which is all AC11 asks; and ADR-0008's condition is about importing the rules *module*, which `cli.py` does not. Filed no bug for any of them — no criterion says the behaviour should be different, and inventing an item for something the record already declares would be work nobody asked for.
+  - Classified nothing as a send-back and nothing as a bug, because nothing failed. No question was needed: no criterion turned out ambiguous once the sample folder and the rule files were built from the item's own words.
+- **Questions raised:** none
+- **Commands:**
+  - `git rev-parse HEAD` → 0, `d870cb1649333e90af727b26cf5d8b1c1f483b06`
+  - `python3 -m unittest discover -s tests -t . -q` → 0, `Ran 157 tests in 0.161s / OK`
+  - `python3 -m compileall -q tidy tests` → 0, no output
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0, `10 item(s), 13 document(s), 0 errors, 0 warnings`
+  - `python3 /tmp/v/mkS.py /tmp/v/S` → 0, rebuilt between every scenario
+  - `python3 -m tidy /tmp/v/S` and `--apply` → 0 (AC1)
+  - `python3 -m tidy /tmp/v/S --rules F{1,2,3,4,5,6}.ini`, preview and `--apply` → 0 (AC2–AC7, AC9–AC11)
+  - 12 malformed rule files × 2 modes → 2 each, stdout empty, one stderr line each (AC7, AC8)
+  - `sha256sum` listings of `S` before and after the 12 rejected `--apply` runs; `diff` → 0, empty (AC8)
+  - `python3 -m tidy /tmp/v/S --rules /tmp/v/absent.ini` → 2; `--rules /tmp/v` (a directory) → 2
+  - a script extracting `README.md`'s `ini` block, then `python3 -m tidy /tmp/v/S --rules /tmp/v/readme-example.ini` → 0 (AC12)
+  - `git diff -U0 main..HEAD -- tests/test_rules.py` and the other five test files → 0 (AC1's suite clause)
+  - `python3 -m unittest tests.test_rules.BandTableTests tests.test_rules.ExtensionTableTests tests.test_apply tests.test_planner.ScanTests` → 0, `Ran 26 tests / OK`
+  - seven sensitivity breakages, each followed by `python3 -m unittest discover -s tests -t . -q` → 1 each, then restore; final restored run → 0, `OK`
+  - `git diff --quiet HEAD` → 0 (working tree identical to the verified commit after the probes)
+  - `grep -nE "^(from|import).*\brules\b" tidy/cli.py` → 1, no output; `python3 -m tidy --help` → 0, names `recent`, `old`, `modified`, `--rules`
+  - `git diff main..HEAD --stat -- tidy/` and `-- tidy/apply.py` → 0; `apply.py` diff is empty
+- **Gates:**
+  - `tests-pass` → **pass** (I ran it on `d870cb1`: `Ran 157 tests in 0.161s / OK`, exit 0)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests`, exit 0, no output)
+  - `workspace-valid` → **pass** (`validate-workspace .`, exit 0, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (all twelve rows of `verify-report.md` name a command I ran and quote its output; `S` and the rule files were built from the item, and the CLI was driven as a subprocess, so no verdict cites `impl-report.md`)
+  - `negative-cases-exercised` → **pass** (12 malformed rule files × 2 modes with byte-for-byte proof nothing moved; three files at the age boundary; a pre-existing destination; a missing rule file; a rule path that is a directory; a file matching no rule)
+  - `tests-would-fail-without-the-change` → **pass**, advisory (seven independent breakages, each producing failures — 21, 11, 16, 7, 3, 27 and 6 — and each restored; the tree was confirmed clean afterwards)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/verify-report.md`
+  - `tracker/items/WI-0003/item.md` — all twelve criteria ticked, each against the evidence in the report; none was ticked without a command of mine behind it
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** WI-0003 passes verification at `d870cb1`. All twelve criteria are met on evidence gathered independently of the test suite: a user's rules arrive as one INI file, layer over the built-in tables with their entries winning, rename the two bands and move the one boundary, and are rejected before anything moves — twelve malformed files in both modes left `S` byte-for-byte identical. Seven sensitivity probes confirm no delivered behaviour survives its own removal quietly. No defect found, nothing sent back, no bug filed; four declared oddities were reproduced and are inside the criteria, and what could not be checked is listed in the report.
+
+## 2026-08-27T22:04:04Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-review`; dispatched by `next` as the best-ranked runnable item (priority rank 4 shared with BUG-0005 and BUG-0006, decided on `created` ascending).
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the twelve criteria and their tick state
+  - `tracker/items/WI-0003/history.md` — eight rows, chaining without a gap to `in-review`
+  - `tracker/items/WI-0003/journal.md` — read in full: eight entries, one per execution
+  - `tracker/items/WI-0003/artifacts/plan.md`, `impl-report.md`, `verify-report.md`
+  - `tracker/items/WI-0003/questions/Q-001.md`, `Q-002.md` — both `answered`; each `## Consequences` opened and the files it names checked
+  - the diff `main..22e7313`, hunk by hunk — `tidy/rules.py`, `tidy/ruleset_file.py`, `tidy/planner.py`, `tidy/cli.py`, four test files, `README.md`, `docs/architecture/overview.md`
+  - `docs/architecture/adr/` — ADR-0002, ADR-0005, ADR-0006, ADR-0008, ADR-0009, ADR-0010, ADR-0011, each opened for the D12 audit rather than recalled
+  - `tracker/items/BUG-0006/item.md` — to establish whether the finding was already filed
+  - `.claude/agile-skills/spec/dor-dod.md` §3, `spec/question.md`, `spec/doc-header.md` §5
+- **Decisions:**
+  - **Escalated, and did not merge.** The change is right and I would otherwise accept it, but D12 fails on a document this merge invalidates and that `review-close` may not edit. Merging first and filing the finding afterwards would close the item over a live D12 failure caused by the merge itself — the exact thing the criterion exists to stop.
+  - Classified the finding as **neither a send-back nor a bug**. Not a send-back: no acceptance criterion of WI-0003 covers ADR-0008's citations, and `implement` honoured the ADR's decision exactly — `build_plan`'s `None` default exists precisely so `cli.py` need not import a table. Not a bug item: the remedy is to an ADR, and amending or superseding one is the architect's, which is what a question is for. This follows the shape the two earlier reviews on this epic used for the same class of finding (BUG-0002/Q-001, BUG-0004/Q-002).
+  - Distinguished it from **BUG-0006**, which is a `path:line` citation in the same ADR and whose AC2 sweeps `src: <file>:<line>` forms only. This is a `src: run:` form; that sweep would not find it. Recorded the relationship in Q-003 rather than folding the two together.
+  - Judged ADR-0005's forecast "the lookups do not change" still sound: the lookup *bodies* are byte-identical and one `merge` does replace either table, and ADR-0011's own `## Consequences` already records the part the forecast lacked — that the two stop being importable module functions. A later ADR carrying the correction is the record working, not failing.
+  - Accepted three gaps rather than sending them back, and wrote each into the item's `## Notes` so it survives the item: `Ruleset` is frozen but its `by_extension` dict is mutable in place (a real hazard for a later item, no criterion covers it, and the fix is `plan`'s); `boundary-days = inf` sits inside AC8's wording; and two paths `verify` declared unexercised. A gap living only in a report is one nobody reads again.
+  - Ran the trial merge **detached** and confirmed the trunk did not move afterwards, rather than assuming the worktree removal undid it (F-055).
+- **Questions raised:** Q-003, blocking, addressed to the architect
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness WI-0003 wi/WI-0003` → 0, "verified at d870cb16; wi/WI-0003 has moved to 22e7313b but only the record changed (5 file(s) under tracker/ or docs/)"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → 0, `all 10 commit(s) on main..wi/WI-0003 name WI-0003`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → 0; `lint-claims .` over the whole tree → 0
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff WI-0003` → 0, not an epic
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0 before filing Q-003; 2 errors after, which is `question.blocking.not-suspended` and is resolved by this transition
+  - `git rev-parse main` → `0a56b7a1…` before the trial; `git worktree add --detach /tmp/trial main` → 0; `git -C /tmp/trial merge --no-ff wi/WI-0003` → 0, merge commit `244fdab`; `python3 -m unittest discover -s tests -t . -q` **inside the trial** → 0, `Ran 157 tests in 0.162s / OK`; `python3 -m compileall -q tidy tests` inside the trial → 0; `git worktree remove --force /tmp/trial` → 0; `git rev-parse main` → `0a56b7a1…`, unchanged
+  - `grep -n "^from\|^import" tidy/cli.py` → 0, **six** imports (ADR-0008's citation records five)
+  - `grep -nE "^(from|import).*\brules\b" tidy/cli.py` → 1, no output (the claim itself holds)
+  - `git diff main..HEAD -- tidy/apply.py` → empty
+  - `python3 -c "…BUILT_IN.by_extension is _BY_EXTENSION…"` → `True`, and an in-place mutation succeeded while field rebinding raised `FrozenInstanceError`
+  - `grep -c "^- \[x\] AC" item.md` → 12; `grep -c "^- \[ \] AC" item.md` → 0
+- **Gates:**
+  - `definition-of-done` → **fail on D12, pass on the other eleven** (per-criterion table in `review.md`; D1, D2, D3, D5, D6, D7, D8, D10, D11 pass with evidence, D4 passed at the time of the audit and is now superseded by Q-003 itself, D9 not reached because the merge is deliberately withheld, D12 fails on ADR-0008's two `[src: run: …]` citations)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; the four commits after `d870cb1` touch only `tracker/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 10 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (157 tests OK inside the detached trial worktree at merge commit `244fdab`, not on the branch)
+  - `workspace-valid` → **pass** (exit 0 throughout; the one red window was `question.blocking.not-suspended` between filing Q-003 and this transition, which this transition closes)
+  - `record-is-reconstructible` → **pass** (from the tracker, `docs/` and `git log --grep WI-0003` alone I could answer all four: what was built and why — `item.md` and `plan.md`; which skill decided what — eight journal entries against eight history rows, with ADR-0010 and ADR-0011 carrying the design decisions; what questions arose and how they resolved — Q-001 and Q-002 answered by the stakeholder with `## Consequences` naming files that exist; what verification found — `verify-report.md`'s twelve rows, its negative cases and its seven sensitivity probes)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0, and the whole tree exit 0 — which is the point of Finding 1: the citation resolves and still does not support its sentence)
+  - `epic-sign-off` → **pass, not applicable** (`check-epic-signoff WI-0003` exit 0: "WI-0003 is a 'work-item', not an epic")
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/review.md` — what was examined, the D1–D12 table, the finding, the accepted gaps, the verdict
+  - `tracker/items/WI-0003/item.md` — a `### Review` section under `## Notes` recording the three accepted gaps
+  - `tracker/items/WI-0003/questions/Q-003.md` — blocking, to the architect
+  - no merge commit; the trial merge `244fdab` was discarded and `main` is unmoved at `0a56b7a1`
+  - no bug item filed
+- **Status:** `in-review` → `awaiting-answer`
+- **Result:** WI-0003 is suspended at `awaiting-answer`, `resume-to: in-review`, with Q-003 open to the architect. The change itself passes review — eleven of twelve Definition of Done criteria, a diff that maps hunk-for-hunk onto the plan, a clean trial merge whose 157 tests pass, and fresh verification — but this merge makes ADR-0008's own recorded evidence unreproducible on the one claim it was written to protect, and `review-close` may not edit an ADR. Once Q-003's answer reaches ADR-0008, this review resumes at the trial-merge step; no code needs to change and no acceptance criterion is in question.
+
+## 2026-08-27T22:09:33Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** `awaiting-answer` since 2026-08-27T22:04:04Z, `resume-to: in-review`; dispatched by `next` at orchestrator step 4 as the item owning the only open architect-addressed question in the workspace (Q-003, created 2026-08-27T22:06:40Z).
+- **Inputs read:**
+  - `tracker/items/WI-0003/questions/Q-003.md` — the only open question on this item; Q-001 and Q-002 were already `answered` and were re-read for the decisions they carry
+  - `tracker/items/WI-0003/item.md` — the twelve criteria, `## Out of scope`, and the review notes; none of the criteria bears on ADR-0008's citations
+  - `tracker/items/WI-0003/history.md` — nine rows; the suspending row records `resume-to: in-review`
+  - `docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` v1 — the document under question, read in full
+  - `tracker/items/BUG-0002/questions/Q-002.md` (answered) — the precedent that a factual clause inside a `status: current` ADR may be corrected in place
+  - `tracker/items/BUG-0004/questions/Q-001.md` and `Q-002.md` (answered) — the same class of citation drift in ADR-0006 and ADR-0009, and the durable-citation reasoning this answer follows
+  - `tracker/items/BUG-0006/item.md` — to establish that this defect is not that one and that the edit does not disturb it
+  - `.claude/agile-skills/spec/doc-header.md` §3, §4, §4a, §5 — the change-log rule, the "never edited to change its decision" rule, the citation forms, and the "superseded only" row
+  - `.claude/agile-skills/spec/question.md` §4 — checked against, to confirm no escalation condition applies
+- **Decisions:**
+  - **Q-003 — option A, decided from the record (route 1: existing documents), no escalation.** Both `[src: run: grep -n "^from\|^import" tidy/cli.py → exit 0, five imports: …]` citations in ADR-0008 `## Decision` are replaced by the anchored `[src: run: grep -nE "^(from|import).*\brules\b" tidy/cli.py → exit 1, no output]`, and the ADR goes to v2. The permission comes from BUG-0002/Q-002, which settled that §5's "superseded only" and §4's "never edited to change its decision" protect the *decision*, not the accuracy of a factual clause — §3 requires every content change to every `docs/` document to bump the version and add a row, which a never-editable class would have no use for. The choice between A and the alternatives comes from BUG-0004/Q-002, which met the same decay one citation-form over and chose the durable form: a `run:` citation enumerating a file's imports is a snapshot of something unrelated work keeps editing, while the anchored grep is a test of the claim — exit 1 today, exit 1 after a seventh import, and non-empty exactly when someone imports the rule table, the event ADR-0008 exists to prevent.
+  - **B, C and D rejected.** B supersedes an ADR whose decision never moved, which BUG-0004/Q-001 rejected for the same reason: two documents to learn one unchanged thing. C leaves a `status: current` ADR whose own stated checkable condition cannot be checked, and taking it properly would mean amending `spec/doc-header.md` §4a — the toolkit, outside EP-001. D widens BUG-0006's refined criteria after the fact and holds WI-0003's merge behind an unplanned item's whole pipeline.
+  - **Three things deliberately not done, so the scope of the edit is legible.** (1) The third `run:` citation, in the Reversibility bullet, was re-run and still gives its recorded outcome exactly, so it was left alone. (2) `[src: tidy/cli.py:52]` at ADR-0008 line 48 is BUG-0006 and stays for BUG-0006; the whole edit sits below line 48, so that item's summary and reproduction steps still land where they say. (3) The general rule — that `spec/doc-header.md` §4a admits `run:` citations without distinguishing live claims from dated observations — is a finding about the toolkit that this skill may not write into the spec, so following BUG-0004/Q-002's precedent it is recorded as a `## Consequences` bullet in ADR-0008 where the next `plan` will read it.
+  - **No new item filed and no criterion amended.** The answer widens nothing: ADR-0008's decision, WI-0003's twelve criteria and everything under `tidy/` are untouched, and no defect in delivered behaviour was revealed. A note for BUG-0006 — that its AC2 sweeps `path:line` forms only, so this class survives in `run:` citations elsewhere — is recorded in the answer rather than in BUG-0006, because amending another item's criteria is not this skill's to do.
+  - **One observation, recorded rather than acted on.** `lint-claims tracker/items/WI-0003/item.md` reports three `claim.unsourced` errors, at lines 22, 29 and 182. All three are present unchanged on `HEAD`'s copy of the file and none is in the paragraph this execution added; `lint-claims` is not a gate on this skill and `validate-workspace`, which enforces only the resolution rule tree-wide, passes. Fixing them here would be an unrelated edit inside an answer.
+- **Questions raised:** none
+- **Commands:**
+  - `git branch --show-current` → exit 0, `wi/WI-0003`
+  - `grep -n "^from\|^import" tidy/cli.py` → exit 0, six lines: argparse, os, sys, `.apply`, `.planner`, `.ruleset_file` — the recorded five-import output is unreproducible, as Q-003 states
+  - `grep -nE "^(from|import).*\brules\b" tidy/cli.py` → exit 1, no output — the anchored form the citations now record
+  - `grep -rn "epilog\|description=" tidy tests --include=*.py` → exit 0, two hits, both `tidy/cli.py` — the Reversibility citation still reproduces, so it was not touched
+  - `.claude/agile-skills/scripts/lint-claims docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` → exit 0, 0 errors, 0 warnings
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 1 before transitioning, with exactly the two errors this move clears (`board.stale`, `question.awaiting.none-open`); re-run after the transition and the board regeneration
+- **Gates:**
+  - `answer-is-propagated` → **pass** (Q-003's `## Consequences` names four paths and each was opened and checked: `ADR-0008…md` carries the two amended citations at lines 69-70 and 75-77, the new `## Consequences` bullet, `version: 2`, `updated-by: answer-questions`, `updated-for: WI-0003` and change-log row 2; `questions/Q-003.md` carries the answer and this list; `item.md`'s review section now records the observation as settled and how; `history.md` and `journal.md` carry this execution)
+  - `answered-from-the-record` → **pass** (the answer cites BUG-0002/Q-002 for the permission, BUG-0004/Q-002 for the form, ADR-0007 and ADR-0006 as the two ADRs already corrected this way, and `spec/doc-header.md` §3/§4/§5 for the rule being applied; the record was not silent, so no new ADR was needed)
+  - `escalation-is-justified` → **skipped** (nothing was escalated; each of `spec/question.md` §4's four conditions was checked and none holds — no intent is needed that the record lacks, the edit is reversible in one commit, no ADR is contradicted since ADR-0008's decision is untouched, and the record is not silent)
+  - `a-deferral-is-not-an-answer` → **skipped** (no reply defers; Q-003 is architect-addressed and was decided here, not forwarded)
+  - `item-resumed-correctly` → **pass** (the suspending row of 2026-08-27T22:04:04Z records `resume-to: in-review`; this execution's row targets `in-review`, read from that row rather than inferred from `review-close` having asked)
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0 after the transition and `board-gen`)
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` — v1 → v2. Both `## Decision` `run:` citations replaced with the anchored grep and its outcome; "that same `grep`" reworded to "that same anchored `grep`"; a `## Consequences` bullet added recording why this record's `run:` citations test the claim rather than snapshot the file, citing WI-0003, WI-0003/Q-003 and BUG-0004/Q-002; frontmatter `updated-by: plan` → `answer-questions` and `updated-for: BUG-0003` → `WI-0003`; change-log row 2 added
+  - `tracker/items/WI-0003/questions/Q-003.md` — `status: answered`, `answered-by: answer-questions`, `answered-at` stamped; `## Answer` and `## Consequences` written
+  - `tracker/items/WI-0003/item.md` — the closing paragraph of "Review, 2026-08-27" rewritten: the fourth observation is recorded as answered and closed, with what was changed and that no criterion moved. No acceptance criterion was touched
+  - `tracker/board.md` — regenerated
+  - a commit of the workspace files this execution wrote, on `wi/WI-0003`, following this project's precedent that a document correction lands on the item's own branch [src: BUG-0004/Q-001]
+- **Status:** `awaiting-answer` → `in-review`
+- **Result:** Q-003 is answered from the record and closed: ADR-0008's two recorded-command citations now name a check that decides the claim instead of a snapshot WI-0003's sixth import made unreproducible, and the ADR is at v2. Nothing under `tidy/` and no acceptance criterion changed, no new item was needed, and WI-0003 returns to `in-review` with its D12 failure removed and its branch still unmerged for `review-close` to finish.
+
+## 2026-08-27T22:15:28Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0003
+- **Trigger:** `in-review` since 2026-08-27T22:09:33Z, when `answer-questions` returned the item to its recorded `resume-to` after Q-003; dispatched by `next` at orchestrator step 5 as the best-keyed runnable item — priority-rank 4 shared with BUG-0005 and BUG-0006, decided on `created` (2026-08-27T15:44:24Z).
+- **Inputs read:**
+  - the diff `main..ccf4ece`, hunk by hunk: `tidy/` (four files, `apply.py` untouched), `tests/` (four files), `README.md`, `docs/architecture/overview.md`, `docs/architecture/adr/ADR-0008…md`
+  - the diff `22e7313..ccf4ece` separately — the two commits added since round 1 read the change, both record-only
+  - `tracker/items/WI-0003/item.md`, `history.md` (10 rows), `journal.md` (10 entries, read in full), all three question files
+  - `artifacts/plan.md`, `artifacts/impl-report.md` (five declared deviations, `## What I did not do`), `artifacts/verify-report.md` (twelve criteria, `## Not verified, and why`, the seven-probe sensitivity check), `artifacts/review.md` as round 1 left it
+  - `docs/architecture/adr/` — ADR-0002, ADR-0005, ADR-0006, ADR-0008 v2, ADR-0009, ADR-0010, ADR-0011; `docs/architecture/overview.md` v9
+  - `tracker/project.yaml` for `commands.test`, `commands.lint` and the trunk
+- **Decisions:**
+  - **Accept, close and merge.** Twelve of twelve Definition of Done criteria pass; the per-criterion table with its evidence is in `artifacts/review.md` `## Definition of Done` and is this gate's evidence. Every hunk in the code diff traces to a plan step and an acceptance criterion, and I read the diff rather than the reports about it.
+  - **Finding 1 (round 1's D12 failure) is closed.** ADR-0008's two `run:` citations recorded five imports of `tidy/cli.py` and this item adds a sixth. `answer-questions` amended both to `grep -nE "^(from|import).*\brules\b" tidy/cli.py → exit 1, no output` and bumped the ADR to v2. I closed the finding by **running the amended citation**, not by reading the amendment: exit 1, no output. The remedy is better than a repair — the citation now fails exactly when someone imports the rule table, which is the event ADR-0008 exists to prevent.
+  - **Finding 2 — `--rules ""` is silently a no-rules run. Accepted, not a send-back, and recorded in the item's `## Notes`.** `cli.py` guards the loader with `if args.rules:`, so an empty string reaches neither `load` nor an error path: exit 0 and a preview from the built-in tables, where a missing path, a directory and an unparseable file each give one stderr line and exit 2. I checked rather than assumed that no criterion covers it: AC8's six classes are properties of a rule *file*, an empty path names none, and the empty-*file* case AC1 settles is a different one (`tests.test_cli.…test_a_rules_flag_naming_nothing_is_a_no_rules_run` writes an empty file, not an empty path). `plan` did not specify it. Sending the item back over behaviour no criterion asks for would be inventing a criterion at the last gate; leaving it only in this report would make it invisible once the item is `done`, so it is in `## Notes` with what would go wrong and when.
+  - **Finding 3 — ADR-0008's new change-log row over-escapes the regex it quotes** (`\\brules\\b` against the citations' `\brules\b`). Cosmetic and accepted: nothing reads that cell, and the doubled form is the same command once a shell removes the quotes. Recorded in `review.md` rather than repaired, because `review-close` may not edit an ADR (`spec/doc-header.md` §5) and re-suspending a finished item to fix a change-log cell would cost a question round trip for a blemish that changes nothing a reader does.
+  - **The six gaps round 1 accepted are re-affirmed** and all six remain in the item's `## Notes`: the frozen `Ruleset` with a mutable `by_extension`, `boundary-days = inf`, the well-formed-but-meaningless entry, the inline `#`, the two unexercised cases (`os.altsep`, an unreadable rule file), and `tests/test_rules.py`'s rename-only diff.
+  - **No bug filed and no send-back.** Nothing was found that belongs to another item, and nothing this item delivered violates a criterion of it.
+  - **Merge decision: merge, `--no-ff`, after closing.** The item was transitioned to `done` while `wi/WI-0003` was still unmerged, so `check-commit-refs` had a non-empty `main..wi/WI-0003` range to inspect; merging first would have emptied that range and made the gate refuse the close it precedes.
+  - **Epic decision: do not end the engagement.** `engagement-state EP-001` reports `active`, not `at-rest` — BUG-0005 and BUG-0006 are still in flight — so no sign-off question is filed and EP-001 stays `open`. I asked the script rather than reading the board.
+- **Questions raised:** none — round 1's Q-003 is answered and closed, and nothing in round 2 needed an architect
+- **Commands:**
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → exit 0, "all 12 commit(s) on main..wi/WI-0003 name WI-0003"
+  - `.claude/agile-skills/scripts/check-verify-freshness WI-0003 wi/WI-0003` → exit 0, "verified at d870cb16; wi/WI-0003 has moved to ccf4ecec but only the record changed (8 file(s) under tracker/ or docs/)"
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, "checked 2 document(s) changed since main / 0 errors, 0 warnings"
+  - `git rev-parse main` → `0a56b7a1d57886b37e9810fbf91e8fa6baabd4d7`, before the trial
+  - `git worktree add --detach /tmp/trial-wi3 main` → exit 0, detached at `0a56b7a`
+  - `git -C /tmp/trial-wi3 merge --no-ff wi/WI-0003` → exit 0, merge commit `459323d1a130cf7b3416d07f28be01a3e307358c`
+  - `python3 -m unittest discover -s tests -t . -q` **inside /tmp/trial-wi3** → exit 0, "Ran 157 tests in 0.159s / OK"
+  - `python3 -m compileall -q tidy tests` inside the trial → exit 0
+  - `git worktree remove --force /tmp/trial-wi3` → exit 0; `git rev-parse main` → `0a56b7a1d57886b37e9810fbf91e8fa6baabd4d7` again, and `git worktree list` shows only the primary
+  - `grep -nE "^(from|import).*\brules\b" tidy/cli.py` → exit 1, no output (ADR-0008's amended citation, run as written)
+  - `grep -rn "epilog\|description=" tidy tests --include=*.py` → exit 0, two hits, both `tidy/cli.py`
+  - `python3 -m tidy /tmp/emptyrules/S --rules ""` → exit 0, previewed with the built-in rules; `python3 -m tidy /tmp/emptyrules/S --rules /tmp/emptyrules/absent.ini` → exit 2, one stderr line (Finding 2)
+  - `.claude/agile-skills/scripts/engagement-state EP-001` → "EP-001 active — still in flight: BUG-0005, BUG-0006, WI-0003"
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0 after the transition
+- **Gates:**
+  - `definition-of-done` → **pass** (all twelve criteria recorded individually with evidence in `review.md` `## Definition of Done`; round 1's two differing rows — D9 "not reached" and D12 "fail" — are named in the table with what changed. A single verdict was not written)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; I ran the comparison rather than judging it from how the commits looked)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 12 commits, run while the branch was still unmerged)
+  - `tests-pass-on-the-merge-result` → **pass** (`python3 -m unittest discover -s tests -t . -q` inside the detached trial worktree at merge commit `459323d`: 157 tests, OK, exit 0; `compileall` exit 0 there too)
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0 after this transition; before it, the only error was `item.outcome.premature`, which this move clears)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone: *what was built and why* — `item.md`'s twelve criteria and `## Notes`, `plan.md`'s eleven steps, `overview.md` v9; *which skill decided what* — ten history rows against ten journal entries, ADR-0010 and ADR-0011 by `plan`, ADR-0008 v2 by `answer-questions`; *what questions arose and how they resolved* — Q-001 and Q-002 answered by the stakeholder and propagated into the criteria, Q-003 answered from the record by the architect and propagated into ADR-0008; *what verification found* — `verify-report.md`'s twelve rows of run commands, 24 rejection runs, the boundary triple and the seven-probe sensitivity check, and no defect
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0, 2 documents)
+  - `epic-sign-off` → **pass** (run by `transition`; and the engagement is not at rest, so no sign-off was due — `engagement-state EP-001` reports `active`)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/review.md` — rewritten as the two-round review: `## What I examined` for round 2 and round 1, the twelve-row Definition of Done table, three findings, eight accepted gaps, and the verdict
+  - `tracker/items/WI-0003/item.md` — `outcome: delivered`, written **after** this transition rather than before it: `item.outcome.premature` is not one of the codes `validate-workspace --resolving` downgrades, so setting the outcome first — which is the order `review-close`'s step 9 reads as — fails the `workspace-valid` hard gate on the very move that would make it true; a seventh bullet in the review notes recording Finding 2, `--rules ""`, with its reproduction and its fix; the review heading updated to two rounds
+  - the merge of `wi/WI-0003` into `main` — `82a7d264`, a `--no-ff` merge commit made after this transition, with `main` moving `0a56b7a1` → `82a7d264`. The suite was re-run on the merged trunk: `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 157 tests in 0.165s / OK`, and `validate-workspace .` → 0 errors, 0 warnings. (The sha was filled into this bullet, and into `review.md`'s verdict, after the merge; that is the only thing in this entry not true at the moment it was stamped, and nothing else was changed.)
+  - a commit of this execution's tracker files on `wi/WI-0003`, per `conventions.commit-subject`
+- **Status:** `in-review` → `done`
+- **Result:** WI-0003 is delivered and merged. A user can now write their own INI rule file, point `--rules PATH` at it, and have its `[types]` entries layer over the built-in extension table and its `[bands]` section rename both bands and move the one boundary — with everything the tool already promised untouched: nothing overwritten, no subfolder entered, no hidden file moved, no catch-all folder, and the preview still showing every move before anything happens. Round 1's single Definition of Done failure, D12 on ADR-0008's own evidence, is closed against the amended ADR and re-checked by running the amended command rather than by reading it. Two new findings — `--rules ""` failing quietly, and an over-escaped change-log cell — are accepted with their consequences written where they survive this close. The trial merge was detached, green on the merge result, `main` confirmed unmoved before the real merge, and the item closed while the branch was still unmerged. EP-001 stays `open`: `engagement-state` reports it active with BUG-0005 and BUG-0006 still in flight.

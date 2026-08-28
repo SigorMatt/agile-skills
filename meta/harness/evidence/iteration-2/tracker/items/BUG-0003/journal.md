@@ -1,0 +1,286 @@
+# Journal — BUG-0003
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T19:11:48Z — verify v0.1.4 — qa-engineer
+
+- **Item:** BUG-0003
+- **Trigger:** Filed by `verify` while verifying WI-0002 at `verifying`; this is the item's creation entry, not a dispatch.
+- **Inputs read:**
+  - `tracker/items/WI-0002/item.md` — all thirteen criteria; none constrains the CLI help text, and AC13 fixes `README.md` only
+  - `tracker/items/WI-0001/item.md` AC1 — the only criterion about `--help`: it must name the folder positional, the apply flag, and the preview default
+  - `tracker/items/WI-0002/artifacts/impl-report.md` `## What I did not do` item 1 — declared the gap and recommended a bug item
+  - `tracker/items/WI-0002/artifacts/plan.md` `## Approach` — `cli.py` was to be untouched, which is why the text went stale without an edit
+  - `tidy/cli.py` on `wi/WI-0002` at `93a958599cdfe10c81dfba337d62811e23db564c` — `description` (line 22) and `epilog` (line 24)
+  - `README.md` §"Where each file goes" — the standard the help text should agree with
+- **Decisions:**
+  - **Bug, not a send-back.** The SKILL's test is whether an acceptance criterion of the item under verification says the behaviour should be different. No WI-0002 criterion mentions `--help`; AC13 is about `README.md`. So WI-0002 is not unfinished and goes forward.
+  - **Not a failure of WI-0001 either.** WI-0001 AC1's three requirements of `--help` all still hold, checked against the actual output. The sentence that is now wrong was never something a criterion asked for.
+  - **`found-in: WI-0002`, not WI-0001.** The string was written for WI-0001, but what it is wrong about is WI-0002's routing, and it is wrong only from this branch onward. Filing it against WI-0001 would send a reader to an item where the text was true. `spec/ids-and-statuses.md` §5: `found-in` names the delivered behaviour the bug contradicts, and that behaviour is age routing.
+  - **AC3 and AC4 were added beyond the obvious fix.** Rewriting the description could silently drop what WI-0001 AC1 requires; AC3 pins it. AC4 asks for a test that does not restate the help string verbatim, so it guards the claim rather than the wording.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m tidy --help` → exit 0; description reads "chosen by file type", epilog names one table
+  - `python3 -m tidy .verify-scratch/ac1` → exit 0, `move   holiday.jpg -> recent/images/holiday.jpg` — the band the help text never mentions
+  - `grep -n -i 'help' tracker/items/WI-0001/item.md` → exit 0, AC1 is the only hit
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0003 --type bug --title ... --found-in WI-0002` → exit 0, `created BUG-0003 at status ready`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before this entry (`journal.execution.missing`), which is what this entry answers
+- **Gates:**
+  - `tests-pass` → **skipped** (this is a creation entry on a newly filed bug; the gate was run on WI-0002, the item under verification, and passed there)
+  - `lint-clean` → **skipped** (same reason)
+  - `workspace-valid` → **pass** (re-run after this entry and the board regeneration; see WI-0002's entry for the exit code)
+  - `every-criterion-independently-checked` → **skipped** (BUG-0003's own criteria are unmet by construction — that is what a bug is)
+  - `negative-cases-exercised` → **skipped** (same reason)
+  - `tests-would-fail-without-the-change` → **skipped** (there is no change here to test; AC4 is the criterion that will require one)
+- **Artifacts:**
+  - `tracker/items/BUG-0003/item.md` — created and filled in: summary, reproduction, expected, actual output verbatim, four criteria
+  - `tracker/items/BUG-0003/history.md` — the creation row, written by `new-item`
+  - `tracker/items/WI-0002/artifacts/verify-report.md` `## Defects found` — records this bug and why it is not a send-back
+- **Status:** `—` → `ready`
+- **Result:** `tidy --help` still tells users their files are sorted by type alone, which age routing made false. Filed at `ready` with reproduction and real output; it is two strings and no logic, but it is the only place a user meets the tool's own description of what it does.
+
+## 2026-08-27T20:24:28Z — plan v0.3.1 — architect
+
+- **Item:** BUG-0003
+- **Trigger:** Status `ready`, dispatched by `next` as the best-ranked runnable item (priority `medium`, created 19:10:49Z, ahead of BUG-0004 on creation time and ahead of BUG-0005 and WI-0003 on priority).
+- **Inputs read:**
+  - `tracker/items/BUG-0003/item.md` — all four criteria, the reproduction, and the verbatim `--help` output `verify` captured
+  - `tracker/items/BUG-0003/journal.md` — `verify`'s creation entry: why this is a bug rather than a send-back of WI-0002, and why `found-in` is WI-0002 rather than WI-0001
+  - `tracker/items/BUG-0003/history.md` — the single creation row
+  - `docs/architecture/overview.md` v5 — the three-layer shape, the module table, and the section forecasting where WI-0003 touches the system
+  - ADR-0001 (stdlib only), ADR-0002 (destinations decided in `planner.py` alone), ADR-0004 (the test and lint commands), ADR-0005 (`DEFAULT_BANDS` shaped to match `DEFAULT_RULES` so WI-0003 has one mechanism) — ADR-0003, ADR-0006 and ADR-0007 read and found to be about `apply.py`'s move routes, which this item does not touch
+  - `tidy/cli.py` — `build_parser` lines 19-38, and `main` line 52 where `build_parser()` is called and `parse_args` runs
+  - `tidy/rules.py` — both tables and their lookups
+  - `tidy/planner.py` — the destination shape `<band>/<type>/<name>`
+  - `tests/test_cli.py` — `HelpAndModeTests.test_help_names_folder_apply_and_default` (the codified form of WI-0001 AC1) and the class layout; `tests/cli_support.py` — `run()` captures stdout as one string, so assertions are over words rather than lines
+  - `README.md` §"Where each file goes" — the standard BUG-0003 names for the help text
+  - `tracker/project.yaml` — trunk `main`, and the test and lint commands set for WI-0001
+  - `.claude/agile-skills/spec/doc-header.md` §3, §4, §4a — the change-log rule, the ADR shape, and the citation rule
+- **Decisions:**
+  - **The help text stays prose and is guarded by a test that reads `DEFAULT_BANDS`** — ADR-0008, the only decision this item forces. **Asked of no one and taken here**, because the documents constrain it: ADR-0005 says WI-0003 will make both tables user-supplied through one mechanism, and `build_parser` runs before `parse_args`, so generating the help from the tables would describe the built-in defaults during a run that used the user's — a quieter version of the bug being fixed. Options A (generate), B (prose plus a table-reading test) and C (pin the wording) are all in the ADR; C is excluded by AC4 outright.
+  - **The exact wording of the description and the epilog** — settled in `plan.md` `## Approach`, as BUG-0003 `## Expected behaviour` asks. **[documented]**: the middle sentence mirrors `README.md` §"Where each file goes", which the item names as the standard; the epilog's first and last sentences are copied across unchanged so the substrings `previews` and `changes nothing on disk` survive, which is what keeps AC3 true.
+  - **The band assertion uses a word boundary, not a substring** — **[documented, by measurement]**. `old` occurs inside `folder`, so `assertIn("old", stdout)` passes against today's *broken* help text: `python3 -m tidy --help | grep -c 'old'` returns 5 while `grep -c '\bold\b'` returns 0. Recorded under `## Assumptions` and again under `## Risks`, because it is the one way this item can be delivered with a test that proves nothing.
+  - **The age vocabulary excludes `old`** — **[assumed, reversible]**. AC1 wants both the band names and a word for age; if the age check accepted `old`, the band assertion would satisfy it for free. The set is `modified`, `age`, `aged`, `older`; widening it is one line in one test.
+  - **`README.md` is not touched** — **[documented]**. It already describes what the new help text summarises, and BUG-0003 names it as the standard rather than as a defect. The code is brought to the document.
+  - **No behaviour changes** — **[documented]**. No destination, exit status or output line moves; `planner.py`, `apply.py` and `rules.py` are untouched, so ADR-0002's layering is not in play.
+  - **The overview goes to v6 for one sentence**, in the section that forecasts WI-0003. The shape of the system does not change, so nothing else in it does; what changes is that a decision now constrains the remaining item, and an ADR nobody links from the overview is one nobody reads.
+- **Questions raised:** none — every decision was answerable from the documents or reversible at the cost of one line in one test file, so neither branch of `question.md` §1 that reaches the human was taken.
+- **Commands:**
+  - `python3 -m tidy --help` → exit 0; description reads "chosen by file type", epilog names one table — the defect, reproduced
+  - `python3 -m tidy --help | grep -c 'old'` → exit 0, 5 matches (all inside `folder`)
+  - `python3 -m tidy --help | grep -c '\bold\b'` → exit 1, 0 matches — the measurement behind the word-boundary decision
+  - `grep -rn "epilog\|description=" tidy tests --include=*.py` → exit 0, two hits, both `tidy/cli.py` — nothing outside the module reads the strings, which is what makes ADR-0008 cheap to reverse
+  - `grep -n "^from\|^import" tidy/cli.py` → exit 0, five imports: argparse, os, sys, .apply, .planner
+  - `grep -rn "previews\|changes nothing on disk\|--help" tests/*.py` → exit 0; `tests/test_cli.py:24` and `:25` are the two substrings the epilog must keep
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, 68 tests, OK
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 9 items, 10 documents, 0 errors 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 1 first (two `claim.unsourced` in ADR-0008 §Decision), then exit 0 after both sentences were sourced
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0, board already current
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, 0 errors 0 warnings)
+  - `every-criterion-is-addressed` → **pass** — `plan.md` `## Acceptance criteria mapping`, four rows for four criteria: AC1 → steps 1, 2, 3, demonstrated by the new test plus the verbatim help output in `impl-report.md`; AC2 → step 2, demonstrated by the epilog read against `README.md` and by `--help | grep -c extension-to-folder` → 0; AC3 → steps 2, 3, demonstrated by `test_help_names_folder_apply_and_default` unchanged and still passing; AC4 → steps 3, 4, demonstrated by the test containing no sentence from the help output and by step 4's recorded failure against the reverted strings
+  - `project-commands-resolved` → **pass** — `tracker/project.yaml` names `python3 -m unittest discover -s tests -t . -q` and `python3 -m compileall -q tidy tests`; both were run in this execution and both exited 0 with 68 tests. Unchanged by this item; ADR-0004 is the record of why they are these
+  - `decisions-recorded` → **pass** — one ADR (ADR-0008) for the one non-obvious choice, and four entries under `## Assumptions` each stating what reversal costs. `plan.md` `## Decisions and ADRs` maps every choice to one or the other
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0, 2 documents; it checked ADR-0008 and the overview, and does not read `tracker/`)
+  - `plan-is-executable-without-you` (advisory) → **pass** — re-read as a stranger: the wording is quoted in full rather than described, the test is given as code, the two substrings step 2 must preserve are named with their line numbers, and step 4 says which files to delete before re-running. The step needing most care is 3, and its trap is stated twice
+- **Artifacts:**
+  - `tracker/items/BUG-0003/artifacts/plan.md` — created
+  - `docs/architecture/adr/ADR-0008-help-text-is-prose-guarded-by-a-test.md` — created, v1
+  - `docs/architecture/overview.md` — v5 → v6, one paragraph added to `## Where the remaining item will touch this`, with the change-log row
+  - `tracker/project.yaml` — unchanged; already resolved
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0003 is planned. Two literal strings in `build_parser` are rewritten to say that age chooses a band named `recent` or `old` and that `README.md` holds two rule tables, and one test in `tests/test_cli.py` reads `DEFAULT_BANDS` and asserts every band it declares appears in the help output. ADR-0008 records why the text is guarded rather than generated, which is the part WI-0003 inherits. The trap worth knowing before writing the test: `old` is a substring of `folder`, so only a word-boundary match guards anything.
+
+## 2026-08-27T20:25:17Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0003
+- **Trigger:** Status `planned`, dispatched by `next` as the best-ranked runnable item. This is the opening entry: the branch exists, no code has been written yet.
+- **Inputs read:**
+  - `tracker/items/BUG-0003/item.md` — the four criteria, and `## Expected behaviour`, which leaves the wording to `plan`
+  - `tracker/items/BUG-0003/artifacts/plan.md` — five steps, the full description and epilog text quoted under `## Approach`, the AC mapping, and the `old`-inside-`folder` risk
+  - `tracker/items/BUG-0003/history.md` — two rows, `— → ready` (verify) and `ready → planned` (plan); no send-back, so this is a fresh start rather than a resume
+  - `tracker/items/BUG-0003/questions/` — empty; nothing to reconcile
+  - ADR-0008 — the decision this item carries into the code: prose guarded by a test that reads `DEFAULT_BANDS`, not text generated from the tables
+  - `tracker/project.yaml` — branch prefix `wi/`, trunk `main`, `commands.test` and `commands.lint` both set
+  - `tidy/cli.py`, `tidy/rules.py`, `tests/test_cli.py`, `tests/cli_support.py` — the two strings to rewrite, the table the test will read, and the existing help test whose assertions must keep passing
+- **Decisions:**
+  - **Fresh branch, not a resume.** `git branch` showed no `wi/BUG-0003`, and the history's last row is `plan`'s, not a send-back. Branched from `main` at `b76b27c`, the commit carrying this item's plan.
+- **Questions raised:** none so far
+- **Commands:**
+  - `git branch -a` → exit 0; `wi/BUG-0003` absent, four earlier item branches present
+  - `git checkout -b wi/BUG-0003 main` → exit 0, head `b76b27c`
+- **Gates:**
+  - `tests-pass` → **not yet run** (no change has been made; the gates run on the branch head after the last commit)
+  - `lint-clean` → **not yet run** (same)
+  - `workspace-valid` → **not yet run** as a completion gate; the transition accompanying this entry runs it
+  - `every-criterion-has-a-test` → **not yet run** (no test written yet)
+  - `commits-reference-the-item` → **not yet run** (no commits on the branch yet)
+  - `no-unplanned-scope` (advisory) → **not yet run** (no diff yet)
+  - `claims-are-sourced` → **not yet run** as a completion gate
+- **Artifacts:**
+  - branch `wi/BUG-0003`, created from `main` at `b76b27c`
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of BUG-0003 has started on `wi/BUG-0003`. The plan is two string edits in `tidy/cli.py` and one regression test in `tests/test_cli.py` that reads `DEFAULT_BANDS`; nothing has been changed yet.
+
+## 2026-08-27T20:27:54Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0003
+- **Trigger:** Status `in-progress` on `wi/BUG-0003`, continuing this execution. This is the closing entry: the plan's five steps are done and the gates were run on the branch head.
+- **Inputs read:**
+  - `tracker/items/BUG-0003/artifacts/plan.md` — worked step by step; `## Approach` holds the exact description and epilog text, which was used verbatim
+  - `tracker/items/BUG-0003/item.md` — the four criteria, unchanged by this execution
+  - ADR-0008 — why the text is guarded rather than generated, which is what the test's shape had to honour
+  - `tidy/cli.py` `build_parser` — the two strings; `tidy/rules.py` — `DEFAULT_BANDS`, which the test reads
+  - `tests/test_cli.py` `HelpAndModeTests` — the existing help test, and `tests/cli_support.py` `run()`, which returns stdout as one string so assertions are over words rather than lines
+- **Decisions:**
+  - **Plan steps 1 and 2 in one edit and one commit.** They are two arguments of the same `ArgumentParser` call; splitting them would have produced a commit whose own help output contradicted itself. Inside the plan's latitude — it prescribes the text, not the commit boundaries.
+  - **Step 4's revert used `git checkout main -- tidy/cli.py` rather than a stash.** It reverts exactly the file holding the two strings and leaves the new test in place, which is what the step asks to demonstrate. Both of the step's hazards were honoured: both `__pycache__` directories removed, `PYTHONDONTWRITEBYTECODE=1` set, and the reverted file read back before the suite ran.
+  - **The age-word vocabulary was left as the plan's four** — `modified`, `age`, `aged`, `older`. Only `modified` occurs in the delivered text; the other three are there so a future rewording has room without a test edit.
+  - **Nothing was escalated.** No decision arose that the plan does not make: the wording was quoted, the test shape was ADR-0008's, and the one judgement inside the latitude (commit boundaries) changes nothing a user or another item can see.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0003 main` → exit 0, head `b76b27c`
+  - `python3 -m tidy --help` → exit 0, the new text; captured verbatim into `impl-report.md`
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 69 tests ... OK` (68 before this item)
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 -m unittest tests.test_cli.HelpAndModeTests -v` → exit 0, 4 tests, both help tests `ok`
+  - `python3 -m tidy --help | grep -c 'extension-to-folder'` → exit 1, `0` matches — AC2
+  - `python3 -m tidy --help | grep -c '\brecent\b'` → 1; `'\bold\b'` → 2; `'\bmodified\b'` → 1 — AC1 by hand
+  - `git checkout main -- tidy/cli.py` then `grep -n "extension-to-folder\|by file type" tidy/cli.py` → exit 0, lines 23 and 25: the revert is in the file
+  - `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -t .` against the reverted strings → exit 1, `Ran 69 tests ... FAILED (failures=1)`, the one failure `test_help_says_age_chooses_the_band_and_names_every_band`: `Regex didn't match: '\brecent\b'`
+  - `git checkout wi/BUG-0003 -- tidy/cli.py` then the suite again → exit 0, `Ran 69 tests ... OK`
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0003 wi/BUG-0003` → exit 0, "all 2 commit(s) on main..wi/BUG-0003 name BUG-0003"
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 9 items, 10 documents, 0 errors 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, "checked no documents changed since main"
+  - `git diff --stat main..wi/BUG-0003` → exit 0, six files: `tests/test_cli.py`, `tidy/cli.py`, and four tracker files
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 69 tests ... OK`, exit 0, run on the branch head after the last code commit)
+  - `lint-clean` → **pass** (`compileall -q tidy tests` exit 0)
+  - `workspace-valid` → **pass** (exit 0, 0 errors 0 warnings)
+  - `every-criterion-has-a-test` → **pass** — AC1 and AC3 each name a test function (`test_help_says_age_chooses_the_band_and_names_every_band`, `test_help_names_folder_apply_and_default`); AC2 and AC4 each name an exact command with its output. The mapping is the table in `impl-report.md`
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 2 commits). It reported a **false failure** at the opening transition, when the branch had zero commits and `main..wi/BUG-0003` was empty: the script called that "already merged into main" and advised rewinding a merge that never happened. Recorded in `impl-report.md` `## What I did not do` item 3; the same false report was predicted from BUG-0002 `review.md` Finding 5 and has now recurred
+  - `no-unplanned-scope` (advisory) → **pass** — three hunks, all traceable: the two strings (steps 1-2, AC1-AC3) and the test file's imports, docstring and new test (step 3, AC4)
+  - `claims-are-sourced` → **pass** (exit 0). "No documents changed since main" is the correct answer: this branch touches nothing under `docs/`; ADR-0008 and overview v6 were linted on `main` when `plan` wrote them
+- **Artifacts:**
+  - `tracker/items/BUG-0003/artifacts/impl-report.md` — created: the full new help output, the four-row evidence table, two deviations, the gate table, and four declared omissions
+  - branch `wi/BUG-0003`, commits `46e5fd0` (code and test) and `01e0879` (the opening tracker entry), plus this entry's commit; `main..wi/BUG-0003` was 2 commits when `check-commit-refs` was run
+  - `tidy/cli.py` — the `description` and `epilog` in `build_parser`
+  - `tests/test_cli.py` — `import re`, `from tidy.rules import DEFAULT_BANDS`, the module docstring, one comment on the existing help test, and `test_help_says_age_chooses_the_band_and_names_every_band`
+- **Status:** `in-progress` → `verifying`
+- **Result:** `python3 -m tidy --help` now says destinations are chosen from how old a file is and what kind it is, names both `recent` and `old`, and says `README.md` holds two rule tables; the phrase `extension-to-folder` is gone. The regression test reads `DEFAULT_BANDS` and matches each band with a word boundary — proven to fail against the old strings and to pass against the new ones, with 68 other tests unaffected either way. WI-0001 AC1's help assertions were untouched and still pass.
+
+## 2026-08-27T20:32:45Z — verify v0.1.4 — qa-engineer
+
+- **Item:** BUG-0003
+- **Trigger:** Status `verifying`, dispatched by `next`. Verified against branch head `f575fc9caad0042d4d55bf3e05231fd2031dbfb5` on `wi/BUG-0003`.
+- **Inputs read:**
+  - `tracker/items/BUG-0003/item.md` — the four criteria, read **before** the implementation report, and each one's own checkable clause used to derive what would settle it
+  - `tracker/items/BUG-0003/history.md` — four rows; no send-back, so this is a first verification
+  - `tracker/items/BUG-0003/artifacts/plan.md` — read after the criteria, for `## Risks` (terminal width, the `old`-inside-`folder` trap) and `## Out of scope`
+  - `tracker/items/BUG-0003/artifacts/impl-report.md` — read last, for its declared deviations and omissions; not used as evidence for any criterion
+  - `tracker/items/BUG-0003/journal.md` — `verify`'s creation entry of 19:11:48Z, whose gloss on AC4 is what settles the criterion's two readings
+  - `tracker/items/WI-0001/artifacts/verify-report.md` AC1 row — the grep AC3 says to reuse
+  - ADR-0008, `docs/architecture/overview.md` v6 §"Where the remaining item will touch this" — both claim the test objects when a band is added and the text is not; experiment 2 tests that claim rather than trusting it
+  - `README.md` §"Where each file goes" — the standard AC2 names; two tables, confirmed by reading
+  - `tidy/cli.py`, `tidy/rules.py`, `tests/test_cli.py` at `f575fc9`
+- **Decisions:**
+  - **AC4: the loose reading, and why it is not the convenient one.** Measured first: reverting only `description=` while keeping the new epilog leaves the suite green (`Ran 69 tests ... OK`), so under the strict reading — `description` as the argparse argument, which the item's own `## Summary` names by line number — AC4 fails. I took the loose reading (the tool's description of itself) because three artifacts support it and none supports the strict one: the criterion's author glossed AC4 in this item's journal as guarding "the claim rather than the wording", AC1's checkable says "grepping the help **output**", and `plan.md` read it the same way. Recorded in the report's `## Defects found` with the measurement, so the review decides knowingly rather than inheriting my reading silently.
+  - **No question filed for that ambiguity.** `verify`'s escalation rule is for a criterion the record does not settle. This one the record settles; filing a question would have cost a round trip to be told what three artifacts already say. The competing readings and the experiment are written down instead, which is what makes the call reviewable.
+  - **No bug filed, and no send-back.** The AC4 gap is not defective delivered behaviour — the help text is correct today — and it is not a failure of this item's criteria under the reading the record supports. Neither mechanism applies; a report finding does.
+  - **Every experiment ran in a detached worktree at `f575fc9`, not on the branch.** `verify` reverts code to test sensitivity, and doing that in the working tree risks leaving the branch subtly different from what was verified. `git status` was clean before and after, and the worktree was removed.
+  - **The command's behaviour was re-checked, not just its help text.** `cli.py` was edited, and it owns the exit codes; a preview run and a bad-target run were exercised so that "only two strings changed" is an observation rather than a claim.
+- **Questions raised:** none
+- **Commands:**
+  - `git rev-parse HEAD` → exit 0, `f575fc9caad0042d4d55bf3e05231fd2031dbfb5`; `git status --short` → empty
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 69 tests ... OK`
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 -m tidy --help; echo $?` → exit 0, full text captured into the report
+  - `python3 -m tidy --help | grep -o '\brecent\b' | wc -l` → 1; `'\bold\b'` → 2; `'\bmodified\b'` → 1; `'\bage\b'` → 0 — AC1
+  - `python3 -m tidy --help | grep -c 'extension-to-folder'` → `0`, exit 1 — AC2
+  - `python3 -m tidy --help | grep -n 'folder\|--apply\|previews\|changes nothing on disk'` → exit 0, eight lines including the usage line, the positional, the flag help and the preview sentence — AC3
+  - `git worktree add --detach .harness/verify-BUG-0003 f575fc9` → exit 0
+  - Experiment 1, both strings reverted, `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -t .` → exit 1, `Ran 69 tests ... FAILED (failures=1)`, `Regex didn't match: '\brecent\b'`
+  - Experiment 2, `("ancient", 3650 * 24 * 3600)` added to `DEFAULT_BANDS`, help untouched → exit 1, `FAILED (failures=1)`, `Regex didn't match: '\bancient\b'`
+  - Experiment 3, the preview sentence removed from the epilog → exit 1, `test_help_names_folder_apply_and_default` fails on `'changes nothing on disk' not found`
+  - Experiment 4 (the AC4 ambiguity), `description` alone reverted → exit 0, `Ran 69 tests ... OK`
+  - `COLUMNS=20 python3 -m tidy --help` and `COLUMNS=200 ...`, counting the three words → 1/2/1 in both cases
+  - `python3 -m tidy -h | diff - <(python3 -m tidy --help)` → exit 0, no differences
+  - a preview over a folder with a fresh `.jpg` and a 2020-dated `.pdf` → exit 0, `move   ancient.pdf -> old/documents/ancient.pdf`, `move   holiday.jpg -> recent/images/holiday.jpg`; a non-directory target → exit 2, `tidy: <path> is not a folder`
+  - an AST extraction of every string literal in the new test → `'--help'`, `'\b%s\b'` ×2, `'modified'`, `'age'`, `'aged'`, `'older'`; longest 8 characters
+  - `python3 -m tidy --help | grep -c 'age'` → 2 and `grep -c 'older'` → 5, against `\bage\b` → 0 and `\bolder\b` → 0 — the substring trap, measured
+  - `git worktree remove --force .harness/verify-BUG-0003` then `git worktree prune`; `git worktree list` → one entry; `.harness/` holds only `provision.json`
+  - `git diff main..f575fc9 --stat -- tidy tests` → exit 0, two files, 30 insertions, 8 deletions
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 on the first attempt: `verify-report.md:80: ERROR [claim.citation.unresolved] 'BUG-0003 journal, 2026-08-27T19:11:48Z' is not a citation form this gate can check`. The AC4 finding cited this item's journal by heading rather than by path; rewritten as `[src: tracker/items/BUG-0003/journal.md]` with the timestamp and bullet named in prose → exit 0, 9 items, 10 documents, 0 errors 0 warnings
+- **Gates:**
+  - `tests-pass` → **pass** (run by me on `f575fc9`: exit 0, `Ran 69 tests ... OK`)
+  - `lint-clean` → **pass** (`compileall -q tidy tests` exit 0)
+  - `workspace-valid` → **pass** (exit 0, 0 errors 0 warnings)
+  - `every-criterion-independently-checked` → **pass** — four rows, each naming a command I ran and quoting its real output. No row's evidence is `impl-report.md`; the checks were derived from the criteria before that file was opened
+  - `negative-cases-exercised` → **pass** — five: `COLUMNS=20`, `COLUMNS=200`, `-h` versus `--help`, the substring trap measured on the live output, and the tool's own preview and bad-target paths re-run because `cli.py` was edited
+  - `tests-would-fail-without-the-change` (advisory) → **pass** — four experiments in `## Test sensitivity check`, one per criterion's guard: both strings reverted (the new test fails, alone), a third band added (it fails on `\bancient\b`), the preview sentence removed (the AC3 test fails), and the description reverted alone (nothing fails — the finding)
+- **Artifacts:**
+  - `tracker/items/BUG-0003/artifacts/verify-report.md` — created, with `Verified-commit: f575fc9caad0042d4d55bf3e05231fd2031dbfb5`, the four-row criteria table, five boundary cases, four sensitivity experiments, the AC4 finding and four declared gaps
+  - `tracker/items/BUG-0003/item.md` — AC1, AC2, AC3 and AC4 ticked, each against a command in this entry
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0003 passes all four criteria on `f575fc9`. `--help` now says destinations are chosen from how old a file is and what kind it is, names `recent` and `old`, and points at two rule tables; the phrase `extension-to-folder` is gone and WI-0001 AC1's three requirements still hold. The guard was tested rather than trusted: adding a band to `DEFAULT_BANDS` fails the suite, which is what ADR-0008 and overview v6 promise WI-0003. One declared finding goes to the review — a description-only revert does not fail the test, which is a gap under the strict reading of AC4 and not under the reading the record supports.
+
+## 2026-08-27T20:41:15Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0003
+- **Trigger:** Status `in-review`, dispatched by `next` as the best-ranked runnable item (priority `medium`, created 19:10:49Z, ahead of BUG-0004 on creation time and ahead of BUG-0005 and WI-0003 on priority).
+- **Inputs read:**
+  - `tracker/items/BUG-0003/item.md` — the four criteria and their tick state, and all four prose sections
+  - `tracker/items/BUG-0003/history.md` — five rows, chaining without a gap; the last row's `to` matches `item.md`
+  - `tracker/items/BUG-0003/journal.md` — all five entries in full, one per history row: `verify`'s creation entry at 19:11:48Z, `plan` at 20:24:28Z, `implement`'s opening and closing entries, `verify` at 20:32:45Z
+  - `tracker/items/BUG-0003/artifacts/plan.md`, `impl-report.md`, `verify-report.md` — including `## What I did not do` and `## Not verified, and why`, which are the declared gaps this review had to dispose of
+  - `tracker/items/BUG-0003/questions/` — empty; no question was raised at any stage
+  - **the diff**, `git diff main..wi/BUG-0003 -- tidy tests`, hunk by hunk — three hunks in two files; plus `git log --oneline main..wi/BUG-0003` and `git diff --stat`
+  - ADR-0008 in full; ADR-0002 and ADR-0005 for the layering and the band table; ADR-0001 and ADR-0004 for the stdlib and command constraints. ADR-0003, ADR-0006, ADR-0007 concern `apply.py`'s move routes and are not reached by this diff
+  - `docs/architecture/overview.md` v6 §"Where the remaining item will touch this"; `README.md` §"Where each file goes"
+  - `tidy/cli.py`, `tidy/rules.py`, `tests/test_cli.py` at the branch head — opened for the D12 audit rather than read about
+- **Decisions:**
+  - **Accepted and closed, `outcome: delivered`.** All four criteria met with independent evidence, all twelve Definition of Done criteria passing with their own evidence, and three hunks each traceable to a criterion. No behaviour changed: `planner.py`, `rules.py` and `apply.py` are byte-for-byte `main`.
+  - **ADR-0004's "runs 37 tests" was false and is corrected here (v2 → v3).** The module count still holds; the test count does not — the command reports `Ran 69 tests ... OK`. It was corrected once already, by WI-0001's own review, and went stale again because what it asserts is a number every item changes. v3 makes the standing claim the *exit status* and marks the count as a dated measurement, with a paragraph recording that WI-0002, BUG-0001 and BUG-0002 each falsified the old form without notice. D7 and D12 discharged rather than a send-back: it is not this item's delivered behaviour, and it is one document with no code consequence.
+  - **ADR-0008's `## Context` is left saying the help text "still tells the reader ... chosen by file type", which is now false.** An ADR's `## Context` narrates why a decision was taken and is dated and signed; rewriting it after the fix would edit the reasoning rather than correct a fact. The distinction recorded in `review.md` Finding 2 is between a document that *asserts* current behaviour and one that *narrates* a decision.
+  - **`verify`'s AC4 finding: same reading, gap accepted.** I opened the three artifacts it cites rather than taking its summary of them — this item's journal entry of 19:11:48Z glossing AC4 as guarding "the claim rather than the wording", AC1's own "grepping the help **output**", and `plan.md`'s AC mapping. None supports the strict reading. The residual hole (a description-only revert leaves the suite green) is accepted, not filed: the text is correct today, so there is no defective behaviour, and widening the guard is a decision about the criterion.
+  - **The `check-commit-refs` false failure is not filed against this project.** It belongs to the methodology under `.claude/agile-skills/`, which no item in this tracker owns. Third sighting; recorded in `review.md` Finding 7 for the toolkit's owner.
+  - **Six accepted gaps moved into `item.md` `## Notes`.** A gap that lives only in a report stops being read the moment the item closes.
+  - **No bug filed and no send-back.** Nothing in the diff contradicts an ADR, nothing serves no criterion, and the one document defect was inside this skill's own D7/D12 remit to fix.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t . -q` on branch head `7a8d9f9` → exit 0, `Ran 69 tests ... OK`
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 -m tidy --help` → exit 0, output read whole against AC1, AC2 and AC3
+  - `python3 -m tidy --help | grep -c 'old'` → 7 lines; `| grep -c '\bold\b'` → 2; `| grep -c 'extension-to-folder'` → 0 — the substring trap re-measured on the delivered text
+  - `grep -n "^from\|^import" tidy/cli.py` → five imports, none from `rules` — ADR-0008's own checkable
+  - `grep -n "DEFAULT_BANDS" tests/test_cli.py` → lines 14 and 40, the import and its use in the assertion over the help output
+  - `ls tests/` → four test modules and two helpers — the true half of ADR-0004's claim
+  - `git diff main..wi/BUG-0003 -- tidy tests`, `git log --oneline main..wi/BUG-0003`, `git diff main..wi/BUG-0003 --stat` → three hunks, five commits, nine files
+  - `git worktree add --detach .harness/trial-BUG-0003 main` → exit 0 at `b76b27c`; `git merge --no-ff wi/BUG-0003` inside it → exit 0, merge result `4420b83`
+  - `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -t . -q` **on the merge result** → exit 0, `Ran 69 tests ... OK`; `compileall` → exit 0; `python3 -m tidy --help` there → the new text
+  - `git worktree remove --force .harness/trial-BUG-0003`, `git worktree prune`, `git worktree list` → one entry; `.harness/` holds only `provision.json`
+  - `git rev-parse main` before and after the trial → `b76b27c016ecccf68fbbc68ca3b6797fbbfd8c8f` both times; the trunk did not move
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0003 wi/BUG-0003` → exit 0, "only the record changed"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0003 wi/BUG-0003` → exit 0, "all 5 commit(s) on main..wi/BUG-0003 name BUG-0003"
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 1 document (ADR-0004, after this execution's correction)
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 9 items, 10 documents, 0 errors 0 warnings
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → exit 0, **`EP-001 active`**, still in flight: BUG-0003, BUG-0004, BUG-0005, WI-0003
+- **Gates:**
+  - `definition-of-done` → **pass** — twelve criteria, each with its own result and evidence, in `review.md` `## Definition of Done`. D7 passes only because this execution corrected ADR-0004; D9 is satisfied by the trial merge plus the real merge that follows this transition; D12 passes with one correction (Finding 1) and one deliberate exception (Finding 2)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0: verified at `f575fc9`, branch at `7a8d9f9`, and `git diff f575fc9..7a8d9f9 -- tidy tests` is empty — the two later commits are the verification report and this execution's ADR-0004 correction)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 5 commits). Run **before** the merge, as required: merging empties `main..wi/BUG-0003` and the gate would then have nothing to inspect
+  - `tests-pass-on-the-merge-result` → **pass** — `Ran 69 tests ... OK` and `compileall` exit 0 on `4420b83`, the merge of `wi/BUG-0003` into a **detached** checkout of `main`, with `PYTHONDONTWRITEBYTECODE=1` so no stale bytecode could serve the pre-merge code
+  - `workspace-valid` → **pass** (exit 0, 0 errors 0 warnings, re-run after the ADR edit and after the `## Notes` edit)
+  - `record-is-reconstructible` → **pass** — answered from `tracker/`, `docs/` and `git log --grep BUG-0003` alone. *What was built and why:* two strings and one test, because age routing made the help text false without anyone editing it (`item.md`, ADR-0008). *Which skill decided what:* five journal entries, each naming its skill, version and persona. *What questions arose:* none, at any stage — `questions/` is empty and every entry says so. *What verification found:* four criteria passing on `f575fc9` with four sensitivity experiments, and one declared finding it could not settle cleanly, which this review disposed of
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0, 1 document — ADR-0004 v3, whose new sentences carry resolvable citations)
+  - `epic-sign-off` → **skipped, correctly** — the gate applies to an epic, and this execution closes a bug. `engagement-state EP-001` reports **`active`**, not `at-rest`: BUG-0004, BUG-0005 and WI-0003 are still in flight, so the engagement has not reached the point where the stakeholder is asked. No sign-off question is filed and none is due
+- **Artifacts:**
+  - `tracker/items/BUG-0003/artifacts/review.md` — created: what was examined, the six-claim D12 audit table, the twelve-row Definition of Done, seven findings, seven accepted gaps and the verdict
+  - `tracker/items/BUG-0003/item.md` — `## Notes` gains the six accepted gaps; `outcome: delivered` set by this transition
+  - `docs/architecture/adr/ADR-0004-test-and-lint-commands.md` — v2 → v3, `updated-for: BUG-0003`, with the change-log row; committed as `7a8d9f9`
+  - the merge of `wi/BUG-0003` into `main`, made immediately after this transition and its sha recorded in `review.md` `## Verdict`
+  - no bug items filed; no question filed
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0003 is delivered and closed. `python3 -m tidy --help` now tells the reader that age takes part in choosing where a file goes, names `recent` and `old`, and points at two rule tables rather than one; a test that reads `DEFAULT_BANDS` fails if a band is added and the prose is not, which is the guard ADR-0008 leaves WI-0003. One stale document was corrected on the way through — ADR-0004's test count, false since WI-0002 — and re-shaped so the standing claim is the exit status rather than a number every item moves. Six gaps are accepted with reasons and now live in the item rather than in a report; EP-001 remains `active` with three children in flight.

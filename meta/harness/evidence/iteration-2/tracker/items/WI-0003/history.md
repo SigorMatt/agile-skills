@@ -1,0 +1,15 @@
+# History — WI-0003
+
+| when | from | to | actor | resume-to | reason |
+|------|------|----|-------|-----------|--------|
+| 2026-08-27T15:44:24Z | — | draft | intake | — | created from the stakeholder's stated idea for EP-001; 'rules should be configurable' |
+| 2026-08-27T21:23:41Z | draft | awaiting-answer | refine | draft | Q-001 and Q-002 blocking: whether user rules replace or layer over the built-in ones, and whether a rule file may decide how many age bands there are; DoR R4, R8 and R10 cannot close without both |
+| 2026-08-27T21:29:30Z | awaiting-answer | draft | answer-questions | — | Q-001 and Q-002 answered by the stakeholder and propagated: rules layer with the user's entries winning, and two age bands whose names and boundary are user-supplied; criteria rewrite is refine's |
+| 2026-08-27T21:34:09Z | draft | ready | refine | — | Definition of Ready passed criterion by criterion; AC1-AC12 replace intake's five rough criteria, R4/R8/R10 closed, both stakeholder answers propagated and recorded verbatim |
+| 2026-08-27T21:40:42Z | ready | planned | plan | — | plan.md written; ADR-0010 (one INI rule file named with --rules, no default location, rejected at the CLI boundary) and ADR-0011 (a Ruleset value passed into build_plan) recorded; overview at v8 |
+| 2026-08-27T21:42:51Z | planned | in-progress | implement | — | branch wi/WI-0003 created from main; executing plan.md steps 1-11 |
+| 2026-08-27T21:53:03Z | in-progress | verifying | implement | — | plan steps 1-11 complete on wi/WI-0003; all hard gates pass on the branch head and impl-report.md maps every criterion to named tests |
+| 2026-08-27T21:58:30Z | verifying | in-review | verify | — | all twelve criteria pass on evidence gathered independently at d870cb1; 12 malformed rule files exercised in both modes, seven sensitivity probes, no defect found |
+| 2026-08-27T22:04:04Z | in-review | awaiting-answer | review-close | in-review | Q-003 blocking to the architect: this merge makes ADR-0008's two recorded-command citations unreproducible - they say five imports of tidy/cli.py and there are now six - and review-close may not edit an ADR; D12 fails on that alone and the branch is deliberately unmerged |
+| 2026-08-27T22:09:33Z | awaiting-answer | in-review | answer-questions | — | Q-003 answered from the record and propagated: ADR-0008's two run: citations amended in place to the anchored grep that tests the claim, ADR at v2 with a change-log row naming WI-0003; the D12 failure that held the merge is cleared and nothing under tidy/ changed |
+| 2026-08-27T22:15:28Z | in-review | done | review-close | — | Definition of Done passes on all twelve criteria; round 1's D12 failure closed against ADR-0008 v2 and re-checked by running the amended citation; trial merge clean and green (459323d, 157 tests OK), main confirmed unmoved, item closed while the branch is still unmerged; two new findings accepted and recorded (an empty --rules value is a quiet no-rules run; ADR-0008's change-log row over-escapes its regex) |

@@ -1,0 +1,21 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: tidy
+  trunk-branch: main
+  description: >-
+    A tool that organises a messy folder: it moves files into subfolders chosen from each
+    file's type and age, shows the complete set of intended moves before touching anything,
+    and takes its sorting rules from the user rather than hard-coding them.
+
+commands:
+  # Set by plan for WI-0001; the reasoning, and what a passing lint means here, is ADR-0004.
+  test: python3 -m unittest discover -s tests -t . -q
+  lint: python3 -m compileall -q tidy tests
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

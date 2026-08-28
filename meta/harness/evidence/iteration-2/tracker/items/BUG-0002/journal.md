@@ -1,0 +1,383 @@
+# Journal — BUG-0002
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-27T16:32:47Z — verify v0.1.4 — qa-engineer
+
+- **Item:** BUG-0002
+- **Trigger:** Filed by `verify` while verifying WI-0001 at `verifying`; this is the item's creation entry, not a dispatch.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — no criterion constrains the exit status of a successful APPLY; AC3's "exit status is 0" is PREVIEW and AC15's is the nothing-to-do case
+  - `tracker/items/WI-0001/artifacts/plan.md` step 4 and `## Risks` — the fallback is "the one place where a criterion (AC9) rests on code that automated tests do not reach"
+  - `tracker/items/WI-0001/artifacts/impl-report.md` `## What I did not do` — predicted this exact consequence
+  - `docs/architecture/adr/ADR-0003-move-with-os-link.md` `## Decision` — assigns a non-zero exit to `FileExistsError` only, and describes the other-`OSError` fallback as still satisfying AC9 (RB3)
+  - `README.md` — "Exit status is 0 on success … and 1 when some file could not be moved while others were" (RB3)
+  - `tidy/apply.py`, `tidy/cli.py` on `wi/WI-0001` at `6b1873161b148392d8ee5cb6ff5824a4ab404289` — the single `failures` list and `return 1 if failures else 0`
+- **Decisions:**
+  - **Bug, not a send-back.** No WI-0001 acceptance criterion says an APPLY run must exit 0, so nothing this item was asked for is unmet. What the behaviour contradicts is ADR-0003 and `README.md`, which is RB3's citation and a bug's grounds.
+  - **Reproduced by injection rather than by finding a filesystem.** `os.link` was replaced with one raising `OSError(18)`, the error a cross-device or non-linking filesystem raises. That exercises the real branch in `apply_plan` and the real return in `cli.main`; the alternative — mounting exFAT — was not available and is recorded in the steps as the equivalent without injection. This is why the defect survived WI-0001's suite: `plan` recorded that no test could reach it.
+  - **`found-in: WI-0001`** — WI-0001 delivered `apply_plan`. Per `spec/ids-and-statuses.md` §5 this satisfies provenance on a bug on its own.
+  - **AC3 was added beyond the obvious fix.** Making the fallback exit 0 could be done by dropping the message from the returned list entirely, which would also silence real failures. AC3 pins the behaviour the fix must not break.
+  - **The fix's shape is left to `plan`.** `## Notes` suggests separating "did not complete" from "completed by another route", as a suggestion and not a criterion.
+  - Definition of Ready for a bug (`spec/dor-dod.md` §2): RB1 **pass** — five numbered steps including the script to save, plus the injection-free equivalent; RB2 **pass** — `## Actual behaviour` quotes the run's real `EXIT:`, `STDOUT:` and `STDERR:` and the `find` proving the files moved; RB3 **pass** — cites ADR-0003 `## Decision` and `README.md`'s exit-status paragraph; RB4 **pass** — `found-in: WI-0001`; RB5 **pass** — AC4 is the regression test, and it closes the coverage gap `plan.md` `## Risks` records.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .harness/nolink.py .harness/fnl` (patches `os.link` to raise `OSError(18, "Invalid cross-device link")`, then calls `main([folder, "--apply"])`) → **EXIT: 1**, with both files reported moved on stdout and both fallback notes on stderr
+  - `python3 .harness/snap.py .harness/fnl` → 0, showing `documents/doc.pdf` and `images/photo.jpg` present and both sources gone — the run had fully succeeded
+  - `scripts/new-item --id BUG-0002 --type bug --title "..." --epic EP-001 --priority medium --status ready --actor verify --found-in WI-0001 --reason "..."` → 0
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 37 tests … OK`, on `6b18731`)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` → exit 0)
+  - `workspace-valid` → **pass** (`scripts/validate-workspace` → 0 errors, 0 warnings, after this entry was written)
+  - `every-criterion-independently-checked` → **pass** (this bug's four criteria describe the fix and are not yet met; the criteria checked in this execution are WI-0001's, evidenced in `WI-0001/artifacts/verify-report.md`)
+  - `negative-cases-exercised` → **pass** (the no-hard-link path was triggered, not read about — the quoted output is the run)
+  - `tests-would-fail-without-the-change` (advisory) → **skipped** (no fix exists yet; AC4 is what will carry it, and it is the test WI-0001's suite could not have)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/item.md` — created and filled in
+  - `tracker/items/BUG-0002/history.md` — creation row, actor `verify`
+  - `tracker/items/BUG-0002/journal.md` — this entry
+- **Status:** `—` → `ready`
+- **Result:** On a filesystem that refuses hard links, an APPLY run that moves every file successfully exits 1, because `apply_plan` returns ADR-0003's fallback note in the same list as genuine failures. No WI-0001 criterion covers the exit status of a successful apply, so it is filed here at `ready` rather than sent back.
+
+## 2026-08-27T19:50:01Z — plan v0.3.1 — architect
+
+- **Item:** BUG-0002
+- **Trigger:** status `ready`, dispatched by `next` as the highest-ranked runnable item (priority rank 3, created 2026-08-27T16:31:21Z, ahead of BUG-0003 and BUG-0004 on `created` and of WI-0003 on priority).
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — the four acceptance criteria, the reproduction, and the `## Notes` suggestion of a two-list return
+  - `tracker/items/BUG-0002/history.md` — one row; filed by `verify` at `ready`, never planned before, so this is not a re-plan
+  - `tracker/project.yaml` — trunk `main`, and the test and lint commands ADR-0004 set
+  - `docs/architecture/adr/ADR-0002-separate-planning-from-applying.md` — §2 and §3, for what `apply_plan`'s contract actually fixes and what it leaves free
+  - `docs/architecture/adr/ADR-0003-move-with-os-link.md` — `## Decision`, the paragraph that assigns non-zero exit to `FileExistsError` alone and describes the fallback separately
+  - `docs/architecture/adr/ADR-0006-report-an-unusable-target-at-the-cli-boundary.md` — its parenthetical describing `apply_plan`'s return, which this change makes historical
+  - `docs/architecture/overview.md` v3 — the shape, the module table, and the paragraph recording BUG-0002 as live
+  - `tidy/apply.py`, `tidy/cli.py` — in full; the defect is four lines across the two
+  - `tidy/planner.py` — the `Action` dataclass, for the idiom the new record follows
+  - `tests/test_apply.py`, `tests/test_cli.py`, `tests/support.py`, `tests/cli_support.py` — which assertions read `apply_plan`'s return, and the `addCleanup`-before-`chmod` pattern `BadTargetTests` established
+  - `README.md` — the exit-status paragraph, to see whether the document or the code is wrong
+  - No `artifacts/refinement-qa.md`: a bug filed by `verify` enters at `ready` and is never refined.
+- **Decisions:**
+  - **`apply_plan` returns a tagged `Outcome` per action rather than a bare message.** Route: **ADR** — ADR-0007. The distinction between "did not complete" and "completed by the other route" is only knowable in `apply.py`, and today both land in one `list[str]`. Four options were weighed; the two-list return that BUG-0002's own `## Notes` proposed was rejected because it regroups stderr away from action order, which a mixed run makes visible, and AC2 asks that only the exit status change.
+  - **The exit status turns on `kind`, and stays in `cli.py`.** Route: **documented** — ADR-0002 puts presentation and exit codes in `cli.py` and execution in `apply.py`, so `apply_plan` returning a status of its own was rejected on the layering rather than on taste.
+  - **ADR-0003 is not superseded.** Route: **documented** — its `## Decision` already says the fallback is a success and assigns non-zero exit to `FileExistsError` only. The code contradicts the ADR; the ADR is not being changed. This matters because `spec/doc-header.md` §4 makes superseding the expensive path, and nothing here needs it.
+  - **ADR-0006's sentence about the old return type is left as written.** Route: **documented** — `spec/doc-header.md` §4: an ADR records what was believed at its date. ADR-0007 `## Consequences` names it instead, so a reader who follows the citation is not misled.
+  - **`unittest.mock` for the injection; `"failed"`/`"fell-back"` as plain strings; the `os.unlink` duplicate case stays a failure; `README.md` untouched.** Route: **assumed** — all four are recorded under `plan.md` `## Assumptions` with what reversing each costs, and none is more than one module and its tests.
+  - **The overview is updated by this execution rather than left to the code landing.** Route: **documented** — `spec/doc-header.md` §5 names `plan` as the overview's updater, and its paragraph on the fallback asserted the defect was live with nothing said about what replaces it. The new paragraph states what ADR-0007 settles and that BUG-0002 carries it, which is true when written and stays true after the merge.
+  - **AC3 needs a genuinely new test, not an existing one.** Route: **documented** — `grep` over `tests/` finds no assertion on exit status 1 anywhere, so "this fix does not silence real failures" rests on nothing today. Hence step 7's mixed run, and hence the `0o500` directory rather than a `FileExistsError` the planner makes unreachable through the CLI.
+- **Questions raised:** none. Every decision was answerable from ADR-0002, ADR-0003 and `README.md`, or is a reversible assumption; nothing here is irreversible or turns on stakeholder intent no document records.
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, 64 tests, OK (baseline on `main` before planning)
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 nolink.py /tmp/bug2repro/nolink` (the item's own reproduction, `os.link` patched to `OSError(18)`) → `EXIT: 1` with both files at `recent/documents/doc.pdf` and `recent/images/photo.jpg` — the defect reproduces on `main` at `f363721`
+  - `python3 nolink.py /tmp/bug2repro/mixed` (same patch, `recent/documents` pre-created at mode `0o500`) → `EXIT: 1`, the `doc.pdf` failure line printed before the `photo.jpg` fallback line — the probe that showed step 7's AC3 test is constructible and that message order is a property worth keeping
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 2 documents, 0 errors
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 8 items, 9 documents, 0 errors 0 warnings
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` → exit 0, 0 errors 0 warnings)
+  - `every-criterion-is-addressed` → **pass** (`plan.md` `## Acceptance criteria mapping` has one row per AC1-AC4, each naming the steps and the named test that demonstrates it; no AC is demonstrated by "tests")
+  - `project-commands-resolved` → **pass** (`tracker/project.yaml` already carries ADR-0004's commands; both were run in this execution and both exit 0, and the test command reports 64 tests rather than exiting zero vacuously)
+  - `decisions-recorded` → **pass** (`plan.md` `## Decisions and ADRs` lists six; four point at ADR-0007 or ADR-0002, and four more are reversible assumptions with their reversal cost stated)
+  - `plan-is-executable-without-you` → **pass, advisory** (each of the nine steps names its files and what is true afterwards; the two places a developer would otherwise guess — which message strings may change, and how to make a genuine failure coexist with a fallback — are pinned in steps 3 and 7, the latter from a probe that was actually run)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → exit 0 over ADR-0007 and the overview)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/plan.md` — created
+  - `docs/architecture/adr/ADR-0007-tagged-outcomes-from-apply-plan.md` — created, version 1
+  - `docs/architecture/overview.md` — version 3 → 4
+  - `tracker/board.md` — regenerated
+  - Committed as `tracker: the plan and ADR-0007 for tagged apply outcomes (refs BUG-0002)`
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0002 is planned. ADR-0007 decides that `apply_plan` returns a tagged `Outcome` per action instead of a flat list of messages, so `cli.main` can exit 0 on a run that fell back for every file and still exit 1 on one that genuinely failed; `plan.md` carries nine steps, an AC-by-AC mapping, and a probe-verified recipe for the mixed failure-plus-fallback run that AC3 needs, since no test in this project asserts exit status 1 today.
+
+## 2026-08-27T19:50:45Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0002
+- **Trigger:** status `planned`, dispatched by `next` as the highest-ranked runnable item.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — AC1-AC4, the reproduction, and the note that the two-list return is a design call for `plan`
+  - `tracker/items/BUG-0002/artifacts/plan.md` — the nine steps, the AC mapping, the four assumptions and the four risks
+  - `tracker/items/BUG-0002/history.md` — two rows: filed at `ready` by `verify`, moved to `planned` by `plan`. No send-back, so this is a first implementation and not a re-work
+  - `tracker/items/BUG-0002/questions/` — empty; nothing was ever asked on this item
+  - `tracker/project.yaml` — branch prefix `wi/`, commit subject convention, and ADR-0004's test and lint commands, both non-null
+  - `docs/architecture/adr/ADR-0007-tagged-outcomes-from-apply-plan.md` — the decision this execution carries out, including the exact `kind` vocabulary
+  - `docs/architecture/adr/ADR-0003-move-with-os-link.md` — the fallback the tagging distinguishes
+  - `tidy/apply.py`, `tidy/cli.py`, `tidy/planner.py`, `tests/test_apply.py`, `tests/test_cli.py`, `tests/support.py`, `tests/cli_support.py` — the code the plan's steps 1-7 touch
+  - `git branch -a` → `main`, `wi/BUG-0001`, `wi/WI-0001`, `wi/WI-0002`. No `wi/BUG-0002` existed, so there is no partial work to reconcile with.
+- **Decisions:**
+  - **Branched from `main` at `a0fe21e`, not from an existing item branch.** The plan touches `tidy/apply.py` and `tidy/cli.py`, both of which are at their merged state on `main`; nothing on `wi/BUG-0001` or `wi/WI-0002` is unmerged.
+  - **Status moved before any code was written**, per the procedure, so that an interruption leaves `in-progress` and a branch a later execution can reconcile with rather than `planned` and a branch nobody expects.
+- **Questions raised:** none.
+- **Commands:**
+  - `git checkout -b wi/BUG-0002 main` → exit 0, branch created at `a0fe21e`
+  - `git branch -a` → exit 0, confirmed no `wi/BUG-0002` existed beforehand
+- **Gates:**
+  - `tests-pass` → **not yet run** (no code has been written; the completion gates run at step 7 on the branch head)
+  - `lint-clean` → **not yet run** (as above)
+  - `workspace-valid` → **not yet run** (as above; the transition accompanying this entry runs it)
+  - `every-criterion-has-a-test` → **not yet run** (as above)
+  - `commits-reference-the-item` → **not yet run** (no commit exists on the branch yet)
+  - `claims-are-sourced` → **not yet run** (as above)
+  - `no-unplanned-scope` → **not yet run**, advisory (there is no diff yet)
+- **Artifacts:**
+  - branch `wi/BUG-0002`, created at `a0fe21e`
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation has started. The branch exists at `main`'s head and nothing has been written yet; the work is plan steps 1-9, and the report is the entry that accompanies the move to `verifying`.
+
+## 2026-08-27T19:54:16Z — implement v0.2.2 — developer
+
+- **Item:** BUG-0002
+- **Trigger:** status `in-progress` on branch `wi/BUG-0002`, continuing this execution.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/artifacts/plan.md` — steps 1-9, the AC mapping, and the four assumptions
+  - `docs/architecture/adr/ADR-0007-tagged-outcomes-from-apply-plan.md` — the `kind` vocabulary and the exit rule, quoted exactly into the code
+  - `tidy/apply.py`, `tidy/cli.py` — before editing, to confirm the three failure messages and the one fallback message that AC2 protects
+  - `tests/test_apply.py`, `tests/test_cli.py` — which assertions read `apply_plan`'s return, and `BadTargetTests`' `addCleanup`-before-`chmod` and `skipTest` pattern, reused in step 7
+  - `git diff main..wi/BUG-0002` — read in full before reporting, for the `no-unplanned-scope` gate
+- **Decisions:**
+  - **The third test in `HardLinkFallbackTests` was written and then deleted.** It asserted that an all-clean run still returns `[]` and that two equal `Outcome`s compare equal. The plan names two tests in that class; the first half duplicated an `ApplyTests` assertion the plan explicitly wants left as the evidence, and the second tested `dataclasses` rather than this item. Neither traced to an AC, so it went. Latitude used: removing something, not adding it.
+  - **Four mutations instead of the plan's single revert.** Reverting `apply.py` and `cli.py` wholesale makes the two unit tests error on `'str' object has no attribute 'kind'` rather than fail on behaviour, which conflates the type change with the behaviour change. Reverting only the exit rule isolates it; weakening the rule so nothing is ever a failure guards AC3 from the other direction; rewording the fallback message guards AC2. All four are in `impl-report.md`.
+  - **A detached `git worktree` under `.harness/` for the mutations, not a stash.** The branch's own working tree was never in a reverted state, so an interruption mid-mutation could not have left half-reverted code looking like the item's work. The worktree was removed and `git worktree list` shows only the main one.
+  - **`test_a_genuine_failure_alongside_a_fallback_still_exits_1` is reported as passing against the unfixed code, deliberately.** It asserts exit 1, which the old code also gave. It guards against over-fixing rather than demonstrating the bug, and saying so plainly is better than letting `verify` find a "regression test" that never went red.
+  - **The `0o500` guard writes a probe file rather than checking `os.access` or the uid.** `os.access` answers about permission bits, not about whether the filesystem enforces them, and a uid check misses the container and filesystem cases. Attempting the write and skipping if it succeeds is the same shape `BadTargetTests` already uses for its unreadable folder.
+  - **No message string was edited.** AC2 is a byte-for-byte constraint on prose, so the four strings were moved inside `Outcome(...)` and re-wrapped with the text untouched. `git diff` is the check, and it shows no character of any message changed.
+- **Questions raised:** none. The plan decided everything this execution needed, including the `kind` vocabulary and the exit rule verbatim; nothing came up that was not mine to decide.
+- **Commands:**
+  - `git checkout -b wi/BUG-0002 main` → exit 0
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 68 tests ... OK` (64 on `main`)
+  - `python3 -m unittest tests.test_cli.FallbackExitStatusTests tests.test_apply.HardLinkFallbackTests -v` → exit 0, all four `ok` — none skipped on this machine
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 .harness/repro/nolink.py .harness/repro/nolink` (the item's own reproduction, against the branch) → `EXIT: 0`, both files at `recent/documents/doc.pdf` and `recent/images/photo.jpg`, stderr carrying both fallback lines unchanged. It printed `EXIT: 1` on `main` at `f363721`
+  - mutation 1, both modules restored to `main` → `FAILED (failures=1, errors=2)`
+  - mutation 2, exit rule back to `return 1 if outcomes else 0` → `FAILED (failures=1)`, `1 != 0`
+  - mutation 3, exit rule weakened to `kind == "never"` → `FAILED (failures=1)`, `0 != 1`
+  - mutation 4, fallback message reworded `hard link` → `hardlink` → `FAILED (failures=2, errors=1)`
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0002 wi/BUG-0002` → exit 0, `all 1 commit(s) on main..wi/BUG-0002 name BUG-0002`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked no documents changed since main`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors 0 warnings
+  - `git worktree prune` / `git worktree list` → one worktree, the repository itself
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` → exit 0, 68 tests OK, run on the branch head at `cb4a882`)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` → exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace .` → exit 0, 8 items, 9 documents, 0 errors 0 warnings)
+  - `every-criterion-has-a-test` → **pass** (`impl-report.md` `## Acceptance criteria evidence` names a test function for each of AC1-AC4, and the four mutations show each is sensitive; no AC rests on reading the code)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs BUG-0002 wi/BUG-0002` → exit 0. It reported `already merged into main` at step 3, when the branch had no commits at all — recorded in `impl-report.md` `## What I did not do` as a toolkit observation)
+  - `no-unplanned-scope` → **pass, advisory** (`git diff main..wi/BUG-0002 --stat` is exactly four files, all named in plan steps 1-7; the deleted third test is the one hunk that was written and then removed for this reason)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → exit 0. No document under `docs/` changed on this branch: ADR-0007 and overview v4 were `plan`'s commit on `main`)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/impl-report.md` — created
+  - branch `wi/BUG-0002`, one code commit: `cb4a882` `tidy: tell a fallback move apart from a failed one (refs BUG-0002)`; range `main..wi/BUG-0002`
+  - `tidy/apply.py`, `tidy/cli.py`, `tests/test_apply.py`, `tests/test_cli.py` — modified
+- **Status:** `in-progress` → `verifying`
+- **Result:** The fix is on `wi/BUG-0002`. `apply_plan` now returns a tagged `Outcome` per action, so a run that used ADR-0003's fallback for every file exits 0 with its stderr word for word unchanged, while a genuine failure still exits 1 — confirmed by re-running the item's own reproduction (`EXIT: 0` against the branch, `EXIT: 1` on `main`) and by four mutations, each of which turns a different one of AC1-AC3 red. 68 tests pass, up from 64.
+
+## 2026-08-27T19:58:59Z — verify v0.1.4 — qa-engineer
+
+- **Item:** BUG-0002
+- **Trigger:** status `verifying`, dispatched by `next` as the highest-ranked runnable item.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — AC1-AC4, read **before** the implementation report, and each check derived from the criterion's own words
+  - `tracker/items/BUG-0002/history.md` — four rows, no send-back; this is a first verification
+  - `tracker/items/BUG-0002/artifacts/plan.md` — the nine steps and the AC mapping, for step 6's diff-against-the-plan read
+  - `tracker/items/BUG-0002/artifacts/impl-report.md` — read after the criteria, and treated as claims to check rather than as evidence
+  - `tracker/project.yaml` — the test and lint commands this skill ran itself
+  - branch `wi/BUG-0002` at **`6a5b1a7f0ed19923e82a1da76018a46ba36b2e0a`**, code commit `cb4a882`
+  - `tidy/apply.py`, `tidy/cli.py`, `tests/test_apply.py`, `tests/test_cli.py` — on the branch, and `git diff main..wi/BUG-0002` in full
+  - No `artifacts/refinement-qa.md` — a bug filed by `verify` enters at `ready` and is never refined, so no criterion's wording is contested there.
+- **Decisions:**
+  - **AC1 was checked on both routes, not one.** The criterion says "whether the moves used `os.link` **or** ADR-0003's fallback", so an ordinary apply with nothing patched was run as well as the injected one. `impl-report.md` covers only the fallback route end to end; the primary route's exit status is this skill's own check.
+  - **AC2 was checked as a byte diff against the unfixed code, not as a substring match.** The criterion says the line is "unchanged", which the tests can only approximate by asserting a literal they also wrote. Running the same fixture through a `main` worktree and through the branch, then `diff`ing the two stderr captures, is the reading that could actually fail. It came back identical, with the exit status the only difference.
+  - **AC3 was checked by the means the criterion names.** It says "checkable with the `FileExistsError` path", and the implementation's CLI test uses a permission failure instead. Rather than accept the substitution, the `FileExistsError` path was exercised directly through `apply_plan` with nothing patched — a real kernel error — and a genuine end-to-end failure was driven through `python3 -m tidy` with no `mock` anywhere. The substitution is not a defect: AC3's normative clause is "a run in which a move genuinely did not land still exits non-zero", and the `FileExistsError` sentence is a suggested means.
+  - **Five mutations were run rather than reusing the four in `impl-report.md`.** Two overlap; three do not (C weakens the rule so nothing is ever a failure, D re-tags the fallback as `"failed"`, E rewords the message differently). Re-running someone else's mutation list is the failure mode this skill exists to avoid.
+  - **`README.md`'s exit-1 clause: observation, not a bug.** It is phrased for the partial case — "1 when some file could not be moved while others were" — and the all-fail run also exits 1. The sentence is loose rather than false, the behaviour predates this item, and no BUG-0002 criterion covers it. Filing a bug for prose that is not wrong would spend a pipeline slot on a judgement call; recording it in `verify-report.md` `## Defects found` puts the evidence in front of `review-close`'s document audit, which can decide otherwise.
+  - **`NO_HARD_LINKS` as a shared `OSError` instance: observation, not a bug.** `mock` raises the same object per call, so `__traceback__` is reassigned each time; `apply.py` only formats it with `%s` and `str(e)` is stable. Nothing observable depends on it.
+  - **No criterion was judged `ambiguous`, so no question was filed.** Each of the four could be settled by a command whose output decides it either way.
+- **Questions raised:** none.
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t . -q` on `6a5b1a7` → exit 0, `Ran 68 tests in 0.062s`, `OK`
+  - `python3 -m compileall -q tidy tests` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 8 items, 9 documents, 0 errors 0 warnings
+  - `python3 -m tidy .harness/v/primary --apply` (AC1, primary route, nothing patched) → `EXIT: 0`, both files at `recent/documents/` and `recent/images/`
+  - `python3 .harness/v/nolink.py .harness/v/fallback` (AC1, the item's own reproduction) → `EXIT: 0`, both files moved, both fallback lines on stderr
+  - `python3 .harness/v/nolink-main.py` against a detached `main` worktree, and `nolink-branch.py` against the branch, then `diff` of the two normalised stderr captures (AC2) → `DIFF EXIT: 0`; `main` reported `EXIT: 1`, the branch `EXIT: 0`
+  - `build_plan` → create the destination → `apply_plan`, unpatched (AC3, the `FileExistsError` path) → `[Outcome(kind='failed', message='recent/documents/report.pdf appeared while tidying; report.pdf was left where it is')]`, destination byte-unchanged, source still present
+  - `chmod 0500 recent/`, `python3 -m tidy .harness/v/perm --apply` (AC3, end to end, nothing patched) → `EXIT: 1`, two `[Errno 13] Permission denied` lines, both files still at the top level
+  - `chmod 0500 recent/documents/`, then the injected reproduction (AC3, mixed) → `EXIT: 1`, failure line before fallback line, `doc.pdf` unmoved and `photo.jpg` moved
+  - `python3 -c "isinstance(OSError(18, 'Invalid cross-device link'), FileExistsError)"` (AC4) → `False`; `isinstance(..., OSError)` → `True`
+  - mutation A, both modules restored to `main` → `FAILED (failures=1, errors=4)`
+  - mutation B, exit rule alone reverted → `FAILED (failures=1)`
+  - mutation C, `main` returns `0` unconditionally → `FAILED (failures=1)`, `0 != 1`
+  - mutation D, fallback tagged `"failed"` → `FAILED (failures=2)`
+  - mutation E, fallback message reworded → `FAILED (failures=2, errors=1)`
+  - control, tree restored → `Ran 68 tests`, `OK`
+  - boundary runs: empty folder `--apply` → `EXIT: 0`; `chmod 0` folder → `EXIT: 2`; missing folder → `EXIT: 2`; preview under the fallback condition → `EXIT: 0` with the file untouched
+  - `git diff main..wi/BUG-0002` → four files, all traceable to plan steps 1-7
+  - `git worktree remove` ×2, `git worktree list` → one worktree, the repository itself
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t . -q` run by this skill on the branch head → exit 0, 68 tests, `OK`)
+  - `lint-clean` → **pass** (`python3 -m compileall -q tidy tests` → exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace .` → exit 0, 0 errors 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (`verify-report.md` `## Criteria` gives, for each of AC1-AC4, a command this skill ran and its quoted output; no row cites `impl-report.md`, and two rows — AC1's primary route and AC3's unpatched end-to-end run — are checks the report does not contain)
+  - `negative-cases-exercised` → **pass** (seven conditions triggered and recorded in `## Negative and boundary cases exercised`: all-fail, mixed failure-plus-fallback, real `FileExistsError`, nothing to move, unreadable folder, missing folder, preview under the fallback condition)
+  - `tests-would-fail-without-the-change` → **pass, advisory** (five mutations, each turning a different test red, with the control green; recorded in `## Test sensitivity check`)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/verify-report.md` — created, `Verified-commit: 6a5b1a7f0ed19923e82a1da76018a46ba36b2e0a`
+  - `tracker/items/BUG-0002/item.md` — AC1, AC2, AC3 and AC4 ticked, each against a command in the report
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0002 passes all four criteria on `6a5b1a7`. A fallback apply now exits 0 with stderr byte-identical to what the unfixed code printed, and a genuine failure still exits 1 — including in a run that also fell back. Five mutations show each criterion's tests are sensitive. Two observations are recorded and deliberately not filed as bugs: `README.md`'s exit-1 clause is phrased for the partial case, and the shared `OSError` instance in the tests.
+
+## 2026-08-27T20:09:59Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0002
+- **Trigger:** status `in-review`, dispatched by `next` as the highest-ranked runnable item (priority rank 3, created 2026-08-27T16:31:21Z, ahead of BUG-0003 and BUG-0004 on `created` and of WI-0003 on priority).
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — AC1-AC4, all four ticked; the summary, reproduction and notes
+  - `tracker/items/BUG-0002/history.md` — five rows, chaining without a gap; the last matches `item.md`
+  - `tracker/items/BUG-0002/journal.md` — in full, all five entries: `verify` (filing), `plan`, `implement` ×2, `verify`
+  - `tracker/items/BUG-0002/artifacts/plan.md` — the nine steps, the AC mapping, the four assumptions and the four risks, as the standard the diff is read against
+  - `tracker/items/BUG-0002/artifacts/impl-report.md` — `## Deviations from the plan` and `## What I did not do`, as declared gaps to judge
+  - `tracker/items/BUG-0002/artifacts/verify-report.md` — `## Criteria`, `## Defects found`, `## Not verified, and why`
+  - `tracker/items/BUG-0002/questions/` — empty before this execution
+  - `git diff main..wi/BUG-0002` — every hunk, over `tidy/apply.py`, `tidy/cli.py`, `tests/test_apply.py`, `tests/test_cli.py`
+  - `docs/architecture/overview.md` v4, `docs/architecture/adr/ADR-0007-*.md`, ADR-0003, ADR-0006, `README.md` — for D12, each claim checked by opening what it cites
+  - `tidy/apply.py`, `tidy/cli.py`, `tests/test_apply.py`, `tests/test_cli.py` on the branch — the code the claims are about
+  - `spec/doc-header.md` §4, §4a, §5 and `spec/dor-dod.md` §3 — who may edit which document, and what D7 and D12 ask
+- **Decisions:**
+  - **The change is right and I would merge it.** Every hunk maps to a plan step; no hunk serves neither a criterion nor a step. The layering ADR-0002 sets is untouched, no message string moved (checked in the diff, not in the report), and the one behavioural line is `cli.py`'s exit rule. The trial merge is clean and the suite passes on the merge result.
+  - **Suspended on D12, not rejected.** `docs/architecture/overview.md` ¶3 says "That path is unreachable from the test suite … a run using the fallback exits 1 even when every file moved". Four tests reach it (`tests/test_apply.py:120,144`, `tests/test_cli.py:413,447`) and the run exits 0, so the sentence is false the moment this branch merges — and ¶4 of the same document already says BUG-0002 brings the first test that reaches the branch. Filed as **Q-001**.
+  - **ADR-0007's "`apply_plan` is imported only by `cli.py`" is false as written.** `tests/test_apply.py:16` imports it, was already doing so on `main`, and now reads `.kind` and `.message` — which the ADR's own Option A anticipates two sections earlier. The decision and its "cheap to reverse" verdict are unaffected. Filed as **Q-002**, separately, because an overview is edited and an ADR is superseded or left alone: two remedies, two decisions, two questions (`spec/question.md` §2).
+  - **A send-back to `in-progress` would have been wrong.** `implement` may not write to `docs/` (`spec/doc-header.md` §5), so rejecting would have handed the defect to a skill forbidden from fixing it. `answer-questions` is the skill §5 names for `overview.md`, which is why this is a question and a suspension.
+  - **`README.md`'s exit-status paragraph: filed as BUG-0005, disagreeing with `verify`.** `verify` recorded it as loose rather than false and invited the review to take another view. Reproduced here: `recent/` at `0o500`, both moves fail, `EXIT: 1`, nothing moved — a run whose exit code the paragraph's enumeration does not let a reader predict. It belongs to another item (`found-in: WI-0001`), so it is a bug filed at `ready`, not a send-back, and both views are in BUG-0005 `## Notes`.
+  - **Five declared gaps accepted, and written into `item.md` `## Notes`** rather than left in the reports, since nobody reads a verification report after an item closes. The two `verify` raised as observations are judged there too: the shared `NO_HARD_LINKS` `OSError` instance is harmless (`apply.py` only `%s`-formats it), and the README wording became BUG-0005.
+  - **The trial merge was run and discarded, in a `--detach`ed worktree.** `main` was `a0fe21e` before and after. Running it while suspending is deliberate: it tells the architect that nothing but the two sentences stands between this item and the trunk.
+- **Questions raised:** BUG-0002/Q-001, BUG-0002/Q-002 — both `addressed-to: architect`, both `blocking: true`, filed as one ask ("1 of 2", "2 of 2").
+- **Commands:**
+  - `git worktree add --detach .harness/trial main` → exit 0, detached at `a0fe21e`
+  - `git -C .harness/trial merge --no-ff wi/BUG-0002` → exit 0, clean, merge result `71eb7d4`
+  - `python3 -m unittest discover -s tests -t . -q` in the trial worktree → exit 0, `Ran 68 tests in 0.063s`, `OK`
+  - `python3 -m compileall -q tidy tests` in the trial worktree → exit 0
+  - `python3 -m unittest tests.test_cli.FallbackExitStatusTests tests.test_apply.HardLinkFallbackTests -v` on the merge result → 4 tests, all `ok`, none skipped
+  - `git worktree remove --force .harness/trial`; `git worktree list` → one worktree; `git rev-parse main` → `a0fe21e`, byte-identical to the sha recorded before the trial
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0002 wi/BUG-0002` → exit 0, "verified at `6a5b1a7`; `wi/BUG-0002` has moved to `52d588e` but only the record changed (5 files under tracker/ or docs/)"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0002 wi/BUG-0002` → exit 0, all 3 commits name BUG-0002
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, no documents changed since `main`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0 before this execution's writes
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → `active`; still in flight: BUG-0002, BUG-0003, BUG-0004, WI-0003
+  - `grep -rn "from tidy.apply import\|from .apply import" --include=*.py .` → `tidy/cli.py:12`, `tests/test_apply.py:16` — the evidence behind Q-002
+  - `mkdir` fixture, `chmod 0500` on `recent/`, `python3 -m tidy .harness/rc/allfail --apply` → `EXIT: 1`, two `[Errno 13]` lines, `find` shows nothing moved — the evidence behind BUG-0005; fixture removed
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0005 …` → exit 0, created at `ready`
+- **Gates:**
+  - `definition-of-done` → **fail** (D12, and D4 as its consequence; the per-criterion table is `artifacts/review.md` `## Definition of Done`, D1-D12 with evidence each. D1, D2, D3, D5, D6, D8, D10, D11 pass; D7 partial — `overview.md` was bumped to v4 without updating the sentence the change invalidates; D9 not reached because the item is not closing)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` → exit 0; the five commits between `6a5b1a7` and `52d588e` are all under `tracker/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` → exit 0, 3 of 3)
+  - `tests-pass-on-the-merge-result` → **pass** (68 tests and the lint, run inside the detached trial worktree at `71eb7d4`, not on the branch head)
+  - `workspace-valid` → **pass** (`validate-workspace` → exit 0 at the start; the two errors it reports mid-execution are this execution's own unfinished state — a stale board and an open blocking question on an unsuspended item — and both are resolved by this transition)
+  - `record-is-reconstructible` → **pass** (what was built and why: `item.md` and ADR-0007; which skill decided what: five history rows against five journal entries, one per execution; what was asked and how it resolved: nothing was asked before this execution, and Q-001/Q-002 are open with their options recorded; what verification found: `verify-report.md`, seven criterion rows, seven boundary cases, five mutations)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → exit 0. Worth recording that it passes on both sentences behind Q-001 and Q-002: their citations resolve, and neither claim is true. That is the half of D12 a program cannot decide, and this is what it looks like when it matters)
+  - `epic-sign-off` → **skipped** (not an epic; `engagement-state EP-001` → `active`, four children still in flight, so no sign-off is due)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/review.md` — created
+  - `tracker/items/BUG-0002/questions/Q-001.md`, `Q-002.md` — created, both open and blocking
+  - `tracker/items/BUG-0002/item.md` — `## Notes` gains `### Gaps accepted at review`, five gaps
+  - `tracker/items/BUG-0005/` — created at `ready`, with its own filing journal entry and the bug Definition of Ready applied
+  - no merge commit; `main` is unchanged at `a0fe21e` and `wi/BUG-0002` is intact at `52d588e`
+- **Status:** `in-review` → `awaiting-answer`
+- **Result:** BUG-0002 is suspended, not rejected. The code passes: the trial merge is clean, 68 tests and the lint pass on the merge result, and all four criteria hold under this execution's own checks. The Definition of Done fails on D12 alone — `overview.md` ¶3 becomes false on merge, and ADR-0007's reversibility clause is false as written — and both documents belong to skills other than this one, so the findings went to the architect as Q-001 and Q-002 with `resume-to: in-review`. A third finding, in `README.md`, belongs to another item and was filed as BUG-0005.
+
+## 2026-08-27T20:13:10Z — answer-questions v0.3.1 — architect
+
+- **Item:** BUG-0002
+- **Trigger:** status `awaiting-answer`, dispatched by `next` step 4 — BUG-0002/Q-001 is the oldest open architect-addressed question in the workspace (created 2026-08-27T20:07:30Z).
+- **Inputs read:**
+  - `tracker/items/BUG-0002/questions/Q-001.md` and `Q-002.md` — both filed by `review-close`, both blocking, both about sentences in `docs/` rather than about the code
+  - `tracker/items/BUG-0002/history.md` — six rows; the suspending row records `resume-to: in-review`, so it did not have to be reconstructed
+  - `tracker/items/BUG-0002/item.md` — AC1-AC4 all ticked, and `## Notes` `### Gaps accepted at review`
+  - `tracker/items/BUG-0002/artifacts/review.md` — `## What I examined`'s D12 audit table and `## Findings` 1 and 2, which are what the two questions carry
+  - `tracker/items/BUG-0002/artifacts/plan.md` — `## Decisions and ADRs`, and the note that the overview goes to v4 in `plan`'s execution
+  - `docs/architecture/overview.md` v4 — the fallback paragraph and the one after it, in full
+  - `docs/architecture/adr/ADR-0007-tagged-outcomes-from-apply-plan.md` v1 — `## Options considered` A, `## Decision`, and `## Consequences` in full
+  - `docs/architecture/adr/ADR-0003-move-with-os-link.md`, `ADR-0002`, `ADR-0006` — to confirm no decision is being changed by either answer
+  - `tidy/apply.py`, `tidy/cli.py`, `tests/test_apply.py`, `tests/test_cli.py` on `wi/BUG-0002` — the code both claims are about, read rather than assumed
+  - `spec/doc-header.md` §1, §2, §3, §4, §4a, §5 — the scope of "never edited", who updates the overview, and what a content change obliges
+  - `spec/question.md` §4 — the four escalation conditions, checked against both answers
+  - No `refinement-qa.md` and no `docs/product/` reading: a bug filed by `verify` is never refined, and neither question turns on product intent
+- **Decisions:**
+  - **Q-001 — answered, route: from an existing document.** Option A: rewrite the stale sentence in place and bump `overview.md` to v5. `spec/doc-header.md` §1 and §2 make the overview a `status: current` record of conclusions that "a skill that needs a decision looks here first"; §4's "an ADR records what was believed at its date" is written about ADRs and does not extend to it; §3 supplies the change-log row that makes an in-place rewrite auditable, which is Option B's concern answered without turning the overview into a second history. Option C was rejected on the document's own terms, before D12 came into it: BUG-0003 and BUG-0004 are both open in `apply`/`cli` territory, and the next `plan` execution would have read that the fallback branch is untested.
+  - **Q-001 — one edit beyond what was asked.** The following paragraph's "BUG-0002 **carries** that change into the code" was written by `plan` before the code existed and reads as pending once merged. Past tense now, in the same change-log row, because leaving it would have re-created the same species of staleness in the paragraph next to the one being fixed.
+  - **Q-002 — answered, route: from an existing document.** Option A: correct the clause and bump ADR-0007 to v2. `spec/doc-header.md` §4's prohibition is on editing an ADR **to change its decision**; §3 requires every content change to every document to bump the version and add a row, with "no exceptions", which would be meaningless if an ADR could never be edited at all. The decision, the `kind` vocabulary, the exit rule and the cheap-to-reverse verdict are all untouched. Option B was rejected because superseding a decision that never moved points every existing citation of ADR-0007 at a superseded record for nothing; Option C because the false sentence would stay in a `current` ADR, which is the propagation path §4a exists to close.
+  - **Q-002 — two occurrences corrected, not the one that was quoted.** `## Consequences` also said "There is one caller [src: tidy/cli.py]" one paragraph above the sentence the review quoted, wrong in the same way. Fixing only what was asked about would have left the false claim in the document.
+  - **Neither question was escalated, and neither is a decision I had to invent.** `spec/question.md` §4: no intent is at stake, nothing is irreversible, no ADR is contradicted — both answers *restore* agreement with ADR-0007 — and the record is not silent, it is explicit in `spec/doc-header.md`. Escalating would have stopped the loop on a question the spec already answers.
+  - **No ADR was written and no acceptance criterion was touched.** Neither answer changes a design decision or what BUG-0002 was asked to deliver; AC1-AC4 stand exactly as `refine`'s successor skills left them, and the code is unchanged by this execution.
+  - **No scope was widened, so no work item was filed** (`spec/question.md` step 3b). Both answers are corrections to documents the pipeline had already written, not new work.
+- **Questions raised:** none. Both questions were answerable from `spec/doc-header.md`; neither was re-addressed to the human.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked 2 document(s) changed since main`, 0 errors — the two documents this execution edited, with their new citations resolving
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 9 items, 9 documents, 0 errors 0 warnings (before the answers were stamped; the two errors it reported after are this execution's own unfinished state — a stale board, and an item at `awaiting-answer` with no open blocking question left — both resolved by this transition)
+  - `sed -n` over `docs/architecture/overview.md` and `docs/architecture/adr/ADR-0007-*.md` after each edit → the changed paragraphs and both change-log rows read back from disk, which is the `answer-is-propagated` check
+- **Gates:**
+  - `answer-is-propagated` → **pass** (Q-001 names `docs/architecture/overview.md`: opened, the fallback paragraph's final sentence is the new text, the next paragraph reads "carried", the frontmatter says `version: 5` / `updated-by: answer-questions`, and change-log row 5 is present. Q-002 names `docs/architecture/adr/ADR-0007-tagged-outcomes-from-apply-plan.md`: opened, both corrected sentences are present with `[src: tests/test_apply.py]`, the frontmatter says `version: 2` / `updated-by: answer-questions`, and change-log row 2 is present. Neither `## Consequences` names a file that does not carry its change)
+  - `answered-from-the-record` → **pass** (Q-001 follows from `spec/doc-header.md` §1, §2 and §3, cited in the answer; Q-002 from §4's wording read against §3's "no exceptions". Neither answer rests on a decision I made in the absence of a document, so neither needed an ADR)
+  - `escalation-is-justified` → **skipped** (nothing was escalated; the four conditions in `spec/question.md` §4 were checked against both questions and none applies, which is recorded under `## Decisions` rather than left implicit)
+  - `workspace-valid` → **pass** (`validate-workspace` → exit 0 at the start of this execution and, per the transition's own run, on the state this move produces)
+  - `item-resumed-correctly` → **pass** (the suspending row of 2026-08-27T20:09:59Z records `resume-to: in-review`, read from `history.md` rather than inferred from which skill asked; this execution's row targets `in-review`)
+  - `a-deferral-is-not-an-answer` → **skipped** (no question on this item was addressed to the human, so no reply could defer; both were architect-addressed and both are `answered` with consequences that name files carrying real changes)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/questions/Q-001.md` — `## Answer` and `## Consequences` written; `status: answered`, `answered-by: answer-questions`, `answered-at: 2026-08-27T20:11:11Z`
+  - `tracker/items/BUG-0002/questions/Q-002.md` — the same
+  - `docs/architecture/overview.md` — v4 → v5; the fallback paragraph's last sentence and the following paragraph's tense
+  - `docs/architecture/adr/ADR-0007-tagged-outcomes-from-apply-plan.md` — v1 → v2; two false sentences in `## Consequences` corrected, the decision untouched
+  - no ADR created, no item created, no acceptance criterion amended
+- **Status:** `awaiting-answer` → `in-review`
+- **Result:** Both of `review-close`'s questions are answered from `spec/doc-header.md`, and both answers reached the documents rather than stopping in the question files: `overview.md` v5 no longer says the fallback path is untested, and ADR-0007 v2 no longer says `apply_plan` is imported only by `cli.py` — in the two places it said so. Nothing about the decision, the code or the criteria changed. BUG-0002 is back at `in-review`, where `review-close` re-applies D12 against the edited documents rather than taking this answer's word for it.
+
+## 2026-08-27T20:16:13Z — review-close v0.5.0 — reviewer
+
+- **Item:** BUG-0002
+- **Trigger:** status `in-review`, dispatched by `next` step 5 as the highest-ranked runnable item (priority rank 3, created 2026-08-27T16:31:21Z, ahead of BUG-0003 and BUG-0004 on `created` and of BUG-0005 and WI-0003 on priority). This is the second `review-close` execution on the item; the first suspended it on D12.
+- **Inputs read:**
+  - `tracker/items/BUG-0002/item.md` — AC1-AC4 all ticked, and `## Notes` `### Gaps accepted at review`
+  - `tracker/items/BUG-0002/history.md` — seven rows, chaining without a gap, the last matching `item.md`
+  - `tracker/items/BUG-0002/journal.md` — in full; seven entries, one per row, including the two written since the first pass
+  - `tracker/items/BUG-0002/questions/Q-001.md`, `Q-002.md` — both `answered`, read for what they claim to have changed and where
+  - `tracker/items/BUG-0002/artifacts/plan.md`, `impl-report.md`, `verify-report.md` — re-read for the declared gaps and the AC evidence
+  - `git diff main..wi/BUG-0002` — every hunk, now including the two document hunks
+  - `docs/architecture/overview.md` **v5** and `docs/architecture/adr/ADR-0007-*.md` **v2** — the edited paragraphs, their frontmatter and their change-log rows
+  - `tidy/apply.py`, `tidy/cli.py`, `tests/test_apply.py`, `tests/test_cli.py` — the code every D12 claim is about, read on the branch
+  - `spec/dor-dod.md` §3 — D1-D12, applied one at a time
+- **Decisions:**
+  - **Accept and merge.** All twelve Definition of Done criteria pass with their own evidence, recorded in `review.md` `## Definition of Done`. Nothing about the code changed since the first pass; what changed is that the two documents it made false are true again.
+  - **The two resolved findings were re-checked against the code, not against the answers.** That is the point of D12 and the reason this second pass is not a formality: `git grep -n "os.link" main -- tests/` returns nothing (no test on the trunk reaches the fallback), the four patch sites are at `tests/test_apply.py:120,144` and `tests/test_cli.py:413,447`, the four tests run `ok` on the merge result with none skipped, and `grep -rn "from tidy.apply import\|from .apply import"` returns exactly two files. An answer that says a document was fixed is a claim like any other.
+  - **`answer-questions` corrected a second occurrence Q-002 did not quote** — ADR-0007's "There is one caller" — and made a tense fix in `overview.md` ¶4 that Q-001 did not ask for. Both are in scope of the questions they came with, both are recorded in the change-log rows, and both are true against the code. Accepted rather than queried.
+  - **The trial merge was re-run on the current head rather than reused.** The first pass's trial at `71eb7d4` predates the document edits, so `validate-workspace` and `lint-claims` were run **inside** the new merge result at `88fb911` — the documents judged as the trunk will hold them, not as the branch holds them.
+  - **`README.md` stays as it is and BUG-0005 carries it.** Unchanged from the first pass: prose this item did not touch and no criterion covers, filed against another item rather than fixed inside this review.
+  - **No new bug was filed by this execution.** The `check-commit-refs` misdiagnosis is a defect in the toolkit rather than in this project's code, so it goes to the harness status and `review.md` `## Findings` 5, not to a `bug` item under `tracker/`, which tracks this product.
+- **Questions raised:** none. Q-001 and Q-002 were filed by the first pass and are answered; nothing new needed asking.
+- **Commands:**
+  - `git rev-parse main` → `a0fe21e`, recorded before the trial
+  - `git worktree add --detach .harness/trial2 main` → exit 0, detached at `a0fe21e`
+  - `git -C .harness/trial2 merge --no-ff wi/BUG-0002` → exit 0, clean, merge result `88fb911`
+  - `python3 -m unittest discover -s tests -t . -q` in the trial worktree → exit 0, `Ran 68 tests in 0.062s`, `OK`
+  - `python3 -m compileall -q tidy tests` in the trial worktree → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` in the trial worktree → exit 0, 9 items, 9 documents, 0 errors 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since a0fe21e` in the trial worktree → exit 0, 2 documents, 0 errors
+  - `git worktree remove --force .harness/trial2`; `git worktree list` → one worktree; `git rev-parse main` → `a0fe21e`, identical to the sha recorded before the trial
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0002 wi/BUG-0002` → exit 0, "verified at `6a5b1a7`; `wi/BUG-0002` has moved to `d0a7ebd` but only the record changed (15 file(s) under tracker/ or docs/)"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0002 wi/BUG-0002` → exit 0, all 5 commits name BUG-0002
+  - `git grep -n "os.link" main -- tests/` → no output; `grep -rn "from tidy.apply import\|from .apply import" --include=*.py .` → `tidy/cli.py:12`, `tests/test_apply.py:16`
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → `active`; still in flight: BUG-0002, BUG-0003, BUG-0004, BUG-0005, WI-0003
+- **Gates:**
+  - `definition-of-done` → **pass** (D1-D12 recorded criterion by criterion in `review.md` `## Definition of Done`, each with its own evidence. D7 moved from partial to pass with `overview.md` v5 and ADR-0007 v2; D12 moved from fail to pass, decided from the citations; D4 is clear because both questions are answered with propagated consequences; D9 is satisfied by the merge this execution performs immediately after the close, in the order SKILL.md step 8 mandates)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` → exit 0; all 15 commits' worth of files between `6a5b1a7` and `d0a7ebd` are under `tracker/` or `docs/`, so no code changed after verification)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` → exit 0, 5 of 5, run while `main..wi/BUG-0002` is still non-empty — which is why the close precedes the merge)
+  - `tests-pass-on-the-merge-result` → **pass** (68 tests and the lint inside the detached trial worktree at `88fb911`, plus `validate-workspace` and `lint-claims` in the same place)
+  - `workspace-valid` → **pass** (`validate-workspace` → exit 0 on the branch and inside the merge result; and again on the state this transition produces)
+  - `record-is-reconstructible` → **pass** (from `tracker/`, `docs/` and `git log --grep BUG-0002` alone: what was built and why — `item.md`, ADR-0007 and the `README.md`/ADR-0003 contradiction it resolves; which skill decided what — seven history rows against seven journal entries; what was asked and how it resolved — Q-001 and Q-002 with their options, answers and consequences, and the documents carrying them at v5 and v2; what verification found — `verify-report.md`, seven criterion rows, seven boundary cases, five mutations, and two observations it declined to file, one of which became BUG-0005)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since a0fe21e` inside the merge result → exit 0 over both edited documents. Recorded again for the reason the first pass recorded it: it passed while both claims were false, and it passes now that they are true. It checks that citations resolve, never that they support the sentence)
+  - `epic-sign-off` → **skipped** (not an epic; `engagement-state EP-001` → `active` with four children still in flight after this close, so no sign-off is due. `check-epic-signoff BUG-0002` is run by the transition and passes trivially)
+- **Artifacts:**
+  - `tracker/items/BUG-0002/artifacts/review.md` — rewritten as the whole review, both passes: eleven claims audited from their citations, D1-D12, five findings, five accepted gaps
+  - `tracker/items/BUG-0002/item.md` — `status: done`, `outcome: delivered`
+  - the merge of `wi/BUG-0002` into `main`, made immediately after this transition; its sha and the post-merge test run are recorded in a follow-up commit on the trunk, because the close is written before the merge exists
+  - no bug item filed by this execution; BUG-0005 was filed by the first pass
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0002 is delivered. On a filesystem that refuses hard links, `tidy <folder> --apply` now exits 0 when every file moved, with the stderr note about the fallback byte-identical to what the unfixed code printed, while a genuine failure — including one in a run that also fell back — still exits 1. It brings the first tests in this project that reach ADR-0003's fallback branch. Twelve of twelve Definition of Done criteria pass; the item was suspended once, not sent back, because the only defects were in two documents that neither this skill nor `implement` may edit, and both were fixed at their source and re-checked here against the code.
