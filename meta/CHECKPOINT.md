@@ -1,28 +1,28 @@
 # CHECKPOINT
 
-## Current unit: META-121 — F-066, a claims gate that cannot pass vacuously
+## Current unit: META-122 — F-067, the legal repair for a standing ADR
 
-**Session:** builder 3 (`meta/BUILDER-3-PROMPT.md`). Phase IV of `meta/plan.md`.
-**Done and pushed:** META-119 (ADR-0008), META-120 (`lint-answers`, `scope.py`, fixtures).
+**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..121 done and pushed.
 
-The plan's Phase IV was reordered after META-120: the two script-scope fixes and the two spec
-changes land first, and **all** skill contracts are re-derived in one pass (META-124) so each
-skill takes one version bump rather than three.
+**Intent.** `lint-claims --all` finds three `claim.unsourced` in iteration 4's `ADR-0002`. The
+reviewer verified all three true against the code. Adding the citation is an edit; ADRs are
+superseded-only; superseding one to add provenance is disproportionate — so *"no legal move
+clears it"*, and the ledger carries a permanent known-unfixable lint error class.
 
-**Intent.** `scripts/lint-claims --changed-since main` at an epic ending compares `main` with
-`main`, prints "checked no documents" and exits 0. Iteration 4's reviewer: *"It passed here, but
-it would have passed over anything."* `scripts/lib/scope.py` already knows the difference between
-a window that is empty and one that could not have seen anything; apply it.
+The repair, per ADR-0008's neighbour reasoning and the consumer run's own ADR-0009:
 
-1. `lint-claims` refuses a degenerate window (`claim.scope.degenerate`) instead of passing over
-   it, and always prints the scope it actually had — both rules, not only rule 2.
-2. An explicit named scope stays available and becomes the ending's contract: `--all`.
-3. Must-fail and must-pass cases in `./scripts/check`, built in a throwaway repository:
-   the F-066 shape refused, a real-but-empty window still a pass, `--all` at the same commit
-   still a real scope.
+1. `spec/doc-header.md` §4b — a standing ADR may be repaired **without supersession** in exactly
+   two ways, `provenance` and `erratum`, each recorded as an entry in a new append-only
+   `## Corrections` section. Anything that changes what the code must do is a new decision and
+   §4's supersession rule applies with full force. §5's table cell changes to match.
+2. `scripts/validate-workspace` — the shape: every correction entry carries a resolving citation
+   and names its kind; an erratum quotes the removed text; a corrected ADR is still `accepted`;
+   the change log has a row per correction.
+3. `fixtures/adr-correction/` — iteration 4's instance reduced: the ADR **before** (three true,
+   unsourced absolutes) and the same ADR repaired through the new path, asserted by execution in
+   `./scripts/check` — the defect is found, the repair clears it, and a malformed repair does not.
 
-**Not in this unit:** the gate command in any `skill.yaml` (META-124), F-067's repair path
-(META-122).
+**Not in this unit:** the skill contracts that name the path (META-124).
 
 ## Standing instructions (still in force)
 
