@@ -11,7 +11,12 @@ Steps, in order:
   5. must-pass workspace                     — validate-workspace over examples/toy-project
   6. claim-provenance fixtures              — scripts/lint-claims must find both defects in
                                                fixtures/broken-workspace and nothing at all in
-                                               fixtures/sourced-claims
+                                               fixtures/sourced-claims; and the three states of
+                                               its diff window, by execution — a real window that
+                                               is empty passes, a real window still catches an
+                                               unsourced absolute, `--all` is the ending's scope,
+                                               and `--changed-since main` standing on `main` is
+                                               refused rather than passing over nothing (F-066)
   7. cross-answer consistency               — scripts/lint-answers over fixtures/crossed-answers
                                                (exact codes, the compliant escalation among them
                                                producing none), over the two clean engagements,
@@ -389,8 +394,101 @@ def check_claims(runner: Runner) -> None:
     # And the form the GATE actually runs. `--all` and `--changed-since` take different code
     # paths, and a preflight caught the second one crashing while the first was green — the
     # fixtures proved the rules and never proved the invocation.
-    runner.run("claim-provenance as the gate invokes it",
-               [sys.executable, linter, "--root", clean, "--changed-since", "HEAD"])
+    #
+    # F-066: this exact invocation, over a tree standing at the ref it is comparing against, is
+    # the vacuous pass. It must now be refused, and the case is asserted on the code rather than
+    # on the exit status, because "exits non-zero" would also be satisfied by the gate crashing.
+    degenerate = subprocess.run(
+        [sys.executable, linter, "--root", clean, "--changed-since", "HEAD"],
+        capture_output=True, text=True, cwd=ROOT)
+    ok = (degenerate.returncode != 0
+          and "claim.scope.degenerate" in codes_from(degenerate.stdout + degenerate.stderr))
+    runner.emit("a claims window that could not see is refused (F-066)", ok,
+                None if ok else degenerate,
+                detail="" if ok else "  the invocation the contract runs at an epic ending "
+                                     "still reports a pass over an empty comparison")
+    check_claims_scope(runner)
+
+
+def check_claims_scope(runner: Runner) -> None:
+    """The three states of a claims window, by execution (F-066).
+
+    A real window that happens to be empty must stay a pass — otherwise the fix turns every item
+    that touched no document into a blocked transition, which is how a gate gets switched off.
+    """
+    import shutil
+    import tempfile
+    label = "the three states of a claims window (F-066, 4 cases)"
+    linter = os.path.join(SCRIPTS, "lint-claims")
+    if shutil.which("git") is None:
+        runner.skip(label, "git is not on PATH")
+        return
+    unsourced = ("---\ntitle: Overview\nversion: 1\nstatus: current\n"
+                 "updated: 2026-08-29T09:00:00Z\nupdated-by: plan\nupdated-for: WI-0001\n"
+                 "---\n\n# Overview\n\n`render_table` never touches a line outside a table.\n"
+                 "\n## Change log\n\n| version | when | by | for | what changed |\n"
+                 "|---------|------|----|-----|--------------|\n"
+                 "| 1 | 2026-08-29T09:00:00Z | plan | WI-0001 | First version |\n")
+    with tempfile.TemporaryDirectory() as base:
+        repo = os.path.join(base, "workspace")
+        os.makedirs(os.path.join(repo, "docs", "architecture"))
+        overview = os.path.join(repo, "docs", "architecture", "overview.md")
+
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+
+        write(os.path.join(repo, "README.md"), "# workspace\n")
+        git("init", "--initial-branch=main")
+        git("config", "user.email", "check@example.invalid")
+        git("config", "user.name", "check")
+        git("add", "-A")
+        git("commit", "-m", "base")
+
+        def lint(*extra):
+            return subprocess.run([sys.executable, linter, "--root", repo, *extra],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        cases = []
+        # 1. a real window with nothing in it: the branch moved, no document did.
+        git("checkout", "-q", "-b", "wi/WI-0001")
+        write(os.path.join(repo, "code.py"), "def render_table():\n    return None\n")
+        git("add", "-A")
+        git("commit", "-m", "code only")
+        empty = lint("--changed-since", "main")
+        cases.append(("a real window with no documents in it is a pass",
+                      empty.returncode == 0, empty))
+        # 2. the same window, with a document in it, still finds the defect.
+        write(overview, unsourced)
+        real = lint("--changed-since", "main")
+        cases.append(("a real window still catches an unsourced absolute",
+                      real.returncode != 0
+                      and "claim.unsourced" in codes_from(real.stdout + real.stderr), real))
+        git("add", "-A")
+        git("commit", "-m", "the document")
+        # 3. the ending's scope: no branch, no diff, and the defect is still found.
+        git("checkout", "-q", "main")
+        git("merge", "-q", "--no-ff", "-m", "merge", "wi/WI-0001")
+        ending = lint("--all")
+        cases.append(("--all at an ending is a real scope and finds the same defect",
+                      ending.returncode != 0
+                      and "claim.unsourced" in codes_from(ending.stdout + ending.stderr), ending))
+        # 4. and the invocation the ending used to run is refused rather than passing over it.
+        vacuous = lint("--changed-since", "main")
+        cases.append(("--changed-since main, standing on main, is refused",
+                      vacuous.returncode != 0
+                      and "claim.scope.degenerate" in codes_from(vacuous.stdout
+                                                                 + vacuous.stderr), vacuous))
+
+    failed = [(name, result) for name, ok, result in cases if not ok]
+    if failed:
+        detail = []
+        for name, result in failed:
+            detail.append(f"  - {name}: exit {result.returncode}")
+            detail += [f"      {line}" for line in
+                       (result.stdout + result.stderr).strip().split("\n")[-6:]]
+        runner.emit(label, False, detail="\n".join(detail))
+    else:
+        runner.emit(label, True)
 
 
 # fixtures/ended-engagement: one epic per verdict the termination gate has to reach.

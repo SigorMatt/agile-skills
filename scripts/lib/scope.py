@@ -81,8 +81,12 @@ class DiffScope:
 
 def _dirty_under(root: str, subpaths: list) -> list:
     """Files with uncommitted changes under any of `subpaths` (relative, may be empty = all)."""
-    argv = ["status", "--porcelain", "--"] + list(subpaths) if subpaths else ["status",
-                                                                              "--porcelain"]
+    # `--untracked-files=all` matters: git collapses a wholly-untracked directory to `docs/`,
+    # so a brand-new document under a brand-new directory would otherwise be invisible to a gate
+    # scoped by this window — present in the count, absent from the file list.
+    argv = ["status", "--porcelain", "--untracked-files=all"]
+    if subpaths:
+        argv += ["--"] + list(subpaths)
     result = git(root, argv)
     if result is None or result.returncode != 0:
         return []

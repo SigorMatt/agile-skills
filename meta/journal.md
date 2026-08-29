@@ -3381,3 +3381,36 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   (+ `EXPECTED-CODES.txt`, `README.md`), `spec/question.md` §2 (`## Cross-answer check`,
   revision 7), `scripts/check` (step 7 + `check_rewritten_claim`), `scripts/lib/selftest.py`,
   `adapters/claude-code/render.py` (ships `lint-answers` and `scope.py`), re-rendered dist.
+
+---
+
+## 2026-08-29 — META-121 — F-066: a claims window that cannot see is a failure
+
+- **Unit:** META-121
+- **Inputs read:** `meta/findings/FINDINGS.md` F-066 and F-033, `scripts/lint-claims`,
+  `scripts/lib/scope.py`, `scripts/check` (`check_claims`),
+  `meta/harness/evidence/iteration-4/tracker/items/EP-001/artifacts/review.md`.
+- **Decisions:**
+  - **Three states, not two.** `--changed-since` answered "which documents differ" and stopped
+    there, which conflates a well-formed empty window (this execution touched no document — a
+    pass, and it must stay one, or every code-only item becomes a blocked transition) with a
+    window that could not have contained anything whatever the execution did. Only the second is
+    a failure, and it is the one iteration 4 reported as a pass.
+  - **`--all` is the ending's scope, and the docstring says so.** An ending is not an execution
+    and has no diff of its own, so the honest scope at an ending is the whole document set. That
+    is what the review had to run *voluntarily* to find three real `claim.unsourced` errors.
+  - **The existing "as the gate invokes it" step became the must-fail case.** It ran
+    `--changed-since HEAD` over a clean fixture — precisely F-066's shape — and passed. It now
+    asserts the **code**, not just a non-zero exit, because "exits non-zero" is also satisfied by
+    the gate crashing.
+  - **A found bug on the way: `git status --porcelain` collapses a wholly-untracked directory.**
+    A brand-new `docs/architecture/overview.md` under a brand-new directory showed up as `docs/`
+    — counted in the window, absent from its file list, so rule 2 examined nothing while
+    reporting a real scope. `--untracked-files=all` in `scripts/lib/scope.py`, and case 2 of the
+    new step is what caught it.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — 21 steps. Four new executed cases for the window's three
+  states; `scripts/lib/selftest.py` 210 passed.
+- **Artifacts:** `scripts/lint-claims` (`window`, `check_scope`, `scope_note`, docstring),
+  `scripts/lib/scope.py` (`--untracked-files=all`), `scripts/check`
+  (`check_claims_scope`, the must-fail invocation, step 6's docstring), re-rendered dist.

@@ -23,10 +23,26 @@ architecture overview, and then a seventh document after the audit flagged it �
 sentence about a named identifier that nobody re-checked. Absolutes are cheap to write, expensive
 to verify, and catastrophic when wrong. Hedged prose is not the target; unsourced certainty is.
 
-`--changed-since <ref>` restricts rule 2 to documents this execution actually touched, including
-uncommitted ones. That is the same scoping the Definition of Done already applies to D7 and D12 —
-"the behaviour this item touched" — so the gate is a real read of a few paragraphs rather than a
-whole-repository ritual nobody performs. `--all` forces the whole tree, for an audit.
+**Scope is explicit, and a scope that cannot see is a failure.** `--changed-since <ref>` restricts
+rule 2 to documents this execution actually touched, including uncommitted ones — the same scoping
+the Definition of Done applies to D7 and D12, so the gate is a real read of a few paragraphs
+rather than a whole-repository ritual nobody performs. `--all` forces the whole tree, and that is
+the scope an **ending** uses, because an ending is not an execution and has no diff of its own.
+
+Three outcomes, not two (F-066, `scripts/lib/scope.py`):
+
+  * documents in the window → check them;
+  * a well-formed window with nothing in it → pass, and say so: the comparison could have found
+    something and did not;
+  * a **degenerate** window — the ref does not resolve, or it IS the current commit with nothing
+    modified under `docs/` → `claim.scope.degenerate`, exit 1. This is the shape iteration 4
+    found: at an epic ending there is no branch, `--changed-since main` compares `main` with
+    `main`, and the gate printed "checked no documents" and exited 0. The reviewer wrote it down
+    — *"It passed here, but it would have passed over anything"* — and only a voluntary `--all`
+    run surfaced three real `claim.unsourced` errors. A gate that could not look must say so with
+    a non-zero exit; that is F-033's rule, applied to scope.
+
+The scope actually used is printed on every run, for both rules separately.
 
 Standard library only (ADR-0002).
 """
@@ -43,6 +59,7 @@ from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
                     CitationResolver, is_prose, looks_like_code, masked_lines,
                     paragraphs)
 from report import Report  # noqa: E402
+from scope import diff_scope  # noqa: E402
 from workspace import resolve_root  # noqa: E402
 
 class ClaimLinter:
@@ -54,6 +71,7 @@ class ClaimLinter:
         self.only = [os.path.abspath(name) for name in (only or [])]
         self.citations = CitationResolver(self.root)
         self._ignored = None
+        self._window = None
 
     # ---- workspace facts -------------------------------------------------------------
 
@@ -61,18 +79,21 @@ class ClaimLinter:
         """One git runner, shared with the citation resolver so both see the same repository."""
         return self.citations.git(args)
 
+    def window(self):
+        """The diff window rule 2 is scoped to, classified (F-066, `scripts/lib/scope.py`).
+
+        Computed once. `--changed-since` used to answer "which documents differ" and stop there,
+        which conflates two states that need opposite verdicts: a window that is well formed and
+        empty (this execution touched no document — a pass) and a window that could not have
+        contained anything whatever the execution did (a failure).
+        """
+        if self._window is None:
+            self._window = diff_scope(self.root, self.changed_since, ["docs"])
+        return self._window
+
     def changed_docs(self):
         """Documents this execution touched: differing from the ref, or dirty in the tree."""
-        result = self.git(["diff", "--name-only", self.changed_since, "--", "docs"])
-        names = set()
-        if result is not None and result.returncode == 0:
-            names.update(line.strip() for line in result.stdout.split("\n") if line.strip())
-        status = self.git(["status", "--porcelain", "--", "docs"])
-        if status is not None and status.returncode == 0:
-            for line in status.stdout.split("\n"):
-                if len(line) > 3:
-                    names.add(line[3:].strip().strip('"'))
-        return {name for name in names if name.endswith(".md")}
+        return {name for name in self.window().paths if name.endswith(".md")}
 
     def ignored(self, path: str) -> bool:
         """Does git ignore this path? (F-041)
@@ -179,18 +200,49 @@ class ClaimLinter:
                          "run: cmd → outcome>] — an absolute is the claim shape that has "
                          "actually gone wrong and propagated (F-001)")
 
-    def run(self) -> int:
-        self.check_citations()
-        self.check_absolutes()
+    def check_scope(self) -> bool:
+        """Is the scope this run was given one that could have found something? (F-066)
+
+        A gate that could not look must say so with a non-zero exit — F-033's rule, applied to
+        scope instead of to arguments. The counterexample it exists for is an epic ending, where
+        `--changed-since main` is run standing on `main`: the diff is empty because the
+        comparison is degenerate, not because the prose is clean, and iteration 4's reviewer said
+        so in the review — *"It passed here, but it would have passed over anything."*
+        """
+        if self.only or self.everything or not self.changed_since:
+            return True
+        window = self.window()
+        if not window.degenerate:
+            return True
+        self.report.error(os.path.join(self.root, "docs"), 0, "claim.scope.degenerate",
+                          f"--changed-since {self.changed_since}: {window.detail}, so rule 2 "
+                          f"examined nothing and could not have examined anything",
+                          hint=window.hint)
+        return False
+
+    def scope_note(self) -> str:
+        """What this run actually looked at, always printed — for both rules, separately."""
         if self.only:
-            scope = f"{len(self.only)} file(s) named on the command line"
-        elif self.everything or not self.changed_since:
-            scope = f"the whole tree under {self.root}"
-        else:
-            examined = len(self.documents())
-            scope = (f"{examined} document(s) changed since {self.changed_since}"
-                     if examined else f"no documents changed since {self.changed_since}")
-        self.report.note(f"checked {scope}")
+            return f"{len(self.only)} file(s) named on the command line"
+        if self.everything:
+            return (f"absolute claims: every document under {os.path.join(self.root, 'docs')}; "
+                    f"citations: every markdown file in the workspace")
+        if not self.changed_since:
+            return (f"absolute claims: every document under {os.path.join(self.root, 'docs')} "
+                    f"(no scope was named); citations: every markdown file in the workspace")
+        window = self.window()
+        if window.degenerate:
+            return f"absolute claims: NOTHING — {window.detail}"
+        examined = len(self.documents())
+        return (f"absolute claims: {examined} document(s) in {window.detail}; "
+                f"citations: every markdown file in the workspace")
+
+    def run(self) -> int:
+        looked = self.check_scope()
+        self.check_citations()
+        if looked:
+            self.check_absolutes()
+        self.report.note(f"checked {self.scope_note()}")
         return self.report.emit()
 
 
