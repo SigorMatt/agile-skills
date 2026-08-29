@@ -1,0 +1,10 @@
+{
+  "id": "iteration-3b-mdtab",
+  "queue-entry": "meta/BUILDER-3-PROMPT.md — Regression 3b: iteration 3's config and probe, unchanged, against the fixed kernel",
+  "project": "mdtab-3b",
+  "persona": "contradictory-stakeholder",
+  "probe": "iteration-3-mdtab",
+  "max-turns": 30,
+  "worker-model": "opus",
+  "sim-model": "opus"
+}

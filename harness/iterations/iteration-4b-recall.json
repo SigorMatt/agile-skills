@@ -1,0 +1,10 @@
+{
+  "id": "iteration-4b-recall",
+  "queue-entry": "meta/BUILDER-3-PROMPT.md — Regression 4b: iteration 4's config, unchanged, against the fixed kernel",
+  "project": "recall-4b",
+  "persona": "cooperative-pm",
+  "probe": "iteration-4-recall",
+  "max-turns": 30,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}
