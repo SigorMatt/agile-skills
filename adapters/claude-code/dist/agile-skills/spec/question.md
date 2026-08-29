@@ -177,6 +177,59 @@ A deferred **sign-off** (below) is the one deferral with a further consequence: 
 does not end, because the acknowledgment did not happen. The honest record is E3, the impasse
 (`ids-and-statuses.md` §3.5).
 
+### `## Cross-answer check` — the section that stops a contradiction being settled privately
+
+A stakeholder's answers are requirements, not document content. Two of them can contradict each
+other, and when they do, the person who wrote both is the only one who can say which wins.
+
+Iteration 3 is the whole argument. Part one, at refinement: *"The alignment marker decides
+everything. Whatever the marker says, that's where the text sits in the cell — every row, every
+column, no exceptions."* Part two, five turns later, as the condition on a sign-off: *"a cell
+with a line break … should just sit top-left, plain, whatever the column marker says."* The
+contradiction was **detected twice** — D12 found the earlier sentence, quoted with its citation,
+now false in two documents — and repaired both times by rewriting the document. The stakeholder
+had a one-sentence reconciliation ready the whole engagement and was never asked for it:
+*"They fixed it as a problem with their document, not as a question for me. I would rather have
+been asked"* (F-062, derived in `meta/adr/ADR-0008-cross-answer-consistency.md`).
+
+So every human answer, at the moment a skill **consumes** it, records what it was checked
+against:
+
+```markdown
+## Cross-answer check
+
+Checked against: WI-0002/Q-001; WI-0002/Q-002.
+
+- `WI-0002/Q-001` — **conflicts**: it says the marker decides "every row, every column, no
+  exceptions"; this answer exempts a whole class of cell. Escalated as `WI-0004/Q-005`, which
+  quotes both and asks which wins.
+- `WI-0002/Q-002` — compatible: it is about column width, not about where text sits.
+```
+
+Rules:
+
+- The section is REQUIRED on every question with `answered-by: human` that has reached
+  `status: answered`. It is written by the skill that consumes the answer — the human writes
+  `## Answer` and nothing else — so a reply sitting in the file before anything has read it is
+  not a defect.
+- `Checked against:` names the prior recorded human answers by ID, or `none` **with the reason**.
+  `none` is a real result and the commonest one; what is not allowed is silence.
+- Every named ID MUST resolve to a human answer in this workspace, and MUST carry a verdict:
+  `compatible` (with why) or `conflicts`.
+- A verdict of `conflicts` MUST be matched by a question addressed to `human` that **quotes both
+  answers by ID** and asks which wins. Recording a conflict and then deciding it is the move
+  ADR-0008 §3 refuses.
+- Which prior answers belong in the list is the acting skill's judgement, and the ADR says so
+  rather than pretending otherwise: a citation-graph topic key was measured against iteration 3's
+  real record and produced 58 candidate pairs in a four-item engagement. What is mechanical is
+  that the check happened, that its IDs resolve, and that a declared conflict was escalated.
+
+`scripts/lint-answers` enforces all of the above. It also enforces the other half, over a diff:
+**a claim in `docs/` sourced to a human answer may not be rewritten by the execution that
+overtakes it.** If the sentence is false because the pipeline paraphrased badly, or because the
+code changed, correcting it is an ordinary D12 repair and always was. If it is false because the
+person has since said something incompatible, the document is not the thing that is wrong.
+
 ### `kind: sign-off` — the termination question
 
 Almost every question is a `decision`: something the pipeline cannot settle by itself. One is
@@ -298,3 +351,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 4 | 2026-08-22 | §2: one decision per question (F-027); questions for one item in one round are presented as one ask (F-020). |
 | 5 | 2026-08-27 | §2: `status: deferred` — the reply that is neither an answer nor silence, and what it does to the item (F-028). `kind: sign-off` becomes the **termination** question: triggered by rest rather than by closure, and it must name every child item (F-045, F-046). Derived in ADR-0006. |
 | 6 | 2026-08-27 | §2: what a deferral does to an **epic** — it returns the epic to `open`, because `blocked` on an epic is the impasse ending and only `review-close` reaches it. Move 2 as written was impossible to execute on an epic (F-050). |
+| 7 | 2026-08-29 | §2: `## Cross-answer check` — a consumed human answer records what it was checked against, and a declared conflict is put to its author rather than settled in a document (F-062). Derived in ADR-0008. |

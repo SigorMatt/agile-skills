@@ -1,0 +1,337 @@
+#!/usr/bin/env python3
+"""Gate: a conflict between two of the stakeholder's own answers reaches the stakeholder.
+
+Usage:
+  scripts/lint-answers [--root .] [--item <ID>] [--changed-since <git-ref>] [--quiet]
+
+Derived from `meta/adr/ADR-0008-cross-answer-consistency.md`. Three rules, and the ADR is honest
+about what they cannot see — read §5 before trusting this script for more than it does.
+
+  1. **Every consumed human answer records a cross-answer check.** A question with
+     `answered-by: human` that has reached `status: answered` carries a `## Cross-answer check`
+     section naming the prior human answers it was checked against — or `none`, which is a real
+     result and must be said — with a verdict for each.
+
+  2. **A declared conflict is escalated.** A verdict of `conflicts` against answer A on answer B
+     requires a question, addressed to `human`, whose body names **both** A and B by ID. That is
+     the move ADR-0008 §3 calls asking; recording a conflict and resolving it privately is the
+     move it refuses.
+
+  3. **The human's own sentence is not rewritten by the execution that overtakes it** (with
+     `--changed-since`). A paragraph under `docs/` carrying `[src: <ITEM>/Q-nnn]` for a
+     human-answered question, whose text this execution changed or removed, needs one of the two
+     legal moves in the record: the question of rule 2, or a `**Cross-answer check:**` journal
+     bullet naming that answer and saying why the edit is an ordinary repair.
+
+Rule 3 is the mechanical half. In iteration 3 the pipeline found the stakeholder's own sentence —
+*"the marker decides everything … every row, every column, no exceptions"*, quoted in
+`docs/product/vision.md` with `[src: WI-0002/Q-001]` on it — had become false, and rewrote it:
+*"Fixed two false claims where the review named one."* Every gate passed. The person who wrote
+the sentence was holding a one-line reconciliation nobody asked for.
+
+`--changed-since` refuses a **degenerate** window rather than reporting a pass over it
+(`scripts/lib/scope.py`, F-066): a ref that does not resolve, or a ref that is the current commit
+with nothing modified, means this gate could not have seen anything whatever the execution did.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+from claims import CITATION_RE, paragraphs  # noqa: E402
+from report import Report  # noqa: E402
+from scope import diff_scope, git  # noqa: E402
+from workspace import Workspace, resolve_root  # noqa: E402
+
+SECTION = "## Cross-answer check"
+CHECKED_AGAINST_RE = re.compile(r"^\s*checked against\s*:(?P<rest>.*)$", re.IGNORECASE)
+ANSWER_ID_RE = re.compile(r"\b(EP-\d{3}|WI-\d{4}|BUG-\d{4})/(Q-\d{3})\b")
+REQUEST_ID_RE = re.compile(r"\b(R-\d{3})\b")
+NONE_RE = re.compile(r"\bnone\b", re.IGNORECASE)
+VERDICTS = ("conflicts", "compatible")
+JOURNAL_BULLET_RE = re.compile(r"^\s*[-*]\s*\*\*Cross-answer check:\*\*(?P<rest>.*)$",
+                               re.IGNORECASE)
+
+
+def answer_text(question) -> str:
+    """The `## Answer` body with HTML comment placeholders removed."""
+    section = question.sections.get("## Answer")
+    if not section:
+        return ""
+    lines = [line for line in section["text"].split("\n")
+             if not line.strip().startswith("<!--")]
+    return "\n".join(lines).strip()
+
+
+class AnswerLinter:
+    def __init__(self, root: str, only_item=None, changed_since=None) -> None:
+        self.root = os.path.abspath(root)
+        self.report = Report("lint-answers", self.root)
+        self.only_item = only_item
+        self.changed_since = changed_since
+        self.workspace = Workspace(self.root).load()
+        self.human = {}          # "<ITEM>/Q-nnn" -> Question
+        self.questions = []      # every question, for the escalation search
+        self.load()
+
+    # ---- the record ------------------------------------------------------------------
+
+    def load(self) -> None:
+        for item in self.workspace.sorted_items():
+            for question in item.questions:
+                identifier = f"{item.identifier}/{question.identifier}"
+                self.questions.append((identifier, item, question))
+                if question.fields.get("answered-by") == "human" and answer_text(question):
+                    self.human[identifier] = (item, question)
+
+    def journal_checks(self):
+        """Every answer ID named in a `**Cross-answer check:**` journal bullet, anywhere."""
+        named = set()
+        for item in self.workspace.sorted_items():
+            path = os.path.join(item.root, "journal.md")
+            if not os.path.isfile(path):
+                continue
+            with open(path, "r", encoding="utf-8") as handle:
+                for line in handle:
+                    match = JOURNAL_BULLET_RE.match(line)
+                    if match:
+                        named.update(f"{a}/{b}" for a, b in
+                                     ANSWER_ID_RE.findall(match.group("rest")))
+        return named
+
+    def escalations(self):
+        """Answer IDs that appear together in one question addressed to the human.
+
+        Returns a set of frozenset pairs. The question is the artifact ADR-0008 §3 calls asking,
+        and "quoting both by ID" is what makes it checkable: a question that names one of the two
+        answers has not put the contradiction in front of anyone.
+        """
+        pairs = set()
+        for identifier, item, question in self.questions:
+            if question.fields.get("addressed-to") != "human":
+                continue
+            # Only what the person is actually shown counts. A cross-answer check names the
+            # answer it conflicts with by construction, so scanning the whole body would make
+            # every declared conflict its own escalation and the rule would never fire.
+            asked = "\n".join(question.sections.get(name, {}).get("text", "")
+                               for name in ("## Context", "## Question"))
+            named = {f"{a}/{b}" for a, b in ANSWER_ID_RE.findall(asked)}
+            named.discard(identifier)
+            for first in named:
+                for second in named:
+                    if first != second:
+                        pairs.add(frozenset((first, second)))
+                pairs.add(frozenset((first, identifier)))
+        return pairs
+
+    # ---- rule 1 and rule 2 -------------------------------------------------------------
+
+    def check_cross_answer_sections(self) -> int:
+        examined = 0
+        escalated = self.escalations()
+        for identifier, (item, question) in sorted(self.human.items()):
+            if self.only_item and item.identifier != self.only_item:
+                continue
+            if question.fields.get("status") != "answered":
+                # The person has replied and nothing has consumed the reply yet. The check is the
+                # consuming skill's to write (ADR-0008 §4), so demanding it here would make the
+                # workspace invalid for the length of one turn.
+                continue
+            examined += 1
+            section = question.sections.get(SECTION)
+            if section is None or not section["text"].strip():
+                self.report.error(
+                    question.path, question.body_line, "answer.cross-check.missing",
+                    f"{identifier} was consumed without a `{SECTION}` section",
+                    hint="name the prior human answers this one was checked against and the "
+                         "verdict for each, or `Checked against: none` and why — ADR-0008 §4 "
+                         "obligation 1")
+                continue
+            self.check_one_section(identifier, question, section, escalated)
+        return examined
+
+    def check_one_section(self, identifier, question, section, escalated) -> None:
+        text = section["text"]
+        line = section["line"]
+        declared = None
+        for raw in text.split("\n"):
+            match = CHECKED_AGAINST_RE.match(raw)
+            if match:
+                declared = match.group("rest")
+                break
+        if declared is None:
+            self.report.error(question.path, line, "answer.cross-check.malformed",
+                              f"{identifier}'s cross-answer check has no `Checked against:` line",
+                              hint="`Checked against: WI-0002/Q-001; WI-0002/Q-002`, or "
+                                   "`Checked against: none — <why>`")
+            return
+        named = [f"{a}/{b}" for a, b in ANSWER_ID_RE.findall(declared)]
+        named += REQUEST_ID_RE.findall(declared)
+        if not named:
+            if not NONE_RE.search(declared):
+                self.report.error(
+                    question.path, line, "answer.cross-check.malformed",
+                    f"{identifier}'s `Checked against:` line names neither an answer nor `none`",
+                    hint="an unreadable check is not a check; say which IDs, or say none")
+            return
+        for named_id in named:
+            if named_id.startswith("R-"):
+                target = os.path.join(self.root, "tracker", "requests", f"{named_id}.md")
+                if not os.path.isfile(target):
+                    self.report.error(question.path, line, "answer.cross-check.unresolved",
+                                      f"{identifier} was checked against {named_id}, which does "
+                                      f"not exist")
+                continue
+            if named_id not in self.human:
+                self.report.error(
+                    question.path, line, "answer.cross-check.unresolved",
+                    f"{identifier} was checked against {named_id}, which is not a recorded human "
+                    f"answer in this workspace",
+                    hint="a cross-answer check that cites nothing is the appearance of a check")
+                continue
+            verdict = self.verdict_for(text, named_id)
+            if verdict is None:
+                self.report.error(
+                    question.path, line, "answer.cross-check.no-verdict",
+                    f"{identifier} names {named_id} with no verdict",
+                    hint="each named answer needs `compatible` (with why) or `conflicts` (with "
+                         "the question that put both to their author)")
+                continue
+            if verdict == "conflicts" and frozenset((identifier, named_id)) not in escalated:
+                self.report.error(
+                    question.path, line, "answer.conflict.unescalated",
+                    f"{identifier} conflicts with {named_id} and no question addressed to the "
+                    f"human names both",
+                    hint="file a blocking question quoting both answers by ID and asking which "
+                         "wins; deciding it here is the move ADR-0008 §3 refuses")
+
+    @staticmethod
+    def verdict_for(text: str, named_id: str):
+        for raw in text.split("\n"):
+            if named_id not in raw:
+                continue
+            lowered = raw.lower()
+            for verdict in VERDICTS:
+                if verdict in lowered:
+                    return verdict
+        return None
+
+    # ---- rule 3 ------------------------------------------------------------------------
+
+    def sourced_paragraphs(self, text: str):
+        """(start-line, paragraph, {answer ids cited}) for paragraphs citing a human answer."""
+        found = []
+        for start, block in paragraphs(text):
+            joined = "\n".join(block)
+            cited = set()
+            for citation in CITATION_RE.findall(joined):
+                for part in citation.split(";"):
+                    match = ANSWER_ID_RE.search(part.strip())
+                    if match and f"{match.group(1)}/{match.group(2)}" in self.human:
+                        cited.add(f"{match.group(1)}/{match.group(2)}")
+            if cited:
+                found.append((start, joined.strip(), cited))
+        return found
+
+    def check_rewritten_claims(self) -> None:
+        window = diff_scope(self.root, self.changed_since, ["docs"])
+        if window.degenerate:
+            self.report.error(
+                os.path.join(self.root, "docs"), 0, "answer.scope.degenerate",
+                f"--changed-since {self.changed_since}: {window.detail}",
+                hint=window.hint)
+            return
+        self.report.note(f"claim window: {window.detail}")
+        escalated = {member for pair in self.escalations() for member in pair}
+        journalled = self.journal_checks()
+        for relative in window.paths:
+            if not relative.startswith("docs" + os.sep) and not relative.startswith("docs/"):
+                continue
+            if not relative.endswith(".md"):
+                continue
+            before = git(self.root, ["show", f"{self.changed_since}:{relative}"])
+            if before is None or before.returncode != 0:
+                continue        # the document did not exist in the base; nothing was rewritten
+            path = os.path.join(self.root, relative)
+            after = ""
+            if os.path.isfile(path):
+                with open(path, "r", encoding="utf-8") as handle:
+                    after = handle.read()
+            surviving = {"\n".join(block).strip() for _, block in paragraphs(after)}
+            for start, block, cited in self.sourced_paragraphs(before.stdout):
+                if block in surviving:
+                    continue
+                for answer_id in sorted(cited):
+                    if answer_id in escalated or answer_id in journalled:
+                        continue
+                    self.report.error(
+                        path, start, "answer.claim-rewritten-unasked",
+                        f"a claim sourced to {answer_id} was rewritten or removed, and nothing "
+                        f"in the record put that answer to the person who gave it",
+                        hint="ADR-0008 §3: cite compatibility in a `**Cross-answer check:**` "
+                             "journal bullet naming " + answer_id + ", or file a question "
+                             "quoting both answers by ID. A sentence that is false because the "
+                             "human has since said something else is not a document defect")
+
+    # ---- driver --------------------------------------------------------------------------
+
+    # Structure is `validate-workspace`'s job, not this one's. Only the load failures that
+    # would leave THIS gate unable to see the record are fatal here: a missing item tree, an
+    # unparsable question, or a workspace that is not one. Anything else (an item without a
+    # journal, say) is a real defect and another gate's to report — repeating it here would make
+    # every partial fixture unusable and teach a reader to skim this script's output.
+    BLINDING = ("project.missing", "project.unparsable", "project.shape", "items.missing",
+                "question.unparsable", "item.unparsable")
+
+    def run(self) -> int:
+        for path, line, code, message, hint in self.workspace.load_errors:
+            if code in self.BLINDING:
+                self.report.error(path, line, code, message, hint)
+        examined = self.check_cross_answer_sections()
+        scope = (f"{examined} consumed human answer(s)"
+                 + (f" on {self.only_item}" if self.only_item else " in the workspace"))
+        if self.changed_since:
+            self.check_rewritten_claims()
+        self.report.note(f"checked {scope}")
+        return self.report.emit()
+
+
+def main(argv: list) -> int:
+    options, flags, positional = {}, set(), []
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--help", "-h"):
+            print(__doc__.strip())
+            return 0
+        if token == "--quiet":
+            flags.add("quiet")
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"lint-answers: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+    if len(positional) > 1:
+        print("lint-answers: pass at most one directory (the workspace root)", file=sys.stderr)
+        return 2
+
+    root = resolve_root(options.get("root") or (positional[0] if positional else None),
+                        tool="lint-answers")
+    return AnswerLinter(root, options.get("item"), options.get("changed-since")).run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

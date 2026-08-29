@@ -1,0 +1,5 @@
+answer.conflict.unescalated
+answer.cross-check.malformed
+answer.cross-check.missing
+answer.cross-check.no-verdict
+answer.cross-check.unresolved

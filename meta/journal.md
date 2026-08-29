@@ -3336,3 +3336,48 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Questions raised:** none.
 - **Gates:** `./scripts/check` green (derivation-only unit; no code changed).
 - **Artifacts:** `meta/adr/ADR-0008-cross-answer-consistency.md`.
+
+---
+
+## 2026-08-29 — META-120 — the mechanical half of ADR-0008
+
+- **Unit:** META-120
+- **Inputs read:** `meta/adr/ADR-0008-cross-answer-consistency.md`, `spec/question.md`,
+  `scripts/lint-claims`, `scripts/lib/{claims,report,workspace}.py`, `scripts/check`,
+  `fixtures/{ended-engagement,signed-off-epic,broken-workspace}/`,
+  `adapters/claude-code/render.py`.
+- **Decisions:**
+  - **`scripts/lib/scope.py` first, because F-066 and F-062 need the same answer.** A diff window
+    has three states and only the middle one was ever modelled: real-and-non-empty,
+    real-and-empty (a pass, honestly), and **degenerate** — the ref does not resolve, there is no
+    repository, or the ref *is* HEAD with nothing dirty. Degenerate is a failure. Written now so
+    `lint-answers`'s `--changed-since` cannot ship with the defect `lint-claims` is about to have
+    removed (META-123).
+  - **Dirtiness is scoped to the paths the gate reads.** "The tree is clean" has to mean "clean
+    where this gate looks", or a review that has written `tracker/` claims a real window over
+    `docs/`. Covered by its own selftest case.
+  - **`lint-answers` reports only the *blinding* load errors.** Structure is
+    `validate-workspace`'s job. Repeating `journal.missing` here made `fixtures/sourced-claims`
+    unusable and would teach a reader to skim this script's output; the five codes that leave
+    this gate unable to see the record still fail it.
+  - **The escalation search reads `## Context` and `## Question` only.** First cut scanned the
+    whole body — and a cross-answer check names the answer it conflicts with by construction, so
+    every declared conflict became its own escalation and the rule never fired. Only what the
+    person is actually shown counts as having been asked.
+  - **The compliant case lives inside the must-fail fixture.** `WI-0003` in
+    `fixtures/crossed-answers/` is the same conflict, escalated properly, and it must produce
+    **no** code. Because the assertion is set-equality, a rule that starts firing on correct work
+    fails the build exactly as loudly as one that stops firing.
+  - **Rule 3 is executed, not staged.** It reads a diff, so its case is a throwaway git
+    repository inside `scripts/check`: the human's own quoted sentence rewritten (refused), then
+    each of ADR-0008 §3's two legal moves clearing it separately, plus the degenerate window in
+    the same repository — a scope check that only ever runs against a real diff has never been
+    tested.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — 19 steps, two new. `scripts/lib/selftest.py` **210
+  passed** (was 201): eight new `scope` cases. `fixtures/crossed-answers` produces exactly its
+  five codes; `lint-answers` over both clean engagements exits 0; the four rule-3 cases pass.
+- **Artifacts:** `scripts/lib/scope.py`, `scripts/lint-answers`, `fixtures/crossed-answers/`
+  (+ `EXPECTED-CODES.txt`, `README.md`), `spec/question.md` §2 (`## Cross-answer check`,
+  revision 7), `scripts/check` (step 7 + `check_rewritten_claim`), `scripts/lib/selftest.py`,
+  `adapters/claude-code/render.py` (ships `lint-answers` and `scope.py`), re-rendered dist.

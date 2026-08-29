@@ -1,0 +1,8 @@
+project:
+  name: crossed-answers
+  trunk-branch: main
+commands:
+  test: "true"
+conventions:
+  branch-prefix: wi/
+  commit-subject: "tracker: {subject} (refs {id})"

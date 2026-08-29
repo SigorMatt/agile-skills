@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 import report as report_lib  # noqa: E402
+import scope as scope_lib  # noqa: E402
 import workspace as workspace_lib  # noqa: E402
 from miniyaml import YamlError  # noqa: E402
 
@@ -499,6 +500,68 @@ def run_crosscheck(results: Results) -> str:
     return f"ran against PyYAML {yaml.__version__} on {checked} inputs"
 
 
+def run_scope(results) -> None:
+    """A diff window has three states, and only one of them is a pass (F-066, scope.py).
+
+    Built in a throwaway repository rather than against this one, so the test does not depend on
+    where HEAD happens to be when `scripts/check` runs.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+    if shutil.which("git") is None:
+        results.check("scope/skipped-no-git", True, True)
+        return
+    with tempfile.TemporaryDirectory() as base:
+        repo = os.path.join(base, "repo")
+        os.makedirs(os.path.join(repo, "docs"))
+
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+
+        results.check("scope/outside a repository", scope_lib.diff_scope(repo, "main").verdict,
+                      "no-repository")
+        git("init", "--initial-branch=main")
+        git("config", "user.email", "selftest@example.invalid")
+        git("config", "user.name", "selftest")
+        with open(os.path.join(repo, "docs", "a.md"), "w", encoding="utf-8") as handle:
+            handle.write("one\n")
+        git("add", "-A")
+        git("commit", "-m", "base")
+
+        results.check("scope/a ref that does not resolve",
+                      scope_lib.diff_scope(repo, "no-such-ref", ["docs"]).verdict,
+                      "unresolved-ref")
+        results.check("scope/the ref IS the current commit, tree clean",
+                      scope_lib.diff_scope(repo, "main", ["docs"]).verdict, "same-commit")
+
+        # Dirty *outside* the paths this gate reads is still a window that cannot see: the
+        # distinction is what stops a review that wrote tracker/ from claiming it checked docs/.
+        with open(os.path.join(repo, "other.txt"), "w", encoding="utf-8") as handle:
+            handle.write("two\n")
+        results.check("scope/dirty elsewhere does not rescue the window",
+                      scope_lib.diff_scope(repo, "main", ["docs"]).verdict, "same-commit")
+        results.check("scope/dirty elsewhere is a real window for a gate that reads it",
+                      scope_lib.diff_scope(repo, "main").verdict, "real")
+
+        with open(os.path.join(repo, "docs", "a.md"), "w", encoding="utf-8") as handle:
+            handle.write("one, changed\n")
+        window = scope_lib.diff_scope(repo, "main", ["docs"])
+        results.check("scope/an uncommitted edit under the path is real", window.verdict, "real")
+        results.check("scope/and it names the path", "docs/a.md" in window.paths, True)
+
+        git("add", "-A")
+        git("commit", "-m", "the change")
+        git("checkout", "-q", "-b", "wi/WI-0001")
+        with open(os.path.join(repo, "docs", "b.md"), "w", encoding="utf-8") as handle:
+            handle.write("three\n")
+        git("add", "-A")
+        git("commit", "-m", "on the branch")
+        window = scope_lib.diff_scope(repo, "main", ["docs"])
+        results.check("scope/a branch ahead of the trunk is real", window.verdict, "real")
+        results.check("scope/degenerate is the negation of real", window.degenerate, False)
+
+
 def main() -> int:
     results = Results()
     run_accept(results)
@@ -509,6 +572,7 @@ def main() -> int:
     run_workspace(results)
     run_root_resolution(results)
     run_escaping(results)
+    run_scope(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

@@ -12,37 +12,44 @@ Steps, in order:
   6. claim-provenance fixtures              — scripts/lint-claims must find both defects in
                                                fixtures/broken-workspace and nothing at all in
                                                fixtures/sourced-claims
-  7. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
+  7. cross-answer consistency               — scripts/lint-answers over fixtures/crossed-answers
+                                               (exact codes, the compliant escalation among them
+                                               producing none), over the two clean engagements,
+                                               and rule 3 by execution in a throwaway repository:
+                                               the human's own quoted sentence rewritten without
+                                               asking, and each of ADR-0008's two legal moves
+                                               clearing it (F-062)
+  8. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
                                                fixture's epic and passes the sourced-claims one
-  8. the termination gate                    — check-epic-signoff over fixtures/ended-engagement:
+  9. the termination gate                    — check-epic-signoff over fixtures/ended-engagement:
                                                one epic per verdict it has to reach, and
                                                engagement-state's own two
-  9. pipeline invariants                     — lint-skills must report the expected finding code
+ 10. pipeline invariants                     — lint-skills must report the expected finding code
                                                for each defect reintroduced into pipeline.yaml
- 10. a dropped rule obligation is refused    — validate-workspace against a pipeline.yaml whose
+ 11. a dropped rule obligation is refused    — validate-workspace against a pipeline.yaml whose
                                                rule_obligations no longer scope a status rule;
                                                the registry has to be load-bearing to be worth
                                                having (F-050)
- 11. the derived model, by execution         — creation authority refused and permitted through
+ 12. the derived model, by execution         — creation authority refused and permitted through
                                                new-item, and an engagement refused an ending
                                                while nobody had asked the stakeholder
- 12. the journal body the prose promises     — a body with no `**Status:**` bullet goes through
+ 13. the journal body the prose promises     — a body with no `**Status:**` bullet goes through
                                                the transition and comes back carrying the move
                                                that was made; standalone journal-entry still
                                                requires it, and a body missing a bullet the tool
                                                does not write is still refused (F-049)
- 13. a trial merge leaves the trunk alone   — the command block review-close's procedure prints,
+ 14. a trial merge leaves the trunk alone   — the command block review-close's procedure prints,
                                                run against a throwaway repository: the trunk sha
                                                is unchanged, and the same block with --detach
                                                removed moves it (F-055)
- 14. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+ 15. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
- 15. findings citations resolve             — every `commit <sha>` cited in
+ 16. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 16. export profiles                        — scripts/export leaves the workspace behind, and
+ 17. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 17. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 18. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -104,6 +111,11 @@ def codes_from(output: str) -> set:
     return found
 
 
+def write(path: str, text: str) -> None:
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
 def check_fixture(runner: Runner) -> None:
     fixture = os.path.join(ROOT, "fixtures", "broken-workspace")
     expected_path = os.path.join(fixture, "EXPECTED-CODES.txt")
@@ -135,6 +147,206 @@ def check_fixture(runner: Runner) -> None:
         runner.emit("must-fail fixture", False, detail="\n".join(detail))
     else:
         runner.emit(f"must-fail fixture ({len(expected)} codes)", True)
+
+
+def check_cross_answers(runner: Runner) -> None:
+    """A conflict between two of the stakeholder's own answers reaches the stakeholder.
+
+    ADR-0008. Three assertions, because each covers a way the rule could be wrong:
+
+    * the reduced iteration-3 tree produces **exactly** the codes `EXPECTED-CODES.txt` lists —
+      which includes the compliant escalation in it producing none, so a rule that starts firing
+      on correct work fails here too;
+    * the two engagements that end cleanly stay clean;
+    * rule 3, which reads a diff, is executed in a throwaway repository: the human's own quoted
+      sentence is rewritten, and the gate refuses until one of ADR-0008 §3's two legal moves is
+      in the record. The degenerate window (F-066's shape) is asserted in the same repository,
+      because a scope check that only ever runs on a real diff has never been tested.
+    """
+    fixture = os.path.join(ROOT, "fixtures", "crossed-answers")
+    expected_path = os.path.join(fixture, "EXPECTED-CODES.txt")
+    if not os.path.isfile(expected_path):
+        runner.skip("cross-answer consistency", f"{expected_path} does not exist")
+        return
+    result = subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-answers"),
+                             fixture], capture_output=True, text=True, cwd=ROOT)
+    with open(expected_path, "r", encoding="utf-8") as handle:
+        expected = {line.strip() for line in handle if line.strip()}
+    actual = codes_from(result.stdout + result.stderr)
+    missing, extra = sorted(expected - actual), sorted(actual - expected)
+    if result.returncode == 0 or missing or extra:
+        detail = ["the reduced iteration-3 record did not produce the expected findings:"]
+        detail += [f"  - {code} (expected, not emitted)" for code in missing]
+        detail += [f"  + {code} (emitted, not expected)" for code in extra]
+        if result.returncode == 0:
+            detail.append("  lint-answers exited 0 over a fixture built to fail")
+        runner.emit("cross-answer consistency (must-fail fixture)", False,
+                    detail="\n".join(detail))
+    else:
+        runner.emit(f"cross-answer consistency (must-fail fixture, {len(expected)} codes)", True)
+
+    for name in ("ended-engagement", "signed-off-epic"):
+        runner.run(f"cross-answer consistency over fixtures/{name}",
+                   [sys.executable, os.path.join(SCRIPTS, "lint-answers"),
+                    os.path.join(ROOT, "fixtures", name)])
+
+    check_rewritten_claim(runner)
+
+
+REWRITTEN_CLAIM_QUESTION = """---
+id: Q-001
+item: WI-0001
+from-skill: refine
+addressed-to: human
+blocking: true
+status: answered
+created: 2026-08-29T09:00:00Z
+answered-at: 2026-08-29T09:30:00Z
+answered-by: human
+---
+
+## Context
+
+The alignment question.
+
+## Question
+
+Where does the text sit in a cell?
+
+## Options considered
+
+- **A --** the marker decides. **B --** multiline cells are special.
+- **Recommendation:** none, insufficient basis.
+
+## Answer
+
+The marker decides everything -- every row, every column, no exceptions.
+
+## Consequences
+
+`docs/product/vision.md` records the rule.
+
+## Cross-answer check
+
+Checked against: none -- the first answer on this behaviour.
+"""
+
+VISION_BEFORE = """---
+title: Vision
+version: 1
+status: current
+updated: 2026-08-29T09:40:00Z
+updated-by: intake
+updated-for: WI-0001
+---
+
+# Vision
+
+The marker decides where the text sits, in every column without exception
+[src: WI-0001/Q-001].
+
+## Change log
+
+| version | when | by | for | what changed |
+|---------|------|----|-----|--------------|
+| 1 | 2026-08-29T09:40:00Z | intake | WI-0001 | First version |
+"""
+
+VISION_AFTER = VISION_BEFORE.replace(
+    "The marker decides where the text sits, in every column without exception\n"
+    "[src: WI-0001/Q-001].",
+    "The marker decides where the text sits, except in a cell holding a line break\n"
+    "[src: WI-0001/Q-001].")
+
+
+def check_rewritten_claim(runner: Runner) -> None:
+    """The refused move, by execution: the human's own sentence, rewritten without asking."""
+    import shutil
+    import tempfile
+    label = "the human's own sentence is not rewritten unasked (F-062, 4 cases)"
+    if shutil.which("git") is None:
+        runner.skip(label, "git is not on PATH")
+        return
+    with tempfile.TemporaryDirectory() as base:
+        repo = os.path.join(base, "workspace")
+        shutil.copytree(os.path.join(ROOT, "fixtures", "crossed-answers"), repo)
+        # One item, one human answer, one document quoting it. Everything else from the fixture
+        # would only add findings that have nothing to do with the diff.
+        shutil.rmtree(os.path.join(repo, "tracker", "items"))
+        item_dir = os.path.join(repo, "tracker", "items", "WI-0001")
+        os.makedirs(os.path.join(item_dir, "questions"))
+        write(os.path.join(item_dir, "item.md"),
+              "---\nid: WI-0001\ntype: work-item\nstatus: done\npriority: high\n"
+              "epic: EP-001\n---\n\n## Story\n\nFixture.\n\n## Acceptance criteria\n\n"
+              "- [x] AC1 -- the fixture loads\n")
+        write(os.path.join(item_dir, "journal.md"), "# Journal -- WI-0001\n")
+        write(os.path.join(item_dir, "questions", "Q-001.md"), REWRITTEN_CLAIM_QUESTION)
+        os.makedirs(os.path.join(repo, "docs", "product"))
+        vision = os.path.join(repo, "docs", "product", "vision.md")
+        write(vision, VISION_BEFORE)
+
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+
+        git("init", "--initial-branch=main")
+        git("config", "user.email", "check@example.invalid")
+        git("config", "user.name", "check")
+        git("add", "-A")
+        git("commit", "-m", "the record as the stakeholder left it")
+
+        def lint(*extra):
+            return subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-answers"),
+                                   "--root", repo, *extra],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        cases = []
+        # 1. the window that cannot see: main is HEAD and nothing is modified (F-066's shape).
+        clean = lint("--changed-since", "main")
+        cases.append(("a window that could not have seen anything is refused",
+                      clean.returncode != 0
+                      and "answer.scope.degenerate" in codes_from(clean.stdout + clean.stderr),
+                      clean))
+        # 2. the refused move itself.
+        write(vision, VISION_AFTER)
+        rewritten = lint("--changed-since", "main")
+        cases.append(("rewriting a claim sourced to a human answer is refused",
+                      rewritten.returncode != 0
+                      and "answer.claim-rewritten-unasked" in codes_from(rewritten.stdout
+                                                                        + rewritten.stderr),
+                      rewritten))
+        # 3. legal move one: cite compatibility, in the journal, naming the answer.
+        write(os.path.join(item_dir, "journal.md"),
+              "# Journal -- WI-0001\n\n## 2026-08-29T11:00:00Z -- implement v0.1.0 -- developer\n"
+              "\n- **Cross-answer check:** WI-0001/Q-001 -- compatible; the sentence was our "
+              "paraphrase, not theirs, and the answer itself is unchanged.\n")
+        cited = lint("--changed-since", "main")
+        cases.append(("citing compatibility in the journal clears it",
+                      cited.returncode == 0, cited))
+        # 4. legal move two: ask. The journal bullet goes away and a question names both answers.
+        write(os.path.join(item_dir, "journal.md"), "# Journal -- WI-0001\n")
+        write(os.path.join(item_dir, "questions", "Q-002.md"),
+              "---\nid: Q-002\nitem: WI-0001\nfrom-skill: implement\naddressed-to: human\n"
+              "blocking: true\nstatus: open\ncreated: 2026-08-29T11:00:00Z\n---\n\n"
+              "## Context\n\nTwo things you told us cannot both hold.\n\n## Question\n\n"
+              "In `WI-0001/Q-001` you said the marker decides every row and column with no\n"
+              "exceptions. The sign-off condition says a cell with a line break ignores it.\n"
+              "Which wins?\n\n## Options considered\n\n- **A --** the marker. **B --** the "
+              "exception.\n- **Recommendation:** none -- this is yours to settle.\n\n"
+              "## Answer\n\n<!-- filled in by answer-questions -->\n\n## Consequences\n\n"
+              "<!-- filled in by answer-questions -->\n")
+        asked = lint("--changed-since", "main")
+        cases.append(("asking its author clears it", asked.returncode == 0, asked))
+
+    failed = [(name, result) for name, ok, result in cases if not ok]
+    if failed:
+        detail = []
+        for name, result in failed:
+            detail.append(f"  - {name}: exit {result.returncode}")
+            detail += [f"      {line}" for line in
+                       (result.stdout + result.stderr).strip().split("\n")[-6:]]
+        runner.emit(label, False, detail="\n".join(detail))
+    else:
+        runner.emit(label, True)
 
 
 def check_render(runner: Runner) -> None:
@@ -889,6 +1101,7 @@ def main() -> int:
     check_render(runner)
     check_example(runner)
     check_claims(runner)
+    check_cross_answers(runner)
     check_signoff(runner)
     check_termination(runner)
     check_pipeline_faults(runner)
