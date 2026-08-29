@@ -1774,9 +1774,9 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   the question/criteria record that flags same-topic answers with conflicting content, so the
   escalation is checked, not remembered. Repairing a stakeholder-sourced falsehood in docs
   without a question to its author becomes a refused move.
-- Status: **fixed** — ADR-0008 (commit `24a1ca5`) derives the obligation; `scripts/lint-answers`
-  and `fixtures/crossed-answers/` (commit `61fb2aa`) enforce and prove it; `spec/question.md`'s
-  `## Cross-answer check` and the seven contracts that write it (commits `77a5d96`, `1189f29`).
+- Status: **fixed** — ADR-0008 (commit 24a1ca5) derives the obligation; `scripts/lint-answers`
+  and `fixtures/crossed-answers/` (commit 61fb2aa) enforce and prove it; `spec/question.md`'s
+  `## Cross-answer check` and the seven contracts that write it (commits 77a5d96, 1189f29).
   The refused move — repairing a claim sourced to a human answer that a later answer of theirs
   overtook — is rule 3, executed in `./scripts/check` against a throwaway repository. What is
   **not** fixed, and is stated in ADR-0008 §5 rather than implied: the lint cannot tell whether
@@ -1797,7 +1797,7 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
 - Status: **fixed** — `spec/question.md` §2 (the presentation rule) and
   `validate-workspace`'s `question.recommendation.order` / `question.recommendation.misplaced`,
   checked positionally because the failure was a layout; `refine` 0.3.0 step 5a
-  (commits `77a5d96`, `1189f29`)
+  (commits 77a5d96, 1189f29)
 
 ## F-064 — Refinement never makes an open-elicitation move
 - Severity: methodology gap, medium
@@ -1815,7 +1815,7 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   `spec/dor-dod.md`, enforced by `check-epic-signoff`; `intake` 0.3.0 files it at the start
   under a hard `lint-answers --require-elicitation` gate, and `review-close` files it at the
   ending as a backstop so the rule cannot deadlock an engagement that forgot it
-  (commits `77a5d96`, `1189f29`)
+  (commits 77a5d96, 1189f29)
 
 ## F-065 — "Existing criteria still hold" is verified against the test suite, not the criteria
 - Severity: correctness of the record, medium — the enabler of F-062's final pass
@@ -1835,7 +1835,7 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   text": name the criteria by ID, read each sentence against the new behaviour, run the suite as
   evidence rather than as the definition, and state non-intersection or waive it by name.
   `verify` 0.2.0 gains the step and a hard `a-criterion-about-criteria-is-read` gate; `refine`
-  0.3.0 writes the criterion so that it asks for that procedure (commits `77a5d96`, `1189f29`).
+  0.3.0 writes the criterion so that it asks for that procedure (commits 77a5d96, 1189f29).
   Contract-level by construction: no program can read whether two sentences still agree
 
 ## H-012 — The driver does not own its console log
@@ -1904,11 +1904,11 @@ contradiction's blast radius even while F-062 kept it from being escalated.
   scope). "Checked nothing" becomes a failing verdict, never a pass — a gate that could not
   look must say so with exit ≠ 0 (F-033's rule, applied to scope).
 - Status: **fixed** — `scripts/lib/scope.py` models the three states of a diff window and
-  `lint-claims` fails a degenerate one instead of passing over it (commits `61fb2aa`,
-  `d3c1234`); `--context {{item.type}}` makes the scope explicit per context, so an ending reads
+  `lint-claims` fails a degenerate one instead of passing over it (commits 61fb2aa,
+  d3c1234); `--context {{item.type}}` makes the scope explicit per context, so an ending reads
   the whole document set rather than an empty diff, and `--uncommitted` gives `plan` an honest
-  window on the trunk (commit `6a34d69`); `review-close` 0.6.0 carries both and must journal the
-  scope its gate examined (commit `1189f29`). Four executed cases in `./scripts/check` cover the
+  window on the trunk (commit 6a34d69); `review-close` 0.6.0 carries both and must journal the
+  scope its gate examined (commit 1189f29). Four executed cases in `./scripts/check` cover the
   three states, and the old "as the gate invokes it" step is now the must-fail case
 
 ## F-067 — A true-but-unsourced claim in an ADR has no legal repair
@@ -1929,7 +1929,7 @@ contradiction's blast radius even while F-062 kept it from being escalated.
   append-only `## Corrections` section, `provenance` or `erratum`, never a change to what the
   code must do; seven `adr.correction.*` rules in `validate-workspace`;
   `fixtures/adr-correction/` reproduces the iteration-4 instance and its repair, both asserted
-  (commit `9e401a3`). `plan` 0.4.0 and `review-close` 0.6.0 name the path (commit `1189f29`)
+  (commit 9e401a3). `plan` 0.4.0 and `review-close` 0.6.0 name the path (commit 1189f29)
 
 ## H-014 — The closing sim turn is not budget-exempt; a completed engagement was labeled unfinished
 - Severity: harness, stop semantics (H-010's off-by-one costume)
