@@ -1,0 +1,594 @@
+# Journal — WI-0004
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-29T07:20:34Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0004
+- **Trigger:** the item did not exist; it was created by this execution, answering `EP-001/Q-005`, whose reply asked for a behaviour no item recorded (`spec/ids-and-statuses.md` §5)
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-005.md` — the sign-off and the stakeholder's refusal
+  - `tracker/items/EP-001/item.md` — the epic's goal, scope and out-of-scope, and the caveats already declined as work
+  - `tracker/items/EP-001/history.md` — the `resume-to` on the row that suspended the epic
+  - `tracker/items/WI-0002/item.md`, `tracker/items/WI-0003/item.md` — how alignment is specified today, and the criteria this item must not break
+  - `docs/product/vision.md` v6, `docs/architecture/adr/ADR-0007-alignment-is-placed-inside-the-cells-field.md`
+  - the shipped tool, run on two documents to establish what it does with a `<br>` cell today
+- **Decisions:**
+  - **File the work as a new item rather than widen a closed one.** The answer asks for a behaviour no item records, and `spec/ids-and-statuses.md` §5 gives `answer-questions` exactly this authority and forbids the alternative: widening WI-0002 to swallow it would hide the change from the board and from the person who asked for it. `arose-from: EP-001/Q-005` is the provenance.
+  - **Status `draft`, not `ready`.** Nothing may be created past `draft`, and this one earns it independently: four things in the request are genuinely ambiguous — what counts as "a line break" beyond the `<br>` they named, what "top" means when a row is one line, whether one such cell changes its column or only itself, and whether the header row is included. Those are `refine`'s to put to the stakeholder, and they are listed in `## Notes` rather than guessed at.
+  - **Criteria written no more precisely than the words they came from**, and labelled *not yet refined*. Writing decidable-looking criteria here would have meant inventing the four answers above and burying them where `refine` would read them as settled.
+  - **The fault stated from observation, not from reading the code.** `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` centres the cell and the `---:` variant pushes it right; both transcripts are in AC1 as run.
+  - **The dismissed gaps recorded in `## Out of scope`.** The stakeholder waved away three things at the sign-off and five at the previous one; writing them here is what stops a later execution filing work for one of them believing it an unexplored gap.
+- **Questions raised:** none — the four open points belong to `refine`, which questions the stakeholder directly, and filing them as artifacts now would ask them outside the skill that owns the conversation
+- **Commands:**
+  - `.claude/agile-skills/scripts/new-item --next-id work-item` → `WI-0004`
+  - `.claude/agile-skills/scripts/new-item --id WI-0004 --type work-item --title ... --epic EP-001 --priority high --status draft --actor answer-questions --arose-from EP-001/Q-005` → 0, created at `draft`
+  - `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` → 0, cell centred (the fault)
+  - `printf '| heading is long | b |\n|---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` → 0, cell pushed right (the fault)
+  - `.claude/agile-skills/scripts/validate-workspace .` → 0
+- **Gates:**
+  - `answer-is-propagated` → **pass** (this item *is* part of the propagation of `EP-001/Q-005`; it is named in that question's `## Consequences` and it exists, with the request quoted in its `## Notes`)
+  - `answered-from-the-record` → **pass** (every sentence of the request traces to the stakeholder's reply, quoted in full in `## Notes`; nothing is inferred beyond it, and what could not be traced is listed as `refine`'s to ask)
+  - `escalation-is-justified` → **skipped** (nothing was escalated from this item; the four open points go to `refine`, which asks directly)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 after the board was regenerated)
+  - `item-resumed-correctly` → **skipped** (this item was created, not resumed; the resumption is EP-001's and is recorded there)
+  - `a-deferral-is-not-an-answer` → **skipped** (the reply that produced this item is an answer, not a deferral — it names what is wanted and asks for it; recorded on EP-001)
+- **Artifacts:**
+  - `tracker/items/WI-0004/item.md` — created: story, five criteria marked not-yet-refined, four out-of-scope bullets, and notes carrying the stakeholder's words in full, the fault as observed, the four points for `refine` and a design note for `plan`
+  - `tracker/items/WI-0004/history.md`, `tracker/items/WI-0004/journal.md` — created by `new-item`
+  - commit — the answered question, the new item and every artifact propagated into
+- **Status:** `—` → `draft` (the creation row `new-item` wrote; this execution made no further move on this item)
+- **Result:** WI-0004 exists at `draft`, recording the one behaviour the stakeholder made a condition of accepting this engagement, with the four things nobody has decided marked as `refine`'s to ask rather than answered here.
+
+## 2026-08-29T07:25:49Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0004
+- **Trigger:** `draft`, dispatched by `next` — the only item in the engagement whose status has a non-null owner
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md`, `history.md`, `journal.md` — the item as `answer-questions` filed it, and the four open points it recorded
+  - `tracker/items/EP-001/questions/Q-005.md` — the stakeholder's words, which are the whole requirement
+  - `tracker/items/EP-001/questions/Q-004.md`, `tracker/items/EP-001/item.md` — what was already declined as work, so that nothing declined is re-asked
+  - `docs/product/vision.md` v7; `docs/architecture/adr/ADR-0002-cell-width-is-display-width.md`, `ADR-0007-alignment-is-placed-inside-the-cells-field.md`
+  - `tracker/items/WI-0002/item.md`, `tracker/items/WI-0003/item.md` — how alignment and its criteria are already specified, and WI-0003's `## Notes` for the "name the tests, do not count them" rule
+  - `spec/dor-dod.md` §1, `spec/question.md` §2, `spec/workspace-layout.md` §1.3
+  - the shipped tool, on five documents, to get the current behaviour into the questions as transcripts rather than as description
+- **Decisions:**
+  - **The item is suspended, not refined into shape.** The human is not present in this session, so `SKILL.md`'s precondition 2 applies: file what is needed, suspend with `resume-to: draft`, stop. No criterion was rewritten against a guess.
+  - **Three of the four open points go to the stakeholder; one does not.** Applying `SKILL.md` step 3 in order: what counts as a line break (`Q-001`), whether the column or only the cell stops obeying the marker (`Q-002`), and whether the header row is included (`Q-003`) each change what the author sees in their own documents, so each has product stake. *What "top-left" means* does not: "left" is the checkable half and AC1 already states it, and "top" describes how a viewer renders a cell, which mdtab does not control and this item does not change. Asking someone to restate an idiom whose checkable half is unambiguous spends their attention on nothing; it is recorded as an assumption instead, where it can be disagreed with.
+  - **Two things settled from the record rather than asked.** The column's width is still measured from the cell's text exactly as typed — EP-001's success measure (*"every row has its `|` characters at the same display column … in a fixed-width font"*) with ADR-0002; a column narrower than its text would put the pipes out of line in the one place the tool exists to line them up. And the delimiter row's marker is untouched — their own *"whatever the column marker says"* presumes it is still written, and EP-001 `## Out of scope` says the tool changes spacing, not content. Both tagged `[assumed]` with their basis.
+  - **Two questions routed to `plan`, not to a person**: where the per-cell override lives and whether ADR-0007 is amended, and how the break is detected in the cell text alongside the existing escaped-pipe handling. Neither would be answered differently by a different stakeholder. They are in the item's `## Notes` as open design questions.
+  - **The three questions are filed as one ask.** One decision per file, but each `## Context` opens with the same frame — *"WI-0004, round 1, question N of 3"* — and `Q-003` says it is the last. Each carries a transcript of what the tool does today, so the stakeholder can see the behaviour rather than read a description of it.
+  - **The acceptance criteria are left as filed, with their defects named rather than repaired.** AC1 turns on an undefined term, AC3 states one of `Q-002`'s two answers as though it were settled, and AC5's checking clause requires naming tests that cannot be named yet. Rewriting any of them now would convert a guess into a decidable-looking criterion, which is the specific failure `refine` exists to prevent.
+  - **`refinement-qa.md` declares `status: agenda`.** The conversation has not happened. R8 is satisfied only by `recorded`, and writing `recorded` on an agenda would let an item reach `ready` on a conversation nobody had (`spec/workspace-layout.md` §1.3, F-031).
+- **Questions raised:** three, all `addressed-to: human`, all `blocking: true` — `Q-001` (what counts as a line break), `Q-002` (the cell or the whole column), `Q-003` (the header row). None left `[unresolved]`; the item is suspended on them rather than proceeding past them. Full agenda and routing in `artifacts/refinement-qa.md`
+- **Commands:**
+  - `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` → 0, cell centred
+  - `printf '| heading is long | b |\n|---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` → 0, cell pushed right
+  - `printf '| a<br>b | second column |\n|:---:|---:|\n| x | y |\n' | python3 -m mdtab` → 0, header cell treated like any other (`Q-003`)
+  - ``printf '| longer heading | b |\n|:---:|---:|\n| `<br>` | x |\n' | python3 -m mdtab`` → 0, a break inside a code span is ordinary text today (`Q-001` option C)
+  - `printf '| longer heading | b |\n|:---:|---:|\n| a<BR/>b | x |\n| c<br />d | y |\n' | python3 -m mdtab` → 0, every spelling of the tag centred (`Q-001`)
+  - `.claude/agile-skills/scripts/validate-workspace .` → 1 before the transition (`question.blocking.not-suspended` and a stale board, both resolved by it), 0 after
+  - `.claude/agile-skills/scripts/board-gen .` → 0
+- **Gates:**
+  - `workspace-valid` → **pass** — `validate-workspace` exit 0 after the board was regenerated and the item suspended. The two errors seen mid-execution were the states the transition exists to resolve
+  - `definition-of-ready` → **fail, criterion by criterion**, which is why the item is not at `ready`. R1 pass (frontmatter complete, `arose-from: EP-001/Q-005` resolves). R2 pass (role, capability, outcome all named). R3 pass (AC1–AC5, labelled, checkboxes). **R4 fail** — three defects: AC1's subject term is undefined, AC3 states one of two readings as settled, AC5 requires naming tests that cannot be named yet. R5 pass (`## Out of scope` names rendering or wrapping a multi-line cell, which is the first thing a reader would assume this item does). **R6 fail** — `Q-001`, `Q-002`, `Q-003` open and blocking; intended, and it is what makes the suspension honest. R7 pass (`depends-on` absent; nothing must finish first). **R8 fail** — `refinement-qa.md` declares `status: agenda`. R9 pass (one coherent change; neither answer to `Q-002` makes it two items). **R10 fail** — the table is started in `refinement-qa.md`; four rows are settled, three wait on the questions
+  - `criteria-are-decidable` → **fail** — recorded as such rather than worked around. AC2 and AC4 are decidable today (AC2: run the two AC1 transcripts and read the delimiter row; AC4: run the tool twice on each document and `diff`, check stderr and `$?`). AC1 is not, because *"a cell that contains a line break"* has no definition until `Q-001`. AC3 is not, because it asserts `Q-002`'s answer. AC5 is not, because the tests it requires to be named individually are not named. Round 2 fixes all three
+  - `qa-recorded-verbatim` → **pass, for what exists** — `refinement-qa.md` records the audit, the two `[assumed]` settlements with their basis, the routing, and the three questions as filed. It contains no answer, because none has been given, and it declares `status: agenda` so that nothing reads it as an exchange that happened. Nothing is paraphrased into agreement; the stakeholder's only words on this item are quoted verbatim in `## Notes` and in `EP-001/Q-005`
+- **Artifacts:**
+  - `tracker/items/WI-0004/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — created, `addressed-to: human`, `blocking: true`, each with context, one question, at least two options with consequences, a recommendation, and empty `## Answer` and `## Consequences` sections for the reply to land in
+  - `tracker/items/WI-0004/artifacts/refinement-qa.md` — created, `status: agenda`: the DoR audit table, the three R4 defects, what was settled without asking and on what basis, what was routed to `plan`, the three questions and what each unblocks, and the R10 combination table with its unresolved rows marked
+  - `tracker/items/WI-0004/item.md` — `## Notes` rewritten: the four open points replaced by what round 1 did with each, the two record-settled assumptions, and the two design questions left for `plan`. No acceptance criterion touched
+  - `tracker/board.md` — regenerated
+  - commit — the suspended item, its three questions and its agenda
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** WI-0004 is suspended at `awaiting-answer` with `resume-to: draft` on three blocking questions to the stakeholder. Six of the ten Definition of Ready criteria pass; the four that fail all trace to those three questions, and none of them was papered over with a guess.
+
+## 2026-08-29T07:31:25Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0004
+- **Trigger:** status `awaiting-answer`; the stakeholder had written `## Answer` into all three of the item's open human-addressed questions, which is the one case only this skill may consume
+- **Inputs read:**
+  - `tracker/items/WI-0004/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — each with the stakeholder's reply
+  - `tracker/items/WI-0004/item.md` (the criteria the answers had to reach)
+  - `tracker/items/WI-0004/history.md` — the suspending row of 2026-08-29T07:25:49Z carries `resume-to: draft`
+  - `tracker/items/WI-0004/artifacts/refinement-qa.md` (`status: agenda`) — the DoR audit, the three R4 defects, the R10 table and its four *waiting* rows
+  - `docs/architecture/adr/ADR-0007-alignment-is-placed-inside-the-cells-field.md` (v2) — checked for contradiction: it fixes where alignment padding goes inside a cell's field, and says nothing about which cells obey a marker, so no answer here contradicts it
+  - `docs/architecture/adr/ADR-0002-cell-width-is-display-width.md`, `ADR-0003-lay-out-only-tables-the-tool-fully-understands.md`, `ADR-0009-a-false-statement-inside-a-standing-decision-is-corrected-in-place.md` — same check, no contradiction
+  - `docs/product/vision.md`, `docs/architecture/overview.md` (v4)
+- **Decisions:**
+  - **Q-001 answered `human`, option C** — any HTML `br` tag in any spelling counts, except one inside a code span. Route: the human replied to an escalation and this skill propagated it. Notable because it is *not* the option `refine` recommended (B): the stakeholder said *"I do write about markup in these tables, so please get that case right."* Propagated into AC1 (the definition) and a new AC7 (the code-span cell must come back byte-for-byte identical).
+  - **Q-002 answered `human`, option A** — only the cell with the break stops obeying the marker. Propagated into AC3, which stated this reading already but as a guess; it now carries the answer and a concrete three-row check. R4 defect 2 cleared.
+  - **Q-003 answered `human`, option A** — a header cell with a break is a cell like any other. Propagated into a new AC6, with the shipped tool's current centred output as the transcript.
+  - **Amended acceptance criteria, deliberately and within the permission.** AC1 and AC3 were amended and AC6, AC7 added. The criteria are not frozen — the item is at `draft` — and each of the three R4 defects `refine` recorded was a criterion that could not be written until these answers existed. The amendments state what the stakeholder said; none was reshaped to fit code, and no criterion was weakened.
+  - **Did not touch `artifacts/refinement-qa.md`.** It is `refine`'s artifact and declares `status: agenda`; writing the exchange into it and flipping it to `recorded` would claim a refinement conversation this skill did not hold. Round 2 of `refine` records it verbatim, completes the four *waiting* R10 rows, and names AC5's tests. That is said in `item.md` so nobody has to infer it.
+  - **Filed no new item.** The code-span exception is a rule about which cells this item's behaviour applies to, not work outside it, so it belongs in WI-0004's criteria rather than in a sibling. It does add mechanism mdtab has nowhere today, which is why it is called out for `plan` in `## Notes`.
+- **Questions raised:** none
+- **Commands:**
+  - `printf '| longer heading | b |\n|:---:|---:|\n| a<BR/>b | x |\n| c<br />d | y |\n| `<br>` | z |\n| e<br class="k">f | w |\n' | python3 -m mdtab` → exit 0; all five cells centred, which is the current behaviour AC1 and AC7 are written against
+  - `printf '| a<br>b | second column |\n|:---:|---:|\n| wide body cell | y |\n' | python3 -m mdtab` → exit 0; header centred, the transcript in AC6
+  - `printf '| heading is long | b |\n|---:|---:|\n| `<br>` | x |\n' | python3 -m mdtab` → exit 0; the code-span cell right-aligned, the transcript AC7 requires to be preserved
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before the transition, with exactly the two errors the transition and `board-gen` clear (`question.awaiting.none-open`, `board.stale`)
+- **Gates:**
+  - `answer-is-propagated` → **pass**. Each question's `## Consequences` names `tracker/items/WI-0004/item.md` and the change is in the file: Q-001 → AC1's definition sentence and the four-spelling transcript, plus AC7; Q-002 → AC3's citation and its three-row check; Q-003 → AC6. All three are also recorded in `## Notes`, section "Refinement round 1 — the answers".
+  - `answered-from-the-record` → **pass**. All three answers come from the stakeholder's own words in the question files, quoted in the criteria they landed in rather than paraphrased. No new ADR: none of the three is an architectural decision — they fix what the stakeholder wants, and how it is built is `plan`'s open design questions 1 and 2.
+  - `escalation-is-justified` → **skipped**. Nothing was re-addressed to the human; this execution consumed escalations rather than making one.
+  - `workspace-valid` → **pass** at the transition (`validate-workspace` is a hard gate the transition script runs; it exited 1 beforehand only on the two conditions this execution was about to clear).
+  - `item-resumed-correctly` → **pass**. `history.md`'s suspending row records `resume-to: draft` and this execution returns the item to `draft`.
+  - `a-deferral-is-not-an-answer` → **skipped**. No reply deferred: each of the three picks an option and gives a reason for it.
+- **Artifacts:**
+  - `tracker/items/WI-0004/questions/Q-001.md` — `status: answered`, `answered-by: human`, consequences naming AC1, AC7 and `## Notes`
+  - `tracker/items/WI-0004/questions/Q-002.md` — same, naming AC3 and `## Notes`
+  - `tracker/items/WI-0004/questions/Q-003.md` — same, naming AC6 and `## Notes`
+  - `tracker/items/WI-0004/item.md` — AC1 and AC3 amended, AC6 and AC7 added, the preamble now says what is still not decidable (AC5) and who finishes it, and `## Notes` gains "Refinement round 1 — the answers"
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** All three of WI-0004's blocking questions are answered by the stakeholder and their content is in the acceptance criteria, not only in the question files. The item returns to `draft` for `refine` round 2, which owes it AC5's named tests, the four waiting R10 rows and a `recorded` refinement-qa.
+
+## 2026-08-29T07:36:01Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0004
+- **Trigger:** status `draft`, dispatched by `next` — `answer-questions` returned the item here at 2026-08-29T07:31:25Z after the stakeholder answered all three of round 1's questions
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md`, as `answer-questions` left it (AC1–AC7)
+  - `tracker/items/WI-0004/history.md` — two rows; the item is a fresh draft carried through one suspension, not a send-back from `verifying` or `in-review`, so this is round 2 of one refinement rather than a re-refinement
+  - `tracker/items/WI-0004/journal.md` — round 1's audit and `answer-questions`' propagation entry
+  - `tracker/items/WI-0004/artifacts/refinement-qa.md` (`status: agenda`, round 1)
+  - `tracker/items/WI-0004/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the exchange verbatim
+  - `docs/product/vision.md` (v7) — checked for contradiction, and found one it is not this skill's to fix
+  - `docs/architecture/adr/ADR-0002-cell-width-is-display-width.md`, `ADR-0007-alignment-is-placed-inside-the-cells-field.md` (v2)
+  - `tracker/project.yaml` — `commands.test`
+  - `tests/test_units.py`, `tests/test_fixtures.py`, `tests/fixtures/` — to name AC5's tests instead of counting them
+- **Decisions:**
+  - **Asked the stakeholder nothing this round, deliberately.** All three of their questions were answered. What remained was AC5's test naming, the R10 table's four waiting rows and the edges of what a code span is — none of which a different stakeholder would answer differently, so under step 3 they were decided or routed to `plan`. Inventing a fourth question to "check the answers" would have spent their attention on nothing.
+  - **AC5 rewritten to name tests rather than count them**, which was round 1's third R4 defect and the rule `review-close` derived on WI-0003. `grep -rniE '<br' tests/` exits 1 — no test and no fixture in the repository contains a `br` tag — so this item is expected to change **no** existing test, and AC5 says so with the command that shows it. The twenty tests a per-cell alignment rule could plausibly disturb are listed by full dotted name and must pass unmodified; if the implementation changes one, `impl-report.md` must name it individually.
+  - **Three edge cases of the code-span exception recorded as deliberately unconstrained** in `## Notes` (R10): an unbalanced backtick, a multi-backtick span, and a cell holding a tag both inside and outside a span. AC7 states the behaviour the stakeholder asked for; where markdown's own grammar gets fuzzy is `plan`'s to settle and record, not theirs to adjudicate. The third case is in fact decided by AC1 as written — a tag outside a span is a break — and is listed so a reader sees it was considered.
+  - **Recorded that a `br` tag cannot occur in a delimiter row**, with the test that proves it, so nobody re-derives it as a missing R10 row.
+  - **Added open design question 3 for `plan`:** how much of a code span the tool must understand. This is the only part of the item that is new machinery rather than a new use of old machinery, and it exists because the stakeholder took option C over the recommended B.
+  - **Filed `Q-004` to the architect, `blocking: false`.** `docs/product/vision.md` v7 says the three questions are unsettled and are `refine`'s to put to the stakeholder; they are settled. `refine` does not write `docs/`, and the escalation route for a document contradicted by an answer is a question to the architect. Non-blocking because the item is Ready without it — R6 requires open questions to be non-blocking, not absent — and because holding a Ready item for a documentation edit would stop the pipeline for something that changes no criterion.
+  - **Did not touch the acceptance criteria the answers settled.** AC1, AC3, AC6 and AC7 were written by `answer-questions` straight from the stakeholder's words; re-wording them here would put this skill's phrasing between the stakeholder and `verify`. They were re-read against R4 instead, and each names the command that settles it.
+- **Questions raised:** `Q-004` (non-blocking, to architect) — `vision.md` v7 contradicted by the three answers. Round 1's `Q-001`, `Q-002` and `Q-003` are answered and closed; nothing is left `[unresolved]`.
+- **Commands:**
+  - `grep -rniE '<br' tests/` → exit 1, no output; the evidence behind AC5's "no existing test is expected to change"
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 72 tests, OK — the baseline AC5 measures against
+  - `printf '| longer heading | b |\n|:---:|---:|\n| a<BR/>b | x |\n| c<br />d | y |\n| `<br>` | z |\n| e<br class="k">f | w |\n' | python3 -m mdtab` → exit 0; every spelling centred, which is what AC1 and AC7 are written against
+  - `python3 .claude/agile-skills/scripts/board-gen .` → wrote `tracker/board.md`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 11 documents, 0 errors
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, after `board-gen` cleared the one `board.stale` error this execution caused)
+  - `definition-of-ready` → **pass**, criterion by criterion, against `spec/dor-dod.md` §1:
+    - R1 **pass** — frontmatter complete, `type: work-item`, `epic: EP-001`, `priority: high`; `validate-workspace` exit 0
+    - R2 **pass** — `## Story` names the role, the capability and the outcome; unchanged since round 1
+    - R3 **pass** — AC1–AC7, each labelled and a checkbox
+    - R4 **fail at round 1 → pass now.** Defect 1 (AC1 did not define "a line break") cleared by `Q-001`'s answer in AC1 and AC7. Defect 2 (AC3 stated a guess as settled) cleared by `Q-002`'s answer in AC3. Defect 3 (AC5 named no test) cleared by this execution. No criterion carries an unmeasurable adjective; each names a command and the verdict that follows
+    - R5 **pass** — `## Out of scope` names rendering or wrapping a multi-line cell across output lines, which is exactly what a reader would assume an item about multi-line cells does
+    - R6 **fail at round 1 → pass now.** `Q-001`, `Q-002`, `Q-003` are `status: answered`. `Q-004` is open but `blocking: false`, which is what R6 requires
+    - R7 **pass** — no `depends-on`; the item needs nothing else finished first
+    - R8 **fail at round 1 → pass now.** `artifacts/refinement-qa.md` declares `status: recorded` and holds the exchange verbatim, each answer tagged `[human]` or `[assumed]`
+    - R9 **pass** — one coherent change: one rule about which cells obey their column's marker. `Q-002`'s answer keeps the blast radius at one cell, so it did not become two items
+    - R10 **fail at round 1 → pass now.** The table in `refinement-qa.md` is complete: seventeen rows, every one stated in a criterion, named in `## Out of scope`, or recorded in `## Notes` as deliberately unconstrained with who left it so
+  - `criteria-are-decidable` → **pass**. AC1: run the two `printf | python3 -m mdtab` transcripts and the four-spelling one, compare against the stated required rows. AC2: read the delimiter row of each of those outputs. AC3: run the three-row centred table it describes and check rows 1 and 3 centred, row 2 flush left. AC4: run the tool twice over each document above and diff; check stderr empty and `$?` is 0. AC5: `python3 -m unittest discover -s tests -t .` exit 0, plus `git diff` over `tests/` against the named twenty. AC6: run its transcript, compare against the stated required first row. AC7: run its transcript and check the bytes are identical to the ones printed
+  - `qa-recorded-verbatim` → **pass**. `refinement-qa.md` carries all three questions with the options offered and `refine`'s recommendation, and all three answers quoted in full and tagged `[human]` — including that the stakeholder chose option C on `Q-001` **against** the recommendation, which is the fact a tidied record would have lost. Six further points are tagged `[assumed]` with their basis
+- **Artifacts:**
+  - `tracker/items/WI-0004/item.md` — AC5 rewritten to name twenty tests individually; `## Notes` gains "Refinement round 2 — what it finished", "Deliberately unconstrained, by `refine` at round 2 (DoR R10)", "A document this item's answers have already made stale", and a third open design question for `plan`
+  - `tracker/items/WI-0004/artifacts/refinement-qa.md` — rewritten, `status: agenda` → `status: recorded`, with the exchange verbatim and the R10 table complete
+  - `tracker/items/WI-0004/questions/Q-004.md` (new) — to the architect, non-blocking
+  - `tracker/board.md` — regenerated
+- **Status:** `draft` → `ready`
+- **Result:** WI-0004 is Ready. All ten Definition of Ready criteria pass with no override; the four that failed at round 1 each failed on something only the stakeholder could settle, and all four are settled. `plan` inherits three design questions, three deliberately unconstrained code-span edges, and one non-blocking question to the architect about a stale sentence in `vision.md`.
+
+## 2026-08-29T07:37:45Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0004
+- **Trigger:** an open question `addressed-to: architect` — `Q-004`, `blocking: false`, filed by `refine` at round 2. Dispatched by `next` at its step 4, which fires on any open architect-addressed question regardless of the item's status; the item is at `ready`, not `awaiting-answer`, so this execution makes no transition
+- **Inputs read:**
+  - `tracker/items/WI-0004/questions/Q-004.md` — the question, its three options and its recommendation
+  - `tracker/items/WI-0004/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the stakeholder's answers, which are the record this one is decided from
+  - `tracker/items/WI-0004/item.md` — AC1, AC3, AC6 and AC7, to check the answers the document would cite actually live there
+  - `tracker/items/WI-0004/artifacts/refinement-qa.md` (`status: recorded`)
+  - `tracker/items/WI-0004/history.md` — the item is at `ready` with no suspension outstanding, so no `resume-to` is in play
+  - `docs/product/vision.md` (v7 → v8) — the document under question
+  - `.claude/agile-skills/spec/doc-header.md` §2, §3 and §4a — the header, the change-log rule, and the citation rule for absolute claims
+  - `docs/architecture/adr/ADR-0002-cell-width-is-display-width.md`, `ADR-0007-alignment-is-placed-inside-the-cells-field.md` (v2) — checked; neither says anything about which cells obey a marker, so nothing here contradicts a recorded decision
+  - No `plan.md` exists on this item yet, which is why none was read
+- **Decisions:**
+  - **`Q-004` answered, option A: `vision.md` updated now, to version 8.** Route: `SKILL.md` step 3.2, from intent already recorded — the stakeholder's three replies are the record and the only open matter was when the document should catch up with them. Three things decided it against option B (leave it for the close): BUG-0001 exists because a false sentence sat in two documents through a whole item and was re-quoted rather than re-checked, which is what `spec/doc-header.md` §4a was written for; `plan`, `implement` and `verify` all read `vision.md` and all three run before `review-close` would catch it at D7 or D12; and A costs one version bump on a document that needed a change-log row for this change anyway.
+  - **No ADR written.** An ADR records a choice that constrains how the software is built. This constrains nothing — it brings a document into line with answers already given. Writing one would put a non-decision in the place readers go for decisions.
+  - **What the replacement says was chosen carefully.** It records the four answers in the stakeholder's own words, each citing the question it came from and the criterion that carries it, and it keeps stating that the behaviour is wanted and not built — because it is. The change is only that nothing about *what the tool should do* is waiting on the stakeholder.
+  - **No acceptance criterion amended.** WI-0004 is at `ready`, so its criteria are frozen, and nothing in this question bears on them: the propagation into `item.md` is to `## Notes`, which records that the documentation defect is closed rather than outstanding.
+  - **No new item filed.** The answer widens nothing: it names no behaviour that no item records.
+- **Questions raised:** none — nothing was re-addressed to the human
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/lint-claims docs/product/vision.md` → exit 0, 0 errors, 0 warnings — the new section's absolute claims carry resolvable `[src: ...]` citations
+  - `python3 .claude/agile-skills/scripts/board-gen .` → wrote `tracker/board.md`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 11 documents, 0 errors
+- **Gates:**
+  - `answer-is-propagated` → **pass**. `Q-004`'s `## Consequences` names two files and both contain the change: `docs/product/vision.md` is at `version: 8` with `updated-for: WI-0004`, the "not settled and are `refine`'s to put to them" sentence is gone and the four answers are in its place, and the change log's top row is version 8; `tracker/items/WI-0004/item.md`'s `## Notes` heading now reads "A document this item's answers made stale — fixed" and names v8.
+  - `answered-from-the-record` → **pass**. The answer follows from `WI-0004/Q-001`, `Q-002` and `Q-003` — the stakeholder's own replies — together with `spec/doc-header.md` §3 for the mechanics of the edit. The record was not silent, so no ADR was required and none was written.
+  - `escalation-is-justified` → **skipped**. Nothing was escalated. The question is about documentation currency, not about intent no document records: the intent is exactly what the three answers state.
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, after `board-gen` cleared the `board.stale` error this execution's edits caused).
+  - `item-resumed-correctly` → **skipped, correctly**. The item is at `ready` and was never suspended on `Q-004`, which is `blocking: false`; there is no `resume-to` to honour and this execution makes no transition. `next`'s step 4 dispatches on an open architect question whatever the item's status, which is how a non-blocking question gets answered without the item ever having stopped.
+  - `a-deferral-is-not-an-answer` → **skipped**. No deferral: `Q-004` was answered by this skill deciding it, not by a reply that put it off.
+- **Artifacts:**
+  - `docs/product/vision.md` — v7 → v8, `updated-by: answer-questions`, `updated-for: WI-0004`; "Open at the time of writing" rewritten and a change-log row added
+  - `tracker/items/WI-0004/questions/Q-004.md` — `status: answered`, `answered-by: answer-questions`, with the answer and its two consequences
+  - `tracker/items/WI-0004/item.md` — `## Notes`, the stale-document section now records the fix and the version that made it
+  - `tracker/board.md` — regenerated
+- **Status:** `ready` → `ready` (unchanged)
+- **Result:** `vision.md` no longer claims that what the stakeholder meant is unsettled; it records what they said, in their words, with citations that resolve. WI-0004 stays at `ready` and is `plan`'s next, with no question of any kind open on it.
+
+## 2026-08-29T07:46:51Z — plan v0.3.1 — architect
+
+- **Item:** WI-0004
+- **Trigger:** status `ready`, dispatched by `next` (the only runnable item; EP-001 reported `active` by `scripts/engagement-state`)
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md` (AC1–AC7, `## Notes`, the three unconstrained cases)
+  - `tracker/items/WI-0004/artifacts/refinement-qa.md` (the six `[assumed]` entries, the R10 table, and the three points routed to `plan`)
+  - `tracker/items/WI-0004/history.md`
+  - `tracker/project.yaml`
+  - `docs/architecture/overview.md` (v7, as it was before this execution)
+  - `docs/architecture/adr/ADR-0002` (display width), `ADR-0003` (superseded, read for its "spaces and nothing else" clause), `ADR-0007` (where alignment padding goes), `ADR-0008` (the shared-prefix rule), `ADR-0009` (when an ADR may be corrected in place)
+  - `mdtab/table.py` in full, and `mdtab/scan.py`, `mdtab/filter.py`, `mdtab/width.py`
+  - `tests/test_units.py` (class and test names, the helpers), `tests/test_fixtures.py` (the `ALIGNED` registry, the four document-level invariant classes)
+- **Decisions:**
+  - **The override is per cell, at render time, in `_render_row`** — the branch that already knows a delimiter row from a body row and already strips the cell it renders. Rationale: the per-cell reading is the stakeholder's [src: WI-0004/Q-002], and this is the one place where a per-cell decision costs nothing else — the column's alignment is still derived once, `_column_widths` and `_render_cell` are untouched, and the header is included without a clause of its own. **Documented + derived:** the *what* comes from the answers, the *where* from ADR-0007's structure. Recorded as ADR-0010 §1.
+  - **The detection lives in a new module, `mdtab/inline.py`, not in `mdtab/table.py`** (ADR-0010 option B, rejected). Rationale: `table.py` owns *where a cell ends*, which the recognition path calls; a code-span rule reachable from the recognition path is a dependency that must never exist. **Decided here**, with the alternative and its risk written into the ADR.
+  - **What a line break is:** the tag pattern, and a code-span rule with matching backtick-run lengths and an unclosed run treated as literal text. Rationale: it is the smallest grammar that answers AC1 and AC7; CommonMark's further rules about a span's content change no answer this item needs. **Derived** from the stakeholder's Q-001, recorded as ADR-0010 §2.
+  - **The three cases `refine` left unconstrained are decided as consequences of that span rule, not as an exception list** — `` a`<br>b `` left, ``` ``<br>`` ``` obeys the marker, `` a`<br>`b<br>c `` left. Rationale: an exception list would have to be re-derived by whoever changes the span rule; a consequence table cannot drift from it. **Decided here**, ADR-0010 §3, which is what `verify` judges them against.
+  - **`</br>`, an attribute value containing `>`, and a backslash before a backtick are assumptions, not questions.** Rationale: each is a question about what an HTML tag is rather than about what the tool is for, so a different stakeholder would not answer differently — the routing rule `refine` applied at round 2. Each is one regex or one condition in a single-caller file, so reversal is one file and no stored data. **Assumed**, plan `## Assumptions` 1–3.
+  - **`docs/architecture/overview.md` is updated now, in the future tense, and step 7 of the plan makes `implement` put it into the present tense.** Rationale: `review-close` recorded on WI-0003 that `plan` has no step for the documents a change invalidates; writing the step into the plan is the cheapest way to stop that recurring, and a document that describes code which does not exist is only honest if it says so — it says so four times.
+  - **No ADR is superseded or corrected.** ADR-0007 item 1 speaks about the *column's* alignment, which is still derived once per table and read nowhere else; a cell declining that value is a question ADR-0007 never asked. So none of ADR-0009's four conditions is engaged.
+- **Questions raised:** none — no decision here was irreversible or turned on intent the record does not hold, so nothing went to the human
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 72 tests, OK
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0
+  - `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` → the centred `|     a<br>b      | x |` of AC1, fault confirmed against the shipped tool
+  - the AC7 transcript re-run against the shipped tool — the same `printf` with a `---:` marker and a cell whose text is the tag inside single backticks — → the cell comes back right-aligned, which is the byte-for-byte output AC7 requires to survive the change
+  - `python3 - <<PY` (a throwaway prototype of the tag and code-span rules, run in the shell, written to no file) → the fourteen cases of `## Approach` answer as ADR-0010 §2 and §3 say they do
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0 (after fixing one `claim.unsourced` in ADR-0010 and re-pointing one citation off the superseded ADR-0003)
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0, board already current
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace`, exit 0)
+  - `every-criterion-is-addressed` → **pass** (`plan.md` `## Acceptance criteria mapping`: AC1→steps 1,2; AC2→2; AC3→2; AC4→5,6; AC5→6; AC6→2; AC7→1,2 — each with a named test, fixture or transcript rather than "tests")
+  - `project-commands-resolved` → **pass** (`tracker/project.yaml` already names both; both were run this execution — test exit 0 with 72 tests, lint exit 0)
+  - `decisions-recorded` → **pass** (the seven decisions above: four recorded in ADR-0010, three in `plan.md` `## Assumptions` 1–3 with what reversing each costs, and the documents-in-the-future-tense one in the overview's v8 change-log row; `## Assumptions` 4 names which string the question is asked of and turns on nothing)
+  - `plan-is-executable-without-you` → **pass** (advisory; read back cold, the step that would have needed a decision the plan does not make was step 5's fixture registration, which now names the `ALIGNED` dict and what to put in it)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, exit 0, 2 documents)
+- **Artifacts:**
+  - `tracker/items/WI-0004/artifacts/plan.md` (new)
+  - `docs/architecture/adr/ADR-0010-a-cell-that-contains-a-line-break-ignores-its-columns-marker.md` (new, v1)
+  - `docs/architecture/overview.md` (v7 → v8: the `mdtab/inline.py` row, the per-cell override clause, a new one-place-per-rule bullet, and the paragraph qualifying "No markdown parser")
+- **Status:** `ready` → `planned`
+- **Result:** WI-0004 is designed: one per-cell override at the renderer's call site, fed by one new module holding the only inline markdown grammar mdtab reads. ADR-0010 records the placement, the code-span rule and the three edge cases `refine` routed here; the plan's seven steps name the files, the tests and the transcripts, and step 7 makes `implement` put the overview into the present tense once the code exists.
+
+## 2026-08-29T07:47:43Z — implement v0.2.2 — developer
+
+- **Item:** WI-0004
+- **Trigger:** status `planned`, dispatched by `next`
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md` (AC1–AC7 and the transcripts each one fixes)
+  - `tracker/items/WI-0004/artifacts/plan.md` (seven steps, the AC mapping, the four assumptions and the five risks)
+  - `tracker/items/WI-0004/history.md` — last row `ready → planned` by `plan`; no send-back, so this is a fresh start and no branch existed
+  - `tracker/items/WI-0004/questions/Q-001.md`, `Q-002.md`, `Q-003.md`, `Q-004.md` — all four `answered`, and their consequences are already in the criteria and in `docs/product/vision.md` v8, so nothing is read out of them to act on
+  - `tracker/project.yaml` (branch prefix `wi/`, both commands non-null)
+  - `docs/architecture/adr/ADR-0010` (the decision this plan executes), `ADR-0007` (where padding goes), `ADR-0002` (display width)
+  - `mdtab/table.py`, `mdtab/scan.py`, `mdtab/filter.py`; `tests/test_units.py` and `tests/test_fixtures.py` for the shape the new tests must match
+- **Decisions:**
+  - Branched from `main` at `2436a26`, the commit carrying the plan and ADR-0010, so the branch contains the design it executes.
+  - Working the plan's steps in their written order: `mdtab/inline.py` first, then the override in `mdtab/table.py`, then the two unit-test classes, then the fixtures, then the gates, then the overview's tense. Rationale: steps 3 and 4 are meant to fail before step 2 lands and pass after it, which is only observable if the code precedes them in that order.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0004 main` → exit 0
+- **Gates:**
+  - `tests-pass` → **skipped** (not yet run — no code has been written on this branch)
+  - `lint-clean` → **skipped** (same)
+  - `workspace-valid` → **skipped** (the transition running alongside this entry re-runs it; the completion gates belong to the closing entry)
+  - `every-criterion-has-a-test` → **skipped** (no test written yet)
+  - `commits-reference-the-item` → **skipped** (no commit on the branch yet)
+  - `no-unplanned-scope` → **skipped** (advisory; no diff yet)
+  - `claims-are-sourced` → **skipped** (no document changed on this branch yet)
+- **Artifacts:**
+  - branch `wi/WI-0004`, created from `main` at `2436a26`
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation started. The branch exists, the plan is read, and the first change is `mdtab/inline.py`; the closing entry at step 9 reports the work and runs every gate on the branch head.
+
+## 2026-08-29T07:53:24Z — implement v0.2.2 — developer
+
+- **Item:** WI-0004
+- **Trigger:** status `in-progress` — this execution's own opening entry, continuing without interruption
+- **Inputs read:**
+  - `tracker/items/WI-0004/artifacts/plan.md` (steps 1–7, the AC mapping, assumptions 1–4, risks 1–5)
+  - `tracker/items/WI-0004/item.md` (AC1–AC7 and their transcripts)
+  - `docs/architecture/adr/ADR-0010` (the three parts of the decision, and §3's edge-case table)
+  - `mdtab/table.py`, `mdtab/scan.py`, `mdtab/width.py`, `tests/test_units.py`, `tests/test_fixtures.py`
+- **Decisions:**
+  - **A tag counts when its match *begins* outside every code span**, rather than blanking the spans out of the text and searching what is left. Rationale: the two differ on one shape only — a tag opening outside a span and closing inside it — where blanking would manufacture a match out of characters the author did not write in that order. Every case AC1, AC7 and ADR-0010 §3 name answers the same either way. Recorded as deviation 1 in `impl-report.md`, because the plan's words were "excluded from the search".
+  - **Split into four commits, one per plan step group**, each with its tests: `mdtab/inline.py` with `LineBreakTest`; the `_render_row` override with `LineBreakPlacementTest`; the two fixture pairs with their `ALIGNED` entries; the documents and this report. Rationale: `git log --grep WI-0004` then reads as the plan does.
+  - **Every expected document in the new tests and fixtures was computed by hand from the column arithmetic first and compared with the tool afterwards** — not captured from a run. Rationale: `tests/test_fixtures.py`'s own docstring says that is what makes a fixture evidence rather than a snapshot, and a snapshot of the very behaviour under test would agree with any answer.
+  - **One test beyond the plan's list** — `test_ac4_a_laid_out_table_with_a_break_is_a_fixed_point`. Rationale: idempotence is the property this change could most plausibly break, and three lines put it next to the rule rather than only in the fixture layer. Deviation 2.
+  - **Did not touch `_column_widths`, `_render_cell`, `column_alignments` or `_render_delimiter`.** Rationale: ADR-0010 §1 says the override reuses the left placement rather than defining a new one, so a change to any of them would be scope this item does not have.
+- **Questions raised:** none — the plan decided everything this execution met, including all three edge cases
+- **Commands:**
+  - `git checkout -b wi/WI-0004 main` → exit 0 (opening entry)
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 84 tests, OK (72 on the trunk)
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0004 wi/WI-0004` → exit 0, all 4 commits name the item
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0
+  - `git diff --numstat main..HEAD -- tests/test_units.py tests/test_fixtures.py` → `113 0` and `8 0`: no line removed from either, so no existing test changed
+  - the five AC transcripts, each run twice and with stderr captured → exit 0, stderr 0 bytes, second run byte-identical to the first, five times; AC1's rows come back `| a<br>b          | x |` under both markers, AC6's header `| a<br>b         | second column |`, AC7's table unchanged
+  - `grep -rniE '<br' tests/` → 33 lines, where the trunk had none; expected, and the reason AC5's evidence on this branch is the diff rather than that command
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .`, exit 0, 84 tests, on the branch head after the last commit)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests`, exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace`, exit 0)
+  - `every-criterion-has-a-test` → **pass** (`impl-report.md` `## Acceptance criteria evidence`: AC1, AC3, AC6, AC7 each name two or three test functions plus a re-run transcript; AC2 names a test and an unmodified existing one; AC4 names the five double-run measurements and two fixture-level tests; AC5 names the suite result and the numstat)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs`, exit 0, 4 commits)
+  - `no-unplanned-scope` → **pass** (advisory; `git diff --stat main..HEAD` is eight files, each traceable to a plan step — two modules, two test files, four fixtures, one document)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, exit 0)
+- **Artifacts:**
+  - `mdtab/inline.py` (new), `mdtab/table.py` (modified)
+  - `tests/test_units.py` (+113), `tests/test_fixtures.py` (+8), `tests/fixtures/line-break-cells.{in,out}.md`, `tests/fixtures/line-break-code-span.{in,out}.md` (new)
+  - `docs/architecture/overview.md` (v8 → v9)
+  - `tracker/items/WI-0004/artifacts/impl-report.md` (new)
+  - branch `wi/WI-0004`, commits `10530b2..9ba5445` — four, from `main` at `2436a26`
+- **Status:** `in-progress` → `verifying`
+- **Result:** The rule is in: a cell whose own text holds a `br` tag outside a code span is placed left whatever its column's marker says, header included, and a cell that only shows the tag is untouched. 84 tests pass, no existing test changed, the five AC transcripts produce what the criteria require, and the overview describes the code that now exists. Handing to verification.
+
+## 2026-08-29T07:57:17Z — verify v0.1.4 — qa-engineer
+
+- **Item:** WI-0004
+- **Trigger:** status `verifying`, dispatched by `next`
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md` — AC1–AC7 read first, and what would settle each derived from its own wording before the implementation report was opened
+  - `tracker/items/WI-0004/history.md` (no send-back; this is the first verification of this item)
+  - `tracker/items/WI-0004/artifacts/plan.md`, then `artifacts/impl-report.md` (its three declared deviations checked, not accepted), then `artifacts/refinement-qa.md` for the "top-left" and cell-width assumptions
+  - `docs/architecture/adr/ADR-0010` §3, which is the standard for the three edge cases the item deliberately left unconstrained
+  - the code on `wi/WI-0004` at `dff76004aabdc9ad886e429b93170118ff8e5d8d`: `mdtab/inline.py`, the four hunks of `mdtab/table.py`, and the whole `git diff main..HEAD`
+  - `tracker/project.yaml` for both commands
+- **Decisions:**
+  - **Three criteria are checked against the trunk rather than against my own arithmetic.** AC3 says the untouched cells are "as they are today" and AC7 says a document must come back byte-for-byte; "today" and "byte-for-byte" are claims about the shipped tool, so `git archive main` was extracted to a scratch directory and the same documents run through both. AC3's diff, with the break row removed, is empty; AC7's `cmp` reports identical bytes. This is the difference between checking the code against itself and checking it against what the criterion names.
+  - **AC1 is checked against a `:---` column, not only against the required row.** The criterion says the cell is padded "exactly as a `:---` (left) column's cells are". Running the same document with the marker changed to `:---` gives a byte-identical body row, which decides the "exactly as" clause that the required-output transcript alone would not.
+  - **No verdict is `ambiguous` and no question was filed.** The one place a criterion could have been read two ways — what a code span is at its edges — is not left to reading: ADR-0010 §3 decides all three cases and each was triggered.
+  - **AC2 and AC4 are recorded as covered by tests that survive every mutation, and that is stated rather than papered over.** They assert that something did *not* change, so a mutation breaking the new behaviour need not break them; their real evidence is the trunk comparison and the six double-run measurements.
+  - **No defect classified either way**, because none was found: nothing in this item's criteria failed, and nothing in another item's delivered behaviour misbehaved under the ten boundary cases.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 84 tests … OK`
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - `git archive main | tar -x -C <scratch>` → exit 0; the trunk tool then run on the AC3, AC6 and AC7 documents
+  - the AC1 transcripts under `:---:`, `---:` and `:---` → the break row is `| a<br>b          | x |` in all three
+  - the four-spelling transcript → `a<BR/>b`, `c<br />d`, `e<br class="k">f` each flush left
+  - the AC3 document through branch and trunk, `diff` with the break row removed → no output
+  - the AC6 document → `| a<br>b         | second column |`; its other two rows `diff` clean against the trunk
+  - the AC7 document through branch and trunk, `cmp` → identical bytes
+  - six documents run twice each, stderr and exit codes captured → `exit=0/0 stderr=0B twice=same` six times
+  - `python3 -m unittest -v` naming the twenty tests AC5 lists → `Ran 20 tests … OK`
+  - `git diff main..HEAD -- tests/test_units.py tests/test_fixtures.py | grep -cE '^-[^-]'` → `0`
+  - the ten boundary cases of `verify-report.md` `## Negative and boundary cases exercised` → each as recorded there
+  - three mutations of the branch head, each with the suite re-run and the file restored → 5, 4 and 1 failures respectively; `git status` clean afterwards apart from the pre-existing `IDEA.md`
+- **Gates:**
+  - `tests-pass` → **pass** (run by this skill on `dff7600`, exit 0, 84 tests)
+  - `lint-clean` → **pass** (exit 0)
+  - `workspace-valid` → **pass** (exit 0)
+  - `every-criterion-independently-checked` → **pass** (every row of `verify-report.md` `## Criteria` names a command this skill ran and quotes its output; no row cites `impl-report.md`)
+  - `negative-cases-exercised` → **pass** (ten cases, including the delimiter-row tag, the fenced table, the empty cell, the escaped pipe, the wide character and the bare right-aligned table)
+  - `tests-would-fail-without-the-change` → **pass** (advisory; three mutations, each naming the tests that failed)
+- **Artifacts:**
+  - `tracker/items/WI-0004/artifacts/verify-report.md` (new), carrying `Verified-commit: dff76004aabdc9ad886e429b93170118ff8e5d8d`
+  - `tracker/items/WI-0004/item.md` — AC1–AC7 ticked, each against a command in the report
+  - no bug item filed
+- **Status:** `verifying` → `in-review`
+- **Result:** All seven criteria pass on the branch head, checked with commands run here and, for the three criteria that speak about the tool as it is today, against a copy of `main`. Ten boundary cases behave as ADR-0010 and the criteria require, and three mutations show the tests are sensitive. Handing to review.
+
+## 2026-08-29T08:04:33Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0004
+- **Trigger:** status `in-review` — `verify` moved it there at 07:57:17Z and `next` dispatched the status owner, WI-0004 being the only runnable item on the board.
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md`, in full — the seven criteria, `## Out of scope`, and all six subsections of `## Notes`
+  - `tracker/items/WI-0004/history.md` — eight rows, checked for a chain and against `item.md`'s status
+  - `tracker/items/WI-0004/journal.md`, in full — nine entries, checked one-to-one against the executions the history implies
+  - `tracker/items/WI-0004/artifacts/plan.md`, `impl-report.md`, `verify-report.md`, `refinement-qa.md` (the R10 table and the "Settled without asking" section)
+  - `tracker/items/WI-0004/questions/Q-001.md` … `Q-004.md`, each with its `## Consequences`
+  - the diff `main..wi/WI-0004` (`2436a26..4a2f05c`), hunk by hunk: `mdtab/inline.py` whole, `mdtab/table.py`'s four hunks, `tests/test_units.py` +113, `tests/test_fixtures.py` +8, `docs/architecture/overview.md` v8→v9. The four fixture files read as text rather than through the diff, `.gitattributes` marking fixtures binary
+  - `mdtab/table.py`'s `lay_out`, `_render_row`, `_render_delimiter` and `_column_widths` in place, to decide the D12 claims from the code rather than from the prose
+  - `docs/architecture/adr/ADR-0010`, `ADR-0009` and `ADR-0007`; `docs/architecture/overview.md` v9; `docs/product/vision.md` v8
+  - `tracker/project.yaml` for `commands.test`, `commands.lint` and `trunk-branch`
+- **Decisions:**
+  - **Rejected the item, `in-review` → `in-progress`, on D7 and D12.** `docs/product/vision.md` v8 states in four places that the line-break behaviour is not built and that WI-0004 is at `ready`. The branch makes all four false. The plan's step 7 named `docs/architecture/overview.md` and no other document; `implement` executed it faithfully and `overview.md` is correct at v9. The gap is the plan's coverage, and it is the same pattern this skill recorded on WI-0003 — `plan` has no step for the documents a change invalidates. Sent back rather than fixed here because `review-close` does not write `docs/`, and rather than waved through because `vision.md` is the one document written for the stakeholder and `EP-001` reaches rest the moment this item closes: they would be asked to accept an engagement while the product document told them the thing they withheld sign-off for was never built.
+  - **Accepted the ADR-0010 §2 rule 2 imprecision as a gap rather than a defect.** The rule says code spans are "excluded from the search"; `contains_line_break` takes a tag whose match *begins* outside every span, and the two readings differ only on a tag opening outside a span and closing inside one. `implement` declared it as deviation 1 and `verify` checked it against every case AC1, AC7 and ADR-0010 §3 name, all of which answer identically. No criterion distinguishes the readings, and correcting a standing decision's text is the architect's act under ADR-0009, not the reviewer's or the developer's — so it is recorded in the item's `## Notes` where it survives the item, not left inside two reports.
+  - **Corrected `item.md`'s `## Acceptance criteria` preamble in place.** It read "**Partly refined — round 2 must finish them.** … AC5, which names no test", which stopped being true at 07:36:01Z and is contradicted by the item's own `### Refinement round 2 — what it finished`. Rewritten to the past tense, naming this review as the author of the change. No acceptance criterion was touched: AC1–AC7 are byte-identical to what `verify` checked, and nothing was made easier to pass.
+  - **Did not file a bug item.** Finding 1 belongs to WI-0004's own delivery and is carried by the send-back; findings 2 and 3 are not defects in another item's behaviour. Nothing in the shipped code looked wrong.
+  - **Did not merge.** The trial merge was clean and was discarded; the branch stays unmerged and the item goes back rather than forward.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - `.claude/agile-skills/scripts/check-verify-freshness WI-0004 wi/WI-0004` → exit 0, "verified at dff76004; wi/WI-0004 has moved to 4a2f05c4 but only the record changed (5 file(s) under tracker/ or docs/)"
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0004 wi/WI-0004` → exit 0, "all 6 commit(s) on main..wi/WI-0004 name WI-0004"
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 1 document
+  - `git rev-parse main` → `2436a261539c56a1f351d05df30fe56638dea1dc` (recorded before the trial)
+  - `git worktree add --detach /tmp/wi0004-trial main` → exit 0, detached at `2436a26`
+  - `git -C /tmp/wi0004-trial merge --no-ff wi/WI-0004` → exit 0, merge commit `4de3f01`, no conflict
+  - `python3 -m unittest discover -s tests -t .` **in the trial worktree** → exit 0, `Ran 84 tests … OK`
+  - `python3 -W error -m compileall -q mdtab tests` in the trial worktree → exit 0
+  - `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` in the trial worktree → `| a<br>b          | x |`, exit 0 — the evidence that `vision.md` line 142 is false on the merge result
+  - `git worktree remove --force /tmp/wi0004-trial` → exit 0
+  - `git rev-parse main` → `2436a261539c56a1f351d05df30fe56638dea1dc`, unchanged by the trial
+  - `git diff main..wi/WI-0004 -- tests/ | grep -cE '^-[^-]'` → `0`
+  - `grep -rn "inline\|contains_line_break" mdtab/` → three hits, all outside the recognition path
+  - `grep -rniE "not yet in the code|planned for wi-0004|not built|at \`ready\`" docs/` → `overview.md` clean, `vision.md` lines 136, 142, 144, 164
+- **Gates:**
+  - `definition-of-done` → **fail** (walked criterion by criterion in `artifacts/review.md` `## Definition of Done`; D1, D2, D3, D4, D5, D6, D8, D10, D11 pass, D9 not reached because the item is rejected, and **D7 and D12 fail** on `docs/product/vision.md` — four sentences the branch makes false, no version bump, no change-log row)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; the two commits after `dff7600` touch only `tracker/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 6 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (84 tests OK and the lint clean on `4de3f01`, the merge of `wi/WI-0004` into a detached checkout of `main`)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0)
+  - `record-is-reconstructible` → **pass** (from `tracker/`, `docs/` and `git log --grep WI-0004` alone: *what was built* — a per-cell override in `_render_row` and the new `mdtab/inline.py`, from `impl-report.md` and the six commits; *why* — `EP-001/Q-005`'s withheld sign-off, quoted in `item.md` `## Notes`; *which skill decided what* — `refine` routed three questions to the stakeholder and two to `plan`, `plan` chose option A of ADR-0010 against three recorded alternatives, `implement` declared three deviations; *what questions arose and how they resolved* — `Q-001` to `Q-003` answered by the stakeholder with `## Consequences` naming the criteria they landed in, `Q-004` answered by the architect and carried into `vision.md` v8; *what verification found* — seven criteria passed against a `git archive` copy of `main`, ten boundary cases, three mutations. Nothing was unanswerable)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0; the `[auto]` half of D12, which proves citations resolve and not that sentences are true — the read is what caught finding 1)
+  - `epic-sign-off` → **skipped** (this execution reviewed a work item, not an epic; `EP-001` has not reached rest, because WI-0004 returns to `in-progress` and is not terminal. The gate is `check-epic-signoff`'s to run when the epic is dispatched)
+- **Artifacts:**
+  - `tracker/items/WI-0004/artifacts/review.md` — created: what was examined including the four D12 claims and what was opened to decide each, the twelve-row Definition of Done table, three findings, four accepted gaps, and the verdict
+  - `tracker/items/WI-0004/item.md` — updated: the `## Acceptance criteria` preamble put into the past tense (finding 3), and a new `### Accepted gap, recorded by review-close` subsection under `## Notes` carrying finding 2
+  - no merge commit, no bug item, no question
+- **Status:** `in-review` → `in-progress`
+- **Result:** Rejected and returned to `in-progress`. The change itself is sound — every criterion re-checked, no unaccounted hunk, no existing test altered, and the merge result green on 84 tests — but `docs/product/vision.md` still tells the stakeholder that the behaviour this branch delivers was never built, which fails D7 and D12. The remedy is one section of one document, a version bump and a change-log row; no code changes, so the branch will return through `verifying` with the same code and a new record commit.
+
+## 2026-08-29T08:08:13Z — implement v0.2.2 — developer
+
+- **Item:** WI-0004
+- **Trigger:** status `in-progress` — `review-close` rejected the item at 08:04:33Z on Definition of Done D7 and D12 and returned it here, and `next` dispatched the status owner. This is a resume onto an existing branch, not a fresh start, so no opening transition was made and this execution writes one journal entry rather than two: the item was already at `in-progress` when this skill was dispatched, `wi/WI-0004` already carried all seven plan steps, and there was no move to journal at step 3.
+- **Inputs read:**
+  - `tracker/items/WI-0004/artifacts/review.md` **first**, per the procedure for a send-back — the twelve-row Definition of Done table, finding 1 (the defect), findings 2 and 3 (disposed of by the reviewer), and the verdict
+  - `tracker/items/WI-0004/history.md` — the last row is the send-back and names the four false lines
+  - `tracker/items/WI-0004/item.md` — the seven criteria, unchanged, and the new `### Accepted gap` subsection the reviewer added to `## Notes`
+  - `tracker/items/WI-0004/artifacts/plan.md` — step 7, to establish that it names `docs/architecture/overview.md` and no other document
+  - `tracker/items/WI-0004/artifacts/impl-report.md` and `verify-report.md` — what the first execution reported and what `verify` measured
+  - `tracker/items/WI-0004/questions/Q-001.md` … `Q-004.md` — none moved since the last entry; all four were already `answered` and already propagated
+  - `docs/product/vision.md` v8 in full, including `## What it does`, `## Accepted as delivered`, `## Open at the time of writing` and all eight change-log rows
+  - `docs/architecture/overview.md` v9 and `docs/architecture/adr/ADR-0010`, to write the correction against what was actually decided
+  - `tracker/project.yaml` — `commands.test`, `commands.lint`, `conventions.commit-subject`
+  - the branch: `git log --oneline main..wi/WI-0004` (six commits before this execution, all naming the item) and `git diff --stat dff7600..HEAD`
+- **Decisions:**
+  - **Reconciled rather than restarted.** All seven of the plan's steps were already on the branch and `verify` had passed AC1–AC7 against `dff7600`. Nothing in them was redone. The only work of this execution is the document the review named.
+  - **Executed the remedy rather than escalating it.** The work is not in `plan.md` — step 7 enumerated `docs/architecture/overview.md` alone — but D7 is a standing Definition of Done criterion and the reviewer named the document, the section and the remedy exactly. Nothing about *what* is delivered changed: no code, no test, no interface, no acceptance criterion. Under the rule that this skill may adapt *how* but not *what*, this is inside the plan's latitude, so no question was filed.
+  - **Fixed two false claims where the review named one.** `## Open at the time of writing` was the one it named. `## What it does` said the alignment markers are honoured *"in every column without exception"*, quoting `WI-0002/Q-001`'s *"no exceptions"* — and a cell holding a `br` tag is exactly the exception this item introduced, so that sentence is false for the same reason and in the document a stakeholder reads first. Fixing one and leaving the other would have failed D12 at the next review and left the document contradicting itself.
+  - **Wrote the past tense from a measurement, not from memory.** The two "before" rows in v9 — `|     a<br>b      | x |` under `:---:` and `|          a<br>b | x |` under `---:` — were produced by running the trunk's tool from a `git archive main` copy in a scratch directory, not quoted from `item.md`. The "now" transcript was produced on the branch head. This is the D12 failure mode in miniature and the document being fixed is the one it happened to.
+  - **Left `review.md`'s finding 2 alone.** ADR-0010 §2 rule 2's wording against the implemented start-index rule is recorded as an accepted gap in the item's `## Notes`. Correcting the text of a standing decision is the architect's act under ADR-0009. Not the developer's, so not touched.
+  - **Left the v5–v8 change-log rows alone.** They record what those versions said when they said it, including v8's *"The behaviour is still not built and this section still says so"*, which was true at v8. Rewriting a change-log row would destroy the only evidence of what a document used to claim.
+  - **Recorded that this is the second time.** `vision.md`'s own v5 row ends *"Sent back by review-close on D7 and D12"* — the same document, the same section, the same two criteria, on WI-0003. Written into `impl-report.md` because a pattern that has now cost two send-backs belongs in the record.
+- **Questions raised:** none
+- **Commands:**
+  - `git log --oneline main..wi/WI-0004` → 6 commits, reconciliation against the plan's steps
+  - `git archive main | tar -x -C /tmp/wi0004-main` then `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` in that copy → `|     a<br>b      | x |`; the same under `|---:|---:|` → `|          a<br>b | x |` — the two rows v9 records as the past
+  - `printf '| heading is long | b |\n|:---:|---:|\n| a<br>b | x |\n' | python3 -m mdtab` on the branch head → `| a<br>b          | x |`, exit 0 — the transcript v9 shows as the present
+  - `git commit` → `00a08e8` "docs: the vision records the line-break rule as built, not as wanted (refs WI-0004)"
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 84 tests … OK`
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0004 wi/WI-0004` → exit 0, "all 8 commit(s) on main..wi/WI-0004 name WI-0004"
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 2 documents
+  - `git diff --stat dff7600..HEAD` → `docs/product/vision.md` and `tracker/` only; no hunk under `mdtab/` or `tests/`
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` on the branch head after the last change → exit 0, `Ran 84 tests … OK`)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests` → exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace` → exit 0, 6 items, 12 documents)
+  - `every-criterion-has-a-test` → **pass** (unchanged and re-stated in `impl-report.md`: each of AC1–AC7 names a test function or an exact command with its output. No criterion's evidence moved because no code moved — `git diff dff7600..HEAD` has no hunk under `mdtab/` or `tests/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` → exit 0, all 8 commits including this execution's two)
+  - `no-unplanned-scope` → **pass** (advisory) (the diff since verification is one document and the tracker. The document is what D7 requires; there is no code hunk to trace)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → exit 0, 2 documents — `overview.md` from the first execution and `vision.md` from this one)
+- **Artifacts:**
+  - `docs/product/vision.md` — v8 → v9, `updated-by: implement`: `## Open at the time of writing` rewritten so the behaviour is recorded as built with a transcript and what is open is the acceptance; the `## What it does` "no exceptions" paragraph now carries the one exception; a v9 change-log row quoting every sentence that changed
+  - `tracker/items/WI-0004/artifacts/impl-report.md` — a `# Second execution` section appended: what was built, the criteria position, two deviations, the seven gates, and what was not done. The first execution's report is unaltered above it
+  - branch `wi/WI-0004`, commit range `main..wi/WI-0004`, 8 commits; this execution added `00a08e8` and the record commit that follows this entry
+- **Status:** `in-progress` → `verifying`
+- **Result:** The send-back is remedied and nothing else was touched. `docs/product/vision.md` is at v9 and no longer tells the stakeholder that the behaviour they withheld sign-off for was never built; a second sentence in the same document, which said the markers are honoured with "no exceptions", now carries the exception this item introduced. No production code changed since `dff7600`, so `verify` should find the same behaviour and the same evidence it passed at 07:57Z, and its freshness check should see only record and documentation commits since.
+
+## 2026-08-29T08:13:03Z — verify v0.1.4 — qa-engineer
+
+- **Item:** WI-0004
+- **Trigger:** status `verifying` — `implement` moved it there at 08:08:13Z after remedying `review-close`'s send-back, and `next` dispatched the status owner. This is the item's **second** verification; the first passed at `dff7600` on 07:57Z and the item was rejected afterwards on Definition of Done grounds, not on a criterion.
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md` — AC1–AC7 read **before** `impl-report.md`, and what would settle each derived from its own wording first
+  - `tracker/items/WI-0004/history.md` — nine rows; the last two are the send-back and the return
+  - `tracker/items/WI-0004/artifacts/plan.md` — the seven steps and the acceptance-criteria mapping, to read the diff against
+  - `tracker/items/WI-0004/artifacts/impl-report.md` — the first execution's report and the appended `# Second execution` section, read after the criteria were settled
+  - `tracker/items/WI-0004/artifacts/review.md` — finding 1 (the defect that caused the send-back), findings 2 and 3, and the verdict
+  - `docs/architecture/adr/ADR-0010` §2 and §3, for the three cases boundary case 5 asserts against
+  - `docs/product/vision.md` v9, the only content change since the last verification
+  - the branch head verified: **`a64ec3ef7fafd2e9ef7fa16f9fdd937f5fb9640c`**, and the diffs `main..a64ec3e` and `dff7600..a64ec3e`
+- **Decisions:**
+  - **Re-ran everything rather than differencing against the first pass.** `git diff dff7600..a64ec3e -- mdtab/ tests/` is empty, so nothing about the code changed and the earlier verdict would have been safe to carry. It was not carried: each of AC1–AC7 was decided again by a command against `a64ec3e`, because a verification that reasons from a previous verification is the anchoring failure this skill exists to avoid. The empty diff is reported as corroboration, not as the evidence.
+  - **Left all seven checkboxes ticked, having re-demonstrated each.** They were ticked by the first pass. Unticking and re-ticking would have changed nothing on disk; what matters is that no tick rests on the earlier report, and the criteria table names the command behind each.
+  - **Verified AC1's "exactly as a `:---` column's cells are" literally.** The criterion names a reference, so the AC1 document was additionally run with the marker changed to `:---`. The break row is byte-identical under `:---:`, `---:` and `:---` — which is the clause, checked rather than paraphrased.
+  - **Checked `docs/product/vision.md` v9's factual claims but did not judge it against D7 or D12.** No acceptance criterion of this item covers documentation, so the document is not an AC verdict. What was checkable was checked: v9's transcript was `diff`ed against the tool's actual output (no output), and the two rows it attributes to the past were reproduced from a `git archive main` copy and match character for character. Whether the document now *satisfies* the two Definition of Done criteria that sent the item back is `review-close`'s judgement and is recorded as such in `## Not verified, and why`.
+  - **Recorded boundary case 11 rather than judging it.** The `<br` + code span + `>` shape that `impl-report.md` deviation 1 names is decided by no criterion and by no clause of ADR-0010. It was triggered — the cell is placed left — and the observed behaviour written down. Judging it would have meant inventing a standard, and `review-close` has already recorded it as an accepted gap in the item's `## Notes`.
+  - **No send-back and no bug.** Every criterion passed, so there is nothing of this item's to send back; nothing in another item's delivered behaviour failed, so there is nothing to file. Boundary cases 4, 6, 7, 8, 9 and 10 exercise WI-0001's fence and escaped-pipe rules, ADR-0002's display width, WI-0003's re-recognition and WI-0001 AC15's prefixes, and all six behaved as those items specify.
+  - **Overwrote the first verification report rather than appending to it.** `Verified-commit` must name the head this pass measured, and two verdicts in one file with two commits invites a reader to attribute the wrong evidence to the wrong state. The first report is preserved in git at `4a2f05c` and the new one says where to find it.
+- **Questions raised:** none
+- **Commands:**
+  - `git rev-parse HEAD` → `a64ec3ef7fafd2e9ef7fa16f9fdd937f5fb9640c`
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 84 tests in 0.149s … OK`
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - AC1: the AC1 document under `|:---:|---:|`, `|---:|---:|` and `|:---|---:|`; the four-spelling document; `a<BR>b` under `---:` → five runs, exit 0 each, outputs quoted in the report
+  - AC3, AC6, AC7: `git archive main | tar -x -C /tmp/v2main`, then each document through both the branch and that copy, compared with `diff` and `cmp` → AC3's diff with the break row removed exit 0 (no output); AC6's rows 2–3 diff exit 0; AC7's `cmp` exit 0, identical bytes
+  - AC4: six documents, each `python3 -m mdtab` twice with `cmp` between the runs and stderr sized → `exit=0/0 stderr=0B/0B twice=same` six times; `diff` of doc6's four non-table lines input-vs-output → exit 0
+  - AC5: `python3 -m unittest -v` naming all twenty tests → exit 0, `Ran 20 tests … OK`; `git diff main..HEAD -- tests/ | grep -cE '^-[^-]'` → `0`; `git diff --numstat main..HEAD -- tests/test_units.py tests/test_fixtures.py` → `8 0`, `113 0`; five named functions searched for in the tests diff → `0` each
+  - boundary cases 1–11, each a `printf … | python3 -m mdtab`, plus `cmp` for cases 4 and 8 and a `display_width` column check for case 6 → all exit 0, outputs in the report
+  - mutation 1 (`_render_row`'s override removed) → `FAILED (failures=5)`; mutation 2 (`spans = []`) → `FAILED (failures=4)`; mutation 3 (the tag lookahead dropped) → `FAILED (failures=1)`; each file restored from a copy, `git status --short` afterwards showing only the pre-existing `IDEA.md`
+  - `git diff --stat main..HEAD` and `git diff main..HEAD -- docs/product/vision.md | grep -E '^@@'` → seventeen files, five hunks in `vision.md`, every one traced
+  - `git diff --stat dff7600..HEAD -- mdtab/ tests/` → **empty**
+  - `diff` of v9's transcript against `python3 -m mdtab`'s actual output → exit 0; the two trunk rows reproduced from the `git archive` copy → match
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` on `a64ec3e` → exit 0, `Ran 84 tests … OK`)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests` → exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace` → exit 0, 6 items, 12 documents)
+  - `every-criterion-independently-checked` → **pass** (every row of the criteria table names a command this skill ran and quotes its output; no row cites `impl-report.md` or the first verification; AC1, AC3, AC6 and AC7 are measured against a `git archive main` copy)
+  - `negative-cases-exercised` → **pass** (eleven cases triggered, including three the first pass did not run: a blockquote table, a list-indented table, and the `<br` + span + `>` shape)
+  - `tests-would-fail-without-the-change` → **pass** (advisory) (three mutations, 5, 4 and 1 failures; every criterion whose behaviour can be removed is covered by a test that dies with it)
+- **Artifacts:**
+  - `tracker/items/WI-0004/artifacts/verify-report.md` — rewritten for this pass: `Verified-commit: a64ec3e`, seven criteria with commands and quoted output, six gates, eleven boundary cases, three mutations, the diff read against the plan, no defects, and five declared gaps
+  - `tracker/items/WI-0004/item.md` — AC1–AC7 remain ticked, each re-demonstrated; no criterion edited
+  - no bug item, no question
+- **Status:** `verifying` → `in-review`
+- **Result:** Pass, on the second verification and on the same code. All seven criteria hold at `a64ec3e`, measured against the trunk's tool where the criterion says "unchanged" or "identical"; eleven boundary cases behave as ADR-0010 and the three earlier items specify; three mutations show the tests are sensitive. The only content change since the first pass is `docs/product/vision.md` v9, whose factual claims about the tool were checked and are true — whether it now satisfies D7 and D12 is `review-close`'s call, and it is the one thing left before this engagement can reach rest.
+
+## 2026-08-29T08:20:20Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0004
+- **Trigger:** status `in-review`, dispatched by `next` — the second review of this item, after the send-back this skill made at 08:04:33Z
+- **Inputs read:**
+  - `tracker/items/WI-0004/item.md` in full, AC1–AC7, `## Out of scope` and every `## Notes` section
+  - `tracker/items/WI-0004/history.md` — eleven rows, chaining without a gap, last row `in-review`
+  - `tracker/items/WI-0004/journal.md` in full, twelve entries
+  - `tracker/items/WI-0004/artifacts/plan.md` (seven steps, the AC mapping, four assumptions, five risks)
+  - `tracker/items/WI-0004/artifacts/impl-report.md` including its second-execution section (the send-back remedy)
+  - `tracker/items/WI-0004/artifacts/verify-report.md` — the **second** verification, at `a64ec3e`
+  - `tracker/items/WI-0004/artifacts/review.md` — this skill's first review, its three findings and its verdict
+  - `tracker/items/WI-0004/questions/Q-001.md`…`Q-004.md`, all `answered`, with their `## Consequences`
+  - `git diff main..wi/WI-0004` — seventeen files; `mdtab/inline.py` and the four `mdtab/table.py` hunks read line by line, `tests/test_units.py` and `tests/test_fixtures.py` read as diff, the four fixtures read as text (`.gitattributes` marks them binary), and `docs/product/vision.md`'s five hunks — the remedy — read hunk by hunk
+  - `docs/architecture/adr/ADR-0010` (read against the code), `ADR-0007`, `ADR-0009`; `docs/architecture/overview.md` v9; `docs/product/vision.md` v9
+  - `tracker/project.yaml`, `tracker/board.md`
+- **Decisions:**
+  - **Accepted, and the item is closed `delivered`.** All twelve Definition of Done criteria pass, each recorded separately in `review.md`'s second `## Definition of Done` table with its own evidence. The two that failed at 08:04Z — D7 and D12 — were re-decided from the document itself, not from the report about it: `docs/product/vision.md` is at v9 with a change-log row, and both false statements are gone.
+  - **The remedy was checked against the world rather than read.** v9's transcript was reproduced from the merge result byte-for-byte, and the two "before" rows it attributes to the past were reproduced from a `git archive main` copy of the trunk. Rationale: the send-back was for a document asserting a state of the code, so accepting a replacement assertion without running it would repeat the failure in the other direction.
+  - **`implement` fixed two false claims where the review named one, and the second is accepted as in scope.** The `## What it does` sentence quoting `WI-0002/Q-001`'s *"no exceptions"* is false for exactly the reason finding 1 named, and leaving it would have failed D12 at this review. Rationale: it is the same document, the same defect and the same criterion; treating it as unrequested scope would have cost a third round trip on a sentence nobody disputes.
+  - **The claim that the exception is *one* exception was checked, not assumed** — `mdtab/table.py:256` is the only site where a cell is placed by anything but `alignments[column]`, and `contains_line_break` has exactly one caller. Rationale: v9 now tells the stakeholder there is one exception; "at least one" and "exactly one" are different promises and only the second is checkable.
+  - **Finding 4 — `vision.md` v9's *"They have not yet been asked"* — recorded, not sent back.** True at this close and false the moment the epic's sign-off question is filed. Rationale: D12 governs claims about the behaviour this item touched, and this is a claim about the engagement's state; it is written into the item's `## Notes` so the execution that ends the engagement meets it before its own DE6 audit does.
+  - **Finding 5 — a 141-column line at `vision.md:61` — recorded, not fixed.** Rationale: cosmetic, covered by no gate, and fixing it would put a reviewer's commit on a document the stakeholder reads, after verification, without changing what it says.
+  - **This execution does not end the engagement.** `scripts/engagement-state EP-001` reports `active` with WI-0004 still in flight, so step 10 produces no action here; the epic reaches rest at this close and the orchestrator's step 6 dispatches `review-close` on `EP-001`. Rationale: the script's verdict decides this, not the board's appearance.
+  - **Closed before merging, merged after.** `check-commit-refs` inspects `main..wi/WI-0004`, which is empty once the branch is merged, so merging first would make the gate refuse the close it is a precondition for.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 6 items, 12 documents
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0, board already current
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness WI-0004 wi/WI-0004` → exit 0, "verified at a64ec3ef; wi/WI-0004 has moved to 70ef172e but only the record changed (5 file(s) under tracker/ or docs/)"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0004 wi/WI-0004` → exit 0, "all 10 commit(s) on main..wi/WI-0004 name WI-0004"
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 2 documents
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff WI-0004` → exit 0, "WI-0004 is a 'work-item', not an epic … PASS"
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → exit 0, "EP-001 active — still in flight: WI-0004"
+  - `git worktree add --detach /tmp/wi0004-trial main` → exit 0; `git -C /tmp/wi0004-trial merge --no-ff wi/WI-0004` → exit 0, merge commit `f33c73b`
+  - in the trial worktree: `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 84 tests in 0.150s … OK`; `python3 -W error -m compileall -q mdtab tests` → exit 0
+  - in the trial worktree, the AC1 document under `:---:`, `---:` and `:---` → `| a<br>b          | x |` all three times, byte-identical; the `:---:` run is v9's transcript character for character
+  - `git archive main | tar -x -C /tmp/mdtab-main`, then the same two documents through the trunk's tool → `|     a<br>b      | x |` and `|          a<br>b | x |`, the two rows v9 attributes to the past
+  - in the trial worktree: `grep -n alignment mdtab/table.py` → one override site, `table.py:256`; `grep -rn "inline\|contains_line_break" mdtab/` → three hits, one caller
+  - `git worktree remove --force /tmp/wi0004-trial` → exit 0; `git rev-parse main` → `2436a261…`, the same sha as before the trial
+  - on the branch head, re-run from the criteria's own wording: AC3's three-row centred document, AC6's header document, AC7's code-span document, and AC4's double run → the rows AC3, AC6 and AC7 require; exit 0, stderr 0 bytes, second run `cmp`-identical
+  - `grep -rlniE 'line break|<br' docs/` → `ADR-0010`, `overview.md`, `vision.md` and no other document
+  - `awk 'length > 100' docs/product/vision.md` → line 61 at 141 columns, plus three list items at 101–103 that came from `main`
+- **Gates:**
+  - `definition-of-done` → **pass** (all twelve criteria walked individually in `review.md`'s second `## Definition of Done` table, each with its own result and evidence; D3 re-run on the merge result `f33c73b`, D7 and D12 re-decided from `vision.md` v9 itself)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness`, exit 0; and the verification that ran is the second one — `git diff dff7600..a64ec3e -- mdtab/ tests/` is empty, so `verify` re-measured the same code after the document was fixed)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs`, exit 0, 10 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (`python3 -m unittest discover -s tests -t .` in the detached trial worktree at `f33c73b` → exit 0, 84 tests, OK; lint exit 0 there too)
+  - `workspace-valid` → **pass** (`validate-workspace`, exit 0)
+  - `record-is-reconstructible` → **pass** (from the tracker, `docs/` and `git log --grep WI-0004` alone: *what was built* — the per-cell override and `mdtab/inline.py`, from `plan.md` and four commits; *which skill decided what* — ADR-0010 and `plan.md`'s decisions table for the design, `impl-report.md`'s three deviations for the mechanism, this review for the two send-back findings; *what questions arose* — Q-001 to Q-003 to the stakeholder with their answers propagated into AC1, AC3, AC6 and AC7, and Q-004 to the architect about a stale sentence in `vision.md`, each with `## Consequences` naming files that exist; *what verification found* — two reports, the second re-deciding all seven criteria against `a64ec3e` with eleven boundary cases and three mutations)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, exit 0, 2 documents; the read half is the six-claim table in `review.md`, each opened against the tool, the trunk copy or the code)
+  - `epic-sign-off` → **pass** (`check-epic-signoff WI-0004`, exit 0 — WI-0004 is a work item, so the termination gate does not apply; `engagement-state EP-001` reports `active`, so this execution ends no engagement)
+- **Artifacts:**
+  - `tracker/items/WI-0004/artifacts/review.md` — a second `# Second review` section appended, leaving the first review and its finding numbers intact because `## Notes` cites them
+  - `tracker/items/WI-0004/item.md` — `## Notes` gains the finding-4 note for the execution that ends the engagement; status `done`, `outcome: delivered`
+  - merge of `wi/WI-0004` into `main`, made after this close
+- **Status:** `in-review` → `done`
+- **Result:** WI-0004 is delivered and merged. A cell whose own text holds an HTML `br` tag outside a code span now sits plain at the left of its column whatever the marker says — header included, a tag shown in backticks excepted — and the two documents that described the tool without it are at v9. The send-back on D7 and D12 is cleared, twelve Definition of Done criteria pass on evidence re-run for this review, and `main` is green on 84 tests. The engagement reaches rest at this close, so the next action is `review-close` on EP-001 to put the sign-off to the stakeholder.

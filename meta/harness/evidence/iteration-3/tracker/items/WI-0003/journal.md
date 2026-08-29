@@ -1,0 +1,664 @@
+# Journal — WI-0003
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-28T20:20:42Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** created by `answer-questions` while triaging WI-0002's answered questions; the item did not exist before this execution
+- **Inputs read:**
+  - `tracker/items/WI-0002/questions/Q-002.md` (the stakeholder's answer)
+  - `tracker/items/WI-0002/item.md`
+  - `tracker/items/WI-0001/item.md` (AC6, AC14, AC15)
+  - `docs/architecture/adr/ADR-0003-lay-out-only-tables-the-tool-fully-understands.md` (v1)
+  - `docs/product/vision.md` (v3, now v4)
+  - `.claude/agile-skills/pipeline.yaml` (the `from: null → draft, actor: answer-questions` creation row)
+- **Decisions:**
+  - Filed as a new `work-item` at `draft` rather than as an amendment to WI-0002's criteria, because `spec/ids-and-statuses.md` §5 and this skill's step 3b forbid widening an item to swallow work an answer implied — the board would not show the scope change. `arose-from: WI-0002/Q-002` records where it came from.
+  - Filed as a `work-item` rather than a `bug`: the behaviour WI-0001 delivered meets every criterion it was given, and the fault does not exist until WI-0002 emits a bare table with a right-aligned first column. Nothing delivered is wrong today.
+  - `depends-on: WI-0002`, because the output that triggers the fault does not exist until WI-0002 ships and AC1 is stated in terms of it.
+  - Left the recognition rule itself undecided and wrote the three open points into `## Notes` instead. Which prefix a run is judged by is visible to the stakeholder — it decides whether an unevenly indented blockquote table is still left alone — so it is `refine`'s to settle, possibly with them, not this skill's to guess.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/new-item --id WI-0003 --type work-item --status draft --actor answer-questions --arose-from WI-0002/Q-002 …` → exit 0, item created
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1, `item.title.length` (89 > 80); title shortened and re-run
+- **Gates:**
+  - `answer-is-propagated` → **pass** (this item *is* part of the propagation of `WI-0002/Q-002`, and is named in that question's Consequences)
+  - `answered-from-the-record` → **pass** (the stakeholder's own sentence, quoted in `## Notes`, is the whole basis for the item)
+  - `escalation-is-justified` → **skipped** (nothing was escalated by this execution)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 after the title fix and WI-0002's transition)
+  - `item-resumed-correctly` → **skipped** (a creation, not a resumption; WI-0002's resumption is journaled on WI-0002)
+  - `a-deferral-is-not-an-answer` → **skipped** (neither reply deferred; both chose a listed option)
+- **Artifacts:**
+  - `tracker/items/WI-0003/item.md` (new) — story, four draft criteria, out-of-scope, and the three points `refine` must settle
+  - `tracker/items/WI-0003/history.md`, `tracker/items/WI-0003/journal.md` (new)
+- **Status:** `—` → `draft`
+- **Result:** Filed the work the stakeholder's answer to `WI-0002/Q-002` implied and no item recorded: mdtab must go on recognising a table it laid out itself once alignment padding can land at the start of a line. Draft; `refine` owns the criteria.
+
+## 2026-08-28T21:10:36Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0003
+- **Trigger:** status `draft`, dispatched by `next` as the only runnable candidate — WI-0002 reached `done` earlier in this turn, which satisfied `depends-on` and made this item runnable for the first time.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the four draft criteria, `## Out of scope`, and the three open points `answer-questions` left in `## Notes`
+  - `tracker/items/WI-0003/history.md` — one row, `— → draft` by `answer-questions`. A fresh draft, not a send-back, so the whole item is in scope rather than one defect
+  - `tracker/items/WI-0003/artifacts/` — empty before this execution; no prior round
+  - `tracker/items/WI-0002/item.md` — AC10 (the criterion this item's fault comes from), AC14 and its amended checking clause, and the `## Notes` sections `review-close` added at close, which name the second form of the fault and the two documents this item must edit
+  - `tracker/items/WI-0002/questions/Q-002.md` — the stakeholder's answer that created this item, verbatim, so it is not re-asked
+  - `tracker/items/WI-0001/item.md` — AC6, AC7, AC13, AC14 and especially AC15, which defines the prefix rule this item relaxes and names the tangled-blockquote case that must survive
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-003.md` — the stakeholder's "keep its hands off" and "leave it alone" sentences, which are what make `Q-001` theirs rather than `plan`'s
+  - `docs/architecture/adr/ADR-0003-*.md` — all four recognition rules and, in `## Consequences`, the recorded reversibility that authorises relaxing one additively
+  - `docs/product/vision.md` v4, `docs/architecture/overview.md` v3
+  - `mdtab/scan.py` (`line_prefix`, `strip_prefix`, `find_runs`) and `mdtab/table.py` (`lay_out`'s four rules in order) — read to establish what the shipped tool actually does, not to judge it
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `spec/question.md`
+- **Decisions:**
+  - **Filed one question to the stakeholder, not three.** `## Notes` listed three unsettled points. Only the first is theirs: which documents mdtab starts touching. The second (tabs) is settled below from the record; the third (where the fix lives) is `plan`'s by the routing test — the answer would be the same whoever the stakeholder was. Sending all three would have been the failure F-023 records, technical calls routed to a person as questions.
+  - **`Q-001` is the stakeholder's because it moves a boundary they drew themselves.** Relaxing the prefix rule necessarily moves some runs out of the byte-for-byte branch, and the branch is the subject of two of their sentences (`WI-0001/Q-001`, `WI-0001/Q-003`). A bare table indented unevenly by two spaces sits exactly on the line those sentences draw, and nothing in the record says which side.
+  - **The question was grounded in a prototype rather than in reasoning**, and the prototype's numbers are in it: the relaxation was implemented in a throwaway module, run over all 33 shipped fixture documents (none changes), over the exact tangled-blockquote document WI-0001 AC15 names (unchanged), and over both forms of the fault (both fixed). Option B was constructed and then tested to destruction — it re-creates the fault as soon as the first column's text is edited — so it is offered with that cost stated rather than as a plausible-looking alternative.
+  - **Settled without asking: only plain spaces may differ in the indentation; a tab or a `>` must still match byte-for-byte.** Basis: ADR-0002 fixes the display width of every character mdtab measures and a tab is not among them, so treating a tab as equivalent to spaces would require inventing a width nobody has been asked for. Keeping tabs strict changes nothing about today's behaviour. Recorded `[assumed]` against the standing deferral in `EP-001/Q-001`, and named inside `Q-001`'s context so the stakeholder can object in the same reply rather than having to find this file.
+  - **Settled without asking: a table written with outer `|` bars cannot be affected by the change.** Not a choice but a derivation, recorded because it is what makes `Q-001`'s cost small: if every row starts with `|` after the shared indent then the prefixes are already equal, and if one row has extra spaces then it has no leading pipe while its neighbours do, so ADR-0003 rule 4 refuses the run exactly as it does today. Confirmed on the fixtures.
+  - **Corrected two stale citations rather than leaving them for round 2.** AC1 and `## Notes` both named "WI-0002 AC7" for the alignment of a bare table's first column; WI-0002's own round 2 renumbered that criterion to AC10 seven minutes after this item was filed, and AC7 now means something else. A citation pointing at the wrong criterion is a record defect whatever else is open, and the fix does not touch anything `Q-001` will rewrite. Recorded in the item under `### Corrected in refinement round 1`.
+  - **Did not rewrite AC1, AC3 or AC4 this round.** All three turn on the answer, and rewriting them twice would leave a version of the criteria in the history that nobody ever built against — the same reasoning `refine` applied on WI-0002 in its first round. What round 2 must do is listed explicitly at the end of `artifacts/refinement-qa.md`, including two criteria the prototype's evidence already justifies and one for the second form of the fault that no criterion currently mentions.
+  - **Diagnosed but did not fix the AC1/AC3 contradiction.** AC3 forbids any run that fails ADR-0003's rules from being laid out, which is what AC1 requires of one; the item as filed cannot be satisfied. That is the R4 defect the question exists to resolve, and it is written up as such rather than papered over.
+- **Questions raised:** `Q-001` — `addressed-to: human`, `blocking: true`, one decision, filed as a round of one and saying so. Agenda and reasoning in `artifacts/refinement-qa.md`; nothing left `[unresolved]`.
+- **Commands:**
+  - `python3 -c "from mdtab.table import lay_out; ..."` on the prefixed form of the fault → `None`, confirming the shipped tool refuses its own indented output
+  - `printf 'a | b\n---:|---\nxxxx | y\n' | python3 -m mdtab` → `   a | b` / `----:|--` / `xxxx | y`; feeding that back with one cell lengthened → returned unchanged, which is the fault
+  - prototype of the relaxed rule in `/tmp/optA.py` (not committed, nothing under `mdtab/` touched) run over: both forms of the fault → both fixed and both fixed points; the WI-0001 AC15 tangled-blockquote document → unchanged; a tab-versus-spaces document → refused; all 33 shipped fixture pairs → `33 fixtures, 0 would change: []`
+  - `python3 .claude/agile-skills/scripts/board-gen .` → 0, "wrote tracker/board.md"
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 1 (`question.blocking.not-suspended`, the state this transition resolves), then 0 after it
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 after this transition; the one error before it was `question.blocking.not-suspended`, which is precisely the state a filed blocking question is in until the item is suspended)
+  - `definition-of-ready` → **fail, deliberately, and recorded criterion by criterion** — R1 pass, R2 pass, R3 pass, **R4 fail** (three defects: AC1 and AC3 contradict each other, two stale citations to WI-0002 AC7, and AC4 repeats WI-0002 AC14 without a satisfiable checking clause), R5 pass, **R6 fail** (`Q-001` open and blocking — the intended state), R7 pass (`depends-on: WI-0002` is `done`, merged at `984e934`), **R8 fail** (`refinement-qa.md` declares `status: agenda`, honestly, because the conversation has not happened), R9 pass, **R10 fail** (the relaxed rule × outer-pipe style and × tab characters had no stated behaviour; both are settled in this file, and × the tangled-indent case is `Q-001`). The full table is in `artifacts/refinement-qa.md`
+  - `criteria-are-decidable` → **fail** — AC1 is decidable, AC2 is decidable, AC3 is not (it forbids what AC1 requires), AC4 is not (no satisfiable check). Rewritten in round 2, when the answer says which runs move
+  - `qa-recorded-verbatim` → **pass in the only form available** — the question is recorded verbatim in `artifacts/refinement-qa.md` with the options put to the stakeholder and why it went to them; the answer section says `pending`. Nothing is paraphrased and nothing is written that they have not said. The file declares `status: agenda` so that DoR R8 cannot be satisfied by it
+- **Artifacts:**
+  - `tracker/items/WI-0003/questions/Q-001.md` (new) — `addressed-to: human`, `blocking: true`, open
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` (new, `status: agenda`) — the DoR audit, the question, four things settled without asking with their basis, and the five things round 2 must do
+  - `tracker/items/WI-0003/item.md` — two stale citations corrected to WI-0002 AC10; `### Corrected in refinement round 1` added. No criterion rewritten
+  - `tracker/board.md` regenerated
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** WI-0003 is suspended on one question to the stakeholder, and it is the last item in EP-001. The question is whether mdtab should start tidying a bare table whose rows are indented by different numbers of spaces — the price of going on recognising the tables it lays out itself — and it is asked with a prototype's measurements behind it: both forms of the fault fixed, none of the 33 shipped documents changed, and the tangled blockquote they asked us to leave alone still left alone. Two of the item's three open points were settled from the record instead of being asked, and the third was routed to `plan`.
+
+## 2026-08-28T21:15:20Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** status `awaiting-answer`; the stakeholder had written a reply into `questions/Q-001.md` `## Answer` since the previous turn, which is the one case where this skill may act on a `addressed-to: human` question (SKILL.md precondition 1).
+- **Inputs read:**
+  - `tracker/items/WI-0003/questions/Q-001.md` — the only question on the item, `blocking: true`, with the stakeholder's reply now present
+  - `tracker/items/WI-0003/item.md` — the four draft criteria, `## Out of scope`, the three open points in `## Notes`
+  - `tracker/items/WI-0003/history.md` — the suspending row carries `resume-to: draft`
+  - `tracker/items/WI-0003/journal.md` — both prior entries, including `refine`'s round-1 reasoning
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` (`status: agenda`) — the DoR audit, the four things settled without asking, and the five things round 2 must do
+  - `docs/architecture/adr/ADR-0003-lay-out-only-tables-the-tool-fully-understands.md` (v1) — rule 2, the rule this answer relaxes, and the reversibility clause in its `## Consequences` that authorises relaxing it additively
+  - `docs/architecture/adr/` — all seven ADRs listed; ADR-0002 (display width, and the absence of a tab width) and ADR-0007 (alignment lives in `cells`) checked for contradiction, none found
+  - `docs/product/vision.md`
+  - `tracker/items/WI-0002/questions/Q-002.md` — the answer that created this item
+  - `.claude/skills/answer-questions/references/contract.md` (v0.3.1), `.claude/agile-skills/spec/question.md` §3–4
+- **Decisions:**
+  - **Q-001 → answered, `answered-by: human`, option A.** Route 4 of step 3: it was escalated by `refine` and the stakeholder has now replied. Their words settle it directly — *"a table with two spaces on one row and none on the next isn't tangled — it's just untidy, which is the exact thing I wanted the tool for"* — which is a deliberate narrowing of *"a table indented in some tangled way you can't make sense of"* (`WI-0001/Q-003`). Nothing had to be decided by this skill.
+  - **Not a deferral.** The reply chose a listed option and ruled on both of the subsidiary points the question raised. `a-deferral-is-not-an-answer` therefore does not bite; there was nothing to park.
+  - **Propagated into two files and deliberately not into a third.** The answer reaches `artifacts/refinement-qa.md` (verbatim, plus what follows from it) and `item.md` `## Notes` (the three open points reduced to nil, with the ruling quoted). It was **not** written into ADR-0003: `item.md` `## Notes` already routes that amendment to `plan`, ADR-0003's own reversibility clause is the authorisation, and the stakeholder confirmed the routing in the same breath (*"where the fix goes in the code is yours to decide"*). Recording the architecture decision here, ahead of the plan that has to implement it, would put a decision in the durable record that nobody has yet had to satisfy.
+  - **Did not rewrite AC1, AC3 or AC4.** They are the three defects `refine` diagnosed and they turn on this answer, but criteria belong to `refine` until an item is `ready`, and the item resumes to `draft` — where `refine` runs round 2 with the answer in front of it. Rewriting them here would do `refine`'s job in a skill that files no DoR audit and runs no `criteria-are-decidable` gate. `## Notes` says so explicitly so that nobody reads AC1–AC4 as current.
+  - **Left `refinement-qa.md` at `status: agenda`.** The answer being on the page is not the same as the criteria having been rewritten against it. DoR R8 reads that field, and flipping it to `recorded` now would let a future execution pass R8 on a file whose own to-do list is unfinished. Round 2 sets it.
+  - **Narrowed "What round 2 must do" to the option A branch** rather than leaving both branches live: option C is now off the table, and a list that still offers it would send `refine` back through a decision the stakeholder has made.
+  - **Recorded what the answer does *not* settle**, in `refinement-qa.md`: their sentence is about two spaces versus none, and says nothing about a tab or `>` difference (still refused) or about deeper indents (treated identically, because the rule is about difference, not depth). Writing that down is what stops round 2 reading more into one sentence than it says.
+  - **Two `[assumed]` entries re-based to `[decided]`.** `refine` put both to the stakeholder inside `Q-001`'s context precisely so they could object; they endorsed both. The record should not go on calling a thing an assumption after the person it was assumed about has confirmed it.
+  - **Flagged a half-truth the ADR-0003 amendment must not inherit.** ADR-0003 justifies relaxation with *"no document that is aligned today would change"*. Still true, but incomplete after this answer: a bare run with uneven leading spaces is not aligned today and **will** change. Noted in `item.md` for whoever writes the amendment.
+  - **No new work item.** The answer chose one of the options the item was already scoped around and implies no work outside it, so step 3b does not apply.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1, two errors: `board.stale` and `question.awaiting.none-open` — the second being exactly the state an item is in once its last blocking question is answered and before it is resumed, which this transition resolves
+- **Gates:**
+  - `answer-is-propagated` → **pass**. File by file, opened after writing: `questions/Q-001.md` carries `status: answered`, `answered-by: human`, `answered-at`, and a `## Consequences` naming two changed files and three deliberately unchanged ones with reasons. `artifacts/refinement-qa.md` carries the reply verbatim under `Q-001` with what follows from it, two entries re-based to `[decided]`, and a round-2 list narrowed to option A. `tracker/items/WI-0003/item.md` carries `### The stakeholder's ruling` answering all three of `## Notes`' open points, plus the ADR-0003 caveat. No file is named in Consequences that does not contain the change.
+  - `answered-from-the-record` → **pass**. The answer is the stakeholder's own reply, quoted verbatim, and every consequence drawn from it is quoted or cited: `WI-0001/Q-003` for the boundary being narrowed, `WI-0002/Q-002` for the authorisation, ADR-0003 `## Consequences` for the reversibility, `refinement-qa.md` item 1 for why tabs stay strict. Nothing was decided by this skill, so no ADR was needed from it.
+  - `escalation-is-justified` → **skipped** (nothing was escalated by this execution; the escalation being consumed was `refine`'s, justified in its own journal entry)
+  - `workspace-valid` → **pass** after this transition and `board-gen`; before it, exit 1 on `question.awaiting.none-open` and `board.stale`, both of which this execution's own transition and regeneration clear
+  - `item-resumed-correctly` → **pass**. The suspending row (2026-08-28T21:10:36Z, `draft → awaiting-answer`, actor `refine`) records `resume-to: draft`, and this row targets `draft`. Read from the row, not inferred from which skill asked
+  - `a-deferral-is-not-an-answer` → **pass, vacuously**: the reply chose a listed option and ruled on both subsidiary points. Neither of step 3a's two moves was needed
+- **Artifacts:**
+  - `tracker/items/WI-0003/questions/Q-001.md` — `status: answered`, `answered-by: human`, `answered-at: 2026-08-28T21:13:13Z`; `## Consequences` written
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — reply written in verbatim under `Q-001` with the three things that follow and the one thing it does not settle; header rewritten to say the answer is in and why the file is still `status: agenda`; "Settled without asking" items 1 and 3 re-based to `[decided]`/confirmed with the stakeholder's words; "What round 2 must do" narrowed to option A, item 1's first half struck through as done. Still `status: agenda`
+  - `tracker/items/WI-0003/item.md` — `### The stakeholder's ruling` added to `## Notes`, answering all three open points; a caveat added for the ADR-0003 amendment; `updated` stamped. **No acceptance criterion touched**
+  - `tracker/board.md` regenerated
+  - commit of the above on `main`
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** The stakeholder chose option A: a bare table whose rows differ only in leading spaces is no longer "tangled", so mdtab will tidy it and return it at the shallowest indent in the run — the price of mdtab going on recognising the tables it lays out itself. They also confirmed that tabs and `>` stay strict, and that where the fix lives is the architect's. WI-0003 returns to `draft` with all three of its open points closed and its criteria untouched, which is `refine` round 2's whole job.
+
+## 2026-08-28T21:21:16Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0003
+- **Trigger:** status `draft`, dispatched by `next` as the only runnable candidate. Round 2: the item returned to `draft` from `awaiting-answer` earlier in this turn, when `answer-questions` consumed the stakeholder's reply to `Q-001`.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the four criteria as filed, `## Out of scope`, and the `### The stakeholder's ruling` section `answer-questions` added
+  - `tracker/items/WI-0003/history.md` — three rows. The last is `awaiting-answer → draft` by `answer-questions`, so this is a resumed round-1 conversation, not a send-back from a later stage and not a fresh draft
+  - `tracker/items/WI-0003/journal.md` — both prior entries, in particular round 1's agenda and its reasons for not rewriting the criteria then
+  - `tracker/items/WI-0003/questions/Q-001.md` — the stakeholder's reply verbatim, and the three options it chose between
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — the round-1 DoR audit, the four things settled without asking, and the five-item round-2 list
+  - `tracker/items/WI-0001/item.md` — AC2, AC4, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15; AC15 is the rule this item relaxes
+  - `tracker/items/WI-0002/item.md` — AC10, AC11, AC13, AC14 and the amended checking clause of AC14, which is the model AC9 follows
+  - `docs/architecture/adr/ADR-0003-lay-out-only-tables-the-tool-fully-understands.md` (v1) — the four rules and the reversibility clause
+  - `.claude/agile-skills/spec/dor-dod.md` §1 (R1–R10), `.claude/skills/refine/references/contract.md`
+  - `mdtab/scan.py`, `mdtab/table.py` (`lay_out`), `mdtab/filter.py`, `tests/test_units.py`, `tests/test_fixtures.py`, and all 33 fixture pairs under `tests/fixtures/`
+- **Decisions:**
+  - **Asked nothing this round, and recorded why.** Two documents the stakeholder was never shown turned up while measuring — a bare run whose *delimiter* row is the deepest-indented line, and a blockquote run whose rows carry an uneven extra space. Neither is a new decision: both are the sentence they already gave (*"a table with two spaces on one row and none on the next isn't tangled — it's just untidy"*) applied to a run whose uneven rows happen to be different ones. Asking would be asking them to re-answer `Q-001` in other words, which step 3's "already answered" test forbids. They are written into AC5 as worked examples instead.
+  - **Replaced all four criteria rather than editing them.** AC1 and AC3 as filed contradicted each other and AC4 had no satisfiable check; all three turned on the answer. The new AC1–AC10 separate the claims that were tangled: AC1 states the relaxed rule, AC2 and AC3 state the two forms of the fault it fixes, AC5 states the price, AC6 and AC7 and the scope bullets state what is still refused, AC8 and AC9 state what must not change.
+  - **AC1 states the rule, not just its effects.** A run's shared prefix is the longest common prefix of its lines' WI-0001 AC15 prefixes, and every line's remainder past it must be spaces only. Without that sentence, "leading spaces belong to the first cell" is not decidable by someone with a terminal — they cannot tell what happens when the deepest-indented line is the delimiter row, or when a `>` and a space disagree at the same position. With it, every other criterion is an observation.
+  - **Every transcript in the criteria is a measurement, not an intention.** The relaxed rule was prototyped in a throwaway module — nothing under `mdtab/` was touched — and AC2, AC3 and AC5 quote what it actually printed, including the trailing spaces on AC2's third line that a reader would otherwise write out of the expected output. Round 1 established this practice for the question; this round applies it to the criteria.
+  - **AC9's checking clause names exactly one test, because it could be measured.** Running the shipped suite with the prototype patched in gives 65 tests, 64 pass, 1 fails: `test_ac10_a_bare_right_aligned_first_column_pads_at_the_start_of_the_line`, on its final assertion, with the assertion error quoted in `refinement-qa.md`. That test's own docstring, written during WI-0002, predicted precisely this. This is the lesson of `WI-0002/Q-003`, where AC14 required a suite to run unchanged while the item necessarily changed part of it and had to be amended after the fact — the failure mode is a criterion nobody can satisfy, and the fix is to measure before writing it.
+  - **Rewrote an `## Out of scope` bullet instead of deleting it.** Round 1's third bullet said indentation the author wrote is never normalised. The answer to `Q-001` overtook that: inside a recognised run, leading spaces past the shared prefix now *are* re-laid-out. The bullet now says what is still true — nothing outside a recognised run is touched — and says explicitly that its earlier form was overtaken and by what. Silently dropping it would have removed the only place a reader could see the promise change.
+  - **Added two scope bullets the answer made necessary:** that deciding a tab's display width stays out (AC6 exists so that nothing here has to), and that no other ADR-0003 rule is relaxed — cell count, outer-pipe style and fenced blocks are all still refused. Exactly one of the four rules moves.
+  - **Answered R10 with a table rather than prose.** Nine combinations of the relaxed rule with constructs already in the tool, each pointing at the criterion or scope bullet that states the behaviour. Three of them are genuine questions someone would otherwise have to derive: fenced code blocks (the fence mask is computed over the whole document before runs are found, so a relaxed prefix cannot pull a fenced line into a table), run extent (fixed by WI-0001 AC7 before prefixes are compared), and line terminators (removed before a line is examined, so never part of a prefix).
+  - **Did not split the item (R9).** The two forms of the fault are one rule failing in one way, and the prototype fixes both with one change; the second form's document is the first's output, so a split would produce an item that cannot be verified without the other.
+  - **Left three things to `plan`, named in `refinement-qa.md`:** where the relaxation lives, whether ADR-0003 gains a fifth rule or has rule 2 amended, and the correction to the misleading comment on `test_rule_2_a_run_whose_prefixes_are_not_byte_identical` — whose assertion still holds after this change but for a different reason than its comment claims.
+- **Questions raised:** none this round. `Q-001` was the only question on this item, and it is `status: answered`. Nothing is left `[unresolved]`.
+- **Commands:**
+  - `python3 -m unittest discover -q` → OK, 65 tests, against the shipped tool
+  - prototype of the relaxed rule in `/tmp/protoA.py` (throwaway; nothing under `mdtab/` touched) over all fixture pairs → `33 fixtures, 0 would change: []`
+  - `/tmp/checkA.py`, `/tmp/checkB.py`, `/tmp/checkC.py` — both forms of the fault before and after, the stakeholder's uneven-spaces example, the delimiter-row-deepest and blockquote-extra-space variants, tab-versus-spaces, `>` versus `>>`, `ragged-prefix`, a leading-pipe run with uneven spaces, and a fixed-point check on every output → every result is quoted in `artifacts/refinement-qa.md`'s measurement table
+  - `/tmp/suiteA.py` — the shipped suite with the prototype patched in → `ran 65 failures 1 errors 0`, the failure being `tests.test_units.PaddingPlacementTest.test_ac10_a_bare_right_aligned_first_column_pads_at_the_start_of_the_line`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 before the transition and again after it)
+  - `definition-of-ready` → **pass, criterion by criterion.** R1 pass (frontmatter complete, `validate-workspace` exit 0). R2 pass (`## Story` unchanged from round 1, where it passed: role, capability, outcome). R3 pass (AC1–AC10, labelled, checkboxes). **R4 fail → pass**: round 1's three defects are closed — AC1/AC3's contradiction by splitting the claims across AC1, AC2, AC3, AC5, AC6, AC7; the stale WI-0002 AC7 citations in round 1; AC4's unsatisfiable check by the new AC9, which names one test and quotes its assertion. Every criterion now names a command and an expected output. R5 pass (four scope bullets; one rewritten because the answer overtook it, two added). **R6 fail → pass** (`Q-001` is `answered`; no open question on the item). R7 pass (`depends-on: WI-0002`, `done`, merged `984e934`). **R8 fail → pass** (`artifacts/refinement-qa.md` now `status: recorded`, with the exchange verbatim). R9 pass (one rule, one change, one branch; splitting would make the second half unverifiable). **R10 fail → pass** (the nine-row combination table in `## Notes`)
+  - `criteria-are-decidable` → **pass.** Taken one at a time: AC1 is a definition applied line by line — compute the longest common prefix of a run's AC15 prefixes, check each remainder is spaces. AC2, AC3 and AC5 are `printf … | mdtab` transcripts with the exact expected bytes. AC4 is running the tool twice and diffing. AC6 and AC7 are diffs of input against output on named documents. AC8 is `python3 -m unittest tests.test_fixtures` with no `.out` file edited. AC9 is `python3 -m unittest discover` with one named test expected to change and 64 to pass unmodified. AC10 is stderr and an exit code. No criterion contains an adjective without a threshold
+  - `qa-recorded-verbatim` → **pass.** `artifacts/refinement-qa.md` is `status: recorded`. `Q-001`'s answer is the stakeholder's own words, unedited, tagged `[human]` in the question file and quoted verbatim in the Q&A. Round 1's two `[assumed]` entries were re-based to `[decided]` by `answer-questions` because they answered both explicitly. Round 2 asked nothing, says so, and records why the two newly-observed documents were not turned into a question
+- **Artifacts:**
+  - `tracker/items/WI-0003/item.md` — `## Acceptance criteria` replaced: AC1–AC10 for the four filed criteria; `## Out of scope` rewritten (one bullet corrected, two added); `## Notes` gains the R10 combination table, and its round-1 paragraph saying the criteria were still wrong is replaced by what round 2 did
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` — `status: agenda` → `status: recorded`; header rewritten for two rounds; the round-2 list marked complete; a `## Round 2 — the record` section added with why nothing was asked, the nine-row measurement table, the three R4 defects closed, the re-walked DoR, and what is left for `plan`
+  - `tracker/board.md` regenerated
+  - commit of the above on `main`
+  - not touched: anything under `mdtab/` or `tests/`. The prototype lived in `/tmp` and is not committed
+- **Status:** `draft` → `ready`
+- **Result:** WI-0003 is Ready. The stakeholder's option A is now ten criteria someone with a terminal can decide, each of them measured against a prototype before it was written: the two forms of the fault with the transcripts that fix them, the price they accepted with their own example plus two variants of it, the runs still refused, all 33 shipped fixtures unchanged, and a suite clause that names the single test which changes and quotes the assertion — the thing `WI-0002/Q-003` had to be amended for. Nothing is left `[unresolved]`; `plan` owns where the change lives and the ADR-0003 amendment.
+
+## 2026-08-28T21:27:02Z — plan v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** status `ready`, dispatched by `next` as the only runnable candidate; `refine` took the item to `ready` earlier in this turn.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — AC1–AC10, the four `## Out of scope` bullets, the R10 combination table, and `### The stakeholder's ruling`
+  - `tracker/items/WI-0003/history.md` — four rows. The last is `draft → ready` by `refine`; this is a first plan, not a re-plan after a rejection
+  - `tracker/items/WI-0003/artifacts/refinement-qa.md` (`status: recorded`) — the round-2 measurement table, the two `[decided]` entries, and §"What is left for `plan`, deliberately", which names the three decisions routed here
+  - `tracker/items/WI-0003/questions/Q-001.md` — the stakeholder's answer verbatim and the three options
+  - `tracker/items/WI-0002/artifacts/plan.md` — the shape this project's plans take, and what WI-0002 changed in `_render_cell`
+  - `docs/architecture/overview.md` v3 — the one-place-per-rule list and §"A property the tool no longer has"
+  - ADR-0001 (Python 3, stdlib only), ADR-0002 (display width; no width for a tab), ADR-0003 (the four recognition rules), ADR-0004 (bytes and terminators), ADR-0005 (tests from the standard library), ADR-0006 (invalid UTF-8 fixtures), ADR-0007 (alignment inside the cells field)
+  - `mdtab/scan.py` (`line_prefix`, `strip_prefix`, `in_fence`, `find_runs`), `mdtab/table.py` (`split_row`, `row_cells`, `has_leading_pipe`, `is_delimiter_row`, `_outer_style`, `_column_widths`, `_render_cell`, `_render_delimiter`, `_render_row`, `lay_out`), `mdtab/filter.py`, `mdtab/__main__.py`
+  - `tests/test_units.py` (`RejectionTest`, `PaddingPlacementTest`), `tests/test_fixtures.py`, and the 33 fixture pairs
+  - `tracker/project.yaml`, `.claude/agile-skills/spec/doc-header.md` §3, §4, §4a
+- **Decisions:**
+  - **`shared_prefix(contents) -> str | None` goes in `mdtab/scan.py`, beside `line_prefix`.** Route: documented. The overview's one-place-per-rule list already puts "what an indent is" in `scan.py`, and the new rule mentions no cell, no `|` and no table — it is entirely about indentation. Putting it in `table.py` would split the prefix rule across two modules and leave `line_prefix` sitting in `scan.py` with its only consumer elsewhere. The stakeholder explicitly left this to the architect (*"where the fix goes in the code is yours to decide"*).
+  - **Rule 2 in `lay_out` becomes a two-line call, and nothing downstream changes.** Route: documented, from reading the code. `bodies` may now start with spaces, and each of the three remaining rules already does the right thing with that: `is_delimiter_row` strips each cell before matching, `has_leading_pipe` is `startswith("|")` so a row with extra spaces before its `|` has no leading pipe and rule 4 refuses the run, and `_render_cell` trims with `.strip(" ")`. That last one is why tables with outer bars are unaffected — not by luck, but because the refusal simply moves from rule 2 to rule 4 with the same visible outcome.
+  - **ADR-0003 is superseded by ADR-0008, not amended in place.** Route: documented, and it overrides the item. `item.md` `## Notes` says the ADR "will need amending, not superseding"; `spec/doc-header.md` §4 says an ADR is never edited to change its decision and must be superseded by a new one that cites it. Rule 2's text is reversed, so this is a decision change and the spec decides the mechanics. ADR-0008 restates all four rules with rules 1, 3 and 4 reproduced unchanged and says so explicitly, so that the recognition policy stays in one current document — which is ADR-0003's own stated rationale.
+  - **Not escalated to the stakeholder.** The substance was authorised twice in their own words (`WI-0002/Q-002` and `WI-0003/Q-001`, the latter with the changed documents in front of them), and the remaining choice — supersede versus amend — is documentation mechanics whose answer would be the same whoever the stakeholder was. Asking would be the routing failure F-023 records.
+  - **Three genuine alternatives are recorded in ADR-0008, not one.** Option B (re-recognise only output whose padding already matches) is rejected with its real cost — it re-creates the fault on the first edit, and it would make recognition depend on the layout arithmetic that today runs strictly after it. Option D (treat a tab as N spaces) is rejected because it requires inventing a width ADR-0002 does not define.
+  - **The fixture list is six new pairs plus one negative, and no existing `.out` may be edited.** Route: from the criteria. AC8 is the criterion; the risk is that editing an expected file to match new behaviour would look like a passing suite, so `git diff --stat tests/fixtures/` is named in `## Risks` and in AC8's mapping row as the check.
+  - **Exactly one pre-existing test's assertions change**, and the plan names it, quotes the assertion, and says what it becomes: `test_ac10_a_bare_right_aligned_first_column_pads_at_the_start_of_the_line`'s final `assertIsNone` becomes `assertEqual(lay_out(laid_out), laid_out)`. This is measured, not predicted: `refine` ran the shipped suite against a prototype and got 64 passes and that one failure.
+  - **`test_rule_2_a_run_whose_prefixes_are_not_byte_identical` keeps both assertions but loses one to `test_rule_4_…`.** Its second case is now refused by rule 4 rather than rule 2, so leaving it where it is would make the test's name a lie while it still passed — the worst kind of green. Step 6 moves the case and corrects the comment; no assertion is deleted.
+  - **`str | None` is an assumption, not a decision.** Recorded under `## Assumptions` with its reversal cost: `lay_out` already speaks `None` for "not a table", so this matches the module's one convention, and changing it is two call sites in one file.
+  - **The overview is updated now, in the tense that is true now.** §"A property the tool no longer has" became §"A property the tool lost and is getting back", saying the rule is decided and recorded, the code lands with WI-0003, and until it does the old paragraph still describes the tool. Writing "mdtab now recognises…" before it does would be a false claim in the one document every later skill re-quotes.
+  - **Sourced three pre-existing unsourced claims in ADR-0003** — bare `` `Q-002` `` and `` `Q-001` `` references, qualified to `WI-0001/Q-00n` with `[src:]` markers. `spec/doc-header.md` §4a puts that on the next execution to touch the file, and `lint-claims` failed until it was done. No rule text was edited.
+  - **`commands.test` and `commands.lint` were already real and were not changed.** Both were run from the repository root as part of this execution.
+- **Questions raised:** none. Every decision came from a document, from the code, or from an answer the stakeholder had already given; nothing here is irreversible and nothing depends on intent no document records.
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, "Ran 65 tests … OK" (the `commands.test` value, run to confirm it is real)
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0 (the `commands.lint` value)
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 1 twice (two pre-existing unsourced absolutes in ADR-0003, surfaced because this execution touched the file), then exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 before and after the transition)
+  - `every-criterion-is-addressed` → **pass**. All ten criteria have a row in `plan.md` §"Acceptance criteria mapping", each naming the step that satisfies it and the specific fixture, assertion or command that demonstrates it — six new fixture pairs by name for AC2, AC3, AC5 and AC6; five existing unedited fixtures for AC7; `git diff --stat tests/fixtures/` for AC8; a named test and `git diff` over `tests/` for AC9; stderr and an exit code for AC10. No criterion maps to "tests"
+  - `project-commands-resolved` → **pass**. `commands.test` is `python3 -m unittest discover -s tests -t .` and `commands.lint` is `python3 -W error -m compileall -q mdtab tests`; both were run from the repository root during this execution and both exited 0. Neither exits zero without checking anything — the test command runs 65 tests
+  - `decisions-recorded` → **pass**. `plan.md` §"Decisions and ADRs" is a five-row table, each row naming the decision, where it is recorded and which branch of the preference order produced it: two asked (already answered by the stakeholder, recorded in ADR-0008), two documented (`spec/doc-header.md` §4; the overview's one-place-per-rule list), one assumed with its reversal cost under `## Assumptions`. Two further assumptions are recorded there with what reversing them costs
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0 over three changed documents, after the two pre-existing ADR-0003 absolutes were sourced)
+  - `plan-is-executable-without-you` (advisory) → **pass**. Each of the seven steps names its files and what is true afterwards; step 1 gives five concrete input/output pairs for the new function rather than describing it; step 3 gives the fixtures as a table of exact bytes; steps 5 and 6 quote the assertions they change. The one thing a developer must not invent — whether the longest common prefix is taken over raw lines or over `line_prefix` values — is stated in `## Approach` and again in `## Assumptions`
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/plan.md` (new) — problem, approach, seven steps, the ten-row AC mapping, three assumptions, a five-row decision table, `## Scaffolding: none`, four risks, and three out-of-scope bullets
+  - `docs/architecture/adr/ADR-0008-a-run-shares-an-indent-rather-than-repeating-one.md` (new, v1) — supersedes ADR-0003; four options; all four rules restated with rule 2 replaced; reversibility stated in both directions
+  - `docs/architecture/adr/ADR-0003-lay-out-only-tables-the-tool-fully-understands.md` v1 → v2 — `status: superseded`, `superseded-by` set, a pointer paragraph at the top, three bare question references qualified and sourced. No rule text edited
+  - `docs/architecture/overview.md` v3 → v4 — "What a run's indent is" added to the one-place-per-rule list; the lost-property section rewritten
+  - `tracker/board.md` regenerated
+  - commit of the above on `main`
+  - `tracker/project.yaml` — read and confirmed, not changed
+  - no file created outside `tracker/` and `docs/`
+- **Status:** `ready` → `planned`
+- **Result:** WI-0003 is planned. The change is one new function in `mdtab/scan.py` — the longest common prefix of a run's line prefixes, with every remainder required to be spaces — and a two-line swap in `lay_out`'s rule 2; everything downstream already does the right thing with a body that starts with spaces, which is why tables with outer bars are untouched. ADR-0008 supersedes ADR-0003 rather than amending it, because the spec forbids editing an ADR to change its decision, and it restates rules 1, 3 and 4 unchanged so the recognition policy stays in one document. Seven steps, six new fixtures, one pre-existing test whose assertion changes and which the plan names, and one risk the implementation report must answer: no existing `.out` file may be edited.
+
+## 2026-08-28T21:29:06Z — implement v0.2.2 — developer
+
+- **Item:** WI-0003
+- **Trigger:** status `planned`; dispatched by `next` as the only runnable candidate (WI-0001 and WI-0002 are `done`, EP-001's `open` has no owner)
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — AC1–AC10 and the stakeholder's ruling on `Q-001`
+  - `tracker/items/WI-0003/artifacts/plan.md` — the seven steps, the fixture table, the assumptions and the risks
+  - `tracker/items/WI-0003/history.md` — five rows, last `ready → planned`; no send-back, so this is a fresh execution
+  - `tracker/items/WI-0003/questions/Q-001.md` — answered 2026-08-28T21:13:13Z and already propagated into `item.md` and `artifacts/refinement-qa.md`
+  - `docs/architecture/adr/ADR-0008-a-run-shares-an-indent-rather-than-repeating-one.md` — the four rules as they now read
+  - `tracker/project.yaml` — branch prefix `wi/`, test and lint commands, both non-null
+  - `mdtab/scan.py`, `mdtab/table.py`, `tests/test_units.py`, `tests/test_fixtures.py` — the code the plan changes and the two tests it names
+- **Decisions:**
+  - Fresh start, not a resume: `git branch` showed no `wi/WI-0003`, so there is no partial work to reconcile with. Branched from `main` at `2884f53`.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0003 main` → 0
+- **Gates:**
+  - `tests-pass` → **skipped** (not yet run — no change has been made; the closing entry reports it)
+  - `lint-clean` → **skipped** (not yet run — same reason)
+  - `workspace-valid` → **skipped** (not yet run — same reason)
+  - `every-criterion-has-a-test` → **skipped** (not yet run — no test has been written)
+  - `commits-reference-the-item` → **skipped** (not yet run — the branch has no commits)
+  - `no-unplanned-scope` → **skipped** (not yet run — there is no diff)
+  - `claims-are-sourced` → **skipped** (not yet run — nothing has changed since trunk)
+- **Artifacts:**
+  - branch `wi/WI-0003`, created at `2884f53`; no commit yet
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of WI-0003 has started on `wi/WI-0003`. The plan's seven steps are unchanged and will be worked in order, beginning with `shared_prefix` in `mdtab/scan.py`.
+
+## 2026-08-28T21:34:47Z — implement v0.2.2 — developer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-progress`; this execution's own opening entry at 2026-08-28T21:29:06Z
+- **Inputs read:**
+  - `tracker/items/WI-0003/artifacts/plan.md` — the seven steps, worked in order
+  - `docs/architecture/adr/ADR-0008-a-run-shares-an-indent-rather-than-repeating-one.md` — rule 2 as it now reads, and rule 4's "after the shared prefix"
+  - `docs/architecture/overview.md` — the one-place-per-rule list, which already names `mdtab/scan.py` as where a run's indent lives
+  - `mdtab/scan.py`, `mdtab/table.py` — the two functions the plan changes
+  - `tests/test_units.py`, `tests/test_fixtures.py`, `tests/fixtures/` — the tests the plan names and the 33 shipped pairs
+- **Decisions:**
+  - Plan steps 1, 2, 4, 5 and 6 executed as written; `shared_prefix` returns each of the five values step 1 states, and every transcript in AC2, AC3, AC5 and AC6 was run against the branch and matches the criterion byte for byte.
+  - **Deviation, recorded:** three citations in `mdtab/table.py` naming `AC15` or `ADR-0003` for rules this item reverses were corrected to `ADR-0008` — `has_leading_pipe`'s docstring (which now says the prefix stripped is the run's, not the line's, and is the sentence AC7's reasoning rests on), `_outer_style`'s rule-4 citation, and `lay_out`'s docstring. Plan step 2 authorised one such correction, on rule 2's own comment; leaving the other three would have left the module citing a superseded ADR for a rule this commit changed.
+  - **Deviation, recorded:** the plan says `tests/test_fixtures.py` discovers pairs by name so "no test code changes for these". True of `FixtureRoundTripTest`, but `UNTOUCHED` and `ALIGNED` are hand-written maps, and a laid-out fixture absent from `ALIGNED` is checked against the wrong rule by `test_ac11_…`. The six laid-out pairs were added to `ALIGNED` and `quote-depth` to `UNTOUCHED`. No assertion changed.
+  - **Escalated rather than decided:** `test_ac11_cell_content_survives_apart_from_the_spaces_around_it` fails on the new `uneven-blockquote-space` fixture, because it splits a raw line on `|` and so counts a `>` prefix as part of the first cell. Correcting it means a second pre-existing test changes, which [src: WI-0003 AC9] forbids in terms; dropping the fixture means AC5's only `>` document loses its evidence. Q-002 puts the choice to the architect with the recommendation to correct both the test and AC9's count.
+- **Questions raised:** Q-002 (blocking)
+- **Commands:**
+  - `git checkout -b wi/WI-0003 main` → 0
+  - `python3 -c "from mdtab.scan import shared_prefix …"` → 0; the five values are `''`, `'> '`, `None`, `None`, `'> '`, as plan step 1 states
+  - `python3 -m unittest tests.test_units` after step 4 → 0 (52 tests)
+  - `printf '   a | bbbbb\n----:|--\nxxxx | y\n' | python3 -m mdtab` → 0; `   a | bbbbb` / `----:|------` / `xxxx | y    ` (AC2's second command, with the trailing spaces `cat -A` confirms)
+  - the AC3, AC5 and AC6 transcripts, six documents through `python3 -m mdtab` → 0 each; every one matches its criterion byte for byte
+  - `python3 -m unittest discover -s tests -t .` after step 2, before the fixtures → `FAILED (failures=1)`, the single expected failure of `test_ac10_…`, which is AC9's prediction
+  - `python3 -m unittest discover -s tests -t .` at branch head `f32d681` → **`FAILED (failures=1)`**, `test_ac11_…` on `uneven-blockquote-space`; this is what Q-002 is about
+  - `python3 -W error -m compileall -q mdtab tests` → 0
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → 0; all 2 commits name WI-0003
+  - `git diff --stat main..wi/WI-0003 -- tests/fixtures/` → 14 files, all additions, no `.out` file of the 33 shipped pairs touched
+- **Gates:**
+  - `tests-pass` → **fail** (`python3 -m unittest discover -s tests -t .` at `f32d681` exits 1: one failure, `test_ac11_…` on `uneven-blockquote-space`; this is the subject of Q-002 and is why the item suspends rather than moving to `verifying`)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests` exits 0 at `f32d681`)
+  - `workspace-valid` → **pass** (`validate-workspace` reported 0 errors, 0 warnings as part of this transition)
+  - `every-criterion-has-a-test` → **fail** (nine of the ten criteria have evidence — AC1 `SharedPrefixTest`, AC2/AC3 the three `refeed-*` fixtures and the amended `test_ac10_…`, AC4 `test_ac6_running_the_tool_on_its_own_output_changes_nothing` over all 40 pairs, AC5 `uneven-leading-spaces` and `uneven-delimiter-deepest`, AC6 `quote-depth` and `tab-prefix` and two `SharedPrefixTest` assertions, AC7 `ragged-prefix` and the case moved into `test_rule_4_…`, AC8 `tests.test_fixtures` with no `.out` edited, AC10 `ProcessTest`. AC5's third document — the blockquote one — has a fixture that the suite currently rejects, and AC9's count clause is the thing Q-002 asks about, so neither can be called satisfied yet)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs WI-0003 wi/WI-0003` exits 0)
+  - `no-unplanned-scope` → **pass** (advisory; every hunk traces to a plan step — 1/4 in `a502bc8`, 2/3/5/6 in `f32d681` — apart from the two deviations named above, both citation- and registration-level and both recorded)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exits 0 as part of this transition)
+- **Artifacts:**
+  - `mdtab/scan.py`, `mdtab/table.py`, `tests/test_units.py`, `tests/test_fixtures.py`
+  - fourteen new files under `tests/fixtures/`: `refeed-bare-first-column`, `refeed-blockquote-first-column`, `refeed-list-indent-first-column`, `uneven-leading-spaces`, `uneven-delimiter-deepest`, `uneven-blockquote-space`, `quote-depth`, each `.in.md` and `.out.md`
+  - `tracker/items/WI-0003/questions/Q-002.md`
+  - branch `wi/WI-0003`, commits `a502bc8` and `f32d681` (range `main..wi/WI-0003`)
+- **Status:** `in-progress` → `awaiting-answer`
+- **Result:** The change is built and every one of the item's own transcripts reproduces exactly. It stops one gate short: a pre-existing document-level test compares a raw line's fields rather than its cells, which was sound only while a run's lines repeated one prefix, and it now fails on the blockquote document AC5 names. Repairing it makes a second pre-existing test change, which AC9 forbids in terms, so Q-002 asks the architect whether to correct the test and AC9's count or to evidence AC5's third document another way. The item suspends at `awaiting-answer` with `resume-to: in-progress`.
+
+## 2026-08-28T21:38:53Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0003
+- **Trigger:** status `awaiting-answer`; dispatched by `next` step 4 — Q-002 is the only open question and is addressed to the architect
+- **Inputs read:**
+  - `tracker/items/WI-0003/questions/Q-002.md` — the only open question; `Q-001` is `answered` and its consequences are already in the item
+  - `tracker/items/WI-0003/item.md` — AC1, AC5, AC7 and AC9, which is the criterion at issue
+  - `tracker/items/WI-0003/artifacts/plan.md` — steps 3, 5, 6 and the acceptance-criteria mapping
+  - `tracker/items/WI-0003/history.md` — the suspending row of 2026-08-28T21:34:47Z, which records `resume-to: in-progress`
+  - `tracker/items/WI-0003/journal.md` — this execution's two `implement` entries
+  - `docs/architecture/adr/ADR-0008-a-run-shares-an-indent-rather-than-repeating-one.md` v1 (`current`) — rule 2 and rule 4
+  - `docs/architecture/adr/ADR-0003-…` (`superseded`), `ADR-0002` v1, `ADR-0005` v1, `ADR-0007` v1 — checked for a decision the answer might contradict; none does
+  - `tracker/items/WI-0002/questions/Q-003.md` and `tracker/items/WI-0001/questions/Q-005.md` — the two precedents for amending a criterion's checking clause
+  - `tests/test_fixtures.py`, `tests/test_units.py`, `mdtab/scan.py`, `mdtab/table.py` at branch head `f32d681`
+- **Decisions:**
+  - **Q-002 — answered, route 1 (from an existing document).** Option A: correct `test_ac11_cell_content_survives_apart_from_the_spaces_around_it` and correct AC9's count with it. The basis is [src: WI-0003 AC1] and [src: ADR-0008] rule 2, which both say that when a run is recognised the *shared* prefix is stripped and the spaces past it are the first cell's. On `>  a | b` the shared prefix is `> `, the first cell strips to `a` on both sides, and WI-0001 AC11 holds; the test says otherwise because it splits the raw line and so counts the prefix as part of field 0. The code follows the criteria and the test does not follow the code. No ADR was needed or written.
+  - **The amendment is to a checking clause, not to what must be true.** AC9 still requires every WI-0001 and WI-0002 criterion to hold; only its statement of how the pass is shown changed — "exactly one" of 65 tests to "exactly two", 64 unmodified to 63, with the second test named and dated. This is the route AC9's own text points at: it says its exception is "named here because WI-0002/Q-003 showed what an unsatisfiable checking clause costs", and [src: WI-0002/Q-003] and [src: WI-0001/Q-005] are the same shape answered the same way. The amendment makes the suite stricter on the point at issue — it keeps a fixture the alternative would have deleted — and it was decided before the corrected test exists.
+  - **Option B rejected explicitly.** Dropping `uneven-blockquote-space` would have kept AC9 literally true by deleting the only document that exercises the shape the test gets wrong, leaving the test stale and the staleness invisible. That is the "green suite bought with the evidence" move, and the asker had already named it as such.
+  - **Option C rejected.** A bug item against the test would leave this item red and could not be worked until this item merged, since it edits the same file. The test is not wrong about behaviour WI-0001 shipped; it is stale about a rule this item changed.
+  - **No code was touched.** The correction is specified as plan step 7 and is `implement`'s to make on resuming. Fixing behaviour inside an answer would give the fix no plan, no criterion and no verification.
+  - **Two further stale sentences in `plan.md` corrected while propagating**, both made false by the same change: step 3's "no test code changes for these" (the `ALIGNED` and `UNTOUCHED` maps are hand-written and `implement` had to register the new fixtures in them) and step 5's "the only pre-existing test whose assertions change".
+- **Questions raised:** none — nothing here met any of the four conditions in `spec/question.md` §4. The record was not silent, no ADR is contradicted, and the change is reversible in one file.
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` on `main` → 0, `Ran 65 tests`; this is the count AC9's amended clause states
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → 0
+- **Gates:**
+  - `answer-is-propagated` → **pass** (three files named in `## Consequences`, each opened and confirmed: `item.md` AC9 now reads "exactly two of its 65 tests" with `test_ac11_…` as entry 2 and "all other 63"; `plan.md` carries a new step 7, the gates step renumbered to 8, the two corrected sentences and an `## Amended after Q-002` section; `Q-002.md` carries the answer and the basis)
+  - `answered-from-the-record` → **pass** (cited: WI-0003 AC1; ADR-0008 rule 2; WI-0002/Q-003 and WI-0001/Q-005 as the precedent for amending a checking clause. The record was not silent, so no ADR was written)
+  - `escalation-is-justified` → **skipped** (nothing was escalated; no question was re-addressed to the human this execution)
+  - `workspace-valid` → **pass** (`validate-workspace` reported 0 errors, 0 warnings as part of this transition)
+  - `item-resumed-correctly` → **pass** (the suspending row of 2026-08-28T21:34:47Z records `resume-to: in-progress`, and this transition targets `in-progress`)
+  - `a-deferral-is-not-an-answer` → **skipped** (no reply deferred; Q-002 is architect-addressed and was answered outright)
+- **Artifacts:**
+  - `tracker/items/WI-0003/questions/Q-002.md` — answered, `answered-by: answer-questions`, with `## Answer` and `## Consequences` filled
+  - `tracker/items/WI-0003/item.md` — AC9's checking clause amended, as described above
+  - `tracker/items/WI-0003/artifacts/plan.md` — new step 7, gates renumbered to step 8, steps 3 and 5 corrected, `## Amended after Q-002` added
+  - no ADR created, no document version bumped — nothing under `docs/` changed
+- **Status:** `awaiting-answer` → `in-progress`
+- **Result:** Q-002 answered from the record with option A: the failing test compares a raw line's fields rather than its cells, which was exact only under the rule this item reverses, so the test is corrected and AC9's "exactly one test changes" clause is corrected with it. The correction is written as plan step 7 for `implement` to make; no code and no ADR changed. WI-0003 returns to `in-progress` with no question open.
+
+## 2026-08-28T21:41:40Z — implement v0.2.2 — developer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-progress`; dispatched by `next` step 5 after `answer-questions` resumed the item at its recorded `resume-to`
+- **Inputs read:**
+  - `tracker/items/WI-0003/artifacts/plan.md` — re-read from disk, because `answer-questions` amended it: the new step 7 and the renumbered gates step 8 are what this execution worked
+  - `tracker/items/WI-0003/item.md` — AC9's amended checking clause, which now names two tests
+  - `tracker/items/WI-0003/questions/Q-002.md` — read to confirm the answer had reached the artifacts, not to act on; the artifacts are what was executed
+  - `tracker/items/WI-0003/history.md` — the `awaiting-answer → in-progress` row of 2026-08-28T21:38:53Z
+  - `tests/test_fixtures.py` at `f91304a` — `pipe_columns`, which is the precedent step 7 cites for restating a rule locally
+  - `git log main..wi/WI-0003` — four commits already on the branch, working tree clean; steps 1–6 done, step 7 outstanding
+- **Decisions:**
+  - **Reconciled rather than restarted.** The branch carried `a502bc8` (steps 1 and 4) and `f32d681` (steps 2, 3, 5, 6) from the suspended execution, plus two tracker commits. Nothing was redone. Only step 7, which did not exist when that execution stopped, was outstanding.
+  - **`without_indent` restates the prefix rule locally rather than importing `strip_prefix`**, as plan step 7 requires and for the reason it gives: this file's expected values are hand-written so that no test asks the code under test where something is, and `pipe_columns` in the same file already restates the escaping rule for that reason.
+  - **The corrected test was checked for having become a tautology, which the plan did not ask for.** A superset strip could in principle hide a real change. Mutating `_render_cell` to drop the last character of every cell makes `test_ac11_…` fail on 24 fixtures; the mutation was reverted and the suite re-run green. Recorded in the implementation report so that `verify` does not have to re-derive it.
+  - **Nothing else stale was corrected.** `tests/test_units.py`'s module docstring and `tests/test_fixtures.py`'s `align-unrecognised` comment still name ADR-0003; both sentences remain true, since ADR-0008 reproduces rules 1, 3 and 4 unchanged. Correcting citations this item's change did not falsify would be tidying.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` at `f74d201` → 0, `Ran 71 tests`, `OK`
+  - `python3 -W error -m compileall -q mdtab tests` → 0
+  - `.claude/agile-skills/scripts/validate-workspace .` → 0 errors, 0 warnings
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → 0, all 5 commits name WI-0003
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → 0 errors, 0 warnings
+  - `git diff --name-status main..wi/WI-0003 -- tests/fixtures/` → 14 files, every one status `A`; no shipped `.out` modified
+  - `git diff main..wi/WI-0003 -- tests/` → changed assertions in `test_ac10_…` and `test_ac11_…` and in no other pre-existing test
+  - seven `python3 -m mdtab < tests/fixtures/<new>.in.md` runs with stderr captured → `exit=0 stderr=<empty>`, seven for seven
+  - six double runs with `diff` on the laid-out inputs → six fixed points, no diff
+  - the temporary `_render_cell` mutation, `python3 -m unittest tests.test_fixtures.ContentPreservationTest.test_ac11_…` → `FAILED (failures=24)`; mutation reverted, `git status` clean of it
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` at branch head `f74d201` exits 0, `Ran 71 tests`, `OK`)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests` exits 0 at `f74d201`)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings, confirmed again by this transition)
+  - `every-criterion-has-a-test` → **pass** (all ten criteria: AC1 `SharedPrefixTest`; AC2 `refeed-bare-first-column` and `test_ac10_…`; AC3 `refeed-blockquote-first-column` and `refeed-list-indent-first-column`; AC4 `test_ac6_running_the_tool_on_its_own_output_changes_nothing` over 40 pairs plus six explicit double runs; AC5 `uneven-leading-spaces`, `uneven-delimiter-deepest`, `uneven-blockquote-space`, all three of AC5's documents; AC6 `quote-depth`, `tab-prefix` and two `SharedPrefixTest` assertions; AC7 `ragged-prefix` and the relocated assertion in `test_rule_4_…`; AC8 the `git diff --name-status` above; AC9 the suite plus the `git diff` over `tests/`; AC10 seven captured stderr runs and `ProcessTest`. Each row of `impl-report.md` names the function or the command and its output)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs WI-0003 wi/WI-0003` exits 0)
+  - `no-unplanned-scope` → **pass** (advisory; every hunk traces to a plan step — 1/4 in `a502bc8`, 2/3/5/6 in `f32d681`, 7 in `f74d201` — with the three deviations named in the report)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exits 0)
+- **Artifacts:**
+  - `tests/test_fixtures.py` — `without_indent` added and used by `test_ac11_…`; commit `f74d201`
+  - `tracker/items/WI-0003/artifacts/impl-report.md` — rewritten from the partial version, with all ten criteria evidenced, the three deviations and the seven gate results
+  - branch `wi/WI-0003`, commits `a502bc8`, `f32d681`, `e56debb`, `f91304a`, `f74d201` (range `main..wi/WI-0003`)
+- **Status:** `in-progress` → `verifying`
+- **Result:** WI-0003 is built and every gate passes on the branch head. `shared_prefix` in `mdtab/scan.py` and a two-line rule 2 in `mdtab/table.py` are the whole behaviour change: mdtab now recognises the bare right-aligned tables WI-0002 taught it to emit, and tidies a run whose rows differ only in leading spaces, at the shared prefix — the price the stakeholder accepted. Tabs and `>` are still compared byte for byte, all 33 shipped fixture documents are byte-identical, and the two pre-existing tests AC9 names are the only ones whose assertions changed. Moving to `verifying`.
+
+## 2026-08-28T21:57:04Z — verify v0.1.4 — qa-engineer
+
+- **Item:** WI-0003
+- **Trigger:** status `verifying` — `implement` reported itself complete at 2026-08-28T21:41:40Z; dispatched by `next`, the only runnable candidate (WI-0001 and WI-0002 are `done`, EP-001 is `open` with a null owner and `engagement-state EP-001` reports `active, still in flight: WI-0003`).
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the ten acceptance criteria, read first and in full, before anything else
+  - `tracker/items/WI-0003/history.md` — nine rows, including the two suspensions
+  - `tracker/items/WI-0003/artifacts/plan.md` — eight steps, the AC mapping, the assumptions and the four risks
+  - `tracker/items/WI-0003/questions/Q-002.md` — read to establish the provenance of AC9's amendment
+  - `tracker/items/WI-0003/artifacts/impl-report.md` — read **last**, after every verdict was reached
+  - `tracker/project.yaml` — `commands.test`, `commands.lint`
+  - `tracker/items/WI-0001/artifacts/plan.md` — to confirm the recorded invocation is `python3 -m mdtab` from the checkout root
+  - the code on branch `wi/WI-0003` at head `0129b1d`: `mdtab/scan.py`, `mdtab/table.py`, `mdtab/__main__.py`, `tests/test_units.py`, `tests/test_fixtures.py`, all 40 fixture pairs
+  - `docs/architecture/adr/ADR-0003-*.md` and `ADR-0008-*.md`, `docs/architecture/overview.md`
+  - `.claude/agile-skills/spec/dor-dod.md` — to classify the documentation finding correctly
+- **Decisions:**
+  - **Verdict pass, no send-back and no bug item.** All ten criteria are met, each by a command run here. No criterion of this item failed, so there is nothing to send back; no behaviour delivered by another item is defective, so there is nothing to file.
+  - **The documentation finding is `review-close`'s, not a bug item.** `docs/architecture/overview.md` cites the now-superseded ADR-0003 as the authority for the four recognition rules at lines 30 and 41 while citing ADR-0008 correctly at 74, 76, 104 and 118; `tests/test_units.py:5` says "each rejection rule of ADR-0003" while `RejectionTest`'s docstring in the same file was changed to ADR-0008 by this item. Classified against the skill's own test: no WI-0003 criterion mentions `docs/`, so it is not a send-back; and the citations were true when WI-0001 wrote them and were made stale by ADR-0008, which `plan` wrote for **this** item, so `found-in` names no other item and a bug would assert a provenance that is not answerable. It is documentation currency at the point of closing, which is DoD **D7** and **D12** — gates `review-close` has not run yet. Recorded prominently in `verify-report.md` `## Defects found` instead.
+  - **AC9 judged `pass`, not `ambiguous`.** Its prose says "exactly two of its 65 tests change; all other 63 pass unmodified" and then accounts for **four** pre-existing tests, spending two of them in a closing paragraph that declares a relocation not to be a change. The number 63 is therefore a slip — literally 61 are unmodified — but the criterion **names** every test whose source changes and says what must happen to each, and each one does; the relocated assertion is character-for-character identical in its new home and both tests pass. Both readings agree on the code, so the criterion is decidable and no question was filed. The slip is recorded in `verify-report.md` `## A note on AC9's arithmetic`, with the observation that this is the fourth criterion in this project to count artefacts and need reconciling after the fact.
+  - **AC9's provenance was checked rather than assumed**, because a criterion amended during implementation to fit what was built is the failure this pipeline guards hardest against. It is not that: `plan` specified the relocation in step 6 on `main` at `2884f53`, before implementation; `answer-questions` — one of the two skills permitted to touch a criterion — rewrote the paragraph at `f91304a`; and `Q-002`'s `## Consequences` declares that rewrite in terms. `f91304a`'s commit subject mentions only the count change and so undersells the commit, but the artifact does not.
+  - **The plan's third risk was discharged by measurement, not by trust.** It says a document class that changes and is not one of AC5's three shapes is a question for the architect. 25 000 three-line documents were run under `main` and under the branch: 588 differ, every one of them was copied through by `main` and is laid out by the branch, and every one has line prefixes differing only in spaces. Nothing `main` laid out changed, and nothing moved from laid-out to copied-through. So there is no such class and no question.
+  - **Verified-commit is `0129b1d`, not the `f74d201` the implementation report names.** `git diff f74d201..0129b1d -- mdtab tests` is empty, so D10 holds against the branch head rather than against an earlier state; the report says why.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0 (`checked 4 item(s), 10 document(s)`, `0 errors, 0 warnings`)
+  - `python3 -m unittest discover -s tests -t .` → 0 (`Ran 71 tests in 0.087s`, `OK`)
+  - `python3 -W error -m compileall -q mdtab tests` → 0 (no output)
+  - `python3 -m unittest tests.test_fixtures` → 0 (`Ran 19 tests`, `OK`)
+  - `git worktree add /tmp/mdtab-main main` → 0; `python3 -m unittest discover -s tests -t .` there → 0 (`Ran 65 tests`, `OK`); `git worktree remove --force` → 0
+  - AC2: `printf 'a | b\n---:|---\nxxxx | y\n' | python3 -m mdtab` → 0, and the criterion's second command → 0; both `diff`-clean against the criterion's bytes, `cat -A` confirming `xxxx | y    $`
+  - AC3: the two-step transcript on the `>` document and on the two-space document → 0 each; step 1 reproduces AC3's stated bytes exactly, step 2 re-aligns
+  - AC5: the three documents AC5 names → 0 each, all three `diff`-clean against the criterion's bytes
+  - AC6: `printf '\ta | b\n  ---|---\n\tc | d\n' | python3 -m mdtab` and the quote-depth document → 0; `diff` input vs output empty for both
+  - AC1: five clause-by-clause probes (LCP over prefixes not raw lines; a `>` against a plain indent; prefix reproduction; spaces past it becoming first-cell padding; run extent fixed before comparison, on a 3-line and a 4-line document) → 0 each, each distinguishing the clause from its alternatives
+  - AC7: `ragged-prefix.in.md` and a left-margin variant → unchanged; `outer-pipes`, `blockquote-table`, `list-indent-table`, `mixed-pipes` `cmp`-ed against their recorded `.out` → identical
+  - AC8: `git diff main..HEAD --name-status -- tests/fixtures/` → 14 files, every one `A`; all 33 shipped inputs run under `main` and the branch → 0 differ
+  - AC4/AC10: 53 documents through `python3 -m mdtab` twice each with stderr captured → 0 non-idempotent, 0 non-zero exits, 0 bytes on stderr
+  - the differential sweep: 25 000 documents through `mdtab.filter.format_document` under both trees → `588 of 25000 differ`, all of one class; `0` not idempotent across all 25 000 branch outputs; `0` of the 20 all-outer-pipe documents changed
+  - sensitivity 1 — rule 2 reverted to `main`'s → `FAILED (failures=15)`; sensitivity 2 — the space-only guard removed → `FAILED (failures=2)`; sensitivity 3 — `_render_cell` dropping a character → `FAILED (failures=79)`; sensitivity 4 — the shared prefix not emitted → `FAILED (failures=8)`; source restored after each, `git status --porcelain` empty (checked twice)
+  - `git diff main..HEAD -- tests/test_units.py tests/test_fixtures.py` and `-- mdtab/` → read in full; nothing in either unaccounted for by a plan step
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .`, `Ran 71 tests`, `OK`, exit 0, on branch head `0129b1d`)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests`, exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace .`, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (every row of `verify-report.md` `## Criteria` names a command run by this skill with its actual output; no row cites `impl-report.md`, which was read last)
+  - `negative-cases-exercised` → **pass** (eleven refusal, boundary and error-path cases triggered and recorded, including both AC6 documents, both outer-pipe refusals, the run-extent case, the empty run and the stderr/exit check on every refused document)
+  - `tests-would-fail-without-the-change` → **pass**, advisory (four mutations, each with the failure count it produced; recorded with the one negative result — no *fixture* isolates rule 2, because the mutated build refuses those documents by rule 1 instead, which is why `SharedPrefixTest` exists)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/verify-report.md` — created
+  - `tracker/items/WI-0003/item.md` — all ten criteria ticked, none without a command run here
+  - no bug item filed
+  - a tracker commit carrying this record
+- **Status:** `verifying` → `in-review`
+- **Result:** WI-0003 passes verification on branch head `0129b1d`: all ten criteria demonstrated by commands run here, six gates pass, and a 25 000-document differential against `main` shows the only behaviour change is exactly AC5's class — runs whose line prefixes differ only in spaces, previously copied through, now laid out at the shared prefix. One finding goes forward to `review-close`: `docs/architecture/overview.md` still cites the superseded ADR-0003 for the current recognition rules in two places, which is DoD D7 and D12 rather than a defect in this item.
+
+## 2026-08-28T22:02:29Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-review` — `verify` passed all ten criteria at 2026-08-28T21:57:04Z; dispatched by `next` as the only runnable candidate (WI-0001, WI-0002 `done`; EP-001 `open`, owner null, `engagement-state` reports `active, still in flight: WI-0003`).
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md`, `history.md` (ten rows), `journal.md` (all ten entries, in full)
+  - `tracker/items/WI-0003/questions/Q-001.md` and `Q-002.md`, including both `## Consequences`, with every file they name opened
+  - `artifacts/plan.md`, `artifacts/impl-report.md`, `artifacts/verify-report.md`
+  - **the diff `main..fb43b93`**, hunk by hunk: `git diff main..HEAD -- mdtab/`, `-- tests/test_units.py tests/test_fixtures.py`, `--name-status -- tests/fixtures/`
+  - `docs/architecture/adr/ADR-0003-…` (header, status, banner) and `ADR-0008-…` (context, options, rule 2)
+  - `docs/architecture/overview.md` and `docs/product/vision.md`, both in full, for D7 and the D12 audit
+  - `.claude/agile-skills/spec/dor-dod.md` §3
+- **Decisions:**
+  - **Rejected, to `in-progress`.** Two hard Definition-of-Done criteria fail — **D7** (documents the change invalidated have been updated, with a version bump and a change-log row) and **D12** (every claim in `docs/` about the behaviour this item touched is still true). Merging would publish an architecture overview and a product vision that describe, in the present tense, the fault this item fixes.
+  - **F1 — `docs/architecture/overview.md` lines 91–112.** The section "A property the tool lost and is getting back" was written by `plan` for a state where the design was recorded and the code was not, and says so: *"the code lands with [src: WI-0003], and until it does, the paragraph above still describes what the tool does."* The code has landed, so the sentence and the paragraph it protects become false on merge, as do line 111's "left alone today" and the title's "is getting back". Not hidden — the file's own change-log row 4 records "*and that the code has not landed yet*"; what nobody did was schedule the edit, and the plan's eight steps contain no step for the overview. That is where this went missing.
+  - **F2 — `overview.md` lines 30 and 41 still attribute the current recognition rules to ADR-0003**, which carries `status: superseded` and a "Read ADR-0008 instead" banner, while the same document cites ADR-0008 correctly at 74, 76, 104 and 118. Raised by `verify` in its `## Defects found` and routed here rather than filed as a bug, which was the right call.
+  - **F3 — `docs/product/vision.md` lines 37–40 and 88–96.** It still lists "*or about how far they are indented*" among the disagreements that make a table one mdtab leaves alone — falsified by running the merged tool on AC5's own document — and its "Open at the time of writing" section still records `Q-001` as a question that may need asking, when it was asked and answered by the stakeholder at 2026-08-28T21:13:13Z in the opposite direction. `vision.md` is `updated-for: WI-0002`; this is the first item whose behaviour change reaches the vision without the vision being touched.
+  - **F4 — `tests/test_units.py:5`** says "each rejection rule of ADR-0003" while `RejectionTest`'s docstring in the same file was changed by this item to ADR-0008. `impl-report.md` declares it deliberately left, on the ground that rules 1, 3 and 4 are unchanged; that holds for `test_fixtures.py:58` and not for a sentence about *each* rule. Minor — it would not have justified a send-back on its own, and it is listed so the fix is done once.
+  - **The code is accepted as it stands and must not change.** Every hunk maps to a plan step or a criterion (the map is in `review.md`), nothing contradicts an ADR, rule 2 as implemented was compared line by line against ADR-0008's text, and the merge result is clean and green. F1–F4 touch no file under `mdtab/`. The send-back says so explicitly so that `implement` does not go looking for a code defect that is not there.
+  - **`impl-report.md`'s "I did not repair anything else the change made stale" is the one declared omission not accepted**, and it is the substance of F2 and F4. The other seven declared gaps across both reports were judged acceptable and are written into `review.md` `## Accepted gaps` for transfer into `item.md` `## Notes` at close.
+  - **The `claims-are-sourced` gate is structurally vacuous for this item, and that is recorded rather than reported as a pass.** `lint-claims --changed-since main` reports `checked no documents changed since main`, because `plan` committed ADR-0008 and the overview edits **on the trunk** at `2884f53` before the branch was cut, so the branch changes no document. The D12 audit therefore had to be done by hand — eleven claims, each decided by opening what it cites.
+  - **Trial merge done detached, per F-055.** `git worktree add --detach`, merge, test, remove; `git rev-parse main` is `2884f53f` before and after. The trial was discarded and nothing was published.
+- **Questions raised:** none — nothing here is ambiguous or contradicts a recorded decision; it is a documentation gap with an obvious owner and an obvious fix.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0 (`4 item(s), 10 document(s)`, 0 errors, 0 warnings)
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness WI-0003 wi/WI-0003` → 0 ("verified at `0129b1d2`; … only the record changed (5 file(s) under `tracker/` or `docs/`)")
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → 0 (`all 7 commit(s) on main..wi/WI-0003 name WI-0003`)
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → 0 (`checked no documents changed since main` — see the decision above)
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff WI-0003` → 0 ("WI-0003 is a 'work-item', not an epic … PASS")
+  - `git rev-parse main` → `2884f53f…` (before the trial)
+  - `git worktree add --detach /tmp/mdtab-trial main` → 0; `git -C /tmp/mdtab-trial merge --no-ff wi/WI-0003` → 0, no conflict; `git -C /tmp/mdtab-trial rev-parse HEAD` → `3ea3147c…`
+  - `python3 -m unittest discover -s tests -t .` in the trial → 0 (`Ran 71 tests in 0.090s`, `OK`)
+  - `python3 -W error -m compileall -q /tmp/mdtab-trial/mdtab /tmp/mdtab-trial/tests` → 0
+  - `git worktree remove --force /tmp/mdtab-trial` → 0; `git rev-parse main` → `2884f53f…`, unmoved
+  - `git diff main..HEAD -- mdtab/`, `-- tests/test_units.py tests/test_fixtures.py`, `--name-status -- tests/fixtures/` → read in full; every hunk mapped
+  - `printf '  a | b\n---|---\n  ccc | d\n' | python3 -m mdtab` → 0, output `a   | b` / `----|--` / `ccc | d` — the command that falsifies `vision.md:37-40` and `overview.md:111`
+  - `grep -c '^- \[ \]' tracker/items/WI-0003/item.md` → 0
+- **Gates:**
+  - `definition-of-done` → **fail** (D1–D6, D8, D10, D11 pass; **D7 fails** and **D12 fails**, each with its evidence in `review.md` `## Definition of Done`; D9 not reached, the item being rejected before the merge step)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; the two commits since verification touch only `tracker/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 7)
+  - `tests-pass-on-the-merge-result` → **pass** (`Ran 71 tests`, `OK`, exit 0 on the merge result `3ea3147`, with lint clean; run even though the item is rejected, so that `implement` knows the remaining work is documentation only)
+  - `workspace-valid` → **pass** (`validate-workspace` 0 errors, 0 warnings)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone: *what was built and why* — one function in `mdtab/scan.py` and a two-line rule 2, because WI-0002's layout made mdtab refuse its own output (`item.md` `## Notes`, ADR-0008 `## Context`); *which skill decided what* — `refine` the ten criteria over two rounds, `plan` ADR-0008 and the eight steps, `answer-questions` the AC9 amendment, `implement` the code, `verify` the verdicts; *what questions arose and how they resolved* — `Q-001` to the stakeholder, option A, and `Q-002` to the architect, route 1, both with `## Consequences` naming files that show the change; *what verification found* — ten passes, six gates, a 25 000-document differential and one documentation finding
+  - `claims-are-sourced` → **pass**, but **vacuous** (`lint-claims --changed-since main` had no changed document to check, for the reason in the decisions above; the D12 audit was done by hand instead)
+  - `epic-sign-off` → **not applicable** (`check-epic-signoff WI-0003` → "not an epic … PASS"; EP-001 is not being ended by this execution and `engagement-state EP-001` reports `active, still in flight: WI-0003`)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/review.md` — created: what was examined, the eleven-claim D12 audit, the twelve-row Definition of Done, four findings, seven accepted gaps, and the three-item list that clears the send-back
+  - no merge commit — the branch is deliberately left unmerged
+  - no bug item filed: the findings are this item's own Definition of Done, not another item's delivered behaviour
+  - a tracker commit carrying this record
+- **Status:** `in-review` → `in-progress`
+- **Result:** WI-0003 is rejected to `in-progress` on documentation, not on code. The change is correct, maps hunk-for-hunk to the plan, contradicts no ADR, and merges clean and green — but `docs/architecture/overview.md` and `docs/product/vision.md` still describe, in the present tense, the tool as it was before this change, and `overview.md` says so about itself. Three edits clear it, all in documents, none in `mdtab/`.
+
+## 2026-08-28T22:06:25Z — implement v0.2.2 — developer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-progress` — `review-close` rejected the item at 2026-08-28T22:02:29Z on D7 and D12; dispatched by `next` as the only runnable candidate. The item was already at `in-progress` when this execution began, so there was no opening transition to make and this is the execution's only journal entry.
+- **Inputs read:**
+  - `tracker/items/WI-0003/history.md` — last row is the send-back from `in-review`, so per SKILL.md step 1 the review was read before anything else
+  - `tracker/items/WI-0003/artifacts/review.md` — `## Verdict`'s three-item list is the authority for this execution; also its `## Findings` F1–F4 and the eleven-claim D12 audit
+  - `tracker/items/WI-0003/item.md` (the ten criteria, all ticked), `artifacts/plan.md` (eight steps — none of them about `docs/`), `artifacts/impl-report.md`, `artifacts/verify-report.md`
+  - `tracker/items/WI-0003/questions/Q-001.md` — read to copy the stakeholder's words verbatim rather than paraphrase them, and to confirm the answer date the vision now records
+  - `docs/architecture/overview.md` and `docs/product/vision.md`, both in full; `docs/architecture/adr/ADR-0003-…` and `ADR-0008-…`
+  - `.claude/agile-skills/spec/doc-header.md` §2 (the header fields) and §4/§4a (why a superseded record is not edited, and what a citation must do)
+  - `tracker/project.yaml`; `mdtab/scan.py` and `mdtab/table.py`, re-read to check each new sentence against the code rather than against the ADR that describes it
+- **Decisions:**
+  - **Five changes, each traced to one of the review's four findings, and nothing else.** F1 → `overview.md`'s lost-property section rewritten for a landed change; F2 → its two ADR-0003 citations moved to ADR-0008; F3 → `vision.md`'s recognition sentence qualified, a paragraph added on where the line now falls, its "Open at the time of writing" section rewritten, and its line-44 citation moved; F4 → `tests/test_units.py`'s module docstring. Both documents bumped to `version: 5` with a change-log row, which is the half of D7 that was actually missing.
+  - **The new sentences were checked against the code, not against ADR-0008.** D12's failure mode is a claim that propagates because each writer re-quotes the previous one, so every assertion added here was read off `mdtab/scan.py:shared_prefix` and `mdtab/table.py:lay_out` and, for the two behavioural ones, run: the merged tool lays out `  a | b` / `---|---` / `  ccc | d` and leaves `\ta | b` / `  ---|---` / `\tc | d` alone.
+  - **The stakeholder is quoted, not paraphrased.** `vision.md`'s new paragraph carries their own distinction — *"a table with two spaces on one row and none on the next isn't tangled … Tabs and the quote marks having to match exactly sounds right to me"* — copied from `Q-001.md` `## Answer` and compared word for word, because a vision that paraphrases the person it speaks for is how a decision quietly becomes the tool's opinion instead of theirs.
+  - **`overview.md`'s section gained a sentence it never had:** that a run differing by a tab or a `>` is still refused. The old text stated the relaxation and its cost and never stated its limit, so a reader would have taken the relaxation as general. That is within the send-back — F1 asks for the section to describe the merged tool — and not scope creep.
+  - **Historical change-log rows citing ADR-0003 were left alone.** `vision.md` row 3 records what `answer-questions` concluded in WI-0001, when ADR-0003 was current. Rewriting it would falsify a record of what was believed then, which is the same rule that made ADR-0003 superseded rather than edited (`spec/doc-header.md` §4).
+  - **`plan.md` was not amended**, though the missing documentation step is the root of this send-back. The plan is not this skill's artifact and nothing here needed a decision — the review named the files, the lines and the required content. The `no-unplanned-scope` gate is therefore recorded against `review.md`'s finding list rather than against a plan step, which is what SKILL.md step 1 makes authoritative for a resumed run.
+  - **Nothing under `mdtab/` was touched**, as the review directed. `git diff 5672ac2..HEAD -- mdtab/` is empty.
+- **Questions raised:** none — the review named the files, the lines and what each had to say; there was no decision left to escalate.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0 (`4 item(s), 10 document(s)`, 0 errors, 0 warnings)
+  - `python3 -m unittest discover -s tests -t .` → 0 (`Ran 71 tests in 0.087s`, `OK`) — run on the branch head `2c39bc4`, after the last change
+  - `python3 -W error -m compileall -q mdtab tests` → 0
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → 0 (`all 9 commit(s) on main..wi/WI-0003 name WI-0003`)
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → 0 (`checked 2 document(s) changed since main`, 0 errors, 0 warnings — the first execution of this gate on this item that had anything to check)
+  - `printf '  a | b\n---|---\n  ccc | d\n' | python3 -m mdtab` → 0, `a   | b` / `----|--` / `ccc | d` — the check behind `vision.md`'s new paragraph
+  - `printf '\ta | b\n  ---|---\n\tc | d\n' | python3 -m mdtab` → 0, output identical to input — the check behind its tab-and-`>` sentence
+  - `git diff 5672ac2..HEAD --stat -- mdtab/` → empty
+  - `git commit` → `2c39bc4 docs: say what the tool does now that the code has landed (refs WI-0003)`
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 71 tests`, `OK`, exit 0 on `2c39bc4`)
+  - `lint-clean` → **pass** (`compileall -W error` exit 0 on `2c39bc4`)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass** — all ten rows of `impl-report.md` `## Acceptance criteria evidence` still name a test function or an exact command with its output; this execution moved no file any of them depends on. The one file it touched that a criterion names is `tests/test_units.py`, where the diff is five lines and all of them are inside the module docstring
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 9)
+  - `no-unplanned-scope` → **pass**, advisory — five changes, each traced in `impl-report.md` to one of `review.md`'s four findings, and nothing else in the diff. Traced to the review rather than to a plan step, for the reason in the decisions above
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, 0 errors). Worth recording: on the previous execution this gate reported `checked no documents changed since main` and passed **vacuously**, because `plan` committed ADR-0008 and the overview edits on the trunk before the branch was cut. The documents this item invalidated were therefore invisible to the one automated gate that looks at documents, which is why `review-close` had to find them by hand
+- **Artifacts:**
+  - `docs/architecture/overview.md` — `version: 5`, the lost-property section rewritten, two citations moved, change-log row
+  - `docs/product/vision.md` — `version: 5`, the recognition sentence qualified, a paragraph added, "Open at the time of writing" rewritten, one citation moved, change-log row
+  - `tests/test_units.py` — module docstring cites ADR-0008
+  - `tracker/items/WI-0003/artifacts/impl-report.md` — a `## Second execution — the D7/D12 send-back` section, and a header saying which commit each half of the report was gated on
+  - branch `wi/WI-0003`, commits `main..2c39bc4` (9), this execution's being `2c39bc4`
+- **Status:** `in-progress` → `verifying`
+- **Result:** the send-back is cleared. `docs/architecture/overview.md` and `docs/product/vision.md` now describe the tool as it is with WI-0003 merged, each with a version bump and a change-log row, and four citations move off the superseded ADR-0003 — three in the documents and one in a test module docstring that contradicted its own class docstring. No behaviour changed: `mdtab/` is untouched and the suite is the same 71 tests, so the code verification at `0129b1d` should still stand.
+
+**One thing for the toolkit, not for this item.** The plan template has no step for updating the documents a change invalidates, and this item shows the cost: `plan` wrote `overview.md` in a state that was honest when written and false the moment the code landed — its own change-log row says "*and that the code has not landed yet*" — and nothing in the pipeline scheduled the follow-up. `lint-claims` could not catch it either, because a document changed on the trunk before the branch is cut is not "changed since trunk". D12 caught it, by a human-style read at the last gate, one step before it would have shipped.
+
+## 2026-08-28T22:15:15Z — verify v0.1.4 — qa-engineer
+
+- **Item:** WI-0003
+- **Trigger:** status `verifying` — `implement` returned the item here at 2026-08-28T22:06:25Z after clearing `review-close`'s D7/D12 send-back in documents only; dispatched by `next`, which found no request, no open question and this as the sole runnable candidate.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the ten acceptance criteria, read **first** and in full, before any other artifact
+  - `tracker/items/WI-0003/history.md` — twelve rows, read as a chain; the last three are the first verification, the rejection and the documents-only fix
+  - `tracker/items/WI-0003/artifacts/plan.md` — the eight steps, the AC mapping table, the decision-routing table
+  - `tracker/items/WI-0003/artifacts/review.md` — the previous cycle's rejection, for what the resumed `implement` was authorised to change
+  - `tracker/items/WI-0003/artifacts/impl-report.md` — read **last**, after the criteria table in `verify-report.md` was complete, so that no verdict could be anchored to it
+  - `tracker/items/WI-0001/item.md` — AC7, AC11, AC15, which AC1 and AC9 are stated in terms of
+  - `tracker/project.yaml` — `commands.test`, `commands.lint`
+  - `mdtab/scan.py`, `mdtab/table.py`, `tests/test_units.py`, `tests/test_fixtures.py` on branch `wi/WI-0003` at `63e072d375f0edd178c5b6af8049b6f5d4b2031d`, and the same files at `main` = `2884f53f` in a detached worktree
+  - `docs/architecture/adr/ADR-0008-…` — only to confirm it restates four recognition rules, which the changed test docstring now claims
+- **Decisions:**
+  - **This is a second verification and it repeats the work rather than inheriting it.** Between the two verified commits the code changed by two bytes — `tests/test_units.py`'s module docstring, `ADR-0003` → `ADR-0008`. A cheap re-run citing the first report was available and was rejected: the first report is a claim, and the whole standing of this skill is that it does not confirm claims. Every one of the ten criteria was decided again by a command run at `63e072d`, and the differential corpus was regenerated with a different seed so the two runs are independent measurements rather than one repeated.
+  - **AC1 is a definition, so it was decomposed before it was tested.** Its five assertions — longest common prefix *of the prefixes*; space-only remainder; the spaces past it belong to the first cell; any other difference refuses the run; extent fixed before prefixes are compared — each got a document chosen to separate it from the obvious wrong implementation. The width probe (`    a | b` / `---|---` / `  cc | d` → column 1 two wide, not five) is what distinguishes "the spaces are the cell's" from "the spaces are content".
+  - **AC9's arithmetic slip: recorded, passed, no question filed.** Its checking clause says "exactly two of its 65 tests change" while its own prose accounts for four changed tests and declares two of them not to count. No question was filed because AC9 *names* every test involved, so both readings select the same code and the criterion is decidable on either; and repairing a criterion is not a verifier's move. It is the fourth criterion in EP-001 to count artefacts and need reconciling (WI-0001/Q-005, WI-0002/Q-003, WI-0003/Q-002, now this) and is flagged as a `refine` pattern in the report.
+  - **Send-back versus bug: neither, because nothing failed.** All ten pass. No behaviour delivered by WI-0001 or WI-0002 was found wrong: the 33 pre-existing fixtures are byte-identical between `main`'s build and this branch's, and 28 documents `main` lays out in the corpus are byte-identical too.
+  - **`docs/` was deliberately not judged.** Whether `overview.md` and `vision.md` now describe the merged tool is D7 and D12, `review-close`'s gates, and no acceptance criterion of this item mentions a document. A verifier ruling on them would pre-empt the gate that rejected this item last cycle. The fact that `lint-claims --changed-since main` was vacuous for the two executions that preceded the rejection is recorded in `## Not verified, and why` for whoever runs D12.
+  - **One unplanned hunk declared rather than raised.** The `tests/test_units.py` module docstring and `RejectionTest`'s class docstring trace to `review.md` finding F4, not to a plan step. `implement`'s SKILL.md makes the review's finding list authoritative for a resumed run, the new text is true, and no assertion or test name moved — so it is recorded in the report's `## Diff read against the plan`, not filed. The wording mismatch between the `no-unplanned-scope` gate and what a post-send-back run can offer is a toolkit observation, not a defect in this item.
+  - **The second mutation's result is reported as a coverage gap, not as reassurance.** Deleting `shared_prefix`'s space-only guard is caught by two unit tests and by **no fixture**, because a document built to isolate rule 2 is refused by rule 1 or rule 4 in the mutated build as well. A negative result about the tests' reach is worth more in the record than the two positive ones beside it.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 71 tests in 0.090s`, `OK`
+  - `python3 -W error -m compileall -q mdtab tests` → exit 0, no output
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, `checked 4 item(s), 10 document(s)`, `0 errors, 0 warnings`
+  - `python3 -m unittest tests.test_fixtures` → exit 0, `Ran 19 tests`, `OK` (AC8)
+  - `git worktree add --detach /tmp/mainwt main` → exit 0, `HEAD is now at 2884f53`; removed cleanly at the end, `git worktree list` shows only the checkout
+  - AC2, both transcript commands under `cat -A` → both reproduce the criterion's bytes, including the trailing spaces on `xxxx | y    `
+  - AC3, four commands (blockquote and two-space indent, each in two steps) → all four match the criterion
+  - AC5, the three documents the criterion names → all three match
+  - AC6, `diff` input against output for the tab and quote-depth documents → both `IDENTICAL`, exit 0
+  - AC1, five clause probes → all five as AC1 requires; the extent probe leaves a four-line run alone rather than splitting it
+  - AC7, five named fixtures each through `main`'s build and the branch's with `cmp` → `branch == main byte-for-byte` five times
+  - AC8, `git diff --name-status main..HEAD -- tests/fixtures/` → fourteen `A` lines, no `M`; `git status --short tests/fixtures/` empty after the suite ran
+  - the 33-pair differential loop → `pre-existing fixtures compared: 33; differing branch vs main: 0`
+  - the 56-document sweep (16 hand-built + 40 fixture inputs, two passes each, stderr and exit captured) → `non-idempotent: 0; stderr non-empty: 0; non-zero exit: 0` (AC4, AC10)
+  - test inventories by name on both builds → `main` 65, branch 71, 6 added, **0 removed**
+  - `git diff main..HEAD -- tests/test_units.py tests/test_fixtures.py` and `-- mdtab/table.py` → read hunk by hunk against the eight plan steps
+  - the 6000-document differential, both builds driven through `mdtab.filter.format_document` (seed `20260829`) → `branch differs from main: 54`, all 54 copied through by `main` and laid out by the branch; `documents main laid out: 28 | branch differs: 0`; `all-outer-barred: 2978 | branch != main: 0`; `differing documents where a tab or a > changed: 0`
+  - idempotence over the same 6000 documents → `non-idempotent: 0`
+  - mutation 1 (rule 2 reverted to ADR-0003's byte-identical prefix) → `FAILED (failures=15)`; file restored, `git status --short mdtab/` empty
+  - mutation 2 (`shared_prefix`'s space-only guard deleted) → `FAILED (failures=2)`, both in `SharedPrefixTest`, **no fixture failed**; restored
+  - mutation 3 (longest common prefix taken over the lines, not their prefixes) → `FAILED (failures=92, errors=5)`, including `test_the_shared_prefix_stops_where_the_indent_does`; restored
+  - WI-0002 spot checks (outer-barred three-marker table; `x|y` under `:---:|---:`) → left, centred and right all honoured, markers kept
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .`, exit 0, `Ran 71 tests`, `OK`)
+  - `lint-clean` → **pass** (`python3 -W error -m compileall -q mdtab tests`, exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace .`, exit 0, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (all ten rows of `verify-report.md`'s `## Criteria` cite a command run in this execution and its actual output; `impl-report.md` was opened only after that table was complete and is cited in no row)
+  - `negative-cases-exercised` → **pass** (nine cases triggered and recorded: the tab, the quote depth, a non-space difference past the shared prefix, a prefix change part-way through a longer run, the outer-barred ragged row, the deepest-indented delimiter row, the empty run, a blank line ending a run, and stderr/exit status on every document the tool declines)
+  - `tests-would-fail-without-the-change` → **pass** (advisory; three mutations, 15 / 2 / 97 failures, each file restored from a pristine copy and the working tree confirmed clean)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/verify-report.md` — rewritten for this execution, `Verified-commit: 63e072d3`
+  - `tracker/items/WI-0003/item.md` — all ten criteria remain ticked; each was re-demonstrated at `63e072d` rather than inherited, and none was ticked on the strength of the earlier run
+  - no bug item filed, no question filed
+  - a commit of the workspace files this execution wrote
+- **Status:** `verifying` → `in-review`
+- **Result:** All ten acceptance criteria pass at `63e072d`, decided by commands run here and not by the implementation report, which was read last. The behaviour change is bounded by measurement rather than by argument: of 6000 generated documents, 54 differ from `main` and every one of them was copied through by `main` and is laid out by the branch, nothing `main` laid out changed, none of the 2978 all-outer-barred documents differ (AC7), and no differing document's indentation changed by anything but spaces (AC6). Three mutations confirm the tests are sensitive, and the one negative result — that no *fixture* isolates rule 2, because the mutated build refuses those documents by rule 1 or rule 4 instead — is recorded rather than buried. The item goes to `in-review`; `docs/` is left to D7 and D12, with the note that `lint-claims --changed-since main` was structurally vacuous on the two executions before the last rejection.
+
+## 2026-08-28T22:22:16Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0003
+- **Trigger:** status `in-review` — `verify` moved the item here at 2026-08-28T22:15:15Z after its second pass; dispatched by `next` as the only runnable candidate. This is the **second** review of the item; the first rejected it on D7 and D12.
+- **Inputs read:**
+  - `tracker/items/WI-0003/item.md` — the ten criteria and their tick state
+  - `tracker/items/WI-0003/history.md` — thirteen rows, read as a chain
+  - `tracker/items/WI-0003/journal.md` — thirteen entries, read in full, including every `**Status:**` bullet checked against its history row
+  - `tracker/items/WI-0003/artifacts/plan.md`, `impl-report.md` (both executions), `verify-report.md` (the second verification), and the previous cycle's `review.md`
+  - `tracker/items/WI-0003/questions/Q-001.md` and `Q-002.md` in full, including both `## Consequences` blocks, with every file they name opened
+  - **the diff `main..f1d5f0a`**, hunk by hunk: `-- mdtab/`, `-- tests/test_units.py tests/test_fixtures.py`, `--name-status -- tests/fixtures/`, `-- docs/`
+  - the seven new fixture pairs under `cat -A`, re-derived by hand from AC2, AC3, AC5 and AC6
+  - `docs/architecture/adr/ADR-0003-…` (header, `status: superseded`, `superseded-by:` resolved) and `ADR-0008-…` (header, `## Context`, all four rules, `## Consequences`)
+  - `docs/architecture/overview.md` v5 and `docs/product/vision.md` v5, in full
+  - `tracker/items/WI-0002/item.md` AC10, opened to decide finding F1 from its source rather than from the sentence that cites it
+  - `.claude/agile-skills/spec/dor-dod.md` §3
+- **Decisions:**
+  - **Re-examined the whole item, not only the three edits that answered the rejection.** A send-back is not a licence to review a subset next time: the hunk map, the ADR reads and the Definition of Done were redone from the diff rather than carried over from `fb43b93`'s review.
+  - **D7 and D12 now pass, and each of the last review's eleven audited claims was re-decided from what it cites** rather than from the corrected sentence. Twelve claims this time. The three the last review found false — `overview.md`'s "until it does, the paragraph above still describes what the tool does", its "left alone today", and `vision.md`'s "or about how far they are indented" — were each re-tested by running the tool, not by reading the rewrite.
+  - **Finding F1 accepted rather than sent back.** `overview.md` says the padding produces "leading spaces on its header and body rows"; two documents falsify the absolute form, including one where no cell needs padding at all. Accepted because the sentence cites `WI-0002 AC10` and **AC10 is worded the same way** — I opened it rather than assuming — so the document reports its source faithfully and the imprecision is inherited from a closed item. Written into `## Notes` with both counter-examples.
+  - **Finding F2 accepted rather than sent back.** `impl-report.md`'s first-execution `## What I did not do` says ADR-0003 is still cited in `tests/test_units.py`'s module docstring; the second execution changed exactly that. The report's preamble scopes the section and its second-execution table records the change, so the signposting is present. A round trip to rewrite a superseded section of a two-execution report buys nothing the preamble does not already say.
+  - **Finding F3 is about the toolkit, not the item.** One hunk — two docstrings at `2c39bc4` — traces to the last review's finding list rather than to a plan step, because `plan.md` has no step for updating documents the change invalidates. That absence is the root of the rejection, and the `no-unplanned-scope` gate's wording ("every hunk traces to an AC or a plan step") cannot be met literally by a resumed run. Both recorded in `## Notes`.
+  - **Finding F5 flagged forward rather than acted on.** `vision.md` v5's "nothing is waiting to be asked" is true now and stops being true when the epic's sign-off question is filed. Making WI-0003 responsible for a document going stale because of a later execution is not a reading D7 or D12 supports; EP-001's close owns DE4 and DE6 and is told so in `## Notes`.
+  - **Nine accepted gaps written into `item.md` `## Notes`, not left in reports.** Including two that are findings about the pipeline rather than about mdtab: `lint-claims` was structurally vacuous on this item until the last execution, and AC9's checking clause miscounts while remaining decidable — the fourth criterion in EP-001 to count artefacts and need reconciling.
+  - **No bug item filed.** Nothing found belongs to another item's delivered behaviour: F1 is an inherited wording imprecision faithful to its source, F2 and F3 are record and toolkit observations, F5 is a future-tense staleness. None is a defect in shipped behaviour.
+  - **Merged after closing, deliberately.** `commits-reference-the-item` inspects `main..branch`, which is empty once merged, so the close is step 3 and the merge is step 4.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0003 wi/WI-0003` → exit 0, `all 11 commit(s) on main..wi/WI-0003 name WI-0003`
+  - `.claude/agile-skills/scripts/check-verify-freshness WI-0003 wi/WI-0003` → exit 0, `verified at 63e072d3; wi/WI-0003 has moved to f1d5f0ac but only the record changed (5 file(s) under tracker/ or docs/)`
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, `checked 2 document(s) changed since main`, 0 errors, 0 warnings — non-vacuous for the first time on this item
+  - `.claude/agile-skills/scripts/check-epic-signoff WI-0003` → exit 0, `WI-0003 is a 'work-item', not an epic … PASS`
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, `4 item(s), 10 document(s)`, 0 errors, 0 warnings
+  - `git rev-parse main` **before** the trial → `2884f53f8f99d53882d5d7ab3b11cb18f8c0bc29`
+  - `git worktree add --detach /tmp/trial main` → exit 0, `HEAD is now at 2884f53`
+  - `git -C /tmp/trial merge --no-ff wi/WI-0003` → exit 0; `git -C /tmp/trial rev-parse HEAD` → `336e359392187d5bf29224ac503c89e790189d85`
+  - `python3 -m unittest discover -s tests -t .` **inside the trial worktree** → exit 0, `Ran 71 tests in 0.092s`, `OK`
+  - `python3 -W error -m compileall -q mdtab tests` inside the trial worktree → exit 0
+  - `git worktree remove --force /tmp/trial`; `git rev-parse main` **after** → `2884f53f8f99d53882d5d7ab3b11cb18f8c0bc29`, unchanged (F-055)
+  - `grep -c '^- \[ \]' tracker/items/WI-0003/item.md` → `0`
+  - the seven new fixtures through `cat -A` and through `cmp` against the tool's output → all seven reproduce, and all seven match the criterion that specifies them
+  - `printf 'a | b\n---:|---\nc | d\n' | python3 -m mdtab` → `a | b` / `-:|--` / `c | d` — the counter-example behind finding F1
+  - the AC2, AC5 and AC6 documents re-run for D12 claims 4, 5, 6 and 9
+  - `grep -rn 'removeprefix\|removesuffix\|match .*:$' mdtab/` → no hits; `from __future__ import annotations` present in every `mdtab/` module carrying an annotation
+  - `git merge --no-ff wi/WI-0003` into `main` for real, after the close
+- **Gates:**
+  - `definition-of-done` → **pass** (the twelve-row table in `review.md` `## Definition of Done`; every criterion has its own result and evidence, D7 and D12 among them)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness`, exit 0; verified at `63e072d3`, only record files after it)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs`, exit 0, 11 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (`Ran 71 tests`, `OK`, exit 0, on `336e359` — the merge result, not the branch)
+  - `workspace-valid` → **pass** (`validate-workspace`, exit 0, 0 errors, 0 warnings)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone: **what was built and why** — one function `shared_prefix` and four lines of rule 2, because WI-0002's answer accepted padding at the start of a line and the stakeholder refused its consequence (`WI-0002/Q-002`, quoted in `## Notes`); **which skill decided what** — `refine` the ten criteria after `Q-001`, `plan` ADR-0008 and eight steps, `answer-questions` the `Q-002` correction and AC9's amended clause, `implement` the code and later the documents, `verify` twice, `review-close` the rejection and this close; **what questions arose and how** — `Q-001` to the stakeholder answered option A, `Q-002` to the architect answered from the record, both with `## Consequences` naming files that carry the change; **what verification found** — all ten criteria at `63e072d`, six gates, six declared gaps, no defect
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, exit 0, 2 documents checked)
+  - `epic-sign-off` → **pass** (`check-epic-signoff WI-0003`, exit 0 — not an epic; the engagement's own ending is EP-001's, and `engagement-state` is consulted on the next `next` run)
+- **Artifacts:**
+  - `tracker/items/WI-0003/artifacts/review.md` — rewritten for this cycle: what was examined, a twelve-claim D12 audit, the hunk map, five findings, nine accepted gaps, the verdict
+  - `tracker/items/WI-0003/item.md` — `outcome: delivered`, and a new `### Gaps accepted at close` section carrying all nine gaps
+  - the merge commit of `wi/WI-0003` into `main`
+  - no bug item, no question, no epic artifact touched by this execution
+- **Status:** `in-review` → `done`
+- **Result:** WI-0003 is accepted, closed as `delivered`, and merged into `main`. All twelve Definition of Done criteria pass, including the D7 and D12 that rejected it last cycle: `overview.md` and `vision.md` now describe the merged tool, each with a version bump and a change-log row, and all twelve absolute claims about the behaviour this item touched were decided by opening what they cite or by running the tool. The trial merge at `336e359` ran 71 tests green and the trunk was confirmed unmoved before and after. Five findings were recorded and none was a send-back — one inherited wording imprecision faithful to its source, one stale bullet in a superseded report section, two observations about the toolkit (`plan` has no step for updating documents a change invalidates, and `lint-claims` was structurally vacuous here), and one flagged forward for the epic's close. Nine accepted gaps are now in `item.md` rather than only in reports. WI-0003 was the last item in EP-001.

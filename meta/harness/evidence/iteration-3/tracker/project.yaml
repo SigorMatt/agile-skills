@@ -1,0 +1,17 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: mdtab
+  trunk-branch: main
+  description: "A filter that reads markdown on stdin and writes it back on stdout with its\n    tables pretty-aligned: columns padded to a common width, alignment markers honoured,\n    everything that is not a table left untouched."
+
+commands:
+  test: python3 -m unittest discover -s tests -t .
+  lint: python3 -W error -m compileall -q mdtab tests
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

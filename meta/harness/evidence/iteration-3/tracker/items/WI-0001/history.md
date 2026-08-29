@@ -1,0 +1,18 @@
+# History — WI-0001
+
+| when | from | to | actor | resume-to | reason |
+|------|------|----|-------|-----------|--------|
+| 2026-08-28T18:24:38Z | — | draft | intake | — | created from the stakeholder's stated idea for EP-001 |
+| 2026-08-28T18:39:49Z | draft | awaiting-answer | refine | draft | Q-001..Q-003 filed to human: malformed tables, tables without outer pipes, and tables indented in a blockquote or list; DoR R6, R8 and R10 unmet until they are answered |
+| 2026-08-28T18:47:22Z | awaiting-answer | draft | answer-questions | — | Q-001..Q-003 answered by the human and propagated; ADR-0003 recorded, vision v3, AC13-AC15 added and AC2/AC7/AC12 amended |
+| 2026-08-28T18:51:00Z | draft | ready | refine | — | Definition of Ready passed R1-R10 with no override; round 1's three questions answered by the stakeholder, round 2 tightened AC7-AC10 and AC15 and asked nothing |
+| 2026-08-28T18:57:30Z | ready | planned | plan | — | plan.md written with all 15 ACs mapped; ADR-0004 and ADR-0005 recorded, architecture overview v1 created, commands.test and commands.lint filled in |
+| 2026-08-28T18:59:20Z | planned | in-progress | implement | — | branch wi/WI-0001 created from main; executing plan.md's twelve steps |
+| 2026-08-28T19:10:21Z | in-progress | verifying | implement | — | all fifteen criteria implemented with tests; 54 tests over 21 hand-written fixture pairs, all seven gates green on the branch head |
+| 2026-08-28T19:16:18Z | verifying | in-review | verify | — | all fifteen criteria verified with commands run against 175101a on documents written for this verification; two findings recorded for review, neither a criterion failure |
+| 2026-08-28T19:21:09Z | in-review | in-progress | review-close | — | rejected on D12: test_ac9_undecodable_bytes_survive_the_round_trip contradicts ADR-0005 (document built from a Python literal) and the deviation was undeclared; the AC11 test is insensitive to strip(" ") becoming strip(); the overview's one-place-per-rule claim is false of has_trailing_pipe; plan.md's parameterised signatures were weakened to bare list |
+| 2026-08-28T19:29:41Z | in-progress | awaiting-answer | implement | in-progress | Q-004 blocking to architect: ADR-0005 requires the AC9 undecodable-bytes document to be a .md fixture and validate-workspace requires every .md file to decode as UTF-8; findings 2, 3 and 4 fixed and committed |
+| 2026-08-28T19:34:49Z | awaiting-answer | in-progress | answer-questions | — | Q-004 answered and propagated: ADR-0006 records that a fixture which is not valid UTF-8 carries .bin, plan.md steps 10-11 and the AC9 mapping updated, ADR-0005 bumped to v2; no acceptance criterion changed |
+| 2026-08-28T19:38:28Z | in-progress | verifying | implement | — | all four review findings closed with mutation evidence; 55 tests over 23 fixture pairs, all seven gates green on branch head 459123c; no fixture's expected output changed |
+| 2026-08-28T19:56:18Z | verifying | in-review | verify | — | second verification: all fifteen criteria re-checked against e0fd6b0 with commands run on documents written here; 22 negative and boundary cases triggered, 13 mutations confirm test sensitivity, all four review findings independently confirmed closed; Q-005 filed non-blocking to the architect for AC12's overdue wording amendment |
+| 2026-08-28T20:06:15Z | in-review | done | review-close | — | second review: all twelve Definition of Done criteria pass with per-criterion evidence; thirteen claims re-audited from the code including the two that failed D12 at the first review; trial merge clean with tests and lint green on the merge result and main confirmed unmoved; one minor finding accepted and six gaps recorded in item.md Notes |

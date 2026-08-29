@@ -1744,3 +1744,124 @@ contradiction probes are unaffected — they plant the wrongness in the stakehol
 Endings scoreboard after iteration 2: E1 (tidy, twice-signed), E3 (1e). E2 and E4 remain
 fixture-only; E4 (abandoned) still has no queue entry — decide after iteration 3.
 
+
+## F-062 — A conflict between two stakeholder statements is adjudicated by rewriting, never escalated
+- Severity: methodology gap, structural — cluster-1 for builder session three
+- Component: methodology (refine, plan, review-close), spec (question.md, dor-dod.md), scripts
+  (a check that does not exist yet)
+- Symptom: iteration 3's planted contradiction (WI-0002/Q-001 "the marker decides everything —
+  every row, every column, no exceptions" vs. the sign-off condition "a cell with a line break
+  sits top-left, plain, whatever the marker says") passed through every gate without anyone
+  putting the two answers side by side. Intake scoped the story so both could be true; refine
+  asked three sharpening questions that quote part two and never mention part one — its
+  contradiction check ran "against ADRs and internal docs; the stakeholder's own prior answers
+  were never in scope" (WI-0004/journal.md:95-96); implement and review then DID detect the
+  collision — as a false sentence in vision.md, named false, caught twice by D12 — and repaired
+  it unilaterally, writing the exception into the docs. The closing sign-off quoted the
+  overturned sentence back to the stakeholder as still-true on the same page. The sim, in
+  persona, held a scripted one-line reconciliation in reserve the whole engagement; nobody ever
+  asked for it: "They fixed it as a problem with their document, not as a question for me. I
+  would rather have been asked."
+- Diagnosis: the machinery treats stakeholder statements as document content to be made true,
+  not as requirements owned by a person. F-021/F-022 gave the human a seat at endings; nothing
+  gives them a seat in conflicts between their own recorded answers.
+- Evidence: meta/harness/evidence/iteration-3/ — WI-0004 questions Q-001..Q-003 (bodies),
+  WI-0004/journal.md (the ADR-scoped check; the D12 catches at :455 and review.md:201),
+  SIM-LOG segments (turn-4 and turn-11 withheld-reconciliation entries), EP-001/Q-006.
+- Direction: a cross-answer consistency obligation: when a new answer, criterion, or condition
+  touches a topic on which the human has a prior recorded answer, the skill must either cite
+  compatibility or file a question quoting both by ID and asking which wins — and a lint over
+  the question/criteria record that flags same-topic answers with conflicting content, so the
+  escalation is checked, not remembered. Repairing a stakeholder-sourced falsehood in docs
+  without a question to its author becomes a refused move.
+- Status: open
+
+## F-063 — Refinement questions lead with the recommendation, and it anchors
+- Severity: UX/methodology, medium (observed across two personas)
+- Component: methodology (refine), spec/question.md
+- Symptom: iteration 3, eleven questions, "every one with the preferred answer printed above
+  the options"; the stakeholder picked against the recommendation twice and noted "I would
+  rather have been asked plainly." A compliant persona would have been steered; only an
+  adversarial one surfaced it.
+- Evidence: meta/harness/evidence/iteration-3/ — SIM-LOG segment 1 (turn 5 and closing notes),
+  question bodies.
+- Direction: options first, recommendation after, clearly marked as the team's preference —
+  a presentation-order rule in question.md's convention, cheap to lint.
+- Status: open
+
+## F-064 — Refinement never makes an open-elicitation move
+- Severity: methodology gap, medium
+- Component: methodology (intake, refine)
+- Symptom: iteration 3's stakeholder, closing note: "What I never got asked about was anything
+  I would have thought to say myself" — two organic wants (max column width, trailing
+  whitespace) existed in persona all engagement and no question ever created a vehicle for
+  them. Same structural gap F-021 covered for mid-epic requests, one layer earlier: every
+  question is closed-form about the team's agenda; nothing asks "what else matters to you /
+  what haven't we asked?" at least once per item or per engagement.
+- Evidence: meta/harness/evidence/iteration-3/ — SIM-LOG segment 1 closing entry.
+- Direction: refine's contract gains one open question per item (or intake per engagement),
+  answers routed like any other; trivially checkable by presence.
+- Status: open
+
+## F-065 — "Existing criteria still hold" is verified against the test suite, not the criteria
+- Severity: correctness of the record, medium — the enabler of F-062's final pass
+- Component: methodology (refine, verify), spec/dor-dod.md
+- Symptom: WI-0004's AC5 ("every acceptance criterion of WI-0001..0003 still holds, named
+  tests pass unmodified") was satisfied by observing that no test or fixture contains a <br> —
+  the old rule and the new exception never collide in anything executable, so the criterion
+  passed while the criteria's *sentences* contradict. Real in the stakeholder's words,
+  empirically inert in the code: a coverage gap laundered a semantic conflict.
+- Evidence: meta/harness/evidence/iteration-3/ — WI-0004/item.md AC5 final text and its
+  resolution note.
+- Direction: a "still holds" criterion must be assessed against the criteria's text (do the
+  statements remain true of the new behaviour?), with the test suite as evidence for, not the
+  definition of, the answer; where the domains don't intersect in tests, that non-intersection
+  must be stated and a covering case added or waived by name.
+- Status: open
+
+## H-012 — The driver does not own its console log
+- Severity: harness, operability
+- Component: harness/run_iteration.py
+- Symptom: three demonstrated failure modes of wrapper-owned logging in one iteration: tee
+  dead at launch because the run directory didn't exist yet (the driver creates it later);
+  the rescue via capture-pane is a rendered, hard-wrapped copy; pipe-pane is clearable without
+  trace. A run's console narrative survived only by ops improvisation.
+- Evidence: ops-session reports 2026-08-28/29; meta/harness/evidence/iteration-3/ console log
+  (note its wrapped prefix).
+- Direction: the driver creates its run directory before first output and writes its own
+  console log there (or ships --console-log); wrappers stop being load-bearing.
+- Status: open
+
+## H-013 — The sim describes the job frame, not the disk
+- Severity: harness, record integrity (F-017's pathology inside the harness's own actor)
+- Component: harness/skills/simulated-human/SKILL.md
+- Symptom: on the continuation relaunch, the sim's job=open turn Glob'd a fully populated
+  workspace (board, 4 done items, an open sign-off) and then logged "no IDEA.md, no
+  tracker/board.md yet — freshly provisioned," and rewrote IDEA.md (adding a heading — a real,
+  if cosmetic, uncommitted change that persisted for turns). State was fine; the log was
+  written to match the opening-turn frame rather than the observation, and nothing protects
+  the case where the idea text had drifted.
+- Evidence: meta/harness/evidence/iteration-3/ — continuation SIM-LOG turn 1 vs. its own
+  turn-2 read list; git status/diff on IDEA.md (ops report 2026-08-29).
+- Direction: SKILL.md: the opening job first states what the workspace actually contains; if
+  it is populated, say so and do not write IDEA.md; log lines describe observations, never the
+  job's expected world. Pairs with H-011's fix (don't dispatch job=open at a populated
+  workspace at all).
+- Status: open
+
+---
+
+### Addendum to H-010 (2026-08-29, iteration 3) — occurrences 4 and 5, now stakeholder-visible
+The first mdtab run's budget expired between the sign-off filing and the answer (occurrence 4);
+the continuation then re-asked, and the stakeholder logged: "I was asked to sign off twice for
+the same engagement, six hours apart… the same question arriving a second time after I had
+already said yes and put the tool to work." Budget stops mid-acknowledgment now have costs
+visible to the person, not just the operator.
+
+### Positive record (2026-08-29, iteration 3) — what held
+D12 caught the planted falsehood twice, in two documents, including one instance found by
+implement outside the review's own finding list. Intake refused to widen a closed item and
+said why. The Opus sim's promotion earned itself (the backticks mention-vs-use answer in
+WI-0004/Q-001; the withheld-reconciliation discipline). BUG-0001 — the team catching an
+inconsistency downstream of the planted absolute — was the claim machinery limiting the
+contradiction's blast radius even while F-062 kept it from being escalated.
