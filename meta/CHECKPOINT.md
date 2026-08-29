@@ -1,27 +1,30 @@
 # CHECKPOINT
 
-## Current unit: META-124 — the contracts, once
+## Current unit: META-125 — budgets bound work, not verdicts
 
-**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..123 done and pushed.
+**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..124 done and pushed; cluster 5's
+findings pass and the regressions remain.
 
-**Intent.** Every skill contract re-derived from ADR-0008 and the three spec changes, in one
-pass, so each skill takes **one** version bump rather than three.
+**Intent.** One rework in `harness/run_iteration.py`, five findings, and it is a **harness**
+commit — separate from the toolkit commits above it.
 
-Two script changes come first, because the gate commands depend on them:
+- **H-014** — a workspace at a terminal ending stops `epic-done` (or `blocked-no-recourse`)
+  regardless of the counter. Iteration 4 reached its ending, spent the budget's last slot on the
+  closing sim turn, and stamped a finished engagement "turn-budget: not finished".
+- **H-014** — the H-007 closing turn is budget-exempt. It exists for the engagement's benefit,
+  not the budget's.
+- **H-010** — a turn-budget stop is **resumable** unless the engagement is at an ending: a plain
+  rerun with a larger `--max-turns` continues in place. Five occurrences, two of them landing
+  between the sign-off being filed and the stakeholder answering it, and one visible to the
+  person: *"I was asked to sign off twice for the same engagement, six hours apart."*
+- **H-011** — the first job of a fresh run is derived from the workspace, exactly as mid-run
+  scheduling is: unanswered human questions → sim answers; no `IDEA.md` → sim opens; otherwise
+  the worker.
+- **H-012** — the driver creates its run directory and opens its own console log **before its
+  first line of output**. Wrappers stop being load-bearing.
 
-- `--context <item-type>` on `lint-claims` and `lint-answers`. An **ending** is not an execution
-  and has no diff of its own, so at `--context epic` the scope is the whole document set — which
-  is F-066's fix stated where the mission puts it, *explicit per context*.
-- `--uncommitted` on both, for a skill that works on the trunk and commits once at the end
-  (`plan`). Its honest window is the working tree, not a diff against the branch it is standing
-  on — and a diff against the branch it is standing on is exactly the degenerate window F-066 is
-  about.
-
-Then the contracts: `intake` (the elicitation question), `refine` (prior human answers in the
-contradiction check; presentation order; how a "still holds" criterion is written), `plan`,
-`implement` (the refused move), `verify` (how a "still holds" criterion is assessed),
-`review-close` (the ending's scopes, DE8, the §4b repair path), `answer-questions` (writes the
-cross-answer check). Version bumps, `lint-skills`, re-render.
+Six-plus regression tests in `harness/tests/test_harness.py`, and `harness/USAGE.md` §9's stop
+table rewritten to match. H-013 (the sim describing the disk) is META-126.
 
 ## Standing instructions (still in force)
 
