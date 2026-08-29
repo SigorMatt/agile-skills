@@ -1873,7 +1873,11 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   it is populated, say so and do not write IDEA.md; log lines describe observations, never the
   job's expected world. Pairs with H-011's fix (don't dispatch job=open at a populated
   workspace at all).
-- Status: open
+- Status: **fixed** — `harness/skills/simulated-human/SKILL.md` 1.1.0: the opening job
+  starts with a look, the SIM-LOG entry opens with a `Found:` line describing the listing, and
+  `IDEA.md` is written only when it does not already exist. Rule 0 of the before-you-finish
+  list makes "describe the disk, never the job" the check the log cannot survive failing.
+  Pairs with H-011's fix, which stops dispatching `job=open` at a populated workspace at all
 
 ---
 

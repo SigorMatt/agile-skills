@@ -3552,3 +3552,50 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Noted, not fixed:** `examples/toy-project` carries 41 `claim.unsourced` findings under
   `lint-claims --all`. It predates the citation convention and nothing gates it; the new
   `--context epic` scope is what makes it visible. Filed rather than quietly repaired.
+
+---
+
+## 2026-08-29 — META-125, META-126 — budgets bound work, not verdicts; the sim describes the disk
+
+- **Unit:** META-125 and META-126 (one rework, one document; harness only)
+- **Inputs read:** H-010..H-014 with their evidence — `meta/harness/evidence/iteration-2/` (three
+  run segments), `iteration-3/` (the continuation SIM-LOG's turn-1 entry against its own turn-2
+  read list), `iteration-4/run/state.json` and its console tail — `harness/run_iteration.py`,
+  `harness/tests/test_harness.py`, `harness/USAGE.md`,
+  `harness/skills/simulated-human/SKILL.md`.
+- **Decisions:**
+  - **One rule under five findings: the counter is a bound on work; the disk says what happened.**
+    `engagement_terminal()` is consulted *before* the budget is believed, so a workspace at a
+    terminal ending stops `epic-done` or `blocked-no-recourse` whatever the turn number is. That
+    is H-014's instance — iteration 4's run was finished and only its label was wrong.
+  - **A third stop table, rather than moving `turn-budget` between the two.** `CONDITIONAL_STOPS`
+    holds the stops that are a verdict or an interruption depending on the workspace, and
+    `stop_is_resumable` takes an optional reading. Without one it refuses: a caller that cannot
+    see the workspace does not get the benefit of the doubt. `turn-budget` stays in
+    `TERMINAL_STOPS` too, with the other half of the explanation, and a test asserts every
+    conditional stop has both.
+  - **The closing turn is exempt, once, and logged.** It exists for the engagement's benefit, not
+    the budget's — refusing it means the stakeholder never sees the ending of exactly the runs
+    that ran long. The exemption emits a `budget-exempt` event so the trail says a turn was
+    spent outside the budget rather than leaving an unexplained off-by-one.
+  - **`first_job()` is the mid-run scheduler's decision, made once more.** Not a new policy: the
+    same order, from the same reading. The reason is logged in the run's `start` event, because
+    "why did this run open with a worker turn" is a question the log should answer.
+  - **The console log is opened after the archive and before the pid check.** Order matters both
+    ways: archiving second would move the directory out from under an open file, and opening it
+    later would leave the "another driver is running" refusal outside the run's own record. A log
+    that cannot be opened is a printed warning, never a stop.
+  - **H-013 is the pipeline's own pathology inside the harness's actor.** F-017 is "a record
+    written from the expected world rather than the observed one", and the sim did exactly that:
+    it listed a populated workspace and logged "freshly provisioned". So the fix is the same
+    shape as the fix for a skill — the entry opens with `Found:`, describing the listing, and the
+    decision to write `IDEA.md` is taken *from* that line rather than from what an opening turn
+    is supposed to find.
+- **Questions raised:** none.
+- **Gates:** `harness/tests/test_harness.py` — **70 tests** (was 55), all pass: three for the
+  conditional budget stop, six for the terminal workspace, three for the derived first job, three
+  for the console log. `./scripts/check` green.
+- **Artifacts:** `harness/run_iteration.py` (`CONDITIONAL_STOPS`, `engagement_terminal`,
+  `first_job`, `open_console_log`/`close_console_log`, the budget block, `--console-log`),
+  `harness/tests/test_harness.py` (`TerminalWorkspace`, `FirstJob`, `ConsoleLog`),
+  `harness/USAGE.md` §3/§4/§9, `harness/skills/simulated-human/SKILL.md` 1.1.0.
