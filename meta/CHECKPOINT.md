@@ -1,28 +1,27 @@
 # CHECKPOINT
 
-## Current unit: META-119 — ADR-0008, cross-answer consistency
+## Current unit: META-120 — enforcement for ADR-0008
 
-**Session:** builder 3 (`meta/BUILDER-3-PROMPT.md`), the proven-kernel push. Phase IV of
-`meta/plan.md`.
+**Session:** builder 3 (`meta/BUILDER-3-PROMPT.md`). Phase IV of `meta/plan.md`.
+**Derivation done:** `meta/adr/ADR-0008-cross-answer-consistency.md` (META-119, pushed).
 
-**Intent.** Derive, before any code, the obligation that gives the stakeholder a seat in
-conflicts between their own recorded answers (F-062) — the queue's sharpest lesson, where a
-planted contradiction was detected twice, named "false", and repaired unilaterally while the
-sim held a one-line reconciliation in reserve nobody asked for.
+**Intent.** Build the mechanical half of ADR-0008 §4 — obligations 1, 2 and 3 — and nothing
+else. Contracts and version bumps are META-121.
 
-`meta/adr/ADR-0008-cross-answer-consistency.md` must settle:
+1. `scripts/lib/scope.py` — one answer to "could this diff window contain anything?", shared
+   with `lint-claims` in META-123. A window that cannot contain this execution's work is
+   **degenerate** and its gate FAILS; a real window with nothing in it passes and says so.
+2. `scripts/lint-answers` — at rest: `## Cross-answer check` present and shaped on every
+   consumed human answer, and a declared conflict matched by a question citing both IDs. Over a
+   diff: a claim sourced to a human answer whose text this execution changed needs either that
+   question or a `**Cross-answer check:**` journal bullet naming the answer.
+3. `spec/question.md` — the `## Cross-answer check` section, its shape, and why it is written by
+   the consuming skill and not by the person.
+4. Fixtures both ways, wired into `./scripts/check`: the iteration-3 shape (an answer consumed
+   with no check; a conflict declared and never escalated; the human's own sentence rewritten
+   without a question) must fail, and a clean engagement must pass.
 
-1. What counts as a **recorded human answer** (the question record, `refinement-qa.md` `[human]`
-   entries, a sign-off condition, a stakeholder request).
-2. When a new answer, criterion, or sign-off condition **touches** a prior one — the test must be
-   mechanical enough to lint and honest about its blind spots.
-3. The two legal moves: cite compatibility, or file a question quoting both answers by ID and
-   asking which wins.
-4. The **refused move**: repairing a stakeholder-sourced falsehood in `docs/` without a question
-   to its author. Say which half is a hard gate and which is a contract rule.
-5. What the lint can and cannot see — stated in the ADR, not implied.
-
-**Not in this unit:** any script, any skill version bump. Derivation only.
+**Not in this unit:** skill.yaml gates, version bumps, re-render.
 
 ## Standing instructions (still in force)
 
