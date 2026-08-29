@@ -1865,3 +1865,80 @@ said why. The Opus sim's promotion earned itself (the backticks mention-vs-use a
 WI-0004/Q-001; the withheld-reconciliation discipline). BUG-0001 — the team catching an
 inconsistency downstream of the planted absolute — was the claim machinery limiting the
 contradiction's blast radius even while F-062 kept it from being escalated.
+
+## F-066 — The contracted claims gate is vacuous at an epic ending
+- Severity: correctness of enforcement, high — F-033's class (a gate that passes having
+  examined nothing), and the direct counterexample to condition 3's "unskippable"
+- Component: scripts/lint-claims (--changed-since), methodology (review-close epic contract),
+  spec/dor-dod.md (DE6)
+- Symptom: `claims-are-sourced` runs `lint-claims --changed-since main`; at an epic ending
+  there is no branch, the diff is empty, and the gate prints "checked no documents" and exits
+  0. Iteration 4's reviewer stated it plainly: "It passed here, but it would have passed over
+  anything," and only a voluntary `--all` run surfaced three real `claim.unsourced` errors.
+  The audit that DE6 records as pass was reviewer discipline, not the contracted gate — the
+  exact "works when followed" caveat F-001's mechanization exists to eliminate, reappearing
+  inside its own machinery.
+- Evidence: meta/harness/evidence/iteration-4/ — tracker/items/EP-001/artifacts/review.md
+  (Accepted gaps §2); F-052 as the same script's earlier scope-honesty defect.
+- Direction: the gate's scope becomes explicit and non-vacuous by contract: at an item close,
+  changed-since the item's base; at an ending, the full document set (or an explicit named
+  scope). "Checked nothing" becomes a failing verdict, never a pass — a gate that could not
+  look must say so with exit ≠ 0 (F-033's rule, applied to scope).
+- Status: open
+
+## F-067 — A true-but-unsourced claim in an ADR has no legal repair
+- Severity: methodology/spec gap — F-057's class, sharper instance
+- Component: spec/doc-header.md §5 (ADR supersession), methodology (review-close, plan)
+- Symptom: `lint-claims --all` flags three `claim.unsourced` in ADR-0002; the reviewer
+  verified all three true against the code. Adding the citation is an edit; ADRs are
+  superseded-only; superseding an ADR to add provenance is disproportionate — so "no legal
+  move clears it." Accepted-gap machinery handled it honestly (recorded in the review and in
+  EP-001/Q-007), but the ledger now carries a permanent, known, unfixable lint error class.
+- Evidence: meta/harness/evidence/iteration-4/ — EP-001 review.md (Accepted gaps §1),
+  EP-001/Q-007.
+- Direction: define the minimal legal repair: an ADR gains an append-only `## Corrections`
+  section for provenance and errata (content rules unchanged, decisions still superseded-only),
+  or the lint learns an `accepted-unsourced` waiver that must cite the review that verified
+  the claim. Either way the repair is authorized, recorded, and bounded.
+- Status: open
+
+## H-014 — The closing sim turn is not budget-exempt; a completed engagement was labeled unfinished
+- Severity: harness, stop semantics (H-010's off-by-one costume)
+- Component: harness/run_iteration.py (turn budget vs. closing-turn extension, ~:516, :721)
+- Symptom: iteration 4's engagement reached its terminal state (sign-off accepted turn 21,
+  EP-001 done/delivered, nothing open) — the driver announced the H-007 closing sim turn,
+  spent turn 24 (the budget's last slot) on it, then cut before the worker turn that records
+  epic-done, stamping a completed run "turn-budget: not finished." The workspace was terminal;
+  only the label was wrong.
+- Evidence: meta/harness/evidence/iteration-4/run/ — state.json, driver-console.log tail,
+  board.
+- Direction: when the observed workspace is at a terminal ending, the driver stops epic-done
+  regardless of the counter; the H-007 closing turn is budget-exempt (it exists for the
+  engagement's benefit, not the budget's). Fold into H-010's resumable/terminal rework — the
+  shared rule: budgets bound work, not verdicts.
+- Status: open
+
+---
+
+### Positive record (2026-08-29, iteration 4) — the boring run, in substance
+Zero probes; everything organic. One human question per genuine ambiguity, each surviving an
+explicit addressee test; five design questions routed to plan; assumptions tagged with their
+deferral and precedent; an AC amendment made with authority cited and the chosen option's cost
+written into the criterion; a send-back closed by a second verify that re-ran all nine
+criteria and refused to cite the implementation's own report as evidence; DE1–DE7 all pass
+with measures re-run, citations opened, and every itch disclosed by the trail itself — three
+accepted gaps, one waved off by the stakeholder in their own recorded words. The cooperative
+stakeholder's notes: five checks, nothing to flag, "a real sign-off with the transcript to
+back it up." A full consumer run, zero skill version bumps, unconditional acceptance.
+
+### ROADMAP §2 addendum (2026-08-29) — the honest reading after the queue
+Condition 1: holds in substance (the run above), not in letter — the review surfaced F-066,
+F-067, H-014, so "signed without findings" is not yet true of an ending's own audit layer.
+Condition 2: holds (E1 twice, E3, all three dead paths; E2/E4 remain fixture-only).
+Condition 3: holds with F-066 as its named counterexample — the claim machinery shaped real
+prose all queue long, and its contracted form is vacuous on one path.
+The kernel is therefore NOT yet proven; builder session three carries the proven-kernel
+mission with a dual regression gate: a 3b re-run in which the planted contradiction is
+escalated to its author (F-062 fixed), and a 4b re-run whose ending audit signs with zero
+new findings (F-066/F-067/H-014 fixed). Both green → all three conditions read positive and
+the gated tracks (retro skill, Codex adapter, content packs) unlock.
