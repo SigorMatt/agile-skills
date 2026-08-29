@@ -1,29 +1,27 @@
 # CHECKPOINT
 
-## Current unit: META-123 — F-065, F-063, F-064 in the spec, with what enforces them
+## Current unit: META-124 — the contracts, once
 
-**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..122 done and pushed.
+**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..123 done and pushed.
 
-**Intent.** The three spec changes the contracts (META-124) then carry, each with the mechanical
-half it can honestly have:
+**Intent.** Every skill contract re-derived from ADR-0008 and the three spec changes, in one
+pass, so each skill takes **one** version bump rather than three.
 
-1. **F-065** — `spec/dor-dod.md`: a criterion *about other criteria* ("every AC of WI-0001..0003
-   still holds") is assessed against those criteria's **text**. The test suite is evidence for
-   the answer, never its definition. Where the domains do not intersect in anything executable,
-   the non-intersection is stated and a covering case is added or waived by name. Contract-level;
-   no program can read whether two sentences still agree.
-2. **F-063** — `spec/question.md`: options first, recommendation last and marked as the team's
-   preference; no recommendation in `## Context` or `## Question`. Lintable, and linted
-   (`validate-workspace`).
-3. **F-064** — `spec/question.md`: `kind: elicitation`, the one open question per engagement that
-   is not about the team's agenda. Presence-checkable, and checked at the ending
-   (`check-epic-signoff`, DoD **DE8**) — with `review-close` always able to file one, so the
-   rule can never deadlock an engagement that forgot it.
+Two script changes come first, because the gate commands depend on them:
 
-Must-fail cases for 2 and 3 in `fixtures/broken-workspace` and `fixtures/ended-engagement`;
-must-pass in `examples/toy-project` and the clean engagements.
+- `--context <item-type>` on `lint-claims` and `lint-answers`. An **ending** is not an execution
+  and has no diff of its own, so at `--context epic` the scope is the whole document set — which
+  is F-066's fix stated where the mission puts it, *explicit per context*.
+- `--uncommitted` on both, for a skill that works on the trunk and commits once at the end
+  (`plan`). Its honest window is the working tree, not a diff against the branch it is standing
+  on — and a diff against the branch it is standing on is exactly the degenerate window F-066 is
+  about.
 
-**Not in this unit:** the skill contracts themselves (META-124).
+Then the contracts: `intake` (the elicitation question), `refine` (prior human answers in the
+contradiction check; presentation order; how a "still holds" criterion is written), `plan`,
+`implement` (the refused move), `verify` (how a "still holds" criterion is assessed),
+`review-close` (the ending's scopes, DE8, the §4b repair path), `answer-questions` (writes the
+cross-answer check). Version bumps, `lint-skills`, re-render.
 
 ## Standing instructions (still in force)
 
