@@ -3291,3 +3291,48 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 
 **The run is not resumed.** `iteration-2-tidy` sits stopped at turn 6 with
 `stop-reason: contamination`; restarting it is the owner's call.
+
+---
+
+## 2026-08-29 — META-119 — ADR-0008: the person's seat in a conflict between their own answers
+
+- **Unit:** META-119
+- **Inputs read:** `meta/findings/FINDINGS.md` (F-062, F-063, F-064, F-065, F-066, F-067,
+  H-010..H-014, the ROADMAP §2 addendum), `meta/ROADMAP.md`, `meta/harness/evidence/iteration-3/`
+  (WI-0004's four question bodies and its journal, EP-001/Q-005, ADR-0009 and ADR-0010,
+  `docs/product/vision.md`), `spec/question.md`, `spec/dor-dod.md`, `spec/doc-header.md`,
+  `spec/skill-contract.md`, `methodology/skills/refine/*`, `scripts/lint-claims`,
+  `scripts/run-gate`.
+- **Decisions:**
+  - **The unit protected is a *recorded human answer*, and `[assumed]` is deliberately outside
+    it.** `refine` already tags every line of the Q&A `[human]` or `[assumed]`; that tag is
+    already the line between "their requirement" and "our default", so the ADR spends it rather
+    than inventing a second one.
+  - **The mechanical trigger is the citation graph read backwards.** `doc-header.md` §4a made a
+    confident sentence carry its provenance so it could be *checked*; the same marker makes the
+    sentence's **author** reachable. A claim carrying `[src: WI-0002/Q-001]` is the human's
+    statement with a return address on it.
+  - **The topic key was measured, not assumed.** I wrote a throwaway pass over iteration 3's real
+    record using "the document a later answer's consequences name" as the topic anchor: **58
+    candidate pairs** in one four-item engagement, because `vision.md` legitimately accumulates
+    every answer. That measurement is why the ADR narrows the mechanical trigger to the rewritten
+    sourced claim and leaves the topic judgement in the contracts. A gate demanding 58
+    reconciliations is a gate that gets switched off.
+  - **Obligation 1 is a presence check and the ADR says so.** `lint-answers` cannot know whether
+    two answers conflict. What it can do is make *"the stakeholder's own prior answers were never
+    in scope"* — `WI-0004/journal.md`'s own sentence — impossible to write while passing a gate.
+    A wrong `compatible` verdict is then in the record and attributable, which is strictly better
+    than an absence.
+  - **The refused move is `doc-header.md` §5's argument, one turn further round.** That rule
+    stops the execution satisfying the record from editing it. The same reasoning applies with
+    more force to the human's own words: the execution trying to satisfy a requirement must not
+    be the one that rewrites the requirement. §3's table draws the line — a paraphrase error and
+    a code change are ordinary repairs; "the human has since said something incompatible" is the
+    refused one.
+  - **The gate fires only at `status: answered`.** The human writes `## Answer` while the
+    question is still `open` (the harness's S1 boundary and `question.md` agree). Firing on the
+    answer's *presence* would red the validator in the window between a person replying and the
+    pipeline reading the reply — and a driver stops on `validator-failed`.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green (derivation-only unit; no code changed).
+- **Artifacts:** `meta/adr/ADR-0008-cross-answer-consistency.md`.
