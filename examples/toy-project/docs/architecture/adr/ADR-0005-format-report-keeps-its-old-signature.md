@@ -1,6 +1,6 @@
 ---
 title: format_report grows optional parameters instead of changing its signature
-version: 1
+version: 2
 status: current
 updated: 2026-08-17T00:05:00Z
 updated-by: plan
@@ -54,7 +54,8 @@ with exact expected strings. WI-0001's criteria may not be edited to accommodate
 - no rows and `total is None` → `"no files\n"` (WI-0001 AC10, WI-0002 AC9);
 - `total is None` → the sum of `rows`, and the label stays `total` (WI-0001 AC1/AC3, WI-0002 AC4);
 - otherwise the caller's `total` and `label` are printed, with the column sized to the widest
-  number actually printed — the total included — exactly as before (WI-0002 AC10).
+  number actually printed — the total included — exactly as before (WI-0002 AC10)
+  [src: src/linecount.py].
 
 `main` decides which call to make; the renderer holds no opinion about `--top`.
 
@@ -78,4 +79,11 @@ with exact expected strings. WI-0001's criteria may not be edited to accommodate
 
 | version | when | by | for | what changed |
 |---------|------|----|-----|--------------|
+| 2 | 2026-08-17T00:05:00Z | review-close | WI-0002 | The third bullet of `## Decision` gained the source that was always behind it; no assertion changed. See ## Corrections. |
 | 1 | 2026-08-17T00:05:00Z | plan | WI-0002 | First version |
+
+## Corrections
+
+| when | by | for | kind | what changed |
+|------|----|-----|------|--------------|
+| 2026-08-17T00:05:00Z | review-close | WI-0002 | provenance | `## Decision`, third bullet: *"exactly as before"* now cites [src: src/linecount.py], which is the code the sentence is about. The assertion is unchanged, and no code has to change to satisfy it (`doc-header.md` §4b). |

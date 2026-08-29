@@ -1,3 +1,10 @@
+adr.correction.changelog
+adr.correction.empty
+adr.correction.erratum.unquoted
+adr.correction.kind
+adr.correction.order
+adr.correction.superseded
+adr.correction.unsourced
 adr.filename
 adr.options
 adr.reversibility

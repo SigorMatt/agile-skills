@@ -3414,3 +3414,46 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Artifacts:** `scripts/lint-claims` (`window`, `check_scope`, `scope_note`, docstring),
   `scripts/lib/scope.py` (`--untracked-files=all`), `scripts/check`
   (`check_claims_scope`, the must-fail invocation, step 6's docstring), re-rendered dist.
+
+---
+
+## 2026-08-29 — META-122 — F-067: a standing ADR gains a legal repair
+
+- **Unit:** META-122
+- **Inputs read:** F-067 and F-057 in the ledger; `meta/harness/evidence/iteration-4/docs/
+  architecture/adr/ADR-0002-card-store-location-and-format.md` (the instance, re-run through
+  `lint-claims --all` to confirm the three findings); `meta/harness/evidence/iteration-3/docs/
+  architecture/adr/ADR-0009-…-corrected-in-place.md` (the consumer team's own derivation of the
+  same rule, from the other side); `spec/doc-header.md` §4 and §5; `scripts/validate-workspace`
+  (`check_adr`); `scripts/lib/workspace.py` (`Doc`, `_parse_table`).
+- **Decisions:**
+  - **The decision and the document are two objects, and §4 conflated them.** Supersession
+    protects *what was decided*. Provenance and errata are properties of the *document*. Splitting
+    them is what makes a repair possible without weakening the rule: §5's ADR row now says which
+    half is superseded-only.
+  - **Two kinds, and one line that is not negotiable.** `provenance` (a citation added, assertion
+    unchanged) and `erratum` (a clause that was false against the code, removed text quoted
+    verbatim). *If a reader would have to change any code to satisfy the new text, it is a new
+    decision* — that is the boundary, and it is lifted almost word for word from the consumer
+    team's ADR-0009, which had to invent this rule mid-run because ours did not have it.
+  - **What the validator can enforce is the record, and the spec says so.** Kind, a resolving
+    citation, a quoted erratum, append-only position, a change-log row per correction, and no
+    corrections on a superseded decision. Whether the assertion is really unchanged is judgement;
+    the entry is what makes that judgement attributable.
+  - **Both status markers count.** An ADR carries `status:` in frontmatter *and* a
+    `- **Status:**` bullet in its body. A document that says `superseded` in either place is not
+    one a reader acts on, so it is not one to repair — reading only the field would have let the
+    fixture's own inconsistency through.
+  - **The instance is a fixture in two states, not a patch to banked evidence.**
+    `meta/harness/evidence/**` is read-only history. `fixtures/adr-correction/before` reproduces
+    the three true-but-unsourced absolutes; `after/` is the same ADR repaired through §4b. Both
+    halves are asserted, because `before/` coming back clean would make the repair prove nothing.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — 22 steps. `fixtures/broken-workspace` **76 codes** (was
+  69): seven new `adr.correction.*`. `examples/toy-project` still validates clean with a
+  well-formed correction on ADR-0005. The F-067 instance: 3 errors before, 0 after.
+- **Artifacts:** `spec/doc-header.md` §4b (+ §5's table row, revision 3),
+  `scripts/validate-workspace` (`check_adr_corrections`, `QUOTED_RE`), `scripts/lib/workspace.py`
+  (`Doc.corrections`), `fixtures/adr-correction/` (+ README), `fixtures/broken-workspace`
+  (two ADRs, EXPECTED-CODES.txt, README row), `examples/toy-project` ADR-0005, `scripts/check`
+  (`check_adr_correction`, step 7), re-rendered dist.

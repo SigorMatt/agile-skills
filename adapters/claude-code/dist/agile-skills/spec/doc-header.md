@@ -151,6 +151,60 @@ Rules:
 
 ---
 
+## 4b. Correcting a standing ADR without superseding it
+
+§4's supersession rule protects one thing: **what was decided**. It was written as though the
+decision and the document were the same object, and they are not. A real run found the gap from
+both sides in one week.
+
+- Iteration 4's `lint-claims --all` flagged three `claim.unsourced` errors in a standing ADR. The
+  reviewer read all three against the code and found them **true**. Adding a citation would have
+  cleared them; adding a citation is an edit; superseding an accepted decision in order to write
+  down where it came from is disproportionate. The reviewer recorded it honestly as an accepted
+  gap, and the ledger acquired a permanent, known, unfixable lint error (F-067).
+- Iteration 3's team hit the other side — one clause of a *justification* was false against the
+  code while the decision itself was correct — and wrote themselves an ADR to authorise fixing
+  it, because ours did not.
+
+So: an ADR at `status: accepted` MAY be repaired in place, in exactly two ways, and every repair
+is recorded as an entry in an **append-only `## Corrections` section**.
+
+| Kind | What it may do | What makes it legal |
+|------|----------------|--------------------|
+| `provenance` | add a citation to an existing sentence | the sentence's assertion is **unchanged** — only its `[src: ...]` is new — and the citation resolves |
+| `erratum` | replace a clause that was **false against the code** | the removed text is quoted **verbatim** in the entry, and the entry cites what establishes the truth: a command with its outcome, a named function, a criterion |
+
+And one line that is not negotiable: **if a reader would have to change any code to satisfy the
+new text, it is a new decision** and §4's supersession rule applies with full force. That is the
+boundary between a correction and a rewrite, and it is the condition most likely to be stretched
+under time pressure.
+
+```markdown
+## Corrections
+
+| when | by | for | kind | what changed |
+|------|----|-----|------|--------------|
+| 2026-08-29T14:02:11Z | review-close | EP-001 | provenance | `## Decision` item 1: *"used exactly as given"* now cites [src: src/recall/store.py:31] and [src: run: RECALL_FILE=/tmp/x recall list → exit 0, reads /tmp/x]. The assertion is unchanged. |
+| 2026-08-29T14:02:11Z | plan | BUG-0001 | erratum | `## Decision` item 4 said *"A column's width does not depend on its marker"*, which [src: run: printf … \| mdtab → a wider column] falsifies. Replaced with a clause naming what width does depend on. |
+```
+
+Rules:
+
+- `## Corrections` is **append-only** and sits last, after `## Change log`. An entry is never
+  edited or removed. A correction whose row says "fixed a wrong sentence" without quoting it
+  destroys the evidence this section exists to keep.
+- Every entry carries a resolving citation. A repair with no source is the shape that produced
+  F-001.
+- Every entry has a matching `## Change log` row and a `version` bump. The two sections answer
+  different questions — the change log says *a version happened*, the corrections say *what a
+  sentence used to say* — and neither substitutes for the other.
+- An ADR at `status: superseded` is **not** corrected. It records what was believed then, and it
+  is no longer the document a reader acts on.
+- `scripts/validate-workspace` enforces the shape; it cannot enforce condition one. Whether the
+  assertion really is unchanged is a judgement, and the entry is what makes it attributable.
+
+---
+
 ## 4a. Claims and their provenance
 
 A document under `docs/` is read by people and by skills that will act on it. Its most dangerous
@@ -202,7 +256,7 @@ one that must source what it writes.
 | `product/vision.md` | `intake` | `refine`, `answer-questions` |
 | `product/prd.md` | `intake` or `refine` | `refine`, `answer-questions` |
 | `architecture/overview.md` | `plan` | `plan`, `answer-questions` |
-| `architecture/adr/*` | `plan` or `answer-questions` | superseded only |
+| `architecture/adr/*` | `plan` or `answer-questions` | the **decision**: superseded only (§4). The **document**: `## Corrections`, append-only, for provenance and errata (§4b) |
 | `process/ways-of-working.md` | `plan` | `review-close`, `answer-questions` |
 
 `implement` and `verify` do **not** write to `docs/`. If either concludes that a document is
@@ -218,3 +272,4 @@ the check would be circular.
 |---|------|--------|
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §4a added: absolute claims about named code carry a resolvable `[src: ...]` citation (F-001). |
+| 3 | 2026-08-29 | §4b added: a standing ADR is repaired in place through an append-only `## Corrections` section — `provenance` or `erratum`, never a change to what the code must do. §5's ADR row says which half is superseded-only (F-067). |

@@ -24,7 +24,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 import board as board_lib  # noqa: E402
-from claims import CitationResolver  # noqa: E402
+from claims import CITATION_RE, CitationResolver  # noqa: E402
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
@@ -79,6 +79,9 @@ ARTIFACT_BY_STATUS = [
 
 ADR_SECTIONS = ["## Context", "## Options considered", "## Decision", "## Consequences",
                 "## Change log"]
+
+# A quoted fragment, in either of the two forms the methodology writes: *"..."* or plain "...".
+QUOTED_RE = re.compile(r'[*_]?"[^"]{4,}"[*_]?')
 
 
 # F-017: the clock a record claims must be a clock that was running. `now + CLOCK_SLACK` is the
@@ -1145,6 +1148,73 @@ class Validator:
                              .get("line", doc.body_line), "adr.reversibility",
                              "## Consequences does not mention reversibility",
                              hint="plan's escalation rule turns on that property")
+        self.check_adr_corrections(doc)
+
+    def check_adr_corrections(self, doc) -> None:
+        """`doc-header.md` §4b — the repair a standing ADR is allowed, and its shape.
+
+        F-067: three true-but-unsourced claims in an accepted ADR had no legal move that cleared
+        them, because the only repair the spec knew was supersession. §4b gives two — adding a
+        citation, and correcting a clause that was false against the code — and makes each one
+        leave a record. What is enforced here is the record; whether the assertion really is
+        unchanged is judgement, and the entry is what makes that judgement attributable.
+        """
+        section = doc.sections.get("## Corrections")
+        if section is None:
+            return
+        line = section.get("line", doc.body_line)
+        # Either marker counts. The frontmatter field is the one with rules, and an ADR also
+        # carries a `- **Status:**` bullet in its body; a document that says "superseded"
+        # anywhere is not one a reader acts on, so it is not one to repair.
+        body_status = ""
+        for raw in doc.body.split("\n")[:20]:
+            if raw.strip().lower().startswith("- **status:**"):
+                body_status = raw.split("**", 2)[-1].strip(": ").strip().lower()
+                break
+        if doc.fields.get("status") == "superseded" or body_status == "superseded":
+            self.report.error(doc.path, line, "adr.correction.superseded",
+                              "a superseded ADR carries corrections",
+                              hint="it records what was believed then; it is not the document a "
+                                   "reader acts on, so there is nothing in it to repair")
+        last = max(doc.sections, key=lambda name: doc.sections[name]["line"])
+        if last != "## Corrections":
+            self.report.error(doc.path, line, "adr.correction.order",
+                              f"## Corrections is followed by {last!r}",
+                              hint="it is append-only and sits last, so a reader reaching the "
+                                   "bottom of the file has the whole repair history")
+        if not doc.corrections:
+            self.report.error(doc.path, line, "adr.correction.empty",
+                              "## Corrections exists with no entries",
+                              hint="an empty repair record claims a repair that did not happen; "
+                                   "remove the section until there is one")
+        for cells, row_line in doc.corrections:
+            row = " | ".join(cells)
+            kind = ""
+            for cell in cells:
+                if cell.strip().lower() in ("provenance", "erratum"):
+                    kind = cell.strip().lower()
+            if not kind:
+                self.report.error(doc.path, row_line, "adr.correction.kind",
+                                  "a correction names no kind",
+                                  hint="`provenance` (a citation added, assertion unchanged) or "
+                                       "`erratum` (a clause that was false against the code). "
+                                       "Anything that changes what the code must do is a new "
+                                       "decision and the ADR is superseded (doc-header.md §4b)")
+            if not CITATION_RE.search(row):
+                self.report.error(doc.path, row_line, "adr.correction.unsourced",
+                                  "a correction cites nothing",
+                                  hint="a repair with no source is the shape F-001 found")
+            if kind == "erratum" and not QUOTED_RE.search(row):
+                self.report.error(doc.path, row_line, "adr.correction.erratum.unquoted",
+                                  "an erratum does not quote the text it removed",
+                                  hint='quote it verbatim — *"the sentence as it stood"* — or the '
+                                       "row destroys the evidence the section exists to keep")
+        if doc.corrections and len(doc.changelog) < len(doc.corrections) + 1:
+            self.report.error(doc.path, line, "adr.correction.changelog",
+                              f"{len(doc.corrections)} correction(s) and only "
+                              f"{len(doc.changelog)} change-log row(s)",
+                              hint="every correction is a version, so it has a change-log row "
+                                   "and a version bump (doc-header.md §4b)")
 
     # ---- driver --------------------------------------------------------------------
 

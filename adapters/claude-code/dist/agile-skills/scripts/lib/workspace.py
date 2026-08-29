@@ -197,7 +197,7 @@ class Question:
 
 
 class Doc:
-    __slots__ = ("path", "fields", "body", "sections", "body_line", "changelog")
+    __slots__ = ("path", "fields", "body", "sections", "body_line", "changelog", "corrections")
 
     def __init__(self, path, fields, body, body_line) -> None:
         self.path = path
@@ -207,6 +207,11 @@ class Doc:
         self.sections = split_sections(body, body_line)
         self.changelog = _parse_table(self.sections.get("## Change log", {}).get("text", ""),
                                       self.sections.get("## Change log", {}).get("line", 0))
+        # `doc-header.md` §4b: the append-only repair record on a standing ADR. Same table shape
+        # as the change log and a different question — the change log says a version happened,
+        # this says what a sentence used to say.
+        self.corrections = _parse_table(self.sections.get("## Corrections", {}).get("text", ""),
+                                        self.sections.get("## Corrections", {}).get("line", 0))
 
 
 class Item:

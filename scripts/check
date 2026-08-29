@@ -17,44 +17,50 @@ Steps, in order:
                                                unsourced absolute, `--all` is the ending's scope,
                                                and `--changed-since main` standing on `main` is
                                                refused rather than passing over nothing (F-066)
-  7. cross-answer consistency               — scripts/lint-answers over fixtures/crossed-answers
+  7. the legal repair for a standing ADR     — fixtures/adr-correction: the reduced iteration-4
+                                               ADR reproduces its three true-but-unsourced
+                                               absolutes, and the same ADR repaired through
+                                               doc-header.md §4b's `## Corrections` is clean.
+                                               The shape of a correction is covered by steps 3
+                                               and 5 (F-067)
+  8. cross-answer consistency               — scripts/lint-answers over fixtures/crossed-answers
                                                (exact codes, the compliant escalation among them
                                                producing none), over the two clean engagements,
                                                and rule 3 by execution in a throwaway repository:
                                                the human's own quoted sentence rewritten without
                                                asking, and each of ADR-0008's two legal moves
                                                clearing it (F-062)
-  8. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
+  9. epic sign-off gate                      — scripts/check-epic-signoff refuses the broken
                                                fixture's epic and passes the sourced-claims one
-  9. the termination gate                    — check-epic-signoff over fixtures/ended-engagement:
+ 10. the termination gate                    — check-epic-signoff over fixtures/ended-engagement:
                                                one epic per verdict it has to reach, and
                                                engagement-state's own two
- 10. pipeline invariants                     — lint-skills must report the expected finding code
+ 11. pipeline invariants                     — lint-skills must report the expected finding code
                                                for each defect reintroduced into pipeline.yaml
- 11. a dropped rule obligation is refused    — validate-workspace against a pipeline.yaml whose
+ 12. a dropped rule obligation is refused    — validate-workspace against a pipeline.yaml whose
                                                rule_obligations no longer scope a status rule;
                                                the registry has to be load-bearing to be worth
                                                having (F-050)
- 12. the derived model, by execution         — creation authority refused and permitted through
+ 13. the derived model, by execution         — creation authority refused and permitted through
                                                new-item, and an engagement refused an ending
                                                while nobody had asked the stakeholder
- 13. the journal body the prose promises     — a body with no `**Status:**` bullet goes through
+ 14. the journal body the prose promises     — a body with no `**Status:**` bullet goes through
                                                the transition and comes back carrying the move
                                                that was made; standalone journal-entry still
                                                requires it, and a body missing a bullet the tool
                                                does not write is still refused (F-049)
- 14. a trial merge leaves the trunk alone   — the command block review-close's procedure prints,
+ 15. a trial merge leaves the trunk alone   — the command block review-close's procedure prints,
                                                run against a throwaway repository: the trunk sha
                                                is unchanged, and the same block with --detach
                                                removed moves it (F-055)
- 15. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
+ 16. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
- 16. findings citations resolve             — every `commit <sha>` cited in
+ 17. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
- 17. export profiles                        — scripts/export leaves the workspace behind, and
+ 18. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
- 18. harness self-test                       — harness/tests/test_harness.py: the contamination
+ 19. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
 
@@ -489,6 +495,44 @@ def check_claims_scope(runner: Runner) -> None:
         runner.emit(label, False, detail="\n".join(detail))
     else:
         runner.emit(label, True)
+
+
+def check_adr_correction(runner: Runner) -> None:
+    """F-067's instance, both ways: the defect exists, and the legal repair clears it.
+
+    Iteration 4's `lint-claims --all` found three `claim.unsourced` errors in an accepted ADR.
+    The reviewer read all three against the code and found them **true**, and then found there
+    was no move that cleared them: adding a citation is an edit, and the only repair the spec
+    knew was supersession. `fixtures/adr-correction/` is that ADR reduced — `before/` as it
+    stood, `after/` repaired through `doc-header.md` §4b.
+
+    Both halves are asserted. If `before/` ever comes back clean the fixture has drifted and the
+    repair proves nothing; if `after/` is not clean, the path this spec now advertises does not
+    actually work.
+    """
+    linter = os.path.join(SCRIPTS, "lint-claims")
+    fixture = os.path.join(ROOT, "fixtures", "adr-correction")
+    if not os.path.isdir(fixture):
+        runner.skip("the legal repair for a standing ADR (F-067)",
+                    "fixtures/adr-correction does not exist")
+        return
+    before = subprocess.run([sys.executable, linter, "--root", os.path.join(fixture, "before"),
+                             "--all"], capture_output=True, text=True, cwd=ROOT)
+    codes = codes_from(before.stdout + before.stderr)
+    unsourced = (before.stdout + before.stderr).count("claim.unsourced")
+    if before.returncode == 0 or "claim.unsourced" not in codes or unsourced < 3:
+        runner.emit("the legal repair for a standing ADR (F-067)", False, before,
+                    detail="  fixtures/adr-correction/before must reproduce the three "
+                           "true-but-unsourced absolutes the instance had; it did not")
+        return
+    after = subprocess.run([sys.executable, linter, "--root", os.path.join(fixture, "after"),
+                            "--all"], capture_output=True, text=True, cwd=ROOT)
+    if after.returncode != 0:
+        runner.emit("the legal repair for a standing ADR (F-067)", False, after,
+                    detail="  the repair doc-header.md §4b authorises does not clear the "
+                           "finding it exists to clear")
+        return
+    runner.emit("the legal repair for a standing ADR (F-067, before and after)", True)
 
 
 # fixtures/ended-engagement: one epic per verdict the termination gate has to reach.
@@ -1200,6 +1244,7 @@ def main() -> int:
     check_example(runner)
     check_claims(runner)
     check_cross_answers(runner)
+    check_adr_correction(runner)
     check_signoff(runner)
     check_termination(runner)
     check_pipeline_faults(runner)
