@@ -129,6 +129,7 @@ to `done` with a note.
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
 | DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written. Every citation in the workspace resolves | [skill] + [auto] |
 | DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and answered — in **every** ending, not only closure | [auto] |
+| DE8 | The stakeholder was asked, at least once in this engagement, an **open** question that was not about the team's agenda — a `kind: elicitation` question (`question.md` §2) — and it was answered | [auto] |
 
 ### DE1 was an entry condition for one ending out of four
 
@@ -157,6 +158,35 @@ prose.
 DE3 is the criterion that stops a pipeline from mistaking "all the tickets are closed" for
 "the goal was achieved". If a success measure was not met, closing the epic is still allowed —
 saying so is what is mandatory.
+
+### A criterion about other criteria is read against their text
+
+`WI-0004`'s AC5 in a real run: *"every acceptance criterion of WI-0001..0003 still holds, named
+tests pass unmodified."* It passed. The reasoning recorded for it was that no test and no fixture
+contains a `<br>`, so nothing executable exercises both the old rule and the new exception — and
+that is true, and it is not what the criterion says. On the page, the criteria contradicted each
+other: one said the alignment marker governs *"every row, every column, no exceptions"*, the new
+one exempted a class of cell. A coverage gap laundered a semantic conflict (F-065).
+
+So a criterion of that shape — one whose subject is other criteria rather than behaviour — is
+assessed like this, and `verify` records it this way:
+
+1. **Name them.** The criteria it covers are listed by ID (`WI-0001 AC3`, not "the earlier
+   criteria"). A criterion that cannot name its own subject is not decidable and R4 already
+   refuses it.
+2. **Read each one's text against the new behaviour** and say, per criterion, whether the
+   sentence is still true. This is the assessment. It is a read, and it is the thing the
+   criterion actually asks for.
+3. **Run the tests as evidence *for* that answer, never as its definition.** "The suite is green"
+   answers a different question, and answering the easier question is how this criterion fails.
+4. **State non-intersection when it exists.** If nothing executable exercises the old criterion
+   and the new behaviour together, say so in those words, and then either add a case that does,
+   or waive it **by name** — which criterion, and why a covering case is not worth writing. A
+   waiver somebody signed is a decision; an unremarked gap is a hole.
+
+If step 2 finds that a criterion's sentence is no longer true, that is not a criterion to
+rewrite. It is a contradiction between what was agreed then and what is being built now, and
+`ADR-0008` says where it goes: cite compatibility, or ask the person who agreed to both.
 
 ### DE7 is about asking, not about being told yes — in every ending
 
@@ -195,3 +225,4 @@ criterion is that the question was asked and answered, never that the answer was
 | 3 | 2026-08-22 | DE7 added: the stakeholder is asked to accept the epic, after the last child closed, and answers (F-022). |
 | 4 | 2026-08-27 | R8 reads `refinement-qa.md`'s `status` field rather than the filename: an `[auto]` check that only tests existence is trusted and wrong (F-031). |
 | 5 | 2026-08-27 | DE1 generalised from "every child `done`" to "every child terminal, and every undelivered child named" (F-045, F-046); DE7 generalised from a completion gate to a **termination** gate, triggered by rest. Derived in ADR-0006. |
+| 6 | 2026-08-29 | A criterion whose subject is other criteria is read against their **text**, with the suite as evidence rather than as the definition, and non-intersection stated or waived by name (F-065). DE8 added: an engagement is asked at least one open question that is not about the team's agenda (F-064). |

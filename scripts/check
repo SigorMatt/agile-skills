@@ -544,9 +544,12 @@ TERMINATION_CASES = [
     ("EP-004", [], False, "closing on a deferred acknowledgment"),
     ("EP-004", ["--resolving", "EP-004:open->blocked"], True,
      "parking at the impasse on a deferred acknowledgment"),
+    ("EP-006", [], False,
+     "a complete, correct sign-off in an engagement where nobody asked an open question (F-064, "
+     "DE8)"),
 ]
 REST_VERDICTS = {"EP-001": "at-rest", "EP-002": "at-rest", "EP-003": "at-rest",
-                 "EP-004": "at-rest", "EP-005": "active"}
+                 "EP-004": "at-rest", "EP-005": "active", "EP-006": "at-rest"}
 
 
 def check_signoff(runner: Runner) -> None:

@@ -60,9 +60,12 @@ question.answered.field
 question.blocking.not-suspended
 question.consequences.files
 question.deferred.not-blocked
+question.elicitation.addressed
 question.id.mismatch
 question.item.mismatch
 question.kind
+question.recommendation.misplaced
+question.recommendation.order
 question.section.missing
 question.signoff.addressed
 request.about.dangling

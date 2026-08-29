@@ -41,7 +41,11 @@ TERMINAL_CHILD_STATUSES = {"done", "blocked"}
 QUESTION_FIELDS_REQUIRED = ["id", "item", "from-skill", "addressed-to", "blocking", "status",
                             "created"]
 QUESTION_FIELDS_OPTIONAL = ["answered-at", "answered-by", "kind"]
-QUESTION_KINDS = {"decision", "sign-off"}
+QUESTION_KINDS = {"decision", "sign-off", "elicitation"}
+# The recommendation line, wherever it appears. `question.md` §2 puts it at the end of
+# `## Options considered` and nowhere else (F-063).
+RECOMMENDATION_RE = re.compile(r"^\s*[-*]?\s*\*\*Recommendation:?\*\*", re.IGNORECASE)
+OPTION_RE = re.compile(r"^\s*[-*]\s+\*\*[A-Z]\b")
 REQUEST_FIELDS_REQUIRED = ["id", "from", "status", "created"]
 REQUEST_FIELDS_OPTIONAL = ["about", "handled-at", "handled-by"]
 REQUEST_STATUS = {"open", "accepted", "declined"}
@@ -832,6 +836,14 @@ class Validator:
                 self.report.error(path, 0, "question.kind",
                                   f"kind must be one of {sorted(QUESTION_KINDS)}, found "
                                   f"{kind!r}")
+            elif kind == "elicitation" and (question.fields.get("addressed-to") != "human"
+                                            or question.fields.get("blocking") is not False):
+                self.report.error(path, 0, "question.elicitation.addressed",
+                                  "an elicitation question must be addressed to human and "
+                                  "non-blocking",
+                                  hint="it is the one question that is not about our agenda, so "
+                                       "nobody answers it on their behalf and nothing waits on "
+                                       "it (spec/question.md §2)")
             elif kind == "sign-off" and (question.fields.get("addressed-to") != "human"
                                          or question.fields.get("blocking") is not True):
                 self.report.error(path, 0, "question.signoff.addressed",
@@ -851,6 +863,21 @@ class Validator:
                 if not text.strip():
                     self.report.error(path, question.body_line, "question.section.empty",
                                       f"{section} is empty")
+                # F-063: eleven questions in one run printed the preferred answer above the
+                # options, and the stakeholder — who chose against it twice — wrote "I would
+                # rather have been asked plainly". A compliant persona would simply have been
+                # steered. The recommendation belongs after the options, where a reader reaches
+                # it having already read the choice.
+                for offset, raw in enumerate(text.split("\n")):
+                    if RECOMMENDATION_RE.match(raw):
+                        self.report.error(
+                            path, question.sections[section]["line"] + offset + 1,
+                            "question.recommendation.misplaced",
+                            f"{section} carries the recommendation",
+                            hint="options first, the recommendation last and inside "
+                                 "## Options considered, marked as the team's preference "
+                                 "(spec/question.md §2)")
+            self.check_option_order(question)
             # F-032: the answerer needs somewhere to write. A stakeholder in iteration 1d found
             # five questions with no `## Answer` heading at all and had to invent the structure
             # of the record to reply — which is the protocol's first impression, made by the
@@ -863,7 +890,7 @@ class Validator:
                                            "moment it exists, empty until answered "
                                            "(spec/question.md §2)")
 
-            if status in ("answered", "deferred"):
+            if status in ("answered", "deferred") and kind != "elicitation":
                 for field in ("answered-at", "answered-by"):
                     if not question.fields.get(field):
                         self.report.error(path, 0, "question.answered.field",
@@ -1123,6 +1150,34 @@ class Validator:
 
             if os.path.basename(os.path.dirname(path)) == "adr":
                 self.check_adr(doc)
+
+    def check_option_order(self, question) -> None:
+        """The recommendation comes after the options it recommends between (F-063).
+
+        Checked positionally rather than by wording, because the failure was a layout: the
+        preferred answer sat above the options and read as the frame for them rather than as one
+        view of them.
+        """
+        section = question.sections.get("## Options considered")
+        if not section:
+            return
+        lines = section["text"].split("\n")
+        first_recommendation = None
+        last_option = None
+        for offset, raw in enumerate(lines):
+            if RECOMMENDATION_RE.match(raw):
+                if first_recommendation is None:
+                    first_recommendation = offset
+            elif OPTION_RE.match(raw):
+                last_option = offset
+        if first_recommendation is None or last_option is None:
+            return
+        if first_recommendation < last_option:
+            self.report.error(question.path, section["line"] + first_recommendation + 1,
+                              "question.recommendation.order",
+                              "the recommendation is printed above an option",
+                              hint="a reader must reach the options before they reach our "
+                                   "preference (spec/question.md §2, F-063)")
 
     def check_adr(self, doc) -> None:
         name = os.path.basename(doc.path)

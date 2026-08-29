@@ -3457,3 +3457,49 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   (`Doc.corrections`), `fixtures/adr-correction/` (+ README), `fixtures/broken-workspace`
   (two ADRs, EXPECTED-CODES.txt, README row), `examples/toy-project` ADR-0005, `scripts/check`
   (`check_adr_correction`, step 7), re-rendered dist.
+
+---
+
+## 2026-08-29 — META-123 — F-065, F-063, F-064: three spec changes and what enforces each
+
+- **Unit:** META-123
+- **Inputs read:** F-063, F-064, F-065 in the ledger with their iteration-3 evidence;
+  `spec/question.md`, `spec/dor-dod.md`, `scripts/validate-workspace` (question rules),
+  `scripts/check-epic-signoff`, `fixtures/{broken-workspace,ended-engagement,signed-off-epic}`.
+- **Decisions:**
+  - **F-065 is contract-level and the spec says why.** No program can read whether two sentences
+    still agree. What the spec can demand is the *procedure*: name the criteria by ID, read each
+    one's text against the new behaviour, run the suite as evidence **for** that answer rather
+    than as its definition, and state non-intersection — then add a covering case or waive it by
+    name. And the last step points at ADR-0008: a criterion whose sentence is no longer true is
+    not a criterion to rewrite, it is a contradiction with an author.
+  - **F-063 is checked positionally, not by wording.** The failure was a *layout* — the preferred
+    answer above the options, so it read as the frame rather than as one view. Two codes:
+    `question.recommendation.order` (a recommendation above an option inside `## Options
+    considered`) and `question.recommendation.misplaced` (a recommendation in `## Context` or
+    `## Question` at all).
+  - **F-064 becomes `kind: elicitation` and DE8.** Non-blocking, addressed to human, exempt from
+    the two-options rule and from it alone — inventing two options for *"what else matters to
+    you?"* defeats the question. Enforced at the ending rather than in the validator, because a
+    validator that goes red mid-engagement stops a harness run with `validator-failed`; and
+    `review-close` may always file it alongside the sign-off, so the rule cannot deadlock an
+    engagement that forgot it. The gate says plainly that earlier is worth more.
+  - **DE8 is checked after DE7's analysis, not before.** First cut ran it first, and
+    `fixtures/ended-engagement`'s EP-002 and EP-003 — which exist to fail on F-046 and F-045 —
+    started failing on DE8 instead. A fixture that fails for the wrong reason has stopped
+    testing what it was built for. EP-006 is the dedicated case: a correct sign-off, and nobody
+    ever asked an open question.
+  - **An elicitation question is exempt from the answered-section rules**, because its
+    `## Consequences` may legitimately be "nothing changed, and here is where that is recorded" —
+    it still names a file, and the existing rule still applies to every other kind.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `fixtures/broken-workspace` **79 codes** (was 76), three
+  new; the termination gate now covers **6 verdicts, 6 rest checks** (was 5); the two clean
+  engagements and `examples/toy-project` still pass.
+- **Artifacts:** `spec/question.md` (the presentation rule, `kind: elicitation`, revision 8),
+  `spec/dor-dod.md` (DE8, "a criterion about other criteria", revision 6),
+  `scripts/validate-workspace` (`check_option_order`, `question.elicitation.addressed`,
+  `RECOMMENDATION_RE`, `OPTION_RE`), `scripts/check-epic-signoff` (DE8),
+  `fixtures/broken-workspace` (`WI-0001/Q-002`, codes, README), `fixtures/ended-engagement`
+  (EP-006 + WI-0007, two elicitations, README), `fixtures/signed-off-epic` (an elicitation),
+  `scripts/check` (EP-006 case), re-rendered dist.

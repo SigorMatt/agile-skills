@@ -3,8 +3,9 @@
 
 Usage: scripts/check-epic-signoff <ITEM-ID> [--root .] [--resolving <ITEM>:<from>-><to>]
 
-Epic Definition of Done DE7. On anything that is not an epic this passes and says so — the gate
-runs on every `review-close` execution and only an engagement's ending is its business.
+Epic Definition of Done DE7 **and DE8**. On anything that is not an epic this passes and says so
+— the gate runs on every `review-close` execution and only an engagement's ending is its
+business.
 
 On an epic it requires a question on the epic with:
 
@@ -28,6 +29,14 @@ It is also the fix for the second half of the gap: a bug the pipeline filed and 
 child, so it is in the statement whether or not anyone remembered it. A stakeholder found one for
 themselves after a run ended — *"there's also a bug sitting at `planned`… that I was never told
 about"* (F-046).
+
+**DE8: the one question that was not about our agenda.** Somewhere in the engagement, before the
+sign-off, the stakeholder was asked an open question — `kind: elicitation` — and answered it.
+Iteration 3's stakeholder had two real wants in persona for a whole engagement and no question
+ever created a vehicle for them: *"What I never got asked about was anything I would have thought
+to say myself"* (F-064). This is presence-checkable and nothing more: it cannot know whether the
+question was a good one. `review-close` may file the elicitation alongside the sign-off, so the
+rule cannot deadlock an engagement that forgot it — and the record shows which run asked early.
 
 **Deferral.** An engagement may end at the **impasse** (`open -> blocked`) on a deferred
 acknowledgment — the stakeholder replied "not yet", and parking it is the honest record. It may
@@ -146,19 +155,6 @@ def main(argv: list) -> int:
             if (fields or {}).get("kind") == "sign-off":
                 sign_offs.append((path, fields or {}, body or ""))
 
-    if not sign_offs:
-        print(f"check-epic-signoff: FAIL — {item_id} has no sign-off question.\n"
-              f"  Epic Definition of Done DE7: before an epic closes, file a question on it with\n"
-              f"  kind: sign-off, addressed-to: human, blocking: true — restating the goal, "
-              f"naming\n"
-              f"  EVERY child item as delivered or not with one line of why, and asking plainly "
-              f"whether\n"
-              f"  the stakeholder accepts the engagement as it stands. Then suspend the epic to\n"
-              f"  awaiting-answer and stop. Children: "
-              f"{', '.join(expected_children) or 'none'}",
-              file=sys.stderr)
-        return 1
-
     boundary = engagement.rest_since
     problems = []
     accepted = None
@@ -202,10 +198,53 @@ def main(argv: list) -> int:
             print(f"  - {problem}", file=sys.stderr)
         return 1
 
+    # DE8. The elicitation may live on the epic or on any child — an open question asked at
+    # refinement is worth more than one asked at the ending, so the gate does not care where it
+    # was filed, only that it exists in this engagement and got a reply.
+    elicitations = []
+    for holder in [item] + list(engagement.children):
+        for question in holder.questions:
+            if question.fields.get("kind") != "elicitation":
+                continue
+            if question.fields.get("status") == "open":
+                continue
+            if not answer_text(question.body):
+                continue
+            elicitations.append(os.path.relpath(question.path, root))
+    if not elicitations:
+        print(f"check-epic-signoff: FAIL — nobody asked {item_id}'s stakeholder an open "
+              f"question.\n"
+              f"  Epic Definition of Done DE8: at least once in an engagement, file a question "
+              f"with\n"
+              f"  kind: elicitation, addressed-to: human, blocking: false, asking what matters "
+              f"to them\n"
+              f"  that we have not asked about — and record the answer. Every other question in "
+              f"this\n"
+              f"  protocol comes from our list. A stakeholder in a real run held two real "
+              f"requirements\n"
+              f"  for a whole engagement because no question ever made room for them (F-064).\n"
+              f"  It may be filed now, alongside the sign-off; earlier is worth more.",
+              file=sys.stderr)
+        return 1
+
+    if not sign_offs:
+        print(f"check-epic-signoff: FAIL — {item_id} has no sign-off question.\n"
+              f"  Epic Definition of Done DE7: before an epic closes, file a question on it with\n"
+              f"  kind: sign-off, addressed-to: human, blocking: true — restating the goal, "
+              f"naming\n"
+              f"  EVERY child item as delivered or not with one line of why, and asking plainly "
+              f"whether\n"
+              f"  the stakeholder accepts the engagement as it stands. Then suspend the epic to\n"
+              f"  awaiting-answer and stop. Children: "
+              f"{', '.join(expected_children) or 'none'}",
+              file=sys.stderr)
+        return 1
+
     print(f"check-epic-signoff: PASS — {accepted} carries the stakeholder's reply, names all "
           f"{len(expected_children)} child item(s)"
           + (f", and was filed after the engagement reached rest at {boundary}"
-             if boundary else ""))
+             if boundary else "")
+          + f"; DE8 satisfied by {elicitations[0]}")
     return 0
 
 

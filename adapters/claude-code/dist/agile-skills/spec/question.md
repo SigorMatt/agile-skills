@@ -85,7 +85,7 @@ question.
 | `created` | always | UTC ISO-8601 |
 | `answered-at` | when `answered` or `deferred` | UTC ISO-8601, ≥ `created` |
 | `answered-by` | when `answered` or `deferred` | `answer-questions`, or `human` when escalated |
-| `kind` | optional | `decision` (the default when absent) \| `sign-off` |
+| `kind` | optional | `decision` (the default when absent) \| `sign-off` \| `elicitation` |
 
 ### Body rules
 
@@ -109,6 +109,14 @@ question.
   question is not a choice between options (e.g. a missing fact). A question filed without
   having thought about the answer pushes the whole cost of the thinking upstream, which is how
   a question protocol degrades into "ask the human everything".
+- **Options first; the recommendation last, and marked as ours.** The `- **Recommendation:**`
+  line comes after every option, inside `## Options considered`, and nowhere else — not in
+  `## Context`, not in `## Question`. A stakeholder who received eleven questions "every one with
+  the preferred answer printed above the options" chose against the recommendation twice and
+  wrote: *"I would rather have been asked plainly"* (F-063). A compliant persona would simply
+  have been steered, and nobody would have known. The recommendation is worth having — it is the
+  thinking the previous rule demands — but a reader must reach the options before they reach our
+  preference, and must be able to see that the preference is ours.
 - `## Answer` and `## Consequences` MUST be non-empty when `status: answered` or
   `status: deferred`.
 - `## Consequences` MUST name **files**, not intentions. "Updated the plan" is not a
@@ -229,6 +237,35 @@ Rules:
 overtakes it.** If the sentence is false because the pipeline paraphrased badly, or because the
 code changed, correcting it is an ordinary D12 repair and always was. If it is false because the
 person has since said something incompatible, the document is not the thing that is wrong.
+
+### `kind: elicitation` — the one question that is not about our agenda
+
+Every other question in this protocol is closed-form and comes from the team's list of things it
+needs to know. That is correct and it has a blind spot the size of the product. Iteration 3's
+stakeholder, in their closing note: *"What I never got asked about was anything I would have
+thought to say myself."* Two real wants — a maximum column width, and trailing whitespace — sat
+in that persona for the whole engagement, and no question ever created a vehicle for them
+(F-064). It is the same structural gap `request.md` closed for mid-epic input, one layer earlier:
+the stakeholder had somewhere to speak unprompted, and was never *asked* to.
+
+An **elicitation** question is the vehicle. One per engagement, at least.
+
+- `addressed-to` MUST be `human`; `blocking` MUST be `false`. It must not stop the loop — it is
+  not a thing anyone is waiting on — and it must not be answered by anybody else.
+- It is exempt from the two-options rule, and from it alone. *"What else matters to you here that
+  we have not asked about?"* is not a choice between options and inventing two would defeat it.
+  Every other body rule applies, including one topic per question and a place to write the answer.
+- `intake` files it at the start of an engagement, where the answers are cheapest to act on, or
+  `refine` files it on an item. If the engagement reaches rest without one, `review-close` files
+  it alongside the sign-off. That last route exists so the rule cannot deadlock an engagement
+  that forgot it — but an elicitation asked at the ending is worth much less than one asked at
+  the beginning, and the record shows which happened.
+- The answer is routed like any other: it becomes an item, a criterion, a `## Notes` entry, or an
+  explicit "nothing to add" — and `## Consequences` says which, naming files.
+
+`scripts/check-epic-signoff` enforces presence at the ending (`dor-dod.md` DE8): an engagement
+does not end without at least one elicitation question, created no later than the sign-off
+it is being asked alongside.
 
 ### `kind: sign-off` — the termination question
 
@@ -352,3 +389,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 5 | 2026-08-27 | §2: `status: deferred` — the reply that is neither an answer nor silence, and what it does to the item (F-028). `kind: sign-off` becomes the **termination** question: triggered by rest rather than by closure, and it must name every child item (F-045, F-046). Derived in ADR-0006. |
 | 6 | 2026-08-27 | §2: what a deferral does to an **epic** — it returns the epic to `open`, because `blocked` on an epic is the impasse ending and only `review-close` reaches it. Move 2 as written was impossible to execute on an epic (F-050). |
 | 7 | 2026-08-29 | §2: `## Cross-answer check` — a consumed human answer records what it was checked against, and a declared conflict is put to its author rather than settled in a document (F-062). Derived in ADR-0008. |
+| 8 | 2026-08-29 | §2: options before the recommendation, and the recommendation marked as ours (F-063); `kind: elicitation`, the one open question per engagement that is not about the team's agenda (F-064). |

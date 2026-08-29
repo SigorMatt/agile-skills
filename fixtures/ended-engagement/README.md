@@ -1,4 +1,4 @@
-# Five engagements, at the four verdicts the termination gate has to reach
+# Six engagements, at the verdicts the termination gate has to reach
 
 This is a **gate fixture**, not a workspace fixture. `scripts/check-epic-signoff` and
 `scripts/engagement-state` are run over it; `scripts/validate-workspace` is not, and the tree is
@@ -16,6 +16,13 @@ Each epic is one historical contradiction, re-decided by the model in `meta/adr/
 | **EP-003** | **F-045** — the engagement is over and nobody was ever asked. This is where a real run stopped, printed a board, and called it a day | `at-rest` | **FAIL**, no sign-off at all |
 | **EP-004** | the acknowledgment was **deferred**: "I'll look at this properly next week" | `at-rest` | **FAIL** for closure, **PASS** for `open → blocked` |
 | **EP-005** | still running — a child at `planned`. The control: not everything with nothing runnable *right now* is over | `active` | not run |
+| **EP-006** | **F-064** — everything DE7 asks for, done correctly, in an engagement where nobody ever asked the stakeholder an open question | `at-rest` | **FAIL** on DE8 |
+
+**EP-006 is the newest and the least dramatic.** Its sign-off is correct — it names its child,
+it was filed after rest, the stakeholder accepted. What it never did was ask them anything that
+was not on the team's own list, which is how a stakeholder in a real run carried two real
+requirements through a whole engagement and mentioned them only in a closing note (F-064). DE8 is
+presence and nothing more: it cannot tell a good open question from a perfunctory one.
 
 **EP-001's statement is the one to read if you only read one.** It is what F-045 and F-046 were
 asking for in the same breath: every child named, each marked delivered or not with one line of
