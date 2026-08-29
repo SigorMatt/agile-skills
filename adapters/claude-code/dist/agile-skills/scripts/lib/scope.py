@@ -30,7 +30,7 @@ from __future__ import annotations
 import os
 import subprocess
 
-__all__ = ["DiffScope", "diff_scope", "git"]
+__all__ = ["DiffScope", "diff_scope", "working_tree_scope", "git"]
 
 
 def git(root: str, args: list):
@@ -135,3 +135,30 @@ def diff_scope(root: str, ref: str, subpaths=None) -> DiffScope:
                      f"{len(names)} path(s) differ from {ref} ({base[:7]})"
                      + (f" under {', '.join(subpaths)}" if subpaths else ""),
                      paths=sorted(names), dirty=dirty)
+
+
+def working_tree_scope(root: str, subpaths=None) -> DiffScope:
+    """The window for a skill that works on the trunk and commits once, at the end.
+
+    `plan` is the case. It writes an ADR and an overview into `docs/`, runs its gates, and only
+    then journals, transitions and commits — so at gate time its work is uncommitted, and the
+    honest window is the working tree. Asking `--changed-since <trunk>` there compares the trunk
+    with itself, which is the degenerate window F-066 is about: it would fail on an execution
+    that legitimately wrote no document, and it would say nothing about one that had already
+    committed.
+
+    This window is never degenerate. It can be empty, and an empty one means what it says: this
+    execution has written no document that is not already committed. Its limit is the mirror
+    image of `diff_scope`'s and belongs in the open: work already committed is invisible to it,
+    so it is the right scope only for a skill whose contract commits once, after its gates.
+    """
+    subpaths = list(subpaths or [])
+    inside = git(root, ["rev-parse", "--is-inside-work-tree"])
+    if inside is None or inside.returncode != 0 or inside.stdout.strip() != "true":
+        return DiffScope("the working tree", "no-repository",
+                         f"{root} is not a git repository")
+    dirty = _dirty_under(root, subpaths)
+    return DiffScope("the working tree", "real",
+                     f"{len(dirty)} uncommitted path(s)"
+                     + (f" under {', '.join(subpaths)}" if subpaths else ""),
+                     paths=sorted(dirty), dirty=dirty)

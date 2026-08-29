@@ -2,7 +2,8 @@
 """Gate: a factual claim about the system cites something that exists.
 
 Usage:
-  scripts/lint-claims [--root .] [--changed-since <git-ref>] [--all] [--quiet]
+  scripts/lint-claims [--root .] [--changed-since <git-ref>] [--uncommitted] [--all]
+                      [--context work-item|bug|epic] [--quiet]
 
 Two rules.
 
@@ -42,6 +43,15 @@ Three outcomes, not two (F-066, `scripts/lib/scope.py`):
     run surfaced three real `claim.unsourced` errors. A gate that could not look must say so with
     a non-zero exit; that is F-033's rule, applied to scope.
 
+`--uncommitted` scopes rule 2 to the working tree, for a skill that works on the trunk and
+commits once after its gates (`plan`). That window is never degenerate and it can be empty; an
+empty one means this execution has written no document it has not already committed.
+
+`--context <item-type>` says what this execution **is**, and the scope follows from it. At
+`--context epic` the scope is the whole document set and any `--changed-since` is ignored, with
+the reason printed: an engagement's ending is not an execution, it has no diff of its own, and
+asking it for one is how F-066 happened. At `--context work-item` or `bug` nothing changes.
+
 The scope actually used is printed on every run, for both rules separately.
 
 Standard library only (ADR-0002).
@@ -59,13 +69,24 @@ from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
                     CitationResolver, is_prose, looks_like_code, masked_lines,
                     paragraphs)
 from report import Report  # noqa: E402
-from scope import diff_scope  # noqa: E402
+from scope import diff_scope, working_tree_scope  # noqa: E402
 from workspace import resolve_root  # noqa: E402
 
 class ClaimLinter:
-    def __init__(self, root: str, changed_since=None, everything=False, only=None) -> None:
+    def __init__(self, root: str, changed_since=None, everything=False, only=None,
+                 uncommitted=False, context="") -> None:
         self.root = os.path.abspath(root)
         self.report = Report("lint-claims", self.root)
+        self.context = (context or "").strip()
+        self.uncommitted = uncommitted
+        # An ending has no diff of its own. Saying so here, once, is what makes the gate command
+        # in a skill contract able to be the same string for an item close and for an engagement
+        # ending without either one being dishonest (F-066).
+        if self.context == "epic":
+            self.ending = bool(changed_since) or everything or uncommitted
+            changed_since, uncommitted, everything = None, False, True
+        else:
+            self.ending = False
         self.changed_since = changed_since
         self.everything = everything
         self.only = [os.path.abspath(name) for name in (only or [])]
@@ -88,8 +109,15 @@ class ClaimLinter:
         contained anything whatever the execution did (a failure).
         """
         if self._window is None:
-            self._window = diff_scope(self.root, self.changed_since, ["docs"])
+            if self.uncommitted:
+                self._window = working_tree_scope(self.root, ["docs"])
+            else:
+                self._window = diff_scope(self.root, self.changed_since, ["docs"])
         return self._window
+
+    def scoped(self) -> bool:
+        """Is rule 2 restricted to a window, rather than reading the whole tree?"""
+        return bool(self.changed_since or self.uncommitted) and not self.everything
 
     def changed_docs(self):
         """Documents this execution touched: differing from the ref, or dirty in the tree."""
@@ -127,7 +155,7 @@ class ClaimLinter:
         if not os.path.isdir(docs_dir):
             return []
         selected = None
-        if self.changed_since and not self.everything:
+        if self.scoped():
             selected = self.changed_docs()
         found = []
         for base, dirs, files in os.walk(docs_dir):
@@ -209,7 +237,7 @@ class ClaimLinter:
         comparison is degenerate, not because the prose is clean, and iteration 4's reviewer said
         so in the review — *"It passed here, but it would have passed over anything."*
         """
-        if self.only or self.everything or not self.changed_since:
+        if self.only or not self.scoped():
             return True
         window = self.window()
         if not window.degenerate:
@@ -225,9 +253,11 @@ class ClaimLinter:
         if self.only:
             return f"{len(self.only)} file(s) named on the command line"
         if self.everything:
-            return (f"absolute claims: every document under {os.path.join(self.root, 'docs')}; "
+            return ((("an ending has no diff of its own, so the scope is the whole document set "
+                      "rather than anything --changed-since could name; ") if self.ending else "")
+                    + f"absolute claims: every document under {os.path.join(self.root, 'docs')}; "
                     f"citations: every markdown file in the workspace")
-        if not self.changed_since:
+        if not self.scoped():
             return (f"absolute claims: every document under {os.path.join(self.root, 'docs')} "
                     f"(no scope was named); citations: every markdown file in the workspace")
         window = self.window()
@@ -251,7 +281,7 @@ def main(argv: list) -> int:
     index = 1
     while index < len(argv):
         token = argv[index]
-        if token in ("--all", "--quiet"):
+        if token in ("--all", "--quiet", "--uncommitted"):
             flags.add(token[2:])
             index += 1
             continue
@@ -291,9 +321,15 @@ def main(argv: list) -> int:
     if files:
         root = resolve_root(None, announce=False)
         return ClaimLinter(root, None, False, only=files).run()
+    context = options.get("context", "")
+    if context and context not in ("work-item", "bug", "epic"):
+        print(f"lint-claims: --context must be work-item, bug or epic, not {context!r}",
+              file=sys.stderr)
+        return 2
     root = resolve_root(options.get("root") or (directories[0] if directories else None),
                         tool="lint-claims")
-    return ClaimLinter(root, options.get("changed-since"), "all" in flags).run()
+    return ClaimLinter(root, options.get("changed-since"), "all" in flags,
+                       uncommitted="uncommitted" in flags, context=context).run()
 
 
 if __name__ == "__main__":

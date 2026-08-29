@@ -2,7 +2,8 @@
 """Gate: a conflict between two of the stakeholder's own answers reaches the stakeholder.
 
 Usage:
-  scripts/lint-answers [--root .] [--item <ID>] [--changed-since <git-ref>] [--quiet]
+  scripts/lint-answers [--root .] [--item <ID>] [--changed-since <git-ref>] [--uncommitted]
+                       [--context work-item|bug|epic] [--quiet]
 
 Derived from `meta/adr/ADR-0008-cross-answer-consistency.md`. Three rules, and the ADR is honest
 about what they cannot see — read §5 before trusting this script for more than it does.
@@ -29,6 +30,11 @@ Rule 3 is the mechanical half. In iteration 3 the pipeline found the stakeholder
 *"Fixed two false claims where the review named one."* Every gate passed. The person who wrote
 the sentence was holding a one-line reconciliation nobody asked for.
 
+`--uncommitted` scopes rule 3 to the working tree instead, for a skill that works on the trunk
+and commits once after its gates (`plan`). `--context epic` says this execution is an
+engagement's **ending**: rules 1 and 2 run over the whole record and rule 3 does not run at all,
+because an ending has no diff of its own and asking it for one is how F-066 happened.
+
 `--changed-since` refuses a **degenerate** window rather than reporting a pass over it
 (`scripts/lib/scope.py`, F-066): a ref that does not resolve, or a ref that is the current commit
 with nothing modified, means this gate could not have seen anything whatever the execution did.
@@ -47,7 +53,7 @@ sys.path.insert(0, os.path.join(HERE, "lib"))
 
 from claims import CITATION_RE, paragraphs  # noqa: E402
 from report import Report  # noqa: E402
-from scope import diff_scope, git  # noqa: E402
+from scope import diff_scope, git, working_tree_scope  # noqa: E402
 from workspace import Workspace, resolve_root  # noqa: E402
 
 SECTION = "## Cross-answer check"
@@ -71,10 +77,16 @@ def answer_text(question) -> str:
 
 
 class AnswerLinter:
-    def __init__(self, root: str, only_item=None, changed_since=None) -> None:
+    def __init__(self, root: str, only_item=None, changed_since=None, uncommitted=False,
+                 context="") -> None:
         self.root = os.path.abspath(root)
         self.report = Report("lint-answers", self.root)
+        self.context = (context or "").strip()
+        self.ending = self.context == "epic"
+        if self.ending:
+            changed_since, uncommitted = None, False
         self.only_item = only_item
+        self.uncommitted = uncommitted
         self.changed_since = changed_since
         self.workspace = Workspace(self.root).load()
         self.human = {}          # "<ITEM>/Q-nnn" -> Question
@@ -241,7 +253,8 @@ class AnswerLinter:
         return found
 
     def check_rewritten_claims(self) -> None:
-        window = diff_scope(self.root, self.changed_since, ["docs"])
+        window = (working_tree_scope(self.root, ["docs"]) if self.uncommitted
+                  else diff_scope(self.root, self.changed_since, ["docs"]))
         if window.degenerate:
             self.report.error(
                 os.path.join(self.root, "docs"), 0, "answer.scope.degenerate",
@@ -256,7 +269,8 @@ class AnswerLinter:
                 continue
             if not relative.endswith(".md"):
                 continue
-            before = git(self.root, ["show", f"{self.changed_since}:{relative}"])
+            base = self.changed_since or "HEAD"
+            before = git(self.root, ["show", f"{base}:{relative}"])
             if before is None or before.returncode != 0:
                 continue        # the document did not exist in the base; nothing was rewritten
             path = os.path.join(self.root, relative)
@@ -297,8 +311,11 @@ class AnswerLinter:
         examined = self.check_cross_answer_sections()
         scope = (f"{examined} consumed human answer(s)"
                  + (f" on {self.only_item}" if self.only_item else " in the workspace"))
-        if self.changed_since:
+        if self.changed_since or self.uncommitted:
             self.check_rewritten_claims()
+        elif self.ending:
+            self.report.note("an ending has no diff of its own; rule 3 checks an execution's "
+                             "own edits and does not run here")
         self.report.note(f"checked {scope}")
         return self.report.emit()
 
@@ -311,8 +328,8 @@ def main(argv: list) -> int:
         if token in ("--help", "-h"):
             print(__doc__.strip())
             return 0
-        if token == "--quiet":
-            flags.add("quiet")
+        if token in ("--quiet", "--uncommitted"):
+            flags.add(token[2:])
             index += 1
             continue
         if token.startswith("--"):
@@ -328,9 +345,15 @@ def main(argv: list) -> int:
         print("lint-answers: pass at most one directory (the workspace root)", file=sys.stderr)
         return 2
 
+    context = options.get("context", "")
+    if context and context not in ("work-item", "bug", "epic"):
+        print(f"lint-answers: --context must be work-item, bug or epic, not {context!r}",
+              file=sys.stderr)
+        return 2
     root = resolve_root(options.get("root") or (positional[0] if positional else None),
                         tool="lint-answers")
-    return AnswerLinter(root, options.get("item"), options.get("changed-since")).run()
+    return AnswerLinter(root, options.get("item"), options.get("changed-since"),
+                        uncommitted="uncommitted" in flags, context=context).run()
 
 
 if __name__ == "__main__":
