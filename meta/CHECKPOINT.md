@@ -1,28 +1,29 @@
 # CHECKPOINT
 
-## Current unit: META-122 — F-067, the legal repair for a standing ADR
+## Current unit: META-123 — F-065, F-063, F-064 in the spec, with what enforces them
 
-**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..121 done and pushed.
+**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..122 done and pushed.
 
-**Intent.** `lint-claims --all` finds three `claim.unsourced` in iteration 4's `ADR-0002`. The
-reviewer verified all three true against the code. Adding the citation is an edit; ADRs are
-superseded-only; superseding one to add provenance is disproportionate — so *"no legal move
-clears it"*, and the ledger carries a permanent known-unfixable lint error class.
+**Intent.** The three spec changes the contracts (META-124) then carry, each with the mechanical
+half it can honestly have:
 
-The repair, per ADR-0008's neighbour reasoning and the consumer run's own ADR-0009:
+1. **F-065** — `spec/dor-dod.md`: a criterion *about other criteria* ("every AC of WI-0001..0003
+   still holds") is assessed against those criteria's **text**. The test suite is evidence for
+   the answer, never its definition. Where the domains do not intersect in anything executable,
+   the non-intersection is stated and a covering case is added or waived by name. Contract-level;
+   no program can read whether two sentences still agree.
+2. **F-063** — `spec/question.md`: options first, recommendation last and marked as the team's
+   preference; no recommendation in `## Context` or `## Question`. Lintable, and linted
+   (`validate-workspace`).
+3. **F-064** — `spec/question.md`: `kind: elicitation`, the one open question per engagement that
+   is not about the team's agenda. Presence-checkable, and checked at the ending
+   (`check-epic-signoff`, DoD **DE8**) — with `review-close` always able to file one, so the
+   rule can never deadlock an engagement that forgot it.
 
-1. `spec/doc-header.md` §4b — a standing ADR may be repaired **without supersession** in exactly
-   two ways, `provenance` and `erratum`, each recorded as an entry in a new append-only
-   `## Corrections` section. Anything that changes what the code must do is a new decision and
-   §4's supersession rule applies with full force. §5's table cell changes to match.
-2. `scripts/validate-workspace` — the shape: every correction entry carries a resolving citation
-   and names its kind; an erratum quotes the removed text; a corrected ADR is still `accepted`;
-   the change log has a row per correction.
-3. `fixtures/adr-correction/` — iteration 4's instance reduced: the ADR **before** (three true,
-   unsourced absolutes) and the same ADR repaired through the new path, asserted by execution in
-   `./scripts/check` — the defect is found, the repair clears it, and a malformed repair does not.
+Must-fail cases for 2 and 3 in `fixtures/broken-workspace` and `fixtures/ended-engagement`;
+must-pass in `examples/toy-project` and the clean engagements.
 
-**Not in this unit:** the skill contracts that name the path (META-124).
+**Not in this unit:** the skill contracts themselves (META-124).
 
 ## Standing instructions (still in force)
 
