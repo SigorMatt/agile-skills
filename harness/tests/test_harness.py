@@ -23,6 +23,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 HARNESS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(HARNESS)
@@ -443,9 +444,38 @@ class StopClassification(unittest.TestCase):
             self.assertTrue(run_iteration.stop_is_resumable(reason), reason)
 
     def test_a_verdict_is_not_resumable(self):
-        for reason in ("epic-done", "blocked-no-recourse", "turn-budget", "contamination",
+        for reason in ("epic-done", "blocked-no-recourse", "contamination",
                        "validator-failed", "stalled"):
             self.assertFalse(run_iteration.stop_is_resumable(reason), reason)
+
+    def test_a_budget_stop_is_resumable_unless_the_engagement_ended(self):
+        """H-010: a budget bounds this run's work, not the engagement.
+
+        Five occurrences in three iterations, two of them landing between the sign-off being
+        filed and the stakeholder answering it. The workaround — --fresh against the same
+        project — worked, and the cost reached the person: "I was asked to sign off twice for
+        the same engagement, six hours apart."
+        """
+        mid_run = TerminalWorkspace.observed({
+            "EP-001": {"type": "epic", "status": "open"},
+            "WI-0001": {"type": "work-item", "status": "planned"},
+        })
+        self.assertTrue(run_iteration.stop_is_resumable("turn-budget", mid_run))
+        ended = TerminalWorkspace.observed({
+            "EP-001": {"type": "epic", "status": "done"},
+            "WI-0001": {"type": "work-item", "status": "done"},
+        })
+        self.assertFalse(run_iteration.stop_is_resumable("turn-budget", ended))
+
+    def test_a_caller_that_cannot_see_the_workspace_gets_no_benefit_of_the_doubt(self):
+        """Without a reading, only the unconditional stops resume. Silence is not evidence."""
+        self.assertFalse(run_iteration.stop_is_resumable("turn-budget"))
+        self.assertTrue(run_iteration.stop_is_resumable("turn-timeout"))
+
+    def test_every_conditional_stop_is_also_described_as_terminal(self):
+        """A stop that can be either has to have both explanations, or one reading is missing."""
+        for reason in run_iteration.CONDITIONAL_STOPS:
+            self.assertIn(reason, run_iteration.TERMINAL_STOPS, reason)
 
     def test_every_stop_reason_the_driver_emits_is_classified(self):
         """A stop nobody classified would silently fall through to 'terminal'."""
@@ -524,6 +554,143 @@ class EngagementRest(unittest.TestCase):
                 "WI-0001": {"type": "work-item", "status": "blocked"},
             })
             self.assertTrue(run_iteration.engagements_ended(observed), ending)
+
+
+class TerminalWorkspace(unittest.TestCase):
+    """H-014: the counter never overrules the disk.
+
+    Iteration 4 reached its terminal state — sign-off accepted at turn 21, the epic `done` and
+    `delivered`, nothing open — announced the H-007 closing turn, spent the budget's last slot on
+    it, and then cut before the worker turn that records epic-done, stamping a finished run
+    "turn-budget: not finished". The workspace was terminal; only the label was wrong.
+    """
+
+    @staticmethod
+    def observed(items, questions=(), requests=(), blocked=()):
+        return {"items": items,
+                "questions": [dict({"status": "open"}, **q) for q in questions],
+                "open-human-questions": [q["id"] for q in questions
+                                         if q.get("addressed-to") == "human"
+                                         and q.get("status", "open") == "open"],
+                "open-requests": list(requests),
+                "blocked-items": list(blocked)}
+
+    def test_every_item_done_is_epic_done_whatever_the_counter_says(self):
+        terminal, reason, _ = run_iteration.engagement_terminal(self.observed({
+            "EP-001": {"type": "epic", "status": "done"},
+            "WI-0001": {"type": "work-item", "status": "done"},
+        }))
+        self.assertTrue(terminal)
+        self.assertEqual(reason, "epic-done")
+
+    def test_an_engagement_that_recorded_an_impasse_is_terminal_too(self):
+        terminal, reason, _ = run_iteration.engagement_terminal(self.observed(
+            {"EP-001": {"type": "epic", "status": "blocked"},
+             "WI-0001": {"type": "work-item", "status": "blocked"}},
+            blocked=["WI-0001"]))
+        self.assertTrue(terminal)
+        self.assertEqual(reason, "blocked-no-recourse")
+
+    def test_work_still_in_flight_is_not_terminal(self):
+        terminal, _, _ = run_iteration.engagement_terminal(self.observed({
+            "EP-001": {"type": "epic", "status": "open"},
+            "WI-0001": {"type": "work-item", "status": "verifying"},
+        }))
+        self.assertFalse(terminal)
+
+    def test_an_unrecorded_ending_is_not_terminal(self):
+        """F-045's shape: at rest with the epic still open is one turn short of the point."""
+        terminal, _, _ = run_iteration.engagement_terminal(self.observed({
+            "EP-001": {"type": "epic", "status": "open"},
+            "WI-0001": {"type": "work-item", "status": "blocked"},
+        }, blocked=["WI-0001"]))
+        self.assertFalse(terminal)
+
+    def test_an_open_question_to_the_human_holds_the_ending_open(self):
+        terminal, _, _ = run_iteration.engagement_terminal(self.observed(
+            {"EP-001": {"type": "epic", "status": "blocked"},
+             "WI-0001": {"type": "work-item", "status": "blocked"}},
+            [{"id": "EP-001/Q-005", "addressed-to": "human", "status": "open"}]))
+        self.assertFalse(terminal)
+
+    def test_the_closing_turn_is_exempt_from_the_budget(self):
+        """The exemption is in the loop, so the test reads the loop rather than re-stating it."""
+        source = open(os.path.join(HARNESS, "run_iteration.py"), encoding="utf-8").read()
+        budget = source[source.index('if self.state["turn"] >= self.max_turns:'):]
+        budget = budget[:budget.index("number = self.state")]
+        self.assertIn('self.state.get("next-job") == "closing"', budget)
+        self.assertIn("engagement_terminal(observed)", budget)
+        self.assertLess(budget.index("engagement_terminal(observed)"),
+                        budget.index('self.stop("turn-budget"'),
+                        "the disk is read before the counter is believed")
+
+
+class FirstJob(unittest.TestCase):
+    """H-011: a fresh run's first job is read from the workspace, not assumed."""
+
+    def project(self, **files):
+        import tempfile
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        for name, text in files.items():
+            path = os.path.join(directory, name.replace("|", os.sep))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(text)
+        return directory
+
+    def test_an_empty_project_opens_with_the_sim(self):
+        directory = self.project()
+        with mock.patch.object(run_iteration, "scan_project",
+                               return_value={"unanswered-human-questions": []}):
+            role, job, why = run_iteration.first_job(directory)
+        self.assertEqual((role, job), ("sim", "open"))
+        self.assertIn("IDEA.md", why)
+
+    def test_a_populated_project_goes_to_the_worker(self):
+        directory = self.project(**{"IDEA.md": "an idea\n"})
+        with mock.patch.object(run_iteration, "scan_project",
+                               return_value={"unanswered-human-questions": []}):
+            role, job, why = run_iteration.first_job(directory)
+        self.assertEqual(role, "worker")
+        self.assertIsNone(job)
+
+    def test_an_unanswered_human_question_outranks_everything(self):
+        directory = self.project(**{"IDEA.md": "an idea\n"})
+        with mock.patch.object(run_iteration, "scan_project",
+                               return_value={"unanswered-human-questions": ["EP-001/Q-005"]}):
+            role, job, why = run_iteration.first_job(directory)
+        self.assertEqual((role, job), ("sim", "answer"))
+        self.assertIn("1 human question", why)
+
+
+class ConsoleLog(unittest.TestCase):
+    """H-012: the driver's account of itself is a file in the run, not a wrapper's problem."""
+
+    def test_say_writes_to_the_log_once_it_is_open(self):
+        import tempfile
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        path = os.path.join(directory, "nested", "driver-console.log")
+        self.assertEqual(run_iteration.open_console_log(path), path)
+        try:
+            run_iteration.say("a line the wrapper never saw")
+        finally:
+            run_iteration.close_console_log()
+        with open(path, encoding="utf-8") as handle:
+            self.assertIn("a line the wrapper never saw", handle.read())
+
+    def test_an_unopenable_log_does_not_stop_the_run(self):
+        self.assertEqual(run_iteration.open_console_log("/proc/nope/console.log"), "")
+        run_iteration.say("still speaking")
+
+    def test_the_run_directory_exists_before_the_first_line_of_output(self):
+        source = open(os.path.join(HARNESS, "run_iteration.py"), encoding="utf-8").read()
+        body = source[source.index("    def main(self):"):]
+        self.assertLess(body.index("open_console_log("), body.index("another_driver("),
+                        "the log is opened before anything can be printed about the run")
+        self.assertLess(body.index("os.makedirs(self.turns_dir"), body.index("open_console_log("),
+                        "the run directory exists before the log is opened into it")
 
 
 class WipeSafety(unittest.TestCase):

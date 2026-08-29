@@ -1713,7 +1713,10 @@ something had gone wrong."*
 - Direction: budget stops become resumable when the workspace holds an open human-addressed
   question or the epic is not terminal — a plain rerun with a larger --max-turns continues the
   run in place. Keep the terminal reading only when the engagement itself is at an ending.
-- Status: open
+- Status: **fixed** — `turn-budget` moves to a new `CONDITIONAL_STOPS` table: resumable unless
+  `engagement_terminal()` says the workspace is at an ending, in which case it is the ending
+  that stopped the run. A plain rerun with a larger `--max-turns` continues in place, nothing is
+  archived, and the trail stays in one run directory. `harness/USAGE.md` §9's table says so
 
 ## H-011 — A fresh run's first job is "open" regardless of workspace state
 - Severity: harness, scheduling, minor
@@ -1727,7 +1730,9 @@ something had gone wrong."*
   ops-session reports 2026-08-28.
 - Direction: derive the first job from workspace state exactly as mid-run scheduling does:
   unanswered human questions → sim answer; otherwise no IDEA.md → sim open; otherwise worker.
-- Status: open
+- Status: **fixed** — `first_job()` makes the same decision the mid-run scheduler makes, in the
+  same order: unanswered human questions to the sim, no `IDEA.md` to a sim `open` turn,
+  otherwise the worker. The reason is logged in the run's `start` event and said on the console
 
 ---
 
@@ -1849,7 +1854,9 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   (note its wrapped prefix).
 - Direction: the driver creates its run directory before first output and writes its own
   console log there (or ships --console-log); wrappers stop being load-bearing.
-- Status: open
+- Status: **fixed** — the driver archives (on `--fresh`), creates its run directory and opens
+  `driver-console.log` **before its first line of output**; `say()` writes to both streams and a
+  log it cannot open is a warning, not a stop. `--console-log` overrides the path
 
 ## H-013 — The sim describes the job frame, not the disk
 - Severity: harness, record integrity (F-017's pathology inside the harness's own actor)
@@ -1945,7 +1952,10 @@ contradiction's blast radius even while F-062 kept it from being escalated.
   regardless of the counter; the H-007 closing turn is budget-exempt (it exists for the
   engagement's benefit, not the budget's). Fold into H-010's resumable/terminal rework — the
   shared rule: budgets bound work, not verdicts.
-- Status: open
+- Status: **fixed** — `engagement_terminal()` is consulted before the counter is believed, so a
+  workspace at a terminal ending stops `epic-done` or `blocked-no-recourse` whatever the turn
+  number is; and a `closing` job is exempt from the budget, once, logged as `budget-exempt`.
+  Folded into H-010's rework as the same rule: budgets bound work, not verdicts
 
 ---
 

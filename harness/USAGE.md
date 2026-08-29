@@ -55,7 +55,9 @@ Two flags worth knowing:
 harness/run_iteration.py --iteration iteration-1-expenses
 ```
 
-Turn order: the sim opens the engagement by writing `IDEA.md`, then worker and sim alternate.
+Turn order: the **first** turn is chosen by reading the project — unanswered human questions go
+to the sim, an empty project gets a sim `open` turn, and an already-populated one goes straight
+to the worker (H-011). After that, worker and sim alternate.
 The driver does not simply alternate, though — before a worker turn it checks whether any human
 question is open and unanswered, and gives the turn to the sim instead (a worker turn there would
 halt at orchestrator step 2 having done nothing). And before it accepts `epic-done` as final, it
@@ -79,6 +81,7 @@ Useful flags:
 | `--skills-per-turn N` | how many skill executions a worker turn may run before it stops and reports (default: the config's, or 3) |
 | `--worker-permission-mode` | default `bypassPermissions`; the project is a throwaway |
 | `--fresh` | archive this iteration's **run** — logs, state, transcripts — and start a new one |
+| `--console-log PATH` | where the driver writes its own console narrative (default: `<run-dir>/driver-console.log`) |
 | `--root DIR` | where the throwaway projects live |
 
 One run directory per iteration id. If the run directory belongs to a project at a different
@@ -100,6 +103,14 @@ already present (H-003). `provision.py --wipe` is the other half — it deletes 
 directory and re-provisions from nothing, and it refuses any directory that does not carry
 `.harness/provision.json` or that is not inside the throwaway root.
 
+**The turn budget bounds work, not the engagement.** When a run spends its budget with the
+engagement still going, that is an interruption: rerun with a larger `--max-turns` and it picks
+up at the next turn, in the same run directory, with the same trail. It is a *verdict* only when
+the workspace itself is at an ending. And the budget never overrules the disk — a workspace at a
+terminal ending stops `epic-done` (or `blocked-no-recourse`) whatever the counter says, and the
+one closing sim turn is exempt, because it exists for the engagement's benefit rather than the
+budget's (H-010, H-014).
+
 **Stopping and resuming.** Rerun the same command. The run directory is derived from the
 iteration id and `state.json` says whose turn it is; a turn that was interrupted is simply run
 again, because every pipeline skill reconciles with what it finds on disk. If the driver was
@@ -118,7 +129,15 @@ harness/runs/<iteration>/
   turns/NNN-<role>.stream.jsonl   the turn's full transcript
   turns/NNN-<role>.stderr.txt     whatever the CLI wrote to stderr
   turns/NNN-worker.status.md      the worker's self-report for that turn
+  driver-console.log              everything the driver said, from its first line
 ```
+
+**The console log belongs to the driver.** It creates the run directory and opens this file
+before it prints anything, so a run's narrative survives without a wrapper. Owning it from
+outside failed three ways in one iteration: `tee` was dead at launch because the run directory
+did not exist yet, the `capture-pane` rescue was a rendered and hard-wrapped copy, and
+`pipe-pane` is clearable without trace (H-012). Redirect the driver's stdout as well if you like;
+nothing depends on it.
 
 Run directories are git-ignored. Copy the ones worth keeping into
 `meta/harness/evidence/<run>/` and commit them there.
@@ -210,7 +229,7 @@ opposite responses. The driver says which when you rerun.
 | `turn-failed` | resumable | read the transcript, fix the cause, then rerun |
 | `epic-done` | terminal | the run finished |
 | `blocked-no-recourse` | terminal | the run reached an impasse; that is a result |
-| `turn-budget` | terminal | raise `--max-turns` and `--fresh`, or accept it |
+| `turn-budget` | **usually resumable** | rerun with a larger `--max-turns` and the run continues in place. Terminal only when the engagement itself is at an ending — then it is the ending, not the budget, that stopped it |
 | `stalled` | terminal | read the worker's status files in order; this is a finding |
 | `validator-failed` | terminal | the workspace is broken; that is a finding about the toolkit |
 | `contamination` | terminal | `--reaudit`, below |

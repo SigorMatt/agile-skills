@@ -64,18 +64,38 @@ RESUMABLE_STOPS = {
     "turn-timeout": "the turn hit --turn-timeout and was killed",
     "api-rejected": "the model API refused the turn (limit, auth, or transport)",
 }
+# H-010: a budget bounds *work*, not the engagement. Five times in three iterations a run hit its
+# turn budget, twice landing exactly between the termination gate filing the sign-off and the
+# stakeholder answering it — and the driver called that a verdict, refused a rerun with a larger
+# --max-turns, and offered only --fresh. The workaround worked and its cost reached the person:
+# "I was asked to sign off twice for the same engagement, six hours apart." So `turn-budget` is
+# resumable unless the engagement itself is at an ending, which is the one case where "this run
+# is over" and "this engagement is over" are the same sentence.
+CONDITIONAL_STOPS = {
+    "turn-budget": "the budget bounds this run's work, not the engagement; rerun with a larger "
+                   "--max-turns and it continues in place",
+}
 TERMINAL_STOPS = {
     "epic-done": "the run reached its end",
     "blocked-no-recourse": "the run reached an impasse with nothing left to ask",
-    "turn-budget": "the configured turn budget is spent",
+    "turn-budget": "the configured turn budget is spent and the engagement is at an ending",
     "contamination": "a turn read or wrote outside the boundary; --reaudit is the recovery",
     "validator-failed": "the workspace no longer validates; fix it, then --fresh or --reaudit",
     "stalled": "three turns changed nothing",
 }
 
 
-def stop_is_resumable(reason) -> bool:
-    return reason in RESUMABLE_STOPS
+def stop_is_resumable(reason, observed=None) -> bool:
+    """Is this stop an interruption rather than a verdict?
+
+    `observed` is a `scan_project` reading. Without one, only the unconditional stops are
+    resumable — a caller that cannot see the workspace does not get the benefit of the doubt.
+    """
+    if reason in RESUMABLE_STOPS:
+        return True
+    if reason in CONDITIONAL_STOPS and observed is not None:
+        return not engagement_terminal(observed)[0]
+    return False
 
 
 API_REJECTION_MARKERS = (
@@ -115,8 +135,45 @@ def write(path, text):
         handle.write(text)
 
 
+# H-012: the driver's console narrative used to belong to whoever launched it, and three ways of
+# owning it from outside failed in one iteration — `tee` dead at launch because the run directory
+# did not exist yet (the driver created it later), a `capture-pane` rescue that is a rendered,
+# hard-wrapped copy, and `pipe-pane`, which is clearable without trace. A run's own account of
+# itself is not a wrapper's job.
+_CONSOLE = None
+
+
+def open_console_log(path):
+    """Own the console from the first line. Returns the path, or "" if it could not be opened."""
+    global _CONSOLE
+    close_console_log()
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        _CONSOLE = open(path, "a", encoding="utf-8")
+    except OSError as exc:
+        print(f"[{now()}] could not open the console log at {path}: {exc}", flush=True)
+        return ""
+    return path
+
+
+def close_console_log():
+    global _CONSOLE
+    if _CONSOLE is not None:
+        try:
+            _CONSOLE.close()
+        finally:
+            _CONSOLE = None
+
+
 def say(message):
-    print(f"[{now()}] {message}", flush=True)
+    line = f"[{now()}] {message}"
+    print(line, flush=True)
+    if _CONSOLE is not None:
+        try:
+            _CONSOLE.write(line + "\n")
+            _CONSOLE.flush()
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------------------------
@@ -294,6 +351,47 @@ def engagements_ended(observed):
     """
     epics = [item for item in observed["items"].values() if item["type"] == "epic"]
     return bool(epics) and all(item["status"] in TERMINAL_CHILD_STATUSES for item in epics)
+
+
+def engagement_terminal(observed):
+    """Is the workspace itself at an ending? Returns (terminal, stop-reason, detail).
+
+    H-014: iteration 4 reached its terminal state — sign-off accepted, the epic `done` and
+    `delivered`, nothing open — spent the budget's last slot on the closing sim turn, and then
+    stamped the finished run "turn-budget: not finished". The workspace was terminal and only the
+    label was wrong. The counter is a bound on work; what happened to the engagement is read off
+    the disk.
+    """
+    if epic_complete(observed):
+        return True, "epic-done", f"{len(observed['items'])} item(s), all done"
+    if (engagement_at_rest(observed) and engagements_ended(observed)
+            and not observed.get("open-human-questions")
+            and not observed.get("open-requests")):
+        blocked = observed.get("blocked-items") or []
+        return True, "blocked-no-recourse", (
+            f"the engagement recorded its ending"
+            + (f"; blocked: {', '.join(blocked)}" if blocked else ""))
+    return False, "", ""
+
+
+def first_job(project_dir):
+    """Whose turn opens a fresh run, read from the workspace rather than assumed.
+
+    H-011: every fresh run led with `sim job=open` whatever the project held. In iteration 2's
+    continuations that cost a near-no-op turn once, and once the open-job sim absorbed a pending
+    sign-off answer by accident — the right outcome by the wrong route. H-004 fixed
+    answers-first for resumes; a fresh start never read the disk at all. This is the same
+    decision the mid-run scheduler makes, in the same order.
+    """
+    observed = scan_project(project_dir)
+    if observed["unanswered-human-questions"]:
+        return "sim", "answer", (
+            f"{len(observed['unanswered-human-questions'])} human question(s) are open and "
+            f"unanswered")
+    if not os.path.isfile(os.path.join(project_dir, "IDEA.md")):
+        return "sim", "open", "the project has no IDEA.md, so the engagement has not been opened"
+    return "worker", None, "the workspace is already populated and nothing is waiting on the "\
+                           "stakeholder"
 
 
 def worker_report(project_dir, not_before=None):
@@ -524,6 +622,7 @@ class Run:
         self.skills_per_turn = (args.skills_per_turn
                                 or self.config.get("worker-skills-per-turn", 3))
         self.state = None
+        self.console_log = ""
 
     # -- state ---------------------------------------------------------------------------
 
@@ -637,6 +736,18 @@ class Run:
                 f"run: {self.project_dir} does not exist.\n"
                 f"     Provision it first:  harness/provision.py --iteration {self.iteration}\n")
             return 2
+        # H-012. Before the first line of output: the run directory exists and the console log
+        # is open, so the driver's own narrative is a file in the run rather than something a
+        # wrapper was supposed to catch. `--fresh` archives first, or the log would be written
+        # into the directory that is about to move.
+        if self.args.fresh:
+            self.archive()
+        os.makedirs(self.turns_dir, exist_ok=True)
+        self.console_log = open_console_log(self.args.console_log
+                                            or os.path.join(self.run_dir, "driver-console.log"))
+        if self.console_log:
+            say(f"console log: {self.console_log}")
+
         running = another_driver(self.driver_pid_path)
         if running:
             sys.stderr.write(
@@ -644,9 +755,6 @@ class Run:
                 "     Stop it before starting another; two drivers would interleave turns\n"
                 "     into the same workspace.\n")
             return 2
-        if self.args.fresh:
-            self.archive()
-        os.makedirs(self.turns_dir, exist_ok=True)
         write(self.driver_pid_path, f"{os.getpid()}\n")
 
         self.state = self.load_state()
@@ -665,10 +773,17 @@ class Run:
             return 2
         if self.state and self.state.get("status") == "stopped" and not self.args.fresh:
             reason = self.state.get("stop-reason")
-            if stop_is_resumable(reason):
-                say(f"the previous run stopped on {reason!r} — {RESUMABLE_STOPS[reason]}")
-                say("resuming: the interrupted turn runs again, and every skill reconciles "
-                    "with what it finds on disk")
+            if stop_is_resumable(reason, scan_project(self.project_dir)):
+                say(f"the previous run stopped on {reason!r} — "
+                    f"{RESUMABLE_STOPS.get(reason) or CONDITIONAL_STOPS[reason]}")
+                if reason in CONDITIONAL_STOPS:
+                    say(f"resuming in place at turn {self.state['turn'] + 1} of "
+                        f"{self.max_turns}; nothing was interrupted and nothing is archived")
+                    if self.state["turn"] >= self.max_turns:
+                        say("     the budget is still spent — pass a larger --max-turns")
+                else:
+                    say("resuming: the interrupted turn runs again, and every skill reconciles "
+                        "with what it finds on disk")
                 self.log({"event": "resume-after-stop", "at": now(), "stop-reason": reason,
                           "stop-detail": self.state.get("stop-detail")})
                 self.state["status"] = "running"
@@ -694,11 +809,14 @@ class Run:
                     say("            the stop if today's rules find them clean")
                 return 0
         if self.state is None:
+            role, job, why = first_job(self.project_dir)
+            say(f"first turn: {role}" + (f" ({job})" if job else "") + f" — {why}")
             self.state = {"iteration": self.iteration, "project": self.project_dir,
-                          "started": now(), "turn": 0, "next-role": "sim", "next-job": "open",
+                          "started": now(), "turn": 0, "next-role": role, "next-job": job,
                           "status": "running", "fingerprints": []}
             self.save_state()
             self.log({"event": "start", "at": now(), "iteration": self.iteration,
+                      "first-role": role, "first-job": job, "first-job-because": why,
                       "project": self.project_dir, "config": self.config,
                       "max-turns": self.max_turns, "worker-model": self.worker_model,
                       "sim-model": self.sim_model,
@@ -719,8 +837,27 @@ class Run:
 
         while True:
             if self.state["turn"] >= self.max_turns:
-                return self.stop("turn-budget",
-                                 f"{self.max_turns} turns used; the run was not finished")
+                # H-014, first half: the counter never overrules the disk. A workspace at a
+                # terminal ending has finished, and saying otherwise mislabels a completed run.
+                observed = scan_project(self.project_dir)
+                terminal, reason, detail = engagement_terminal(observed)
+                if terminal:
+                    return self.stop(reason, f"{detail}; the turn budget was spent at the same "
+                                             f"moment and the workspace is what says what "
+                                             f"happened")
+                # H-014, second half: the H-007 closing turn exists for the engagement's benefit,
+                # not the budget's. It is one turn, it is given once, and refusing it means the
+                # stakeholder never sees the ending of exactly the runs that ran long.
+                if self.state.get("next-job") == "closing":
+                    say(f"    the {self.max_turns}-turn budget is spent, and the closing turn is "
+                        f"not the budget's to spend — giving it")
+                    self.log({"event": "budget-exempt", "at": now(),
+                              "turn": self.state["turn"] + 1, "job": "closing"})
+                else:
+                    return self.stop("turn-budget",
+                                     f"{self.max_turns} turns used; the engagement is not at an "
+                                     f"ending, so this stop is resumable — rerun with a larger "
+                                     f"--max-turns and it continues in place")
 
             number = self.state["turn"] + 1
             role = self.state["next-role"]
@@ -960,6 +1097,9 @@ def main() -> int:
     parser.add_argument("--root", default=DEFAULT_ROOT)
     parser.add_argument("--max-turns", type=int, default=None,
                         help="turn budget for the whole iteration (default: the config's)")
+    parser.add_argument("--console-log", default=None,
+                        help="where the driver writes its own console narrative "
+                             "(default: <run-dir>/driver-console.log)")
     parser.add_argument("--turn-timeout", type=int, default=3600,
                         help="wall-clock seconds before a single turn is killed")
     parser.add_argument("--max-budget-usd", type=float, default=None,
