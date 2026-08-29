@@ -1774,7 +1774,14 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   the question/criteria record that flags same-topic answers with conflicting content, so the
   escalation is checked, not remembered. Repairing a stakeholder-sourced falsehood in docs
   without a question to its author becomes a refused move.
-- Status: open
+- Status: **fixed** — ADR-0008 (commit `24a1ca5`) derives the obligation; `scripts/lint-answers`
+  and `fixtures/crossed-answers/` (commit `61fb2aa`) enforce and prove it; `spec/question.md`'s
+  `## Cross-answer check` and the seven contracts that write it (commits `77a5d96`, `1189f29`).
+  The refused move — repairing a claim sourced to a human answer that a later answer of theirs
+  overtook — is rule 3, executed in `./scripts/check` against a throwaway repository. What is
+  **not** fixed, and is stated in ADR-0008 §5 rather than implied: the lint cannot tell whether
+  two answers conflict. It checks that the check happened, that its IDs resolve, and that a
+  declared conflict reached its author. Regression 3b is the real verdict
 
 ## F-063 — Refinement questions lead with the recommendation, and it anchors
 - Severity: UX/methodology, medium (observed across two personas)
@@ -1787,7 +1794,10 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   question bodies.
 - Direction: options first, recommendation after, clearly marked as the team's preference —
   a presentation-order rule in question.md's convention, cheap to lint.
-- Status: open
+- Status: **fixed** — `spec/question.md` §2 (the presentation rule) and
+  `validate-workspace`'s `question.recommendation.order` / `question.recommendation.misplaced`,
+  checked positionally because the failure was a layout; `refine` 0.3.0 step 5a
+  (commits `77a5d96`, `1189f29`)
 
 ## F-064 — Refinement never makes an open-elicitation move
 - Severity: methodology gap, medium
@@ -1801,7 +1811,11 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
 - Evidence: meta/harness/evidence/iteration-3/ — SIM-LOG segment 1 closing entry.
 - Direction: refine's contract gains one open question per item (or intake per engagement),
   answers routed like any other; trivially checkable by presence.
-- Status: open
+- Status: **fixed** — `kind: elicitation` in `spec/question.md` §2; DoD **DE8** in
+  `spec/dor-dod.md`, enforced by `check-epic-signoff`; `intake` 0.3.0 files it at the start
+  under a hard `lint-answers --require-elicitation` gate, and `review-close` files it at the
+  ending as a backstop so the rule cannot deadlock an engagement that forgot it
+  (commits `77a5d96`, `1189f29`)
 
 ## F-065 — "Existing criteria still hold" is verified against the test suite, not the criteria
 - Severity: correctness of the record, medium — the enabler of F-062's final pass
@@ -1817,7 +1831,12 @@ fixture-only; E4 (abandoned) still has no queue entry — decide after iteration
   statements remain true of the new behaviour?), with the test suite as evidence for, not the
   definition of, the answer; where the domains don't intersect in tests, that non-intersection
   must be stated and a covering case added or waived by name.
-- Status: open
+- Status: **fixed** — `spec/dor-dod.md` "A criterion about other criteria is read against their
+  text": name the criteria by ID, read each sentence against the new behaviour, run the suite as
+  evidence rather than as the definition, and state non-intersection or waive it by name.
+  `verify` 0.2.0 gains the step and a hard `a-criterion-about-criteria-is-read` gate; `refine`
+  0.3.0 writes the criterion so that it asks for that procedure (commits `77a5d96`, `1189f29`).
+  Contract-level by construction: no program can read whether two sentences still agree
 
 ## H-012 — The driver does not own its console log
 - Severity: harness, operability
@@ -1884,7 +1903,13 @@ contradiction's blast radius even while F-062 kept it from being escalated.
   changed-since the item's base; at an ending, the full document set (or an explicit named
   scope). "Checked nothing" becomes a failing verdict, never a pass — a gate that could not
   look must say so with exit ≠ 0 (F-033's rule, applied to scope).
-- Status: open
+- Status: **fixed** — `scripts/lib/scope.py` models the three states of a diff window and
+  `lint-claims` fails a degenerate one instead of passing over it (commits `61fb2aa`,
+  `d3c1234`); `--context {{item.type}}` makes the scope explicit per context, so an ending reads
+  the whole document set rather than an empty diff, and `--uncommitted` gives `plan` an honest
+  window on the trunk (commit `6a34d69`); `review-close` 0.6.0 carries both and must journal the
+  scope its gate examined (commit `1189f29`). Four executed cases in `./scripts/check` cover the
+  three states, and the old "as the gate invokes it" step is now the must-fail case
 
 ## F-067 — A true-but-unsourced claim in an ADR has no legal repair
 - Severity: methodology/spec gap — F-057's class, sharper instance
@@ -1900,7 +1925,11 @@ contradiction's blast radius even while F-062 kept it from being escalated.
   section for provenance and errata (content rules unchanged, decisions still superseded-only),
   or the lint learns an `accepted-unsourced` waiver that must cite the review that verified
   the claim. Either way the repair is authorized, recorded, and bounded.
-- Status: open
+- Status: **fixed** — `spec/doc-header.md` §4b: a standing ADR is repaired in place through an
+  append-only `## Corrections` section, `provenance` or `erratum`, never a change to what the
+  code must do; seven `adr.correction.*` rules in `validate-workspace`;
+  `fixtures/adr-correction/` reproduces the iteration-4 instance and its repair, both asserted
+  (commit `9e401a3`). `plan` 0.4.0 and `review-close` 0.6.0 name the path (commit `1189f29`)
 
 ## H-014 — The closing sim turn is not budget-exempt; a completed engagement was labeled unfinished
 - Severity: harness, stop semantics (H-010's off-by-one costume)
@@ -1942,3 +1971,26 @@ mission with a dual regression gate: a 3b re-run in which the planted contradict
 escalated to its author (F-062 fixed), and a 4b re-run whose ending audit signs with zero
 new findings (F-066/F-067/H-014 fixed). Both green → all three conditions read positive and
 the gated tracks (retro skill, Codex adapter, content packs) unlock.
+
+## F-068 — the example workspace's own prose predates the citation convention
+- Severity: consistency of the shipped example, low
+- Component: examples/toy-project/docs/
+- Symptom: `scripts/lint-claims --root examples/toy-project --all` reports **41**
+  `claim.unsourced` findings. The example is the toolkit's own reference workspace and the one a
+  reader opens to see what a good record looks like; its documents were written before
+  `doc-header.md` §4a existed and nothing gates them — `./scripts/check` runs
+  `validate-workspace` over it, which enforces citation *resolution* but not the absolute-claim
+  rule. F-066's fix is what made this visible: `--context epic` reads the whole document set, so
+  a `review-close` ending in that workspace would now fail.
+- Diagnosis: not a defect in the rule and not a regression. It is the retroactivity carve-out
+  `doc-header.md` §4a states in terms — *"A record written before this convention existed is not
+  retroactively invalid"* — showing up in our own example rather than in a consumer's project.
+- Evidence: `python3 scripts/run-gate --skill review-close --item EP-001 --gate
+  claims-are-sourced --root .` in `examples/toy-project` → 41 errors, exit 1 (2026-08-29,
+  META-124).
+- Direction: either source the example's absolutes (it is a small tree and the citations are all
+  available in the item record), or state in `examples/toy-project/README.md` that the example
+  predates §4a and is not a model for it. Doing neither leaves the reference workspace quietly
+  failing a rule the toolkit teaches.
+- Status: open — filed rather than fixed silently; out of builder 3's scope, which is the
+  kernel rather than the example
