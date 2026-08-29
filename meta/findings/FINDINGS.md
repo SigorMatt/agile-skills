@@ -174,7 +174,12 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
 - Interim: the harness works today at the prompt level (worker turn prompt:
   "write human questions via the question mechanism and stop; consume answers
   next turn") — no toolkit change required for harness v1.
-- Status: open
+- Status: **deferred**, gated on a real asynchronous human — the fresh-eyes install-and-run
+  recorded under F-009, before the open-source release. Triaged 2026-08-30 (META-128): the
+  harness has now proved the question-file protocol carries a whole engagement, so the defect
+  that motivated this is gone. What remains is a design change — making the file protocol the
+  canonical channel with the interactive tool as one transport over it — and its evidence has
+  to come from someone who is not us
 
 ## F-009 — Prior art: BMAD-METHOD; README must position against it
 - Severity: strategy/docs, ship-blocker for the open-source release
@@ -972,7 +977,11 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/004-worker.status.md
 - Direction: separate ordering from importance — a `sequence`/`after` field, or let `depends-on`
   carry soft ordering — so the board's priority column means one thing.
-- Status: open
+- Status: **deferred**, gated on the sprint-ceremonies / multi-item-parallelism track
+  (ROADMAP §3, last). Triaged 2026-08-30 (META-128): with one runnable item at a time the
+  board cannot mislead about what is next, so the field only lies when there is a queue — and
+  that track is where a queue first exists. Adding a `sequence` field before then would be a
+  schema change with no run able to exercise it
 
 ## F-031 — an `[auto]` Definition of Ready check that only tests file existence
 - Severity: correctness (F-001's class, in a machine-decidable gate)
@@ -1056,7 +1065,9 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/007-worker.status.md
 - Direction: distinguish "empty because nothing is committed yet" from "empty because it was
   merged" — the branch head equalling the trunk head separates them.
-- Status: open
+- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128) as
+  small and self-contained: the branch head equalling the trunk head separates "nothing is
+  committed yet" from "already merged", and the message follows from that
 
 ## F-036 — `new-item` leaves the workspace invalid and does not say so
 - Severity: UX
@@ -1069,7 +1080,9 @@ is not a ledger.
   command. The worker also noted that `journal-entry` requires a `**Status:**` bullet on an entry
   that records no transition; that is `spec/journal-and-history.md` §2.2 as written (such an entry
   reads `X` → `X` (unchanged)), so what is missing is only that the error message does not say so.
-- Status: open
+- Status: **deferred** as one of the four-finding *half-written record* class — with F-043,
+  F-051 and F-053 — gated on the next builder session's first unit. Triaged 2026-08-30
+  (META-128); see the triage note below for why they move together
 
 ## F-037 — the citation rule made the append-only rule unsatisfiable
 - Severity: **structural, severe** — one invariant added this session broke another
@@ -1159,7 +1172,8 @@ Definition of Ready R9's split — that neither filing had noticed.
 - Evidence: evidence/iteration-1d/run/012-worker.status.md
 - Direction: name `--outcome` in `review-close`'s closing step, and find out why setting the field
   before the move is refused. Hand-editing `item.md` is precisely what the tooling exists to remove.
-- Status: open
+- Status: **deferred** with the *half-written record* class (F-036, F-051, F-053), gated on the
+  next builder session's first unit. Triaged 2026-08-30 (META-128)
 
 ## F-044 — `transition` does not escape `|` in `--reason` and corrupts `history.md`
 - Severity: **correctness, severe** — silent record corruption after a reported success
@@ -1263,7 +1277,9 @@ Definition of Ready R9's split — that neither filing had noticed.
 - Direction: `plan`'s self-check gains "no step instructs another skill to do something its
   contract forbids". Worth recording that the system behaved correctly here: the instruction was
   refused, the refusal was declared, and the review agreed — all three positions are in the record.
-- Status: open
+- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128): one
+  self-check line in `plan`'s procedure, and the run it came from is the evidence that the
+  enforcement below it held
 
 ---
 
@@ -1454,7 +1470,8 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: `new-item` takes `--journal-body-file` as `transition` does, or writes the creation
   entry itself. The rule that already exists — the row and the entry are written by one command —
   should hold at creation too.
-- Status: open
+- Status: **deferred** with the *half-written record* class (F-036, F-043, F-053), gated on the
+  next builder session's first unit. Triaged 2026-08-30 (META-128)
 
 ## F-052 — `lint-claims --changed-since` reports a scope it did not have
 - Severity: correctness — F-033's class, in the same script
@@ -1471,7 +1488,11 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: the scope line must describe what was examined — how many documents, selected how.
   F-033 fixed this for the file-argument path; the `--changed-since` path says the same kind of
   untrue thing.
-- Status: open
+- Status: **fixed** — `scope_note()` describes what each rule actually examined, separately and
+  on every run: how many documents, selected how, against which base sha, and where rule 1
+  looked. A window that could not have contained anything is now a failing verdict rather than a
+  quiet 'checked no documents' (commits 61fb2aa, d3c1234, 6a34d69). F-066 was the same defect a
+  step further on — the misreported scope became a passing gate
 
 ## F-053 — `outcome` and `status: done` cannot both be written, in either order
 - Severity: correctness — the F-014 mechanism does not model a dependent field
@@ -1488,7 +1509,10 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: `transition` grows `--outcome` and writes it with the move, the way it already
   writes `--branch`; or `--resolving` teaches the validator that `item.outcome.premature` is
   resolved by the pending move to `done`. The first is simpler and matches an existing pattern.
-- Status: open
+- Status: **deferred** with the *half-written record* class (F-036, F-043, F-051), gated on the
+  next builder session's first unit. Triaged 2026-08-30 (META-128). It is the most expensive of
+  the four — `review-close` takes a non-zero exit on a transition that succeeded, on every item
+  it closes — and that is an argument for fixing the class properly, not for fixing this one
 
 ## F-054 — `lint-claims` rejects a citation whose path is wrapped in backticks, with a misleading message
 - Severity: UX
@@ -1500,7 +1524,9 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: strip surrounding backticks from a citation part before resolving it — writing a
   path in backticks is what all of this repository's prose does — or, if it must be rejected, say
   *why* rather than reporting it as unresolvable.
-- Status: open
+- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128): strip
+  surrounding backticks from a citation part before resolving it, and keep a distinct message
+  for anything still unresolvable
 
 ## F-055 — `review-close`'s "throwaway copy of the trunk" advanced the real trunk
 - Severity: **correctness, severe** — the only finding in the run that caused real damage
@@ -1544,7 +1570,9 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Evidence: meta/harness/evidence/iteration-1e/run/011-worker.status.md
 - Direction: a required section appearing twice is an error. Cheap to check, and the failure it
   prevents is a document that reads correctly in one place and wrongly in another.
-- Status: open
+- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128):
+  cheap, and the failure it prevents is a document that reads correctly in one place and
+  wrongly in another — which is F-001's shape in miniature
 
 ## F-057 — a defect whose fix is a document has no skill allowed to fix it
 - Severity: methodology gap, structural (F-013's shape, in `docs/` rather than in the tracker)
@@ -1563,7 +1591,10 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: as the worker says. Note the shape — an instruction the state machine cannot carry
   out — is the F-013 class again, which suggests `docs/` authority deserves the same enumeration
   treatment ADR-0006 gave item creation.
-- Status: open
+- Status: **deferred** as one of the two-finding *document-as-deliverable* class — with F-058 —
+  gated on an ADR that enumerates `docs/` write authority the way ADR-0006 enumerated item
+  creation. Triaged 2026-08-30 (META-128). One corner of it closed this session: `doc-header.md`
+  §4b gives a standing ADR a legal repair, which is the same shape of gap (F-067)
 
 ## F-058 — `check-verify-freshness` treats `docs/` as record, even when a document is the deliverable
 - Severity: correctness, low
@@ -1574,7 +1605,9 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Evidence: meta/harness/evidence/iteration-1e/run/016-worker.status.md
 - Direction: decide with F-057. If a document can be a deliverable, the gate that asks "did
   verification postdate the change" has to count it.
-- Status: open
+- Status: **deferred** with the *document-as-deliverable* class (F-057), gated on the same ADR.
+  Triaged 2026-08-30 (META-128): it is that finding from the gate's side and cannot be decided
+  before it
 
 ## F-059 — `verify`'s procedure and its contract disagree about its gate list
 - Severity: correctness of the contract, low
@@ -1603,7 +1636,9 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: a *pending-input* channel, distinct from a question: an item parked on an external
   artifact carries what is owed and by whom, and the board and `next`'s report surface it every
   run. Relates to F-008 (asynchronous human interaction as a first-class mode).
-- Status: open
+- Status: **deferred**, gated on F-008. Triaged 2026-08-30 (META-128): it asks for a third
+  human channel beside questions and requests, and inventing one before F-008 decides what the
+  canonical channel *is* would be building the thing F-008 exists to replace
 
 ### Addendum to F-035 (2026-08-27, iteration 1e) — reproduced three times, with the exact message
 F-035 (`check-commit-refs` reports a merge that never happened) fired on **every** item's
@@ -2006,5 +2041,87 @@ the gated tracks (retro skill, Codex adapter, content packs) unlock.
   available in the item record), or state in `examples/toy-project/README.md` that the example
   predates §4a and is not a model for it. Doing neither leaves the reference workspace quietly
   failing a rule the toolkit teaches.
-- Status: open — filed rather than fixed silently; out of builder 3's scope, which is the
+- Status: **deferred**, gated with F-009's fresh-eyes install-and-run, before the open-source
+  release. Triaged 2026-08-30 (META-128): the example is what a reader opens first, so it is
+  release-blocking and not kernel-blocking
   kernel rather than the example
+
+---
+
+### Triage of the open ledger (2026-08-30, builder 3, META-128)
+
+Every finding that was open when this session began now carries a verdict: fixed here, accepted
+for this session, or deferred behind a **named** gate. Nothing is left saying only "open".
+
+| Verdict | Findings |
+|---------|----------|
+| fixed in this session | F-062, F-063, F-064, F-065, F-066, F-067, F-052; H-010, H-011, H-012, H-013, H-014 |
+| accepted for this session (META-131) | F-035, F-048, F-054, F-056, F-059 |
+| deferred — *half-written record* | F-036, F-043, F-051, F-053 |
+| deferred — *document-as-deliverable* | F-057, F-058 |
+| deferred — individually gated | F-008 (a real async human), F-030 (the parallelism track), F-060 (gated on F-008), F-068 (the release), F-010 (already gated on ROADMAP §2) |
+| observation, unchanged | F-061 — held open deliberately; the 3b and 4b trails are its next evidence |
+
+**Why two classes rather than six fixes.** ADR-0006 was written because five findings had each
+been fixable by adding one row, and adding a sixth row is how a class survives. Two of the groups
+above have that shape and are deferred as classes rather than picked off:
+
+- **The half-written record** (F-036, F-043, F-051, F-053). One command writes one half of a
+  record and another command writes the other, and the workspace is invalid in between: `new-item`
+  writes a history creation row and no journal entry; `transition` will not carry `outcome` with
+  the move it is making; `--outcome` exists as a flag no contract names; `review-close` therefore
+  takes a non-zero exit on a transition that in fact succeeded, on every item it closes. The rule
+  the toolkit already believes — *the row and the entry are written by one command* — simply is
+  not true at creation or at closure. That is one derivation, not four patches, and F-038's
+  committed-invalid window is its spec-side statement.
+- **Document-as-deliverable** (F-057, F-058). When the thing being delivered *is* a document, no
+  skill the orchestrator dispatches may write it, and the freshness gate excludes the deliverable
+  from the comparison. `doc-header.md` §4b closed one corner this session (a standing ADR now has
+  a legal repair, F-067) and the shape of the rest is identical: an instruction the state machine
+  cannot carry out. It wants the ADR-0006 treatment — enumerate who may write what under `docs/`,
+  and read the rules off the enumeration.
+
+**F-061 stays an observation.** The mission's instruction, and still the right call: a
+conditional acceptance costing a full engagement cycle is a *cost*, correctly incurred, and the
+stakeholder's own verdict carried both sides. 3b re-runs the engagement that produced it.
+
+## H-015 — two iterations cannot run at once, and nothing says so
+- Severity: harness, operability — a footgun with no guard
+- Component: harness/run_iteration.py (`render_sim_skill`, `SKILL_TARGET`)
+- Symptom: the simulated human's skill directory is a single global path,
+  `harness/.claude/skills/simulated-human/`, and `render_sim_skill` rewrites it — `rmtree` then
+  `makedirs` then three copies — at the start of **every sim turn**. Two drivers running different
+  iterations therefore share one persona and one probe script: each sim turn reads whichever
+  iteration rendered last, and there is a window in which the files do not exist at all. The
+  driver already refuses a second driver on the *same* iteration (`another_driver`); nothing
+  refuses two drivers on different ones.
+- Consequence: found while planning this session's two regression runs, which is why they were run
+  **sequentially**. Had they been launched together, 3b's contradictory stakeholder and 4b's
+  cooperative one would have been interleaved into both trails, and the evidence would have been
+  quietly worthless rather than obviously broken.
+- Evidence: `harness/run_iteration.py:192` (`render_sim_skill`), `:50` (`SKILL_TARGET`), `:704`
+  (called per sim turn); no lock beyond `driver.pid` inside a single run directory.
+- Direction: render the sim skill **into the run directory** and point `--add-dir` at it, so the
+  rendered persona belongs to the run rather than to the harness; or take a harness-wide lock and
+  refuse the second driver with the reason. The first is better — it also puts the exact persona
+  and probe a run used into the evidence that gets banked.
+- Status: open — filed during this session, not fixed here (the fix touches `harness/` while a
+  run is in flight)
+
+---
+
+### Addendum to F-024 (2026-08-30, builder 3) — the same class, in the citation's own formatting
+F-024 is "a finding's commit citation is not checked, and every one of mine was wrong". This
+session wrote seven new citations as ``commit `24a1ca5` `` — backticked, because that is how this
+repository writes shas in prose everywhere else. `scripts/check`'s verifier matches
+`commits? ([0-9a-f]{7,40})` with no backtick, so all seven were **silently unverified**: the step
+reported "30 cited" while the ledger contained 37, and a wrong sha in that form would have passed.
+Normalised to the bare form in commit 517f15f; the count went 30 → 37 on the same tree.
+
+The lesson is F-024's own: a citation nobody verifies is the appearance of evidence. The residual
+hole is stated rather than fixed — the verifier's pattern is *narrower* than the ways a human will
+write a sha, so the next divergent formatting is invisible in the same way. The cheap fix is to
+make the pattern tolerate backticks; the honest fix is to make the step report how many
+sha-shaped tokens it *skipped*, so a citation that falls outside the pattern is loud rather than
+absent. Neither is done here.
+
