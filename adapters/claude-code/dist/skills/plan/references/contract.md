@@ -1,4 +1,4 @@
-# Contract — plan v0.3.1
+# Contract — plan v0.4.0
 
 Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -45,7 +45,8 @@ Every gate below appears in the journal entry for every execution — including 
 | `project-commands-resolved` | hard | tracker/project.yaml has a real command for test and lint, or an ADR records why the project has none. A command that does not exist, or one that exits zero without checking anything, fails this gate. | stay |
 | `decisions-recorded` | hard | List the choices this plan makes. For each, point to an ADR, or to an entry under Assumptions stating what would be needed to reverse it. | stay |
 | `plan-is-executable-without-you` | advisory | Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make. | stay |
-| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}}`, expect exit-zero | stay |
+| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --uncommitted`, expect exit-zero | stay |
+| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --uncommitted`, expect exit-zero | stay |
 
 ## Escalation
 
@@ -55,6 +56,7 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] No ADR or document this execution wrote settles a contradiction between two of the stakeholder's own recorded answers; where one exists, a question quoting both by ID was filed instead (ADR-0008).
 - [ ] plan.md exists with numbered steps, each naming the files it touches and the observable result.
 - [ ] Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.
 - [ ] Every non-obvious decision is an ADR or a recorded reversible assumption.

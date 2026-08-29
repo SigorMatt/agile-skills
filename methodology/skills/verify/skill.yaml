@@ -1,5 +1,5 @@
 name: verify
-version: 0.1.4
+version: 0.2.0
 persona: qa-engineer
 purpose: Independently decide whether an item meets its acceptance criteria, with evidence, and file bugs for what is wrong.
 
@@ -84,6 +84,11 @@ quality_gates:
     manual_check: For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened.
     enforcement: hard
     on_failure: stay
+  - name: a-criterion-about-criteria-is-read
+    description: A criterion whose subject is other criteria was assessed against their text, not against the suite's silence.
+    manual_check: For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065).
+    enforcement: hard
+    on_failure: stay
   - name: tests-would-fail-without-the-change
     description: The tests demonstrating each criterion are sensitive to the behaviour they claim to test.
     manual_check: For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed.
@@ -96,6 +101,7 @@ escalation:
   impasse: If verification cannot be performed at all - the code will not run, the environment is unusable - set the item to blocked with what was tried.
 
 exit_criteria:
+  - A criterion whose subject is other criteria names them by ID and carries a per-criterion verdict read from their text, with any non-intersection stated and a covering case added or waived by name.
   - Every acceptance criterion has a verdict backed by a command this skill ran and its actual output.
   - Every criterion that passed is ticked in item.md, and no criterion is ticked without evidence.
   - Failures are recorded as a send-back for this item's own criteria, or as bug items for behaviour delivered elsewhere.

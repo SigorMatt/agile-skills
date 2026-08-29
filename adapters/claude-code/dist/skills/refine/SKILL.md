@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.2.2
+  methodology-version: 0.3.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -19,7 +19,7 @@ At a glance:
 
 - Runs on items at status: `draft`
 - Human interaction: **direct**
-- Hard gates: `workspace-valid`, `definition-of-ready`, `criteria-are-decidable`, `qa-recorded-verbatim`
+- Hard gates: `workspace-valid`, `definition-of-ready`, `criteria-are-decidable`, `cross-answer-consistency`, `qa-recorded-verbatim`
 - On success: `ready`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
@@ -106,6 +106,34 @@ acted on. Then write down exactly what was said.
      the last one closes by saying that is all of them for now. One conversation, three
      artifacts.
 
+4a. **Check every new answer against the stakeholder's own prior answers.** Your contradiction
+   check has always run against ADRs and the vision. In a real run it ran against exactly those
+   and a worker wrote the gap down in its own journal: *"the stakeholder's own prior answers were
+   never in scope."* Five turns earlier that stakeholder had said the alignment marker decides
+   where text sits *"every row, every column, no exceptions"*; the answer being recorded now
+   exempted a whole class of cell. The pipeline built both, found the older sentence had become
+   false, and **corrected the document** — while the person who wrote both sentences sat with a
+   one-line reconciliation nobody asked for: *"I would rather have been asked"* (F-062).
+
+   So, for each answer you record and each criterion you write from one, you have exactly two
+   moves (`meta/adr/ADR-0008-cross-answer-consistency.md` §3):
+
+   - **Cite compatibility.** Name the prior answers by ID in the question's `## Cross-answer
+     check` and say why the new one coexists with each. `Checked against: none` is a real result
+     and the commonest one — say it, do not leave it blank.
+   - **Ask.** File a blocking question addressed to `human` that **quotes both answers verbatim,
+     by ID**, and asks which wins. Not "we noticed an inconsistency" — both sentences, side by
+     side, and a plain question.
+
+   And one move is refused: **repairing a document, a criterion or a vision statement because a
+   recorded answer of theirs has been overtaken.** If the sentence is false because we
+   paraphrased them badly, or because the code changed, fix it — that is ordinary. If it is false
+   because they have since said something else, the document is not the thing that is wrong.
+
+   `scripts/lint-answers --item <ID>` is a hard gate on this skill and checks the record of the
+   check, not its quality. It cannot know whether two answers really conflict. It can make
+   "nobody looked" impossible to leave behind.
+
 5. **Challenge answers that cannot be acted on — once, specifically.**
    - "It should handle errors gracefully" → "Which errors? For a missing file, do you want a
      message on stderr and a non-zero exit, or a warning and a skip?"
@@ -118,6 +146,15 @@ acted on. Then write down exactly what was said.
    open assumption in the item's `## Notes`, mark it `assumed` in the Q&A, and move on. A human
    badgered into a number they do not believe has not given you a requirement, only a truce.
 
+5a. **Put the options before the recommendation, and mark the recommendation as ours.** A
+   stakeholder who received eleven questions "every one with the preferred answer printed above
+   the options" chose against the recommendation twice and wrote: *"I would rather have been
+   asked plainly"* (F-063). An agreeable stakeholder would simply have been steered and nobody
+   would ever have known. Keep the recommendation — it is the thinking that stops this protocol
+   degrading into "ask the human everything" — but it goes **last**, inside `## Options
+   considered`, marked as the team's preference, and it appears in neither `## Context` nor
+   `## Question`. `validate-workspace` checks the layout, because the failure was a layout.
+
 6. **Rewrite the acceptance criteria.** Each one gets a label `AC<n>`, a checkbox, and a form
    that names what would be observed. Apply the test: *hand this to someone with a terminal and
    no context — would they reach the same verdict you would?*
@@ -128,6 +165,20 @@ acted on. Then write down exactly what was said.
    Include the negative and boundary cases the human implied but did not say: empty input, a
    path that does not exist, a tie, the largest reasonable size. These are where implementations
    diverge from intent, and they are nearly free to specify now.
+
+6a. **A criterion whose subject is other criteria is written so it can be read, not run.** "Every
+   acceptance criterion of WI-0001..0003 still holds" was satisfied in a real run by observing
+   that nothing in the test suite exercised both the old rule and the new exception — which was
+   true, and was not what the criterion said. On the page the two criteria contradicted each
+   other (F-065). If you write a criterion of that shape:
+   - it names the criteria it covers **by ID**, never "the earlier criteria";
+   - it says the assessment is a read of those criteria's *text* against the new behaviour, with
+     the suite as evidence for the answer rather than as its definition;
+   - and it says what to do when nothing executable exercises both: state the non-intersection,
+     then add a covering case or waive it by name.
+
+   `spec/dor-dod.md` carries the procedure `verify` will follow. Writing the criterion so that it
+   asks for that procedure is what makes the procedure happen.
 
 7. **Write `## Out of scope`.** At least one entry, naming something a reader could reasonably
    assume is included. If the human insists nothing is excluded, that itself is worth writing
@@ -264,6 +315,9 @@ the item's whole story rather than only its code.
   unmet criteria in the journal and in `## Notes`. Do not pass it as Ready — an item that
   reaches `implement` with unmet criteria will consume far more of everyone's time than the
   block does.
+- **The answer contradicts an earlier answer of theirs:** this is the one in §4a, and it is the
+  one most likely to look like a document problem. Quote both, by ID, and ask which wins. Never
+  reconcile two of their statements by editing either.
 - **The answer contradicts the product vision or an ADR:** do not resolve it yourself. Put the
   contradiction to the human explicitly, and record their decision. If they change the
   direction, note that `docs/product/vision.md` needs updating and file a question addressed to

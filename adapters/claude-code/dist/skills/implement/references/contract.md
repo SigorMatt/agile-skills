@@ -1,4 +1,4 @@
-# Contract — implement v0.2.2
+# Contract — implement v0.3.0
 
 Rendered from `methodology/skills/implement/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -43,6 +43,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `every-criterion-has-a-test` | hard | For each AC, name the test function or the exact command and its expected output. An AC demonstrated only by reading the code fails this gate. | stay |
 | `commits-reference-the-item` | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
 | `no-unplanned-scope` | advisory | Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed. | stay |
+| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --changed-since {{trunk}}`, expect exit-zero | stay |
 | `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}}`, expect exit-zero | stay |
 
 ## Escalation
@@ -53,6 +54,7 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] No sentence in docs/ that cites one of the stakeholder's answers was rewritten because a later answer of theirs overtook it; that is a question, filed, not an edit (ADR-0008).
 - [ ] Every acceptance criterion has code and a test or reproducible command that exercises it.
 - [ ] All hard gates passed on the branch head, not on an earlier state.
 - [ ] impl-report.md maps each acceptance criterion to its evidence and lists any deviation from the plan.

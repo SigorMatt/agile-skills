@@ -1,5 +1,5 @@
 name: answer-questions
-version: 0.3.1
+version: 0.4.0
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
@@ -80,6 +80,12 @@ quality_gates:
     manual_check: For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition.
     enforcement: hard
     on_failure: stay
+  - name: cross-answer-consistency
+    description: Every human answer this execution consumed records what it was checked against, and a declared conflict was put to its author rather than settled here.
+    command: "scripts/lint-answers --item {{item.id}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
   - name: workspace-valid
     description: The tracker and docs still satisfy the schemas after propagation.
     command: scripts/validate-workspace
@@ -103,6 +109,8 @@ escalation:
   impasse: If the human is unavailable and the question is blocking, leave the item at awaiting-answer and report it. An unanswerable question is not a reason to unblock the item.
 
 exit_criteria:
+  - Every human answer this execution consumed carries a Cross-answer check naming the prior recorded human answers it was checked against - or none, with the reason - and a verdict for each (ADR-0008).
+  - Every conflict a cross-answer check declares is matched by a question addressed to the human that quotes both answers by ID; none was resolved by editing a document instead.
   - Every question this execution handled is either answered with consequences, deferred with what would unblock it recorded and the item where the deferral puts it - blocked for a work item or bug, open for an epic - or addressed to the human with the condition stated.
   - Work an answer implied and no item records exists as a work-item at draft, with arose-from naming the question.
   - Every file named in a Consequences section actually contains the change.

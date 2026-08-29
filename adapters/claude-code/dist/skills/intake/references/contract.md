@@ -1,4 +1,4 @@
-# Contract — intake v0.2.1
+# Contract — intake v0.3.0
 
 Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -24,6 +24,7 @@ Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative 
 
 | path | kind | when |
 |------|------|------|
+| `tracker/items/{{item.id}}/questions/Q-###.md` | file | always |
 | `tracker/` | file | conditional |
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `docs/product/vision.md` | file | always |
@@ -40,6 +41,7 @@ Every gate below appears in the journal entry for every execution — including 
 |------|-------------|-------------------|------------|
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `epic-has-success-measures` | hard | Read the epic's Success measures section; each entry must be something a person could check, not a restatement of the goal. | stay |
+| `an-open-question-was-asked` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}} --require-elicitation`, expect exit-zero | stay |
 | `items-are-separable` | advisory | For each item, state the order it could be built in and what it depends on; an item that cannot be described this way is really part of another. | stay |
 | `no-solution-in-the-problem` | advisory | Read each title and story back; if it names a technology or a data structure the human did not, remove it and record what was removed. | stay |
 
@@ -52,6 +54,7 @@ Every gate below appears in the journal entry for every execution — including 
 ## Exit criteria — all must be true before transitioning
 
 - [ ] An epic exists at status open with a goal, success measures, and an explicit out-of-scope list.
+- [ ] One kind elicitation question exists on the epic - addressed to human, non-blocking - asking what else matters to them that nobody asked about, and its answer is recorded or it is still open with the stakeholder.
 - [ ] At least one work item exists at status draft, each naming the epic.
 - [ ] docs/product/vision.md exists and states who the product is for and what it is for.
 - [ ] Every created item has journal.md and history.md with a creation entry.

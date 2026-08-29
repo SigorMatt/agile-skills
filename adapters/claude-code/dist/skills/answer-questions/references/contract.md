@@ -1,4 +1,4 @@
-# Contract — answer-questions v0.3.1
+# Contract — answer-questions v0.4.0
 
 Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -44,6 +44,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `answer-is-propagated` | hard | For each question answered, open each file named in its Consequences section and confirm the change is there. A Consequences section naming no file fails this gate. | stay |
 | `answered-from-the-record` | hard | For each answer, cite the document, ADR, or Q&A entry it follows from - or state explicitly that the record was silent and record the new decision as an ADR. | stay |
 | `escalation-is-justified` | hard | For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition. | stay |
+| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `item-resumed-correctly` | hard | Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match. | stay |
 | `a-deferral-is-not-an-answer` | hard | For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, a work item or bug must be at blocked and an epic must be back at open, with what would unblock it in Consequences either way. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop; and an epic parked at blocked is a move only review-close may make (F-050). | stay |
@@ -56,6 +57,8 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] Every human answer this execution consumed carries a Cross-answer check naming the prior recorded human answers it was checked against - or none, with the reason - and a verdict for each (ADR-0008).
+- [ ] Every conflict a cross-answer check declares is matched by a question addressed to the human that quotes both answers by ID; none was resolved by editing a document instead.
 - [ ] Every question this execution handled is either answered with consequences, deferred with what would unblock it recorded and the item where the deferral puts it - blocked for a work item or bug, open for an epic - or addressed to the human with the condition stated.
 - [ ] Work an answer implied and no item records exists as a work-item at draft, with arose-from naming the question.
 - [ ] Every file named in a Consequences section actually contains the change.

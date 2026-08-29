@@ -4,7 +4,7 @@ description: "Independently decide whether an item meets its acceptance criteria
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: verify
-  methodology-version: 0.1.4
+  methodology-version: 0.2.0
   persona: qa-engineer
   human-interaction: via-questions
 ---
@@ -20,7 +20,7 @@ At a glance:
 
 - Runs on items at status: `verifying`
 - Human interaction: **via-questions** — you may not ask a person; file a question artifact instead
-- Hard gates: `tests-pass`, `lint-clean`, `workspace-valid`, `every-criterion-independently-checked`, `negative-cases-exercised`
+- Hard gates: `tests-pass`, `lint-clean`, `workspace-valid`, `every-criterion-independently-checked`, `negative-cases-exercised`, `a-criterion-about-criteria-is-read`
 - On success: `in-review`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
@@ -72,6 +72,32 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
 
    Never tick a box you did not personally demonstrate. The tick is what `review-close` relies
    on to close the item, and it is the single place where an unearned pass becomes invisible.
+
+3a. **A criterion about other criteria is read, not run.** Some criteria have criteria as their
+   subject: *"every acceptance criterion of WI-0001..0003 still holds, named tests pass
+   unmodified."* There is a way to satisfy that criterion which looks like verification and is
+   not, and a real run took it: the suite was green, nothing in it exercised both the old rule
+   and the new exception, so nothing collided and the criterion was ticked. On the page the two
+   criteria contradicted each other — one said the alignment marker governs *"every row, every
+   column, no exceptions"*, the other exempted a class of cell. A coverage gap laundered a
+   semantic conflict (F-065).
+
+   So, for a criterion of that shape (`spec/dor-dod.md`):
+
+   1. **Name every criterion it covers, by ID.** If it does not name them, it is not decidable
+      and it should have been sent back at R4.
+   2. **Read each one's sentence against the new behaviour** and give a per-criterion verdict.
+      This is the assessment; it is a read, and it is what the criterion asks for.
+   3. **Run the tests as evidence for that verdict, never as its definition.** "The suite is
+      green" answers a different question, and answering the easier question is how this fails.
+   4. **State non-intersection when it exists**, in those words: nothing executable exercises the
+      old criterion and the new behaviour together. Then either add a case that does, or waive it
+      **by name** — which criterion, and why a covering case is not worth writing.
+
+   If step 2 finds a sentence that is no longer true, do not tick and do not tidy. It is a
+   contradiction between what was agreed and what was built, and it goes back as a defect with
+   both sentences quoted — and if the older sentence is the **stakeholder's own recorded answer**,
+   it is a question for them, not a document to fix (`meta/adr/ADR-0008-cross-answer-consistency.md`).
 
 4. **Exercise the negative and boundary cases deliberately.** Every criterion that mentions an
    error, an empty input, a missing file, or a boundary gets *triggered*, not read about. This

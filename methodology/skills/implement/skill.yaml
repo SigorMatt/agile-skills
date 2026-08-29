@@ -1,5 +1,5 @@
 name: implement
-version: 0.2.2
+version: 0.3.0
 persona: developer
 purpose: Execute the recorded plan on a branch, with tests, and report which evidence satisfies each acceptance criterion.
 
@@ -87,6 +87,12 @@ quality_gates:
     manual_check: Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed.
     enforcement: advisory
     on_failure: stay
+  - name: cross-answer-consistency
+    description: This execution did not repair a claim sourced to a stakeholder answer that their own later answer overtook.
+    command: scripts/lint-answers --changed-since {{trunk}}
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
   - name: claims-are-sourced
     description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
     command: scripts/lint-claims --changed-since {{trunk}}
@@ -100,6 +106,7 @@ escalation:
   impasse: If the plan cannot be executed and no question would unblock it, set the item to blocked with the approaches tried and why each failed.
 
 exit_criteria:
+  - No sentence in docs/ that cites one of the stakeholder's answers was rewritten because a later answer of theirs overtook it; that is a question, filed, not an edit (ADR-0008).
   - Every acceptance criterion has code and a test or reproducible command that exercises it.
   - All hard gates passed on the branch head, not on an earlier state.
   - impl-report.md maps each acceptance criterion to its evidence and lists any deviation from the plan.

@@ -3,7 +3,7 @@
 
 Usage:
   scripts/lint-answers [--root .] [--item <ID>] [--changed-since <git-ref>] [--uncommitted]
-                       [--context work-item|bug|epic] [--quiet]
+                       [--context work-item|bug|epic] [--require-elicitation] [--quiet]
 
 Derived from `meta/adr/ADR-0008-cross-answer-consistency.md`. Three rules, and the ADR is honest
 about what they cannot see — read §5 before trusting this script for more than it does.
@@ -29,6 +29,11 @@ Rule 3 is the mechanical half. In iteration 3 the pipeline found the stakeholder
 `docs/product/vision.md` with `[src: WI-0002/Q-001]` on it — had become false, and rewrote it:
 *"Fixed two false claims where the review named one."* Every gate passed. The person who wrote
 the sentence was holding a one-line reconciliation nobody asked for.
+
+`--require-elicitation` adds one presence check: the engagement `--item` names carries a
+`kind: elicitation` question — the one open question that is not about the team's agenda
+(`spec/question.md` §2, F-064). `intake` runs it at the start, where an answer is cheapest to
+act on; `check-epic-signoff` enforces the same thing at the ending, where it is a last resort.
 
 `--uncommitted` scopes rule 3 to the working tree instead, for a skill that works on the trunk
 and commits once after its gates (`plan`). `--context epic` says this execution is an
@@ -78,7 +83,7 @@ def answer_text(question) -> str:
 
 class AnswerLinter:
     def __init__(self, root: str, only_item=None, changed_since=None, uncommitted=False,
-                 context="") -> None:
+                 context="", require_elicitation=False) -> None:
         self.root = os.path.abspath(root)
         self.report = Report("lint-answers", self.root)
         self.context = (context or "").strip()
@@ -86,6 +91,7 @@ class AnswerLinter:
         if self.ending:
             changed_since, uncommitted = None, False
         self.only_item = only_item
+        self.require_elicitation = require_elicitation
         self.uncommitted = uncommitted
         self.changed_since = changed_since
         self.workspace = Workspace(self.root).load()
@@ -304,11 +310,37 @@ class AnswerLinter:
     BLINDING = ("project.missing", "project.unparsable", "project.shape", "items.missing",
                 "question.unparsable", "item.unparsable")
 
+    def check_elicitation(self) -> None:
+        """Somebody asked an open question in this engagement (F-064).
+
+        Presence and nothing else. It cannot tell a real question from a perfunctory one — what
+        it can do is make an engagement in which nobody was ever asked anything off their own
+        agenda impossible to complete quietly, which is what happened.
+        """
+        found = [identifier for identifier, item, question in self.questions
+                 if question.fields.get("kind") == "elicitation"
+                 and (not self.only_item
+                      or item.identifier == self.only_item
+                      or item.fields.get("epic") == self.only_item)]
+        if found:
+            self.report.note(f"open question on file: {', '.join(sorted(found))}")
+            return
+        where = self.only_item or "this workspace"
+        self.report.error(os.path.join(self.root, "tracker"), 0, "answer.elicitation.missing",
+                          f"no `kind: elicitation` question exists in {where}",
+                          hint="file one addressed to human, blocking: false, asking what else "
+                               "matters to them that nobody has asked about. Every other "
+                               "question in this protocol comes from our list, and a stakeholder "
+                               "in a real run carried two real requirements through a whole "
+                               "engagement because none of them made room (spec/question.md §2)")
+
     def run(self) -> int:
         for path, line, code, message, hint in self.workspace.load_errors:
             if code in self.BLINDING:
                 self.report.error(path, line, code, message, hint)
         examined = self.check_cross_answer_sections()
+        if self.require_elicitation:
+            self.check_elicitation()
         scope = (f"{examined} consumed human answer(s)"
                  + (f" on {self.only_item}" if self.only_item else " in the workspace"))
         if self.changed_since or self.uncommitted:
@@ -328,7 +360,7 @@ def main(argv: list) -> int:
         if token in ("--help", "-h"):
             print(__doc__.strip())
             return 0
-        if token in ("--quiet", "--uncommitted"):
+        if token in ("--quiet", "--uncommitted", "--require-elicitation"):
             flags.add(token[2:])
             index += 1
             continue
@@ -353,7 +385,8 @@ def main(argv: list) -> int:
     root = resolve_root(options.get("root") or (positional[0] if positional else None),
                         tool="lint-answers")
     return AnswerLinter(root, options.get("item"), options.get("changed-since"),
-                        uncommitted="uncommitted" in flags, context=context).run()
+                        uncommitted="uncommitted" in flags, context=context,
+                        require_elicitation="require-elicitation" in flags).run()
 
 
 if __name__ == "__main__":

@@ -134,6 +134,48 @@ information.
    (`answer-questions`, or `human` when they replied to an escalation). A deferral is a reply, so
    it carries both stamps.
 
+4a. **Write the `## Cross-answer check`, on every answer the human gave.** This is the section
+   that stops a contradiction between two of their own statements being settled by us, quietly.
+
+   It happened, and it passed every gate. A stakeholder said the alignment marker decides where
+   text sits — *"every row, every column, no exceptions"* — and, five turns later, that a cell
+   with a line break sits top-left whatever the marker says. Refinement asked three questions
+   about the second and never mentioned the first; planning wrote an ADR quoting both and
+   reconciled them by fiat; implementation found the older sentence, quoted in the vision with
+   its citation on it, had become false, and **rewrote it**. The person who wrote both sentences
+   had a one-line reconciliation ready the whole time and was never asked for it: *"They fixed it
+   as a problem with their document, not as a question for me"* (F-062, ADR-0008).
+
+   So, on every question with `answered-by: human` that you move to `status: answered`:
+
+   ```markdown
+   ## Cross-answer check
+
+   Checked against: WI-0002/Q-001; WI-0002/Q-002.
+
+   - `WI-0002/Q-001` — **conflicts**: it says the marker decides "every row, every column, no
+     exceptions"; this answer exempts a whole class of cell. Escalated as `WI-0004/Q-005`, which
+     quotes both and asks which wins.
+   - `WI-0002/Q-002` — compatible: it is about column width, not about where text sits.
+   ```
+
+   - `Checked against: none — <why>` is a real result and the commonest one. Write it. The
+     section is required; the work of filling it in honestly is usually one line.
+   - A verdict of `conflicts` obliges you to **file the question** — addressed to `human`,
+     blocking, quoting **both** answers verbatim and by ID, asking which wins. `## Options
+     considered` lists their two statements as the options, with `Recommendation: none — this is
+     yours to settle`.
+   - Which prior answers belong in the list is your judgement. ADR-0008 §5 is honest about why:
+     a citation-graph topic key was measured against a real engagement's record and produced 58
+     candidate pairs for four items, so a gate demanding all of them would be a gate somebody
+     switches off. What is checked is that you looked and said what you found.
+
+   And the refused move, stated once: **you may not repair a claim in `docs/` sourced to one of
+   their answers because a later answer of theirs overtook it.** A sentence that is wrong because
+   we paraphrased them badly, or because the code changed, is an ordinary repair and always was.
+   A sentence that is wrong because they have since said something else is not a document defect,
+   and editing it decides on their behalf which of their two statements loses.
+
 5. **Actually make those changes.** This is the step that is skipped under time pressure, and
    skipping it is why the gate `answer-is-propagated` exists. Open each file you named and make
    the change. If you amend an acceptance criterion, journal it explicitly — criteria are frozen
@@ -166,6 +208,10 @@ On the item's `journal.md`:
 - `**Decisions:**` — for each question: the answer, which of the four routes produced it
   (document / recorded intent / decided / escalated), and the reasoning. For escalations, the
   condition that justified it.
+- `**Cross-answer check:**` — for each human answer consumed, the prior answers it was checked
+  against by ID and the verdict for each, or `none` with the reason. The same content as the
+  question's own section, in the one place a reader following the item's story passes through
+  (ADR-0008 §4).
 - `**Questions raised:**` — questions you re-addressed to the human, or `none`.
 - `**Gates:**` — every one, with the file-by-file propagation check as evidence for
   `answer-is-propagated` and, for each deferral, which of step 3a's two moves you took and why.

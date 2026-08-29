@@ -3503,3 +3503,52 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `fixtures/broken-workspace` (`WI-0001/Q-002`, codes, README), `fixtures/ended-engagement`
   (EP-006 + WI-0007, two elicitations, README), `fixtures/signed-off-epic` (an elicitation),
   `scripts/check` (EP-006 case), re-rendered dist.
+
+---
+
+## 2026-08-29 — META-124 — the contracts, once
+
+- **Unit:** META-124
+- **Inputs read:** `meta/adr/ADR-0008-cross-answer-consistency.md`, `spec/question.md`,
+  `spec/dor-dod.md`, `spec/doc-header.md` §4b, all eight `skill.yaml`/`process.md` pairs,
+  `scripts/run-gate`, `scripts/lint-skills`.
+- **Decisions:**
+  - **One pass, one version bump each.** Clusters 1, 2 and 3 all land in the same six contracts.
+    Doing them separately would have cost three bumps per skill and three re-renders for one
+    coherent change. `intake` 0.3.0, `refine` 0.3.0, `plan` 0.4.0, `implement` 0.3.0, `verify`
+    0.2.0, `review-close` 0.6.0, `answer-questions` 0.4.0 — all minor, because every one adds an
+    obligation without removing a legal move.
+  - **`--context {{item.type}}` is how one gate command serves two contexts.** `review-close`
+    runs on items and on epics with a single gate list, and F-066's fix is *scope explicit per
+    context*: at `--context epic` the scope is the whole document set, because an ending is not
+    an execution and has no diff of its own. The alternative — two gates, both always running —
+    would have made every item close read the entire `docs/` tree, which is the whole-repository
+    ritual the D12 scoping exists to avoid.
+  - **`--uncommitted` exists because `plan` works on the trunk.** `plan` writes its ADR, runs its
+    gates, then commits. `--changed-since {{trunk}}` there compares the trunk with itself: it
+    would fail an execution that legitimately wrote no document, and say nothing about one that
+    had already committed. The working tree is `plan`'s honest window, and the limit — work
+    already committed is invisible to it — is written in `scope.py` rather than left implicit.
+  - **`--require-elicitation` moves F-064's presence check to where it is cheap.**
+    `check-epic-signoff` enforces DE8 at the ending, which is a backstop; `intake`'s new gate
+    enforces it at the start, which is where an answer can still change the work. The process
+    text says the difference out loud: asked at the ending it is close to a formality, and the
+    record shows when it was asked.
+  - **The refused move is written into the skill that actually made it.** `implement`'s step 6a
+    carries the three-row table — paraphrase error and code change are ordinary repairs, "they
+    have since said something incompatible" is a question — because iteration 3's journal entry
+    *"Fixed two false claims where the review named one"* was `implement`'s.
+  - **A YAML trap, caught by the cross-check.** An exit criterion written with a colon —
+    `"…could contain something: the item's own diff…"` — parsed as a one-key mapping under
+    PyYAML and as a string under `miniyaml`, and `selftest.py`'s cross-check is what failed.
+    Rewritten with a dash. The self-test earned its keep.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — 22 steps, `lint-skills` clean over 8 contracts, `selftest`
+  210 passed. Both new gates exercised through `run-gate` against `examples/toy-project` on an
+  epic and on a work item, so the placeholder resolution is proven rather than assumed.
+- **Artifacts:** `scripts/lib/scope.py` (`working_tree_scope`), `scripts/lint-claims` and
+  `scripts/lint-answers` (`--context`, `--uncommitted`, `--require-elicitation`), all seven
+  changed skill contracts and their process documents, re-rendered dist.
+- **Noted, not fixed:** `examples/toy-project` carries 41 `claim.unsourced` findings under
+  `lint-claims --all`. It predates the citation convention and nothing gates it; the new
+  `--context epic` scope is what makes it visible. Filed rather than quietly repaired.

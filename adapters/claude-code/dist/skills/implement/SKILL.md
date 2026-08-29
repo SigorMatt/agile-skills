@@ -4,7 +4,7 @@ description: "Execute the recorded plan on a branch, with tests, and report whic
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: implement
-  methodology-version: 0.2.2
+  methodology-version: 0.3.0
   persona: developer
   human-interaction: via-questions
 ---
@@ -20,7 +20,7 @@ At a glance:
 
 - Runs on items at status: `planned`, `in-progress`
 - Human interaction: **via-questions** — you may not ask a person; file a question artifact instead
-- Hard gates: `tests-pass`, `lint-clean`, `workspace-valid`, `every-criterion-has-a-test`, `commits-reference-the-item`, `claims-are-sourced`
+- Hard gates: `tests-pass`, `lint-clean`, `workspace-valid`, `every-criterion-has-a-test`, `commits-reference-the-item`, `cross-answer-consistency`, `claims-are-sourced`
 - On success: `verifying`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
@@ -112,6 +112,33 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    answer just moves the work upstream. Then set the item to `awaiting-answer` with
    `resume-to: in-progress`, journal, and stop.
 
+6a. **You may not repair a sentence that is one of theirs.** D12 asks you to check whether the
+   claims in `docs/` about the behaviour you touched are still true, and to fix them when they
+   are not. There is one sentence that rule does not reach: a claim carrying
+   `[src: <ITEM>/Q-nnn>]` for a question the **stakeholder** answered. That sentence is their
+   requirement, quoted, with a return address on it.
+
+   In a real run this exact thing happened and every gate passed. The vision said the alignment
+   markers are honoured *"in every column without exception"*, citing `WI-0002/Q-001` — the
+   stakeholder's own words. The item being built introduced the exception, so the sentence had
+   become false, and the journal recorded the repair proudly: *"Fixed two false claims where the
+   review named one."* The person who wrote the sentence held a one-line reconciliation for the
+   whole engagement and was never asked (F-062).
+
+   Three repairs, one of which is refused (`ADR-0008` §3):
+
+   | The sentence is wrong because… | What you do |
+   |---|---|
+   | we paraphrased them badly, or cited the wrong answer | ordinary repair — fix it, cite the answer it should have cited |
+   | the code changed and the sentence describes the code | ordinary repair — D12, as always |
+   | **they have since said something incompatible** | **file a question**; the document is not the thing that is wrong |
+
+   For the third row: file it addressed to `human`, blocking, quoting both answers verbatim and
+   by ID, set the item to `awaiting-answer` with `resume-to: in-progress`, and stop. If you are
+   confident the two answers coexist and the edit is an ordinary repair, say so in the journal
+   under `**Cross-answer check:**`, naming the answer — that is the other legal move, and
+   `scripts/lint-answers --changed-since <trunk>` accepts either and refuses silence.
+
 7. **Run all the gates on the branch head**, after the last change. Not on an earlier state — a
    gate run before the final commit tells you about code that no longer exists.
 
@@ -147,6 +174,12 @@ On the item's `journal.md`:
   orient yourself.
 - `**Decisions:**` — every choice you made inside the plan's latitude, with the reason. Include
   the ones you decided *not* to make and escalated instead.
+- `**Cross-answer check:**` — any claim in `docs/` sourced to a human answer that this execution
+  edited, the answer's ID, and why the edit was an ordinary repair rather than a decision that
+  was theirs to make. `none` when this execution touched no such sentence (ADR-0008 §4).
+- `**Cross-answer check:**` — any claim in `docs/` sourced to a human answer that this execution
+  edited, the answer's ID, and why the edit was an ordinary repair rather than a decision that was
+  theirs to make. `none` when this execution touched no such sentence (ADR-0008 §4).
 - `**Questions raised:**` — IDs and whether blocking, or `none`.
 - `**Commands:**` — every command, with exit codes. The test command, at minimum, with its
   final result.

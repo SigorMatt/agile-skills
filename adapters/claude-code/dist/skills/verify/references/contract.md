@@ -1,4 +1,4 @@
-# Contract — verify v0.1.4
+# Contract — verify v0.2.0
 
 Rendered from `methodology/skills/verify/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -43,6 +43,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `every-criterion-independently-checked` | hard | For each AC, record the command this skill ran and its actual output. Citing the implementation report as evidence fails this gate. | stay |
 | `negative-cases-exercised` | hard | For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened. | stay |
+| `a-criterion-about-criteria-is-read` | hard | For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065). | stay |
 | `tests-would-fail-without-the-change` | advisory | For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed. | stay |
 
 ## Escalation
@@ -53,6 +54,7 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] A criterion whose subject is other criteria names them by ID and carries a per-criterion verdict read from their text, with any non-intersection stated and a covering case added or waived by name.
 - [ ] Every acceptance criterion has a verdict backed by a command this skill ran and its actual output.
 - [ ] Every criterion that passed is ticked in item.md, and no criterion is ticked without evidence.
 - [ ] Failures are recorded as a send-back for this item's own criteria, or as bug items for behaviour delivered elsewhere.

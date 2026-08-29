@@ -1,4 +1,4 @@
-# Contract — refine v0.2.2
+# Contract — refine v0.3.0
 
 Rendered from `methodology/skills/refine/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -18,6 +18,7 @@ Rendered from `methodology/skills/refine/skill.yaml`. This is the authoritative 
 | `tracker/items/{{item.id}}/history.md` | yes | an item sent back from later stages must not be re-refined as if it were new |
 | `tracker/items/{{item.id}}/journal.md` | yes | intake recorded the human's original answers verbatim; re-asking them wastes the human |
 | `docs/product/vision.md` | no | a criterion that contradicts the product vision is a conflict to raise, not to resolve |
+| `tracker/items/*/questions/Q-*.md` | no | the stakeholder's own prior answers - a new answer that contradicts one of them is theirs to settle, not ours (ADR-0008) |
 | `tracker/items/*/item.md` | no | a sibling item may already own part of this scope |
 
 ## Outputs
@@ -39,6 +40,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `definition-of-ready` | hard | Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. | stay |
 | `criteria-are-decidable` | hard | For each AC, name the command to run or the artifact to inspect and the verdict that would follow. Any AC for which you cannot do this is not ready. | stay |
+| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
 | `qa-recorded-verbatim` | hard | refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement. | stay |
 
 ## Escalation
@@ -49,6 +51,8 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] Every new answer, criterion or condition was checked against the stakeholder's prior recorded answers, and each conflict was put to them by ID rather than resolved here (ADR-0008).
+- [ ] Every question filed lists its options before the recommendation, and the recommendation is marked as the team's preference.
 - [ ] Every question filed to the human carries product stake; implementation-only choices were decided or routed to plan, and a standing deferral was honoured for its whole category.
 - [ ] Every Definition of Ready criterion is recorded as passed, or as overridden by the human with the reason.
 - [ ] Every acceptance criterion names how it would be observed.

@@ -4,7 +4,7 @@ description: "Review the change and its record against the Definition of Done, t
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.5.0
+  methodology-version: 0.6.0
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -20,7 +20,7 @@ At a glance:
 
 - Runs on items at status: `in-review`
 - Human interaction: **via-questions** — you may not ask a person; file a question artifact instead
-- Hard gates: `definition-of-done`, `verification-postdates-the-code`, `commits-reference-the-item`, `tests-pass-on-the-merge-result`, `workspace-valid`, `record-is-reconstructible`, `claims-are-sourced`, `epic-sign-off`
+- Hard gates: `definition-of-done`, `verification-postdates-the-code`, `commits-reference-the-item`, `tests-pass-on-the-merge-result`, `workspace-valid`, `record-is-reconstructible`, `claims-are-sourced`, `cross-answer-consistency`, `epic-sign-off`
 - On success: `done`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
@@ -177,6 +177,30 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     not a pass. `scripts/lint-claims` has already proved the citations *resolve*; only a reader
     can say whether they *support* the sentence.
 
+    **Run it over a scope that could have found something.** The gate's command is
+    `scripts/lint-claims --context {{item.type}} --changed-since {{trunk}}`, and the
+    `--context` is not decoration. Closing an item, the scope is that item's diff. Ending an
+    engagement, there is no branch and no diff — an ending is not an execution — so the scope is
+    the **whole document set**, which is what `--context epic` selects. Before that flag existed,
+    the ending ran `--changed-since main` standing on `main`, found an empty diff, printed
+    "checked no documents" and exited 0. The reviewer who noticed wrote it down exactly: *"It
+    passed here, but it would have passed over anything"*, and a voluntary `--all` run then found
+    three real errors (F-066). A window that could not have seen anything now fails; you will
+    never again get a green from a gate that did not look.
+
+9b. **A true claim with no source has a repair; use it.** `--all` at an ending will surface
+    `claim.unsourced` on old prose, including inside standing ADRs. Read the sentence against the
+    code. If it is **false**, that is a finding and a defect. If it is **true**, it is not an
+    accepted gap and it is not unfixable: `spec/doc-header.md` §4b lets you add the citation in
+    place and record a `provenance` row in the ADR's append-only `## Corrections` section, with a
+    change-log row and a version bump. The decision is untouched, so nothing is superseded, and
+    the ledger does not acquire a permanent known error — which is what happened when the repair
+    did not exist and a reviewer had to record three verified-true claims as a gap they were
+    accepting on the project's behalf (F-067).
+
+    The line, again: if a reader would have to change any code to satisfy the new text, it is a
+    new decision, and the ADR is superseded rather than corrected.
+
 10. **End the engagement, when it is over.** You are also the skill that ends engagements, and
     an engagement ends when it can no longer progress — not only when it finishes. Ask the
     program, never your own read of the board:
@@ -200,10 +224,28 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
       bug you filed and nobody fixed is a child, so it goes in the list. The gate checks the
       naming, because "list what was not delivered" cannot be checked and "name every child" can.
     - `## Options considered` offers the real choices: accept as complete; accept with named
-      follow-up items; do not accept, and say what is missing.
+      follow-up items; do not accept, and say what is missing. Options first; the recommendation
+      last and marked as the team's preference, never above them (F-063).
+    - **DE8: has anyone ever asked them an open question?** `check-epic-signoff` requires one
+      `kind: elicitation` question in the engagement — the one that is not about our agenda. If
+      `intake` filed it, you have nothing to do. If nobody did, file it now, alongside the
+      sign-off, non-blocking and addressed to `human`: *"What else matters to you here that we
+      never asked about?"* Asked at the ending it is close to a formality, and the record shows
+      that is when it was asked; asked at intake it changes the work. It exists because a
+      stakeholder held two real requirements through an entire engagement and mentioned them only
+      in a closing note (F-064).
 
     Then transition the **epic** to `awaiting-answer` with `resume-to: open`, and stop. You are
     not stalling; you are at the one gate in this pipeline that belongs to a person.
+
+    **Before you record any ending, check the stakeholder's answers against each other.** The
+    sign-off's own answer is a recorded human answer like any other, and the conditions people
+    attach to a sign-off are exactly where a contradiction with something they said at
+    refinement surfaces. Write the `## Cross-answer check` on it, and if it conflicts with an
+    earlier answer, quote both by ID and ask which wins rather than harmonising the documents
+    around the newer one (`meta/adr/ADR-0008-cross-answer-consistency.md`;
+    `scripts/lint-answers` is a hard gate here). One extra round trip at the ending is cheaper
+    than ending on a record the stakeholder would not recognise as theirs.
 
     **If the reply is already in the file — record the ending.** Apply the epic Definition of
     Done (`spec/dor-dod.md` §4) criterion by criterion, then take exactly one of the four
@@ -234,9 +276,13 @@ On the item's `journal.md`:
 - `**Inputs read:**` — every artifact, and the diff range you reviewed (`{{trunk}}..head`).
 - `**Decisions:**` — every finding and whether it was a send-back or an accepted gap, with the
   reasoning; the merge decision; the epic decision.
+- `**Cross-answer check:**` — the human answers this execution consumed, the prior answers each
+  was checked against by ID, and the verdict for each; `none` with the reason when there were
+  none (ADR-0008 §4).
 - `**Gates:**` — every one, with the per-criterion Definition of Done table as the evidence for
-  `definition-of-done`, and `scripts/engagement-state`'s verdict as the evidence for the epic
-  decision.
+  `definition-of-done`, `scripts/engagement-state`'s verdict as the evidence for the epic
+  decision, and — for `claims-are-sourced` — the **scope** the gate actually examined, quoted
+  from its own output. A gate whose scope you did not read is a gate you cannot report (F-066).
 - `**Artifacts:**` — `review.md`, the merge commit, any bug you filed, the sign-off question, and
   the epic if the engagement ended.
 

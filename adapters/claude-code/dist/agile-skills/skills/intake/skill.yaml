@@ -1,5 +1,5 @@
 name: intake
-version: 0.2.1
+version: 0.3.0
 persona: product-analyst
 purpose: Turn a raw idea from a human into an epic and a first set of work items in the tracker.
 
@@ -34,6 +34,9 @@ inputs:
     why: a new epic must be coherent with an existing product vision, or explicitly revise it
 
 outputs:
+  - path: tracker/items/{{item.id}}/questions/Q-###.md
+    kind: file
+    when: always
   - path: tracker/
     kind: file
     when: conditional
@@ -68,6 +71,12 @@ quality_gates:
     manual_check: Read the epic's Success measures section; each entry must be something a person could check, not a restatement of the goal.
     enforcement: hard
     on_failure: stay
+  - name: an-open-question-was-asked
+    description: The stakeholder was asked one question that was not about our agenda, and it is on file.
+    command: "scripts/lint-answers --item {{item.id}} --require-elicitation"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
   - name: items-are-separable
     description: Each created work item is deliverable on its own, in some order.
     manual_check: For each item, state the order it could be built in and what it depends on; an item that cannot be described this way is really part of another.
@@ -86,6 +95,7 @@ escalation:
 
 exit_criteria:
   - An epic exists at status open with a goal, success measures, and an explicit out-of-scope list.
+  - One kind elicitation question exists on the epic - addressed to human, non-blocking - asking what else matters to them that nobody asked about, and its answer is recorded or it is still open with the stakeholder.
   - At least one work item exists at status draft, each naming the epic.
   - docs/product/vision.md exists and states who the product is for and what it is for.
   - Every created item has journal.md and history.md with a creation entry.

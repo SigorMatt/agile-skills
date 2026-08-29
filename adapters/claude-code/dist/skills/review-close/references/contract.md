@@ -1,4 +1,4 @@
-# Contract — review-close v0.5.0
+# Contract — review-close v0.6.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -49,7 +49,8 @@ Every gate below appears in the journal entry for every execution — including 
 | `tests-pass-on-the-merge-result` | hard | run `{{commands.test}}`, expect exit-zero | stay |
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `record-is-reconstructible` | hard | Answer, using only those sources - what was built and why, which decisions were made and by which skill, what questions arose and how they were resolved, what verification found. Any answer you cannot give is a defect in the record, not in the reader. | stay |
-| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}}`, expect exit-zero | stay |
+| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --context {{item.type}} --changed-since {{trunk}}`, expect exit-zero | stay |
+| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --context {{item.type}} --changed-since {{trunk}}`, expect exit-zero | stay |
 | `epic-sign-off` | hard | run `.claude/agile-skills/scripts/check-epic-signoff {{item.id}}`, expect exit-zero | stay |
 
 ## Escalation
@@ -61,6 +62,8 @@ Every gate below appears in the journal entry for every execution — including 
 ## Exit criteria — all must be true before transitioning
 
 - [ ] Every Definition of Done criterion is recorded as passed, or the item was rejected.
+- [ ] The claims audit ran over a scope that could contain something - the item's own diff at an item close, the whole document set at an ending. A gate that examined nothing is a failure, never a pass (F-066).
+- [ ] Any true-but-unsourced claim found in a standing ADR was repaired through its append-only Corrections section rather than left as an accepted gap (doc-header.md section 4b).
 - [ ] review.md states what was examined, not only the verdict.
 - [ ] The branch is merged into the trunk and the item is done with an outcome recorded.
 - [ ] If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.

@@ -1,5 +1,5 @@
 name: refine
-version: 0.2.2
+version: 0.3.0
 persona: product-analyst
 purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
 
@@ -28,6 +28,9 @@ inputs:
   - path: docs/product/vision.md
     required: false
     why: a criterion that contradicts the product vision is a conflict to raise, not to resolve
+  - path: tracker/items/*/questions/Q-*.md
+    required: false
+    why: the stakeholder's own prior answers - a new answer that contradicts one of them is theirs to settle, not ours (ADR-0008)
   - path: tracker/items/*/item.md
     required: false
     why: a sibling item may already own part of this scope
@@ -66,6 +69,12 @@ quality_gates:
     manual_check: For each AC, name the command to run or the artifact to inspect and the verdict that would follow. Any AC for which you cannot do this is not ready.
     enforcement: hard
     on_failure: stay
+  - name: cross-answer-consistency
+    description: Every answer this item consumed records what it was checked against, and a declared conflict was put to its author.
+    command: "scripts/lint-answers --item {{item.id}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
   - name: qa-recorded-verbatim
     description: The exchange with the human is preserved, with assumed answers marked as assumed.
     manual_check: refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement.
@@ -78,6 +87,8 @@ escalation:
   impasse: If the human cannot answer what the item needs and will not override, set the item to blocked, recording which Definition of Ready criteria remain unmet.
 
 exit_criteria:
+  - Every new answer, criterion or condition was checked against the stakeholder's prior recorded answers, and each conflict was put to them by ID rather than resolved here (ADR-0008).
+  - Every question filed lists its options before the recommendation, and the recommendation is marked as the team's preference.
   - Every question filed to the human carries product stake; implementation-only choices were decided or routed to plan, and a standing deferral was honoured for its whole category.
   - Every Definition of Ready criterion is recorded as passed, or as overridden by the human with the reason.
   - Every acceptance criterion names how it would be observed.

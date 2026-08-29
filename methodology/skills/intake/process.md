@@ -72,6 +72,26 @@ You talk to the human directly. You are the only skill besides `refine` that doe
    inventing a number. An unknown you wrote down is a question `refine` can pick up; an invented
    number is a false requirement nobody will ever question.
 
+3a. **Ask the one question that is not on your list, and file it.** Every question in step 3
+   comes from what *we* need to know. That list has a blind spot the size of the product. A
+   stakeholder in a real run held two genuine requirements — a maximum column width, and trailing
+   whitespace — through an entire engagement, and wrote at the end: *"What I never got asked
+   about was anything I would have thought to say myself"* (F-064). Nothing had ever made room
+   for them.
+
+   So ask, plainly: **"What else matters to you here that we have not asked you about?"** — and
+   file it as a real artifact, on the epic, `kind: elicitation`, `addressed-to: human`,
+   `blocking: false` (`spec/question.md` §2). It is filed even when they answer you on the spot,
+   because the answer has to be findable by `refine` and by `review-close`, neither of whom was
+   in this conversation. It is exempt from the two-options rule and from nothing else: `## Answer`
+   carries their words, and `## Consequences` names what changed — an item, a criterion, a
+   `## Notes` entry, or "nothing, and here is where that is recorded".
+
+   `scripts/lint-answers --item <EPIC> --require-elicitation` is a hard gate on this skill, and
+   `check-epic-signoff` asks for the same thing at the ending (`dor-dod.md` DE8). Asked here it
+   is cheap and shapes the work; asked at the ending it is a formality that arrives too late to
+   change anything.
+
 4. **Write the epic.** Allocate the next `EP-` ID per `spec/ids-and-statuses.md` §1.1. Create
    `tracker/items/EP-###/` with `item.md`, an empty `questions/`, an empty `artifacts/`, and
    `journal.md`/`history.md` carrying their headers. The epic body follows

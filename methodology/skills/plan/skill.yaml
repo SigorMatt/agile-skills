@@ -1,5 +1,5 @@
 name: plan
-version: 0.3.1
+version: 0.4.0
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -88,9 +88,15 @@ quality_gates:
     manual_check: Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make.
     enforcement: advisory
     on_failure: stay
+  - name: cross-answer-consistency
+    description: A document this execution wrote does not overwrite a claim sourced to one of the stakeholder's answers without asking them.
+    command: scripts/lint-answers --uncommitted
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
   - name: claims-are-sourced
     description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
-    command: scripts/lint-claims --changed-since {{trunk}}
+    command: scripts/lint-claims --uncommitted
     expect: exit-zero
     enforcement: hard
     on_failure: stay
@@ -101,6 +107,7 @@ escalation:
   impasse: If the item cannot be designed without a decision nobody can make, set it to blocked and record the options and what each would cost.
 
 exit_criteria:
+  - No ADR or document this execution wrote settles a contradiction between two of the stakeholder's own recorded answers; where one exists, a question quoting both by ID was filed instead (ADR-0008).
   - plan.md exists with numbered steps, each naming the files it touches and the observable result.
   - Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.
   - Every non-obvious decision is an ADR or a recorded reversible assumption.

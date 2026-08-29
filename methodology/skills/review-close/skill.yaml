@@ -1,5 +1,5 @@
 name: review-close
-version: 0.5.0
+version: 0.6.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -107,12 +107,18 @@ quality_gates:
     on_failure: stay
   - name: claims-are-sourced
     description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
-    command: scripts/lint-claims --changed-since {{trunk}}
+    command: scripts/lint-claims --context {{item.type}} --changed-since {{trunk}}
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: cross-answer-consistency
+    description: Every human answer in scope records what it was checked against, a declared conflict reached its author, and nothing repaired one of their sentences instead of asking.
+    command: scripts/lint-answers --context {{item.type}} --changed-since {{trunk}}
     expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: epic-sign-off
-    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied.
+    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied - and until they have been asked, at least once, one open question that was not about our agenda.
     command: scripts/check-epic-signoff {{item.id}}
     expect: exit-zero
     enforcement: hard
@@ -125,6 +131,8 @@ escalation:
 
 exit_criteria:
   - Every Definition of Done criterion is recorded as passed, or the item was rejected.
+  - The claims audit ran over a scope that could contain something - the item's own diff at an item close, the whole document set at an ending. A gate that examined nothing is a failure, never a pass (F-066).
+  - Any true-but-unsourced claim found in a standing ADR was repaired through its append-only Corrections section rather than left as an accepted gap (doc-header.md section 4b).
   - review.md states what was examined, not only the verdict.
   - The branch is merged into the trunk and the item is done with an outcome recorded.
   - If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.

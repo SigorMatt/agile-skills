@@ -67,6 +67,34 @@ will not have been tested by anyone.
    Do not write an ADR for a choice with no alternative worth naming. An ADR trail padded with
    non-decisions is unreadable, and the real decisions hide in it.
 
+5a. **An ADR may not reconcile two of the stakeholder's own statements.** This is the one thing
+   an ADR is not for, and it is easy to write by accident: two recorded answers turn out to be
+   incompatible, one of them has to give, and an ADR is exactly the shape of document that
+   settles which. In a real run it did — quoting both answers, in the same file, and choosing
+   (F-062). Nobody asked the person who gave them.
+
+   If the design cannot proceed because two recorded human answers disagree, that is not a
+   decision you have the authority to record. File a blocking question addressed to `human`
+   quoting both by ID, set the item to `awaiting-answer`, and stop. Everything downstream of that
+   contradiction is guesswork until it is settled by the person who created it
+   (`meta/adr/ADR-0008-cross-answer-consistency.md` §3).
+
+   The same rule covers the softer version: **do not fix a sentence in `docs/` that cites one of
+   their answers because a newer answer of theirs has overtaken it.** `scripts/lint-answers
+   --uncommitted` is a hard gate on this skill and will refuse the edit unless the record shows
+   you either asked, or wrote down why the two answers coexist.
+
+5b. **A true claim with no source is repaired, not tolerated.** If `lint-claims` reports
+   `claim.unsourced` on a sentence in a standing ADR and you read that sentence against the code
+   and find it **true**, the repair is `spec/doc-header.md` §4b: add the citation in place and
+   record a `provenance` row in the ADR's append-only `## Corrections` section, with a change-log
+   row and a version bump. The decision is untouched, so nothing is superseded. Before §4b existed
+   this had no legal move at all and a real review had to record three verified-true claims as a
+   permanent accepted gap (F-067).
+
+   The line: if a reader would have to change any code to satisfy the new text, it is a new
+   decision and §4's supersession rule applies with full force.
+
 6. **Write `artifacts/plan.md`.** Required shape:
 
    ```markdown
@@ -129,6 +157,12 @@ On the item's `journal.md`:
 - `**Decisions:**` — every decision, its rationale, and which branch of the preference order it
   came from (documented / assumed / asked). This is what lets a later reader tell a considered
   assumption from a lucky guess.
+- `**Cross-answer check:**` — if this execution recorded or relied on a human answer, the prior
+  recorded answers it was checked against by ID and the verdict for each, or `none` with the
+  reason (ADR-0008 §4).
+- `**Cross-answer check:**` — if this execution recorded or relied on a human answer, the prior
+  recorded answers it was checked against by ID and the verdict for each, or `none` with the
+  reason (ADR-0008 §4).
 - `**Questions raised:**` — anything asked of the human, verbatim with their answer, or `none`.
 - `**Gates:**` — all five, with the AC mapping table as the evidence for
   `every-criterion-is-addressed`.
