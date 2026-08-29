@@ -1,33 +1,35 @@
 # CHECKPOINT
 
-## Current unit: META-127 — the dual regression gate, launched
+## Current unit: META-129 — waiting on regression 3b, then 4b
 
-**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..126 done and pushed.
+**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..128 done and pushed;
+`meta/FINAL-REPORT-3.md` §1–§3 written.
 
-**Intent.** Two runs, detached, against the fixed kernel. Their configs differ from the
-originals only in `id`, `project` and `max-turns`; the personas and probe scripts are byte-for-
-byte the ones that produced F-062..F-067.
+**In flight:** `iteration-3b-mdtab`, relaunched 2026-08-29T21:10Z from an empty project after
+being stopped at turn 2 and its two brittle `lint-answers` rules fixed (journalled). Project
+`~/agile-skills-throwaway/mdtab-3b`; run `harness/runs/iteration-3b-mdtab/`; `--max-turns 30`.
+A background waiter reports when `state.json` reaches `stopped`.
 
-- **3b** — `iteration-3b-mdtab`, project `mdtab-3b`, persona `contradictory-stakeholder`, probe
-  `iteration-3-mdtab` **including P-signoff-extension**. The pass condition is the sim saying its
-  reserved line: the planted contradiction is escalated — a question quoting both stakeholder
-  answers by ID — the scripted reconciliation *"the multiline case wins; I over-spoke before"* is
-  elicited and recorded, and the engagement ends through the gate.
-- **4b** — `iteration-4b-recall`, project `recall-4b`, persona `cooperative-pm`, probe
-  `iteration-4-recall`. The pass condition is the boring run again, and this time an ending whose
-  own audit signs with **zero new findings**: the claims gate examines a real scope, nothing is
-  legally unfixable, and the driver labels the completed engagement `epic-done`.
+**The two runs are sequential, not parallel — H-015.** `render_sim_skill` rewrites one global
+directory, `harness/.claude/skills/simulated-human/`, at the start of every sim turn. Two drivers
+would interleave a contradictory stakeholder and a cooperative one into both trails. Do not
+launch 4b until 3b has stopped.
 
-Both projects are provisioned and the installed toolkit carries `lint-answers` and `scope.py`.
-`--max-turns 30`.
+## What to do next, in order
 
-**While they run:** META-128 — cluster 5, the triage of every remaining open finding. Do not
-touch `harness/` or anything outside `meta/` while a run is in flight: the W4 contamination rule
-fires on a repository that changes mid-turn, and `meta/` and `harness/` are the exempt paths —
-so `meta/` only.
-
-**When they stop:** their trails are read-only evidence from that moment (META-129), then
-`meta/FINAL-REPORT-3.md` (META-130).
+1. **When 3b stops:** its trail is read-only evidence from that moment. Read
+   `harness/runs/iteration-3b-mdtab/SIM-LOG.md` first — the pass condition is the sim saying its
+   reserved line, *"the multiline case wins; I over-spoke before"*, in answer to a question that
+   quotes both stakeholder answers by ID. Then the item trail, then the console log.
+2. **Launch 4b:** `python3 harness/provision.py --iteration iteration-4b-recall` is already done;
+   `nohup python3 harness/run_iteration.py --iteration iteration-4b-recall --max-turns 30 &`.
+   (Wipe and `--fresh` first if anything has touched `~/agile-skills-throwaway/recall-4b`.)
+3. **META-129:** findings pass over both trails; file F-069+ / H-016+; bank both trails under
+   `meta/harness/evidence/iteration-3b/` and `iteration-4b/`.
+4. **META-131:** the five small fixes accepted in META-128's triage — F-035, F-048, F-054, F-056,
+   F-059. Only once no run is in flight: `scripts/` is guarded by the W4 rule.
+5. **META-130:** `meta/FINAL-REPORT-3.md` §4, §5, §6 — the ROADMAP §2 verdict, condition by
+   condition, with an evidence line for each.
 
 ## Standing instructions (still in force)
 
@@ -35,4 +37,5 @@ so `meta/` only.
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
 - Toolkit commits and harness commits stay separate.
-- **A harness run is in flight.** Touch nothing outside `meta/`.
+- **A harness run is in flight.** `meta/` and `harness/` are exempt from the W4 rule; everything
+  else trips it and stops the run.
