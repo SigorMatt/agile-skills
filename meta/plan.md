@@ -345,49 +345,50 @@ positive at the end or the report says which does not and why.
 
 ### Cluster 1 — the person's seat in conflicts (F-062, F-065)
 
-- [ ] **META-119** — `meta/adr/ADR-0008-cross-answer-consistency.md`: what a *recorded human
-      answer* is, when a new answer/criterion/condition **touches** one, the two legal moves
-      (cite compatibility, or file a question quoting both by ID), the refused move (repairing a
-      stakeholder-sourced falsehood in docs without asking its author), and — honestly — what a
-      citation-graph lint can and cannot see. Derivation only; no code.
-- [ ] **META-120** — enforcement: `scripts/lint-answers` over the question/criteria record
-      (same-topic answers whose content conflicts), wired into `validate-workspace` and
-      `./scripts/check`; must-fail fixture for the escalation that was not filed.
-- [ ] **META-121** — skill contracts re-derived from ADR-0008: `refine`, `plan`, `implement`,
-      `verify`, `review-close`, `answer-questions`. Version bumps, re-render.
-- [ ] **META-122** — F-065: a "still holds" criterion is assessed against the criteria's *text*;
-      `spec/dor-dod.md` and the `verify`/`review-close` contracts; non-intersection stated and a
-      covering case added or waived by name.
+- [x] **META-119** — `meta/adr/ADR-0008-cross-answer-consistency.md`: what a *recorded human
+      answer* is, when a new answer/criterion/condition **touches** one, the two legal moves, the
+      refused move, and — honestly — what a citation-graph lint can and cannot see.
+      (commit `24a1ca5`)
+- [x] **META-120** — enforcement: `scripts/lib/scope.py`, `scripts/lint-answers`,
+      `spec/question.md`'s `## Cross-answer check`, `fixtures/crossed-answers/` and rule 3 by
+      execution in `./scripts/check`. (commit `61fb2aa`)
 
 ### Cluster 2 — gates that cannot pass vacuously (F-066, F-067)
 
-- [ ] **META-123** — F-066: `scripts/lint-claims` scope becomes explicit and non-vacuous; the
-      gate command per context; "checked nothing" is a failing verdict. Must-fail fixture.
-- [ ] **META-124** — F-067: the minimal legal repair for a true-but-unsourced ADR claim
+- [ ] **META-121** — F-066: `scripts/lint-claims` scope becomes explicit and non-vacuous, on
+      `scripts/lib/scope.py`; "checked nothing" is a failing verdict. Must-fail cases both ways.
+- [ ] **META-122** — F-067: the minimal legal repair for a true-but-unsourced ADR claim
       (`spec/doc-header.md`), the iteration-4 instance as the fixture, repaired through the new
       path.
 
-### Cluster 3 — refine calibration, second pass (F-063, F-064)
+### Cluster 1b / 3 — spec changes the contracts then carry
 
-- [ ] **META-125** — options before recommendation (lintable presentation rule) and one
-      open-elicitation question per item/engagement (presence-checkable).
+- [ ] **META-123** — F-065: a "still holds" criterion is assessed against the criteria's *text*
+      (`spec/dor-dod.md`); F-063's presentation rule and F-064's open-elicitation question in
+      `spec/question.md`.
+
+### The contracts, once
+
+- [ ] **META-124** — every skill contract re-derived from ADR-0008 and META-121..123 in one pass:
+      `refine`, `plan`, `implement`, `verify`, `review-close`, `answer-questions`. Gate commands,
+      process sections, exit criteria, one version bump each, re-render.
 
 ### Cluster 4 — harness semantics (H-010..H-014)
 
-- [ ] **META-126** — budgets bound work, not verdicts: terminal workspace → `epic-done`
+- [ ] **META-125** — budgets bound work, not verdicts: terminal workspace → `epic-done`
       regardless of the counter; the closing turn is budget-exempt; a budget stop is resumable
       unless the engagement is at an ending; first job derived from workspace state; the driver
       owns its run directory and console log from first output. Six-plus regression tests.
-- [ ] **META-127** — H-013 in `harness/skills/simulated-human/SKILL.md`: describe the disk,
+- [ ] **META-126** — H-013 in `harness/skills/simulated-human/SKILL.md`: describe the disk,
       never the frame.
 
 ### The dual regression gate
 
-- [ ] **META-128** — 3b and 4b configured (iteration-3/4 config and probe unchanged, fresh
+- [ ] **META-127** — 3b and 4b configured (iteration-3/4 config and probe unchanged, fresh
       projects, `--max-turns 30`) and launched detached.
-- [ ] **META-129** — cluster 5: every remaining open finding gets fix / defer-with-gate /
+- [ ] **META-128** — cluster 5: every remaining open finding gets fix / defer-with-gate /
       reject-with-reason. No status left stale.
-- [ ] **META-130** — findings pass over both regression trails; anything new filed as F-068+ /
+- [ ] **META-129** — findings pass over both regression trails; anything new filed as F-068+ /
       H-015+; evidence banked.
-- [ ] **META-131** — `meta/FINAL-REPORT-3.md`: what changed, versions bumped, what 3b and 4b
+- [ ] **META-130** — `meta/FINAL-REPORT-3.md`: what changed, versions bumped, what 3b and 4b
       proved, and the ROADMAP §2 verdict — all three conditions, with the evidence line for each.

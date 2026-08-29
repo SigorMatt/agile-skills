@@ -1,27 +1,28 @@
 # CHECKPOINT
 
-## Current unit: META-120 — enforcement for ADR-0008
+## Current unit: META-121 — F-066, a claims gate that cannot pass vacuously
 
 **Session:** builder 3 (`meta/BUILDER-3-PROMPT.md`). Phase IV of `meta/plan.md`.
-**Derivation done:** `meta/adr/ADR-0008-cross-answer-consistency.md` (META-119, pushed).
+**Done and pushed:** META-119 (ADR-0008), META-120 (`lint-answers`, `scope.py`, fixtures).
 
-**Intent.** Build the mechanical half of ADR-0008 §4 — obligations 1, 2 and 3 — and nothing
-else. Contracts and version bumps are META-121.
+The plan's Phase IV was reordered after META-120: the two script-scope fixes and the two spec
+changes land first, and **all** skill contracts are re-derived in one pass (META-124) so each
+skill takes one version bump rather than three.
 
-1. `scripts/lib/scope.py` — one answer to "could this diff window contain anything?", shared
-   with `lint-claims` in META-123. A window that cannot contain this execution's work is
-   **degenerate** and its gate FAILS; a real window with nothing in it passes and says so.
-2. `scripts/lint-answers` — at rest: `## Cross-answer check` present and shaped on every
-   consumed human answer, and a declared conflict matched by a question citing both IDs. Over a
-   diff: a claim sourced to a human answer whose text this execution changed needs either that
-   question or a `**Cross-answer check:**` journal bullet naming the answer.
-3. `spec/question.md` — the `## Cross-answer check` section, its shape, and why it is written by
-   the consuming skill and not by the person.
-4. Fixtures both ways, wired into `./scripts/check`: the iteration-3 shape (an answer consumed
-   with no check; a conflict declared and never escalated; the human's own sentence rewritten
-   without a question) must fail, and a clean engagement must pass.
+**Intent.** `scripts/lint-claims --changed-since main` at an epic ending compares `main` with
+`main`, prints "checked no documents" and exits 0. Iteration 4's reviewer: *"It passed here, but
+it would have passed over anything."* `scripts/lib/scope.py` already knows the difference between
+a window that is empty and one that could not have seen anything; apply it.
 
-**Not in this unit:** skill.yaml gates, version bumps, re-render.
+1. `lint-claims` refuses a degenerate window (`claim.scope.degenerate`) instead of passing over
+   it, and always prints the scope it actually had — both rules, not only rule 2.
+2. An explicit named scope stays available and becomes the ending's contract: `--all`.
+3. Must-fail and must-pass cases in `./scripts/check`, built in a throwaway repository:
+   the F-066 shape refused, a real-but-empty window still a pass, `--all` at the same commit
+   still a real scope.
+
+**Not in this unit:** the gate command in any `skill.yaml` (META-124), F-067's repair path
+(META-122).
 
 ## Standing instructions (still in force)
 
