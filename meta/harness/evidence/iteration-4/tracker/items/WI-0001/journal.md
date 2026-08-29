@@ -1,0 +1,381 @@
+# Journal — WI-0001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-29T10:47:30Z — intake v0.2.1 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** invoked directly on the stakeholder's opening statement in `IDEA.md`; no status made this runnable, `intake` is not scheduled
+- **Inputs read:**
+  - `IDEA.md` (the stakeholder's opening statement)
+  - `tracker/project.yaml`
+  - `tracker/items/` (empty — no prior epic or item to overlap with)
+- **Decisions:**
+  - This item exists because EP-001 was split into three; see EP-001's entry for how the split was chosen and why it is three and not one or five. This item carries capturing a card and having it survive a restart.
+  - Acceptance criteria written without naming any interface technology, because the stakeholder named none and `EP-001/Q-001` is open on exactly that. Writing "runs `recall add`" here would have been design smuggled in as analysis.
+  - Depends-on set to nothing, derived from logical necessity rather than from a stated preference: there is nothing to review before cards persist, and nothing to schedule before a review records a result. The stakeholder gave no ordering, so priority is uniform and the ordering lives in `depends-on` where it can be justified.
+- **Questions raised:** none on this item; `EP-001/Q-001`–`Q-004` are open on the epic and gate this item's refinement
+- **Commands:**
+  - `scripts/new-item --id WI-0001 --type work-item --status draft --actor intake` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace`, reported on EP-001's entry for the whole execution)
+  - `epic-has-success-measures` → **pass** (EP-001 SM1–SM5; assessed on the epic, see its entry)
+  - `items-are-separable` (advisory) → **pass** (build order WI-0001 → WI-0002 → WI-0003, recorded in `depends-on`)
+  - `no-solution-in-the-problem` (advisory) → **pass** (title and story name no technology; see EP-001's entry for what was kept out)
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` (new)
+  - `tracker/items/WI-0001/history.md` (new, creation row)
+  - `tracker/items/WI-0001/journal.md` (this entry)
+- **Status:** `—` → `draft`
+- **Result:** Created at draft with provisional acceptance criteria. It cannot be refined until the four questions open on EP-001 are answered.
+
+## 2026-08-29T10:58:24Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** status `draft`, dispatched by `next` (steps 1–4 empty; the only runnable candidate — WI-0002 and WI-0003 are behind unfinished `depends-on`)
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md`, `history.md` (one row: created at `draft` by `intake`, so this is a fresh refinement and not a send-back), `journal.md` (intake's entry, for what it deliberately left undecided)
+  - `tracker/items/EP-001/questions/Q-001.md`–`Q-004.md` — the stakeholder's four answers, read in full so that none of them would be re-asked
+  - `tracker/items/EP-001/item.md` — SM1, SM2 and SM5 are the epic-level measures this item carries
+  - `docs/product/vision.md` (v2), `docs/architecture/adr/ADR-0001-fixed-interval-ladder.md` (v1) — checked for anything this item's criteria would contradict; ADR-0001 constrains WI-0003, not this item
+  - `tracker/items/WI-0002/item.md`, `WI-0003/item.md` — checked for scope this item should not claim; listing belongs here, reviewing does not
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `spec/question.md`, `spec/workspace-layout.md` §1.3
+- **Decisions:**
+  - Applied the addressee test from the procedure to every failing criterion before filing anything. Two questions carry product stake and went to the stakeholder: how a card is typed in (`Q-001`), and where the card file lives (`Q-002`). Both change what the user does or where their data is, and neither would come out the same whoever the stakeholder was.
+  - Decided six things myself rather than asking, each recorded in `refinement-qa.md` as `[assumed]` with its basis: the tool is called `recall` (already the project name in `project.yaml`); this item delivers `recall add` and `recall list`; a card is identified by a number from 1 upwards; `recall list` on an empty store prints one plain line and exits 0; card text round-trips byte-identical including non-ASCII; card sides are a single line. Rationale: each would have the same answer whoever the stakeholder was, and F-023 records a real stakeholder objecting to exactly this class of question being routed to them.
+  - Wrote AC7 (non-ASCII round-trip) as its own criterion rather than leaving it inside AC2's "byte-identical". The stakeholder's cards are vocabulary — *"It's just vocab, one pile is fine"* — so non-ASCII is the normal case here, not an edge case, and it is the one an implementation silently gets wrong.
+  - Wrote AC8 (empty listing) because R10 asks for every combination of the behaviours this item introduces to be visible: `list` with no cards had no stated behaviour anywhere. Gave it the same shape WI-0002 AC3 gives an empty review session, so the tool is consistent about "nothing to do is not an error".
+  - Sharpened AC1 (a number that identifies the card, numbering stated), AC2 (names `recall list`, ties the listing to the number AC1 printed), AC3 (two identical cards get different numbers) and AC6 (names `recall list`). Each was decidable only if a reader knew what to run; now each names the command and the observation.
+  - Did **not** rewrite AC1's and AC4's statement of what is typed and printed, and did not put a path in AC5. Those are precisely what the two open questions decide, and writing a plausible answer in now is the guess the question protocol exists to prevent.
+  - Routed three questions to `plan` through the item's `## Notes` rather than to a person: the store's file format, how a write survives an interruption, and whether the store is created lazily or eagerly. AC5 constrains the answer to something human-readable; nothing else about it is the stakeholder's to decide.
+  - Recorded multi-line card sides in `## Out of scope` marked as `refine`'s assumption rather than as the stakeholder's exclusion, so that a reader can see the difference and the stakeholder can overturn it.
+  - Left `refinement-qa.md` at `status: agenda`. The conversation has not happened; writing `recorded` on it would satisfy R8 mechanically while claiming an exchange that never took place (F-031).
+- **Questions raised:** `Q-001` (how a card is typed in) and `Q-002` (where the card file lives) — both blocking, both addressed to `human`, filed as one round of two and framed as one ask; see `artifacts/refinement-qa.md`. None left `[unresolved]`.
+- **Commands:**
+  - `scripts/validate-workspace .` → exit 1 before this transition, with `question.blocking.not-suspended` on WI-0001 and `board.stale`; the first is what this transition resolves and the second is resolved by regenerating the board
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace`, run by this transition against the state the move produces)
+  - `definition-of-ready` → **fail**, criterion by criterion: R1 pass (frontmatter complete, `type`/`epic`/`priority` set); R2 pass (role, capability and "so that" outcome all present); R3 pass (AC1–AC8 labelled checkboxes); R4 **fail** — AC1 and AC4 do not state what is typed or printed and AC5 names no location, all three pending `Q-001`/`Q-002`, while AC2, AC3, AC6, AC7 and AC8 are each decidable by a named command and a stated observation; R5 pass (five exclusions, including two a reader would assume were included); R6 **fail** — `Q-001` and `Q-002` are open and blocking, which is the state this execution deliberately ends in; R7 pass (`depends-on` empty); R8 **fail** — `refinement-qa.md` is `status: agenda`; R9 pass (one branch's worth of work: a store, an add command, a list command); R10 pass (every combination enumerated in `## Notes`, each covered, excluded, or named as deliberately unconstrained). The three failures share one cause and no override was recorded, because an override is the stakeholder's to request and they are not in this session.
+  - `criteria-are-decidable` → **partial**, and recorded rather than claimed. AC2: `recall add` then `recall list` in a new process, compare the printed sides byte-for-byte with the input. AC3: add the same text twice, `recall list` shows two entries with different numbers. AC5: open the file named in the documentation and read it. AC6: `recall add --help` (or its equivalent) takes no deck argument, and `recall list` shows every card added. AC7: `recall add "Grüße" "greetings"`, then compare the listed text with the input. AC8: `recall list` against an empty store — one line, exit 0. AC1 and AC4 cannot yet be given a command, because the command is what `Q-001` decides; that is the R4 failure above, not an oversight.
+  - `qa-recorded-verbatim` → **skipped** — no exchange has happened, so there is nothing verbatim to record. `refinement-qa.md` is `status: agenda` and every answer in it is marked `[assumed]` and attributed to `refine`, with no answer attributed to the stakeholder. The gate applies at the execution that receives their replies.
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` (new, `status: agenda`) — the two questions asked, the six decisions taken, the three routed to `plan`, and the per-criterion DoR table
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md` (new, open, blocking, to `human`)
+  - `tracker/items/WI-0001/item.md` — AC1, AC2, AC3, AC6 sharpened; AC7 and AC8 added; `## Out of scope` extended by two entries; `## Notes` rewritten with what is pending, what is `plan`'s, and the R10 enumeration
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** WI-0001 is two answers short of Ready, and both are the stakeholder's to give: how a card is typed in, and where the card file lives. Everything else on the item is settled — six criteria are decidable as written, six assumptions are recorded as mine rather than theirs, and three design questions are waiting for `plan` rather than for a person. The item is suspended at `awaiting-answer` with `resume-to: draft`.
+
+## 2026-08-29T11:07:00Z — answer-questions v0.3.1 — architect
+
+- **Item:** WI-0001
+- **Trigger:** status `awaiting-answer` with two open blocking questions to the human, both now carrying a reply; dispatched by the harness ahead of `next`, per the rule that an answered-but-unconsumed human question stops the loop for ever
+- **Inputs read:**
+  - `tracker/items/WI-0001/questions/Q-001.md` and `Q-002.md` (both with `## Answer` filled in)
+  - `tracker/items/WI-0001/item.md`, `history.md`, `artifacts/refinement-qa.md` (`status: agenda`)
+  - `tracker/items/EP-001/questions/Q-001.md`–`Q-004.md` (all answered; the frame the stakeholder already settled)
+  - `docs/architecture/adr/ADR-0001-fixed-interval-ladder.md` (v1)
+  - `docs/product/vision.md` (v2)
+  - `tracker/project.yaml` (project name `recall`, trunk `main`, commit-subject convention)
+  - `.claude/agile-skills/spec/question.md`, `spec/journal-and-history.md`, `spec/doc-header.md`
+- **Decisions:**
+  - `Q-001` is answered by the stakeholder outright and needed no architectural judgement: both sides as arguments to one command. Route: recorded intent, quoted verbatim. AC1 and AC4 were the two criteria that could not be stated until this was settled, so both were rewritten to name the exact invocation — `recall add "<question side>" "<answer side>"`, and for the empty-side case `recall add "" "the cat"` and `recall add "die Katze" ""`. Rationale for rewriting rather than annotating: R4 requires a criterion be decidable by someone with a terminal and no context, and "the tool's add command" is not.
+  - `Q-002`'s reply — *"Whatever you think is best, you know this better than I do."* — is a **deferral**, not a choice. Took move 1 of `spec/question.md` §2: decided it under the deferral and marked the question `answered`. Rationale: the deferral plus the record is enough to choose, because the constraint that actually decides it is already written down — `EP-001/Q-004` asks for one flat pool, which rules out a per-directory store, and AC5 exists so the user *can* open the file, which argues against a path two directories deep. Move 2 (park at `blocked`) would have been dishonest: nothing is missing.
+  - Chose `~/.recall.json` with `RECALL_FILE` overriding it, and recorded it as `ADR-0002` because the record was previously silent on the store's location. The override is part of the decision rather than a nicety: every criterion in this epic is checked by running commands, and without it verification would have to write into the checker's real home directory.
+  - Set `answered-by: answer-questions` on `Q-002`, not `human`. Rationale: the stakeholder replied, but they did not choose the path — the architect did. `answered-by: human` would record that they picked `~/.recall.json`, which they did not. The deferral itself is preserved verbatim in `## Answer`.
+  - Settled the store's **format** as JSON in `ADR-0002`, taking it off the list `refine` routed to `plan`. Rationale: both options put to the stakeholder in `Q-002` named a `.json` file, so leaving the format open would have left the record asserting two different things about one path. The file's *schema*, its crash-safety and eager-versus-lazy creation stay with `plan` — those are genuinely open.
+  - Recorded the stakeholder's replies verbatim in `artifacts/refinement-qa.md` but left it at `status: agenda`. Rationale: Definition of Ready R8 reads that field and only `refine` may judge that the conversation is finished. Flipping it would have passed the item to `ready` on this skill's say-so. For the same reason the DoR table at the foot of that file was annotated as out of date rather than re-judged.
+  - Amended acceptance criteria AC1, AC4 and AC5 while the item is at `draft`/`awaiting-answer` — permitted, and journaled here explicitly because criteria freeze at `ready`. None of the three changes what the stakeholder asked for; each replaces a placeholder with the thing they (or, for AC5, the ADR they authorised) settled.
+  - No new work item filed under §3b. Neither answer widened the scope: `Q-001` chose among shapes of an existing criterion, and `Q-002`'s `RECALL_FILE` override is the store-location decision itself, expressed in AC5, not a separate capability.
+- **Questions raised:** none — neither answer needed re-addressing to the human, and no new question arose on this item
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before the transition, with exactly the two errors the pending move accounts for (`board.stale`, `question.awaiting.none-open`)
+  - `date -u +%Y-%m-%dT%H:%M:%SZ` → 2026-08-29T11:06:15Z, the stamp on both answers
+  - `grep` over `item.md` and `refinement-qa.md` → each file named in a `## Consequences` section confirmed to contain the change
+- **Gates:**
+  - `answer-is-propagated` → **pass** — every file named in the two `## Consequences` sections was opened and checked: `item.md` contains `recall add "<question side>" "<answer side>"` (AC1), `recall add "" "the cat"` (AC4) and both `~/.recall.json` and `RECALL_FILE` (AC5, `## Notes`, R10); `refinement-qa.md` contains the stakeholder's reply to `Q-001` verbatim; `ADR-0002-card-store-location-and-format.md` exists on disk
+  - `answered-from-the-record` → **pass** — `Q-001` follows from the stakeholder's own words, quoted. `Q-002` was not in the record, so the new decision is recorded as `ADR-0002` and the question cites it, which is the sanctioned route for a silent record
+  - `escalation-is-justified` → **skipped** — nothing was escalated. Neither question needed re-addressing: one was answered by the stakeholder and the other was delegated to the architect by them
+  - `workspace-valid` → **pass** — `validate-workspace` reported only `board.stale` and `question.awaiting.none-open` beforehand, both of which this transition and the following `board-gen` clear; re-run after the transition
+  - `item-resumed-correctly` → **pass** — the suspending row (2026-08-29T10:58:24Z, `draft` → `awaiting-answer`, actor `refine`) records `resume-to: draft`, and this transition targets `draft`
+  - `a-deferral-is-not-an-answer` → **pass** — one deferral, `Q-002`. Move 1 taken: decided under the deferral, question marked `answered`, the deferral quoted verbatim in `## Answer` as the basis, and `## Consequences` states what it settled and names four files. The item therefore resumes rather than parking at `blocked`, which is correct for move 1; `Q-001` carries no deferral
+- **Artifacts:**
+  - `tracker/items/WI-0001/questions/Q-001.md` — `status: answered`, `answered-by: human`, `answered-at` stamped; `## Consequences` names the four propagation targets
+  - `tracker/items/WI-0001/questions/Q-002.md` — `status: answered`, `answered-by: answer-questions`, `answered-at` stamped; `## Consequences` states the deferral, the decision and the four files
+  - `docs/architecture/adr/ADR-0002-card-store-location-and-format.md` (new, v1) — the store's location, the `RECALL_FILE` override and the JSON format
+  - `tracker/items/WI-0001/item.md` — AC1, AC4 and AC5 rewritten; `## Notes` and its R10 paragraph rewritten; `updated` bumped
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — both replies recorded verbatim; the file format taken off the list routed to `plan`; the DoR table annotated as out of date, `status` left at `agenda`
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** Both blocking questions on WI-0001 are resolved — one answered by the stakeholder, one decided by the architect under their deferral and recorded as ADR-0002 — and every answer is propagated into the acceptance criteria and the architecture record. The item returns to `draft` for `refine` to close its Definition of Ready.
+
+## 2026-08-29T11:12:24Z — refine v0.2.2 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** status `draft`, dispatched by `next` (the only runnable candidate — WI-0002 and WI-0003 both have a `depends-on` that is not `done`)
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md`, `history.md`, `journal.md` (including `answer-questions`' entry of 2026-08-29T11:07:00Z, which records what was propagated and what was left for this skill)
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` (`status: agenda`, round 1 with both replies written in verbatim)
+  - `tracker/items/WI-0001/questions/Q-001.md` and `Q-002.md` (both `answered`)
+  - `tracker/items/EP-001/questions/Q-001.md`–`Q-004.md` — the stakeholder's four intake answers, re-read so that round 2 did not re-ask anything they had already settled
+  - `docs/product/vision.md` (v2), `docs/architecture/adr/ADR-0001` (v1), `ADR-0002` (v1)
+  - `tracker/items/WI-0002/item.md` and `WI-0003/item.md` — checked that no sibling already owns part of this scope; they own the review session and the schedule, and neither touches adding or listing
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `spec/work-item.md`, `spec/journal-and-history.md`
+- **Decisions:**
+  - **Round 2 asked the stakeholder nothing, and that is the main decision of this execution.** Applied step 3's test to every remaining gap: none had product stake. Two categories were covered by their standing deferral on `Q-002` — *"Whatever you think is best, you know this better than I do."* — which step 3 says applies to the category (naming, output wording, exit codes, file layout) and not only to the question that produced it. The rest are implementation-only and went to `plan`. Filing a round-2 question would have told them their deferral was not heard, and it would have stopped the loop for a decision that is not theirs.
+  - Tightened **AC5**. It required the store's location to be "stated in the project's documentation", which names no file a checker could grep. Now names `README.md`, and gives the observation — `RECALL_FILE=<tmp>/cards.json recall add "a" "b"`, then find the card in that file. Rationale: AC5 is the criterion that carries `ADR-0002` into the delivered work, and "the project's documentation" is exactly the kind of phrase that is agreed by everyone and checked by nobody. `[assumed]` under the standing deferral.
+  - Tightened **AC6**. Its first half stated an absence — "takes no deck, tag or category argument" — which no command settles. Now: `recall add` accepts exactly the two positional arguments and rejects a deck-like option, checked with `recall add --deck german "die Katze" "the cat"` exiting non-zero. Rationale: this is `EP-001/Q-004`'s flat pool restated in observable form, not a new decision, so it needed no question.
+  - Fixed the order `recall list` prints in, as part of AC6: ascending card number. Rationale: AC2, AC3 and AC6 all read that output and none of them said what order it comes in, so two verifiers could reach different verdicts on the same run. Card-number order is the order the numbers are handed out in, so it is the absence of a decision rather than one; a different order — most recent first, say — would have been a product choice and would have been asked.
+  - Added **AC9**: `recall add` with any number of positional arguments other than two exits non-zero, prints a usage line on stderr naming the two it expects, and stores nothing. Rationale: round 1 recorded this as deliberately unconstrained *because the command's shape was not yet settled*. `Q-001` settled the shape, so the reason for leaving it open is gone. This is the negative case step 6 asks for, and leaving it open would have left `verify` with a behaviour it could observe and could not judge.
+  - Left the **exact wording** of the confirmation line (AC1), the empty-side messages (AC4), the empty listing (AC8) and the usage line (AC9) unconstrained, recorded in the item's R10 paragraph with who left it so. Rationale: each criterion requires the message to exist and to name the right thing, which is what makes it decidable; requiring a particular sentence would be inventing a requirement nobody stated, and `verify` would then fail an implementation for punctuation.
+  - Routed one more question to `plan` rather than to anyone: what `recall` does when `RECALL_FILE` names a path it cannot write. Same test — the answer is the same whoever the stakeholder is.
+  - Did **not** record a Definition of Ready override, and none was needed: every criterion passes on its own terms. Noted because an override is the stakeholder's to request and they are not in this session, so an override could not have been obtained even if one had been wanted.
+- **Questions raised:** none this round. `artifacts/refinement-qa.md` holds both rounds — round 1's two questions with the stakeholder's verbatim replies, and round 2's six decisions each tagged `[assumed]` with the deferral or the routing that justifies it. Nothing is left `[unresolved]`.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 1 warning (`project.commands.test-null`, which is `plan`'s to resolve)
+  - `python3 .claude/agile-skills/scripts/board-gen .` → board regenerated
+  - `date -u +%Y-%m-%dT%H:%M:%SZ` → 2026-08-29T11:11:43Z, the `updated` stamp on `item.md`
+- **Gates:**
+  - `workspace-valid` → **pass** — `validate-workspace` exit 0. The one warning, `commands.test` being null, belongs to `plan`; it does not bear on the Definition of Ready
+  - `definition-of-ready` → **pass**, criterion by criterion, with the full evidence table in `artifacts/refinement-qa.md` under "state at the end of round 2". R1 pass (frontmatter complete). R2 pass (role, capability, outcome). R3 pass (AC1–AC9, labelled checkboxes). **R4 was failing at the end of round 1** on AC1, AC4 and AC5; `answer-questions` fixed AC1 and AC4 from the stakeholder's reply, and this execution rewrote AC5 and AC6 and added AC9 — now pass, every criterion naming a command and a verdict. R5 pass (five exclusions, editing and deleting being the one a reader would most likely assume was included). **R6 was failing** on two open blocking questions; both are now `answered` — pass. R7 pass (`depends-on` empty). **R8 was failing** because the Q&A file was `status: agenda`; this execution judged the conversation complete and set it to `recorded` — pass. R9 pass (one branch: a store, an add command, a list command). R10 pass (the item's R10 paragraph enumerates nine combinations, each covered, excluded, or named as unconstrained with who left it so)
+  - `criteria-are-decidable` → **pass** — each of AC1–AC9 was walked and the settling command written out, in the R4 row of that table: AC1 `recall add "<q>" "<a>"`; AC2 `recall list` in a fresh process; AC3 two identical adds; AC4 the two empty-side invocations; AC5 `RECALL_FILE=<tmp>/cards.json recall add "a" "b"` plus a grep of `README.md`; AC6 `recall add --deck german …` and the order of `recall list`; AC7 `recall add "Grüße" "greetings"`; AC8 `recall list` against an empty store; AC9 the three wrong-arity invocations. No criterion carries an unmeasurable adjective
+  - `qa-recorded-verbatim` → **pass** — `refinement-qa.md` is `status: recorded` and holds both rounds. The stakeholder's two replies are quoted word for word and tagged `[human]`; every round-2 decision is tagged `[assumed]` and names the deferral or the routing rule it rests on. Nothing was paraphrased into agreement, and the round-1 Definition of Ready table is kept unedited beneath the round-2 one as the record of where the item was before they replied
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` — AC5 and AC6 rewritten, AC9 added; `## Notes` gains a round-2 paragraph and its R10 paragraph rewritten; the `plan` routing list gains the unwritable-`RECALL_FILE` case; `updated` bumped
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — `status: agenda` → `recorded`; round-1 replies tagged `[human]`; a "Round 2" section recording six decisions and why none was asked; a second Definition of Ready table for the state that stands
+  - `tracker/board.md` — regenerated
+- **Status:** `draft` → `ready`
+- **Result:** WI-0001 is Ready. Every one of AC1–AC9 names a command and the verdict that follows, the whole exchange with the stakeholder is on the record verbatim, and the second round cost them nothing because everything left was theirs to have deferred or was never theirs to decide.
+
+## 2026-08-29T11:21:00Z — plan v0.3.1 — architect
+
+- **Item:** WI-0001
+- **Trigger:** status `ready` — `next` dispatched `plan` as the only runnable candidate (WI-0002 and WI-0003 both depend on an item that is not `done`; EP-001's `open` has no owner).
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, `## Out of scope`, and the `## Notes` list of the four design questions left to `plan`
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — both rounds, and which answers are `[human]` and which `[assumed]`
+  - `tracker/items/WI-0002/item.md` — AC1–AC9, read only to know what state this item must leave room for and what it must not decide
+  - `tracker/items/WI-0003/item.md` — AC1–AC4, same reason
+  - `docs/product/vision.md` v2
+  - ADR-0001 (the ladder — not touched by this item) and ADR-0002 (the store's location and format, and the four things it left open)
+  - `tracker/project.yaml` — `commands.test` and `commands.lint` both null
+  - the project's source code: there is none. `git ls-files` returns only the installed pipeline under `.claude/`, `tracker/` and `docs/`, so this is the first item to put code in the tree.
+- **Decisions:**
+  - **Test and lint commands — ADR-0003, decided after measuring the environment.** `python3 -m unittest discover -s tests -t .` and `python3 -m compileall -q -x '[.]claude' .`, with no third-party dependency. `pytest` is not importable and no linter is on the path; the interpreter is externally managed, so `pip install --user ruff` is refused under PEP 668. A venv or `--break-system-packages` would make every later gate depend on a network fetch or on modifying the host interpreter, for a single-file tool. Recorded honestly: `compileall` is a compile check, not a linter, and the ADR and the plan's `## Risks` both say what it does not catch.
+  - **Store schema and write protocol — ADR-0004, the four questions ADR-0002 left to `plan`.** One JSON object `{"version": 1, "cards": [...]}`; a card carries `number`, `question`, `answer` and nothing else at this item; UTF-8, two-space indent, non-ASCII unescaped, trailing newline; the next number is derived as one above the largest present rather than stored as a counter, so a hand-edited file cannot disagree with itself; writes go to a temporary file in the store's own directory and are renamed over it, so a crash leaves the old document or the new one; the store is created by the first successful add; an unwritable path and an unparseable file both fail the command and leave the disk untouched. `version` is the seam WI-0003 uses to add scheduling fields without renegotiating the format.
+  - **Command surface — ADR-0005.** An executable `recall` beside an importable `recall.py`, no install step; `main(argv)` returns an exit code and does not exit the process; arguments after the command name are positional and never options, which is the one rule that satisfies both AC6 (a `--deck` argument makes the count four) and AC9 (any count but two is rejected); exit 0 success, 2 wrong command line, 1 store failure; user output on stdout, diagnostics on stderr; the listing is tab-separated in ascending card-number order.
+  - **Answered from the documents, not re-decided:** where the store lives and that it is JSON (ADR-0002), the flat pool (EP-001/Q-004), both card sides as arguments to one command (WI-0001/Q-001), and the interval ladder (ADR-0001, untouched here).
+  - **Reversible assumptions, recorded in the plan rather than as ADRs:** only the empty string is an empty side (whitespace is content); the exact wording of the confirmation, empty-listing and usage lines, which `refine` left deliberately unconstrained; the tab separator; that `~` is resolved by the standard expansion honouring `HOME`, which is what lets AC5's default-path case be checked without writing into the checker's real home directory.
+  - **Not asked of the stakeholder:** nothing. Every open point was in a document already, or was one of ADR-0002's four, or was a reversible wording choice covered by their standing deferral on WI-0001/Q-002.
+  - **Architecture overview created**, because this is the first planned item and an overview written after three items is archaeology.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -V` → `Python 3.12.3`
+  - `python3 -c "import pytest"` → `ModuleNotFoundError: No module named 'pytest'`
+  - `which ruff flake8 pyflakes` → no output; exit 1
+  - `python3 -m pip install --user ruff` → exit 2, `error: externally-managed-environment` (PEP 668)
+  - `python3 -m pip download ruff -d /tmp/x` → `Successfully downloaded ruff` (the network is reachable; what is missing is a supported place to install into)
+  - `python3 -m compileall -q -x '[.]claude' .` over a file with an unclosed bracket → exit 1, `Error compiling ./bad.py`; over valid files → exit 0
+  - `python3 -m unittest discover -s tests -t .` → exit 5, `NO TESTS RAN` (the declared test command cannot pass by finding nothing)
+  - `python3 -m compileall -q -x '[.]claude' .` in this repository → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 4 documents checked
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0, 0 errors, 0 warnings — the standing `project.commands.test-null` warning is gone, because this execution filled both commands in)
+  - `every-criterion-is-addressed` → **pass** (the `## Acceptance criteria mapping` table in `plan.md` has one row per AC, AC1–AC9, each naming the steps that satisfy it and the named test that demonstrates it; no AC is demonstrated by the word "tests")
+  - `project-commands-resolved` → **pass** (`commands.test` and `commands.lint` are set to commands run in this project during this execution — see `## Commands`. Neither can pass vacuously: `unittest discover` exits 5 on an empty suite, and `compileall` exits 1 on a file that does not parse)
+  - `decisions-recorded` → **pass** (every decision is in the `## Decisions and ADRs` table of `plan.md`, pointing at ADR-0003, ADR-0004, ADR-0005, at an already-recorded ADR, or at a numbered entry under `## Assumptions` that states what reversing it costs)
+  - `plan-is-executable-without-you` (advisory) → **pass** (nine numbered steps, each naming the file it touches and what is observably true afterwards; the interface table and the output-contract table remove the decisions a developer would otherwise have to invent — function signatures, exit codes, which stream each message goes to)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0. Two findings were fixed rather than argued with: an unsourced "nothing" about `tracker/project.yaml` in ADR-0003, and an unsourced "no behaviour" about the `recall` shim in ADR-0005. One further citation had to be rewritten because `[src: ...]` cannot contain a `]` and the regex `[.]claude` does — noted for the toolkit)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/plan.md` — created
+  - `docs/architecture/overview.md` — created, v1
+  - `docs/architecture/adr/ADR-0003-stdlib-only-test-and-lint-commands.md` — created, v1
+  - `docs/architecture/adr/ADR-0004-card-store-schema-and-write-protocol.md` — created, v1
+  - `docs/architecture/adr/ADR-0005-command-surface-and-entry-point.md` — created, v1
+  - `tracker/project.yaml` — `commands.test` and `commands.lint` filled in
+  - `tests/__init__.py` — created, empty; scaffolding, listed under `## Scaffolding` in the plan, so that the declared test command can execute at all
+  - commit: recorded in the history row for this transition
+- **Status:** `ready` → `planned`
+- **Result:** WI-0001 has a plan a developer can execute without another decision: two files at the repository root, nine numbered steps, an interface table and an output contract, and every one of AC1–AC9 mapped to a named test. Three ADRs record what this execution decided — the toolchain, the store's schema and write protocol, and the command surface — and each states what reversing it would cost. The project now has an architecture overview and two real gate commands.
+
+## 2026-08-29T11:21:38Z — implement v0.2.2 — developer
+
+- **Item:** WI-0001
+- **Trigger:** status `planned` — `next` dispatched `implement`; the only runnable candidate, and no branch existed yet.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, `## Out of scope`, `## Notes`
+  - `tracker/items/WI-0001/artifacts/plan.md` — the nine steps, the interface table, the output contract, the assumptions and the scaffolding note
+  - `tracker/items/WI-0001/history.md` — five rows, the last one `ready → planned` by `plan`. No send-back, so this is a fresh implementation, not a defect fix
+  - `tracker/items/WI-0001/questions/` — `Q-001` and `Q-002`, both `answered`; their consequences are already in AC1, AC4, AC5 and ADR-0002, and I am working from those artifacts rather than from the question files
+  - `docs/architecture/adr/` — ADR-0002 (store location and format), ADR-0003 (test and lint commands), ADR-0004 (schema and write protocol), ADR-0005 (entry point, arguments, exit codes, streams); ADR-0001 read and not applicable to this item
+  - `docs/architecture/overview.md` v1
+  - `tracker/project.yaml` — branch prefix `wi/`, commit subject convention, and both gate commands, now non-null
+  - the working tree: `git ls-files` shows no product source, so there is nothing to reconcile with
+- **Decisions:**
+  - Branch `wi/WI-0001` created from `main` at `4d5cbce`, and the item moved to `in-progress` before any code was written, so that an interruption leaves a truthful status.
+  - No reconciliation was needed: the branch did not exist and the tree carries no product code.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0001 main` → exit 0
+- **Gates:**
+  - `tests-pass` → **not yet run** (this is the opening entry; the completion gates run at the branch head in the closing entry)
+  - `lint-clean` → **not yet run**
+  - `workspace-valid` → **not yet run** as a completion gate; `scripts/transition` runs it for this move
+  - `every-criterion-has-a-test` → **not yet run** (no test exists yet)
+  - `commits-reference-the-item` → **not yet run** (no commit on the branch yet)
+  - `no-unplanned-scope` (advisory) → **not yet run** (no diff yet)
+  - `claims-are-sourced` → **not yet run** as a completion gate; `scripts/transition` runs it for this move
+- **Artifacts:**
+  - branch `wi/WI-0001`, at `4d5cbce`
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of WI-0001 has started on `wi/WI-0001`. Nothing is built yet; the plan's nine steps are next, in order.
+
+## 2026-08-29T11:25:36Z — implement v0.2.2 — developer
+
+- **Item:** WI-0001
+- **Trigger:** status `in-progress` on `wi/WI-0001`, continuing the same execution that opened at 2026-08-29T11:21:38Z.
+- **Inputs read:**
+  - `tracker/items/WI-0001/artifacts/plan.md` — worked step by step, steps 1 to 9 in order
+  - `tracker/items/WI-0001/item.md` — AC1–AC9 and `## Out of scope`
+  - ADR-0002, ADR-0003, ADR-0004, ADR-0005 — the constraints the plan assumes but does not restate
+  - `tracker/project.yaml` — both gate commands, and the commit subject convention
+  - the branch: `git log main..wi/WI-0001`, empty at the start of the work
+- **Decisions:**
+  - **Inside the plan's latitude, recorded rather than escalated:** `recall list` with an argument is rejected with `usage: recall list` and exit 2. The plan fixed the positional-only rule and `add`'s count, and said nothing about `list`'s; accepting the argument silently would suggest a filter exists, and the flat pool with no filtering is the stakeholder's decision (EP-001/Q-004). AC6 requires `list` to show every card, so rejecting a narrowing argument is that criterion's reading rather than a departure from it. Reversal is one condition in `cmd_list`.
+  - **`load` checks the document's shape, not only that it parses.** ADR-0004 says a file that does not have the schema's shape is refused; a card must carry a whole-number `number` and string sides, and the message names which card and which side is wrong.
+  - **`tests/support.py` holds the subprocess runner and the per-test temporary store**, so that three test modules do not each carry a copy. It is test code, not scaffolding; the plan's `## Scaffolding` still lists only `tests/__init__.py`.
+  - **Three tests beyond the plan's list**, each pinning a decision that would otherwise be invisible: a card side beginning with a dash is text (ADR-0005), the store is created by the first add and not by a listing (ADR-0004), and `list` takes no filter argument (the decision above). No product code exists for these alone.
+  - **The tests were checked against a mutant rather than assumed to bite.** In a throwaway copy under `/tmp`, removing the empty-question check, relaxing `add`'s count check from `!= 2` to `< 2` and dropping the sort from `cmd_list` produced exactly three failures. The copy was deleted; nothing in this repository was mutated.
+  - **Escalated: nothing.** No decision met the test for escalation — none changes an interface another item depends on, contradicts an ADR, or would be expensive to reverse.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0001 main` → exit 0
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 21 tests`, `OK` (branch head)
+  - `python3 -m compileall -q -x '[.]claude' .` → exit 0 (branch head)
+  - `python3 -m unittest discover -s tests -t .` against a mutated copy in `/tmp` → `FAILED (failures=3)`
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0001 wi/WI-0001` → exit 0, `all 3 commit(s) on main..wi/WI-0001 name WI-0001`
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - manual runs of the delivered command covering AC1, AC4, AC6, AC7, AC8 and AC9 by hand before the tests were written → the exit codes and output the plan's contract specifies
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 21 tests`, `OK`, exit 0, at the branch head)
+  - `lint-clean` → **pass** (`compileall` exit 0, at the branch head. It is a compile check, not a linter — ADR-0003 records what it does not catch)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass** (`impl-report.md`'s evidence table names a test function for each of AC1–AC9; none is demonstrated by reading the code, and the mutation check above is the evidence that the tests fail when the behaviour is removed)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0 over all three commits)
+  - `no-unplanned-scope` (advisory) → **pass** (the diff is `recall`, `recall.py`, `README.md` and five test modules; every hunk traces to a plan step or to a deviation recorded in the report)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0; no document under `docs/` changed on this branch)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/impl-report.md` — created
+  - `recall`, `recall.py`, `README.md` — created
+  - `tests/support.py`, `tests/test_add.py`, `tests/test_list.py`, `tests/test_store.py`, `tests/test_docs.py` — created
+  - branch `wi/WI-0001`, commits `1ae6e9d..accb110` (three, all naming WI-0001)
+- **Status:** `in-progress` → `verifying`
+- **Result:** `recall add` and `recall list` are built, with the store, the README and 21 tests. All seven gates pass at the branch head, AC1–AC9 each map to a named test, and four deviations from the plan are recorded in the implementation report — the largest being that `recall list` rejects an argument, which the plan had not settled. Nothing was escalated and nothing in the plan was left undone.
+
+## 2026-08-29T11:29:27Z — verify v0.1.4 — qa-engineer
+
+- **Item:** WI-0001
+- **Trigger:** status `verifying` — `next` dispatched `verify`; the only runnable candidate.
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9, read **first** and used to derive what would settle each one before the implementation report was opened
+  - `tracker/items/WI-0001/history.md` — seven rows; the last is `in-progress → verifying` by `implement`, so this is a first verification, not a re-check after a send-back
+  - `tracker/items/WI-0001/artifacts/plan.md` — the nine steps and the interface and output contracts, read to judge the diff against them
+  - `tracker/items/WI-0001/artifacts/impl-report.md` — read after the criteria, and treated as a claim to check rather than as evidence
+  - ADR-0002, ADR-0004, ADR-0005 — for the behaviour no criterion states: the store's failure cases and the positional-only argument rule
+  - `tracker/project.yaml` — both gate commands
+  - the code at `wi/WI-0001` head, commit `f23fe67548d96862adf96f2a406b1cb1dd2cbded`: `recall`, `recall.py`, the five test modules, `README.md`, and `git diff main..wi/WI-0001 --stat`
+- **Decisions:**
+  - **All nine criteria pass, each on evidence I produced.** Every row of the report's `## Criteria` table names a command run in this execution and quotes what it printed. The implementation report is cited nowhere as evidence.
+  - **Two criteria were checked in more readings than they state, because both wordings admitted two.** AC5 says `RECALL_FILE` counts "when that is set and non-empty" but gives an observation only for the set case, so the empty-string case was exercised too, and it falls back to the default. AC8 says "with no cards stored", which is true both when no store file exists and when one exists holding zero cards; both were run, and both print one line and exit 0.
+  - **AC6's ordering was checked against a hostile file, not a friendly one.** Three cards were added, their order reversed inside the store file by hand, and the listing checked again — so the ascending order is demonstrably produced by the tool rather than inherited from the file.
+  - **Nothing was classified as a defect.** No criterion of this item failed, so there is no send-back; nothing failed in behaviour delivered by another item, so no bug item was filed. WI-0001 is the first item to deliver code, so there is no other item's behaviour to find a defect in.
+  - **Two pieces of uncovered behaviour were recorded as observations, not defects.** `recall list` with an argument exits 2 with a usage line, and an unknown or missing command exits 2 with a usage line. No criterion covers either. The test that decides send-back versus observation is whether a criterion says the behaviour should be different — none does, and both are declared in `impl-report.md` rather than hidden, so they are noted for `review-close`.
+  - **Nothing was judged ambiguous**, so no question was filed. Where a criterion admitted two readings I checked both rather than picking one, which is the case above.
+  - **A side effect of my own mutation testing is declared rather than quietly cleaned up.** Mutating `store_path` to ignore `RECALL_FILE` made the mutant's subprocesses write the suite's fixtures to `~/.recall.json`, outside this project. The file did not exist beforehand, all 18 cards in it were this suite's fixtures, and I deleted it. The finding it exposes belongs to the tests, not to the tool: `tests/support.py` redirects `RECALL_FILE` but not `HOME`, so it cannot safely host a mutation of the path resolution itself. It is in `## Not verified, and why` in full.
+- **Questions raised:** none
+- **Commands:**
+  - `git rev-parse HEAD` → `f23fe67548d96862adf96f2a406b1cb1dd2cbded`, exit 0
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 21 tests in 1.503s`, `OK`
+  - `python3 -m compileall -q -x '[.]claude' .` → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - AC1: `recall add "die Katze" "the cat"` / `"der Hund" "the dog"` / `"das Pferd" "the horse"` → `Added card 1.` `Added card 2.` `Added card 3.`, each exit 0
+  - AC2: `recall list` in a fresh process, piped into a byte comparison → `1\tdie Katze\tthe cat` …, `question_identical=True answer_identical=True`
+  - AC3: `recall add "same" "same"` twice, `recall list` → cards 1 and 2, both listed
+  - AC4: `recall add "" "the cat"` → exit 2, `recall add: the question side is empty`; `recall add "die Katze" ""` → exit 2, `recall add: the answer side is empty`; `recall add "" ""` → exit 2, the question side reported; `recall list` after each → `No cards yet.`, exit 0
+  - AC5: `RECALL_FILE=$T/cards.json recall add "a" "b"` → exit 0 and the card in that file; `cat` → pretty-printed JSON; `file $T/cards.json` → `JSON text data`; `env -u RECALL_FILE HOME=$T/home recall add "d" "e"` → the card in `$T/home/.recall.json`; `RECALL_FILE="" HOME=$T/home recall add "f" "g"` → exit 0, fell back to the default; `grep -n -e '~/.recall.json' -e 'RECALL_FILE' README.md` → lines 55 and 56
+  - AC6: `recall add --deck german "die Katze" "the cat"` → exit 2, usage on stderr, `No cards yet.` afterwards; three cards added, the file's card order reversed by hand, `recall list` → `1 a 1`, `2 b 2`, `3 c 3`
+  - AC7: `recall add "Grüße" "greetings"` and `recall add "日本語" "Japanese"`, `recall list` compared with the inputs → both `True`; `cat` of the store shows both as themselves
+  - AC8: `recall list` with no store file, and with a file holding zero cards → both exit 0, `stdout lines=1`, `content=[No cards yet.]`, `stderr=[]`
+  - AC9: `recall add`, `recall add "die Katze"`, `recall add "die Katze" "the cat" "extra"` → each exit 2, empty stdout, `usage: recall add <question side> <answer side>` on stderr, `No cards yet.` afterwards, no store file
+  - boundary: `recall add "-x" "minus x"` → exit 0, listed as `1\t-x\tminus x`; `recall` and `recall bogus` → exit 2, `usage: recall <add|list>`; a store containing `not json` → exit 1 from both commands with the file unchanged; a store path in a missing directory → exit 1, `cannot write`, no directory created
+  - sensitivity: nine single mutations in a throwaway copy under `/tmp`, the full suite run against each → every one rejected, `exit=1`, with the failing test names recorded in the report
+  - `rm -f /home/msi/.recall.json` → removed the file my AC5 mutation created outside this project
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 21 tests`, `OK`, exit 0, run by me at the branch head, not read from the report)
+  - `lint-clean` → **pass** (`compileall` exit 0. It is a compile check, not a linter — ADR-0003 records what it cannot catch, and `## Not verified, and why` is where that lands)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings, before and after ticking the criteria)
+  - `every-criterion-independently-checked` → **pass** (nine rows, nine commands I ran, nine quoted outputs; `impl-report.md` is cited as evidence for none of them)
+  - `negative-cases-exercised` → **pass** (every error, empty-input and boundary case a criterion names was triggered — both empty sides and both empty together, three wrong argument counts, the deck option, both readings of an empty listing, an empty `RECALL_FILE` — plus the two store failure paths ADR-0004 specifies)
+  - `tests-would-fail-without-the-change` (advisory) → **pass** (nine mutations, one per criterion, each rejected by at least one test; the table in the report names which)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/verify-report.md` — created, `Verified-commit: f23fe67548d96862adf96f2a406b1cb1dd2cbded`
+  - `tracker/items/WI-0001/item.md` — AC1 to AC9 ticked, all nine on evidence in this entry
+  - bug items filed: none
+- **Status:** `verifying` → `in-review`
+- **Result:** WI-0001 passes verification against `f23fe67`. All nine criteria were checked by running commands and reading their output, every negative case a criterion names was triggered, and nine mutations confirmed the tests bite. No defect was found and no question was needed. Two pieces of user-visible behaviour that no criterion covers — `recall list` with an argument, and an unknown command — are recorded as observations for `review-close`, and one side effect of my own mutation testing is declared in the report.
+
+## 2026-08-29T11:36:14Z — review-close v0.5.0 — reviewer
+
+- **Item:** WI-0001
+- **Trigger:** status `in-review` — `next` dispatched `review-close` as the only runnable candidate (EP-001's `open` has no owner; WI-0002 and WI-0003 are both behind a `depends-on` that is not `done`).
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1–AC9 all ticked, `## Out of scope`, `## Notes`
+  - `tracker/items/WI-0001/history.md` — all eight rows, checked to chain without a gap and to end where `item.md` says
+  - `tracker/items/WI-0001/journal.md` — all eight entries, read in full rather than skimmed, because this execution certifies the record is complete
+  - `tracker/items/WI-0001/artifacts/plan.md`, `impl-report.md`, `verify-report.md`, `refinement-qa.md`
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md` — both `answered`, both with `## Consequences` naming files that were opened
+  - **the diff** `main..wi/WI-0001`, hunk by hunk: `recall`, `recall.py`, `README.md`, `tests/support.py`, `tests/test_add.py`, `tests/test_list.py`, `tests/test_store.py`, `tests/test_docs.py`
+  - `docs/architecture/overview.md` v1, ADR-0002, ADR-0003, ADR-0004, ADR-0005 — read **against the code**, not against one another
+  - `tracker/project.yaml` — trunk `main`, both gate commands, the commit-subject convention
+  - `.claude/agile-skills/spec/dor-dod.md` §3, `spec/work-item.md`, `spec/journal-and-history.md`, `pipeline.yaml`
+- **Decisions:**
+  - **Accepted, and merged.** Every hunk of the diff maps to an acceptance criterion or a numbered plan step; nothing in it serves neither, so there is no unrequested scope. The mapping is written out hunk by hunk in `review.md` `## Findings` rather than asserted.
+  - **All four of the implementation's declared deviations accepted, and the substantive one checked rather than taken on trust.** `recall list` rejecting an argument is not settled by the plan, which fixed only `add`'s arity. I checked the reading the report gives: AC6 requires `list` to show *every* card and `EP-001/Q-004` settled one flat pool with no filtering, so silently accepting a narrowing argument would advertise a filter that does not exist. It contradicts no ADR — ADR-0005's positional-only rule speaks to `add`'s count, not to `list`. Accepted, and recorded as an accepted gap because no criterion covers it.
+  - **D12 was done by opening code, not by reading prose.** Fourteen absolute claims across `overview.md`, ADR-0002, ADR-0003, ADR-0004 and ADR-0005 were listed, and for each one the code its citation points at was opened and the verdict taken from there. All fourteen are true. The table is in `review.md` `## What I examined`. This mattered here because `lint-claims --changed-since main` has nothing to check — the branch changes no file under `docs/` — so the mechanical half of D12 is silent on exactly the documents this item's code could have invalidated.
+  - **Two maintainability findings, neither a send-back and neither a bug item.** `recall` carries `# noqa: E402`, a marker for a linter ADR-0003 records as not installed, so it suppresses nothing and says something untrue about the toolchain. And `save` writes through `tempfile.NamedTemporaryFile`, which mkstemps at mode `0600`, so `os.replace` leaves the store owner-only rather than umask-default. Neither contradicts a criterion, an ADR or a document, so neither could satisfy the bug Definition of Ready RB3 — a bug item would have nothing to cite. Recorded in `review.md` `## Findings`, which is where a later reader will look.
+  - **Five gaps accepted, and all five copied into the item's `## Notes`.** A gap that lives only in a report stops being read the moment the item is `done`: the unproven durability claim, `tests/support.py` redirecting `RECALL_FILE` but not `HOME`, the two uncovered command-line behaviours, the deliberately out-of-scope cases, and `compileall` not being a linter.
+  - **Merged in the order the procedure fixes**, and the order is load-bearing: trial-merge into a **detached** worktree, run the tests on the merge result, discard the trial, confirm `main` did not move, close the item while `main..wi/WI-0001` is still non-empty, and only then merge for real. `check-commit-refs` inspects that range, so merging first would have emptied it and refused the close it gates.
+  - **No question filed and no engagement ended.** Nothing contradicted a recorded decision, so there was nothing to ask the architect. `scripts/engagement-state EP-001` reports `active` with WI-0002 and WI-0003 still in flight, so this is not the execution that ends EP-001.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness WI-0001 wi/WI-0001` → exit 0, "verified at f23fe675; wi/WI-0001 has moved to 18e1605d but only the record changed (5 file(s) under tracker/ or docs/)"
+  - `python3 .claude/agile-skills/scripts/check-commit-refs WI-0001 wi/WI-0001` → exit 0, "all 5 commit(s) on main..wi/WI-0001 name WI-0001"
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, "checked no documents changed since main"
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff WI-0001` → exit 0, "WI-0001 is a 'work-item', not an epic — the termination gate applies to an engagement's ending only. PASS."
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → exit 0, "EP-001 active — still in flight: WI-0001, WI-0002, WI-0003"
+  - `git rev-parse main` → `4d5cbce5856053524a1ad4bddcfa7ef8a9a1db00`, taken **before** the trial merge
+  - `git worktree add --detach /tmp/wi0001-trial main` → exit 0, "HEAD is now at 4d5cbce"
+  - `git -C /tmp/wi0001-trial merge --no-ff wi/WI-0001` → exit 0; `git -C /tmp/wi0001-trial rev-parse HEAD` → `3f655f87bf908ba75c8e86d6633457ad49fccf92`
+  - `python3 -m unittest discover -s tests -t .` **in the trial worktree** → exit 0, `Ran 21 tests in 1.317s`, `OK`
+  - `python3 -m compileall -q -x '[.]claude' .` **in the trial worktree** → exit 0
+  - smoke run of the merged tree: `RECALL_FILE=$T/c.json ./recall add "die Katze" "the cat"` → `Added card 1.`; `... add "Grüße" "greetings"` → `Added card 2.`; `... list` → `1\tdie Katze\tthe cat`, `2\tGrüße\tgreetings`, exit 0; `cat $T/c.json` → pretty-printed JSON with `Grüße` unescaped
+  - `git worktree remove --force /tmp/wi0001-trial` → exit 0; `git rev-parse main` → `4d5cbce5856053524a1ad4bddcfa7ef8a9a1db00`, unchanged
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, "checked 4 item(s), 7 document(s)", 0 errors, 0 warnings
+- **Gates:**
+  - `definition-of-done` → **pass**, criterion by criterion, with the full table in `artifacts/review.md` `## Definition of Done`. D1 pass (AC1–AC9 all `- [x]`). D2 pass (nine rows in `verify-report.md`, each a command `verify` ran and its quoted output; AC5 and AC8 checked in both readings their wording admits). D3 pass (both gate commands **re-run on the merge result**, not read from a report, plus an end-to-end smoke run of the merged tool). D4 pass (`Q-001` and `Q-002` both `answered`; nothing open anywhere). D5 pass (eight history rows, eight journal entries, same order and actors; last row matches `item.md`). D6 pass (ADR-0003/0004/0005 written by `plan` and all cited from `plan.md`'s decisions table; ADR-0002 cited; the reversible non-ADR choices numbered under `## Assumptions`). D7 pass, vacuously and checked rather than assumed (`git diff --name-only main..wi/WI-0001 -- docs/` is empty; the documents describing this behaviour were written *for* this item at v1 with change-log rows, and the claim audit is what shows the code did not drift from them). D8 pass (`check-commit-refs` exit 0 over all five commits). D9 pass (trial merge green, trunk unmoved, real merge after the close). D10 pass (`check-verify-freshness` exit 0 — the comparison was run, not inferred). D11 pass (`review.md` leads with `## What I examined`). D12 pass (fourteen claims, each decided by opening the cited code; `lint-claims` exit 0)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness WI-0001 wi/WI-0001` exit 0; verified at `f23fe67`, and the only later commit, `18e1605`, touches five files under `tracker/` and no code)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs WI-0001 wi/WI-0001` exit 0, all five commits; run before the merge, while the range is still non-empty)
+  - `tests-pass-on-the-merge-result` → **pass** (`python3 -m unittest discover -s tests -t .` inside the detached trial worktree holding merge commit `3f655f8` → `Ran 21 tests`, `OK`, exit 0; `compileall` → exit 0 there too)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0, 0 errors, 0 warnings)
+  - `record-is-reconstructible` → **pass**, answered from the tracker, `docs/` and `git log` alone. *What was built and why:* `item.md`'s story and AC1–AC9, and `plan.md`'s problem statement. *Which skill decided what:* `intake` split the epic, `refine` set the criteria over two rounds, `answer-questions` settled the store's location under a deferral as ADR-0002, `plan` decided the toolchain, schema and command surface as ADR-0003/0004/0005, `implement` built it, `verify` checked it — each with its own journal entry naming its inputs and gates. *What questions arose and how they resolved:* `EP-001/Q-001`–`Q-004` and `WI-0001/Q-001`–`Q-002`, every one `answered` with `## Consequences` naming the artifacts the answer reached; `Q-002` is explicitly `answered-by: answer-questions` rather than `human`, because the stakeholder deferred and the architect chose. *What verification found:* `verify-report.md` — nine criteria on nine commands it ran, negative cases triggered, nine mutations each rejected, no defect, and one declared side effect of its own mutation testing. `git log --grep WI-0001` returns all five branch commits plus the tracker commits on `main`
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0. It had nothing to check, since no document under `docs/` changed on this branch — which is why D12 was done by hand against the code, and why that is recorded as a table rather than a sentence)
+  - `epic-sign-off` → **pass, not applicable** (`check-epic-signoff WI-0001` exit 0: WI-0001 is a work item, and the termination gate applies to an engagement's ending. `engagement-state EP-001` → `active`, so no engagement ended here)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/review.md` — created: what was examined, the fourteen-claim audit, the D1–D12 table, the hunk-by-hunk mapping, five accepted gaps and the verdict
+  - `tracker/items/WI-0001/item.md` — `## Notes` gains the accepted gaps in full; `status` and `outcome: delivered` written by this transition
+  - the merge of `wi/WI-0001` into `main` — made immediately after this transition, for the reason in `## Decisions`; its sha is recorded in `review.md`'s D9 row in a follow-up commit on `main`
+  - bug items filed: none. No epic was closed
+- **Status:** `in-review` → `done`
+- **Result:** WI-0001 is delivered and merged. `recall add` and `recall list` do exactly what AC1–AC9 ask and nothing more, the tests and the tool both pass on the merge result rather than only on the branch, and every absolute claim the documents make about this code was checked by opening the code. Five gaps are accepted and written into the item so they outlive it; the largest is that the test suite redirects `RECALL_FILE` but not `HOME`, which WI-0002 and WI-0003 inherit. EP-001 remains `active` with two children still to build.
