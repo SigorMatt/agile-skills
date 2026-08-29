@@ -3647,3 +3647,45 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `~/agile-skills-throwaway/`, `harness/runs/iteration-3b-mdtab/` (in flight),
   `meta/findings/FINDINGS.md` (14 statuses triaged, the triage note, **H-015**, the F-024
   addendum).
+
+---
+
+## 2026-08-30 — META-127 (part two) — 3b stopped at turn 2 and restarted, because the rule it exists to test was fragile
+
+- **Unit:** META-127, continued
+- **Inputs read:** `scripts/lint-answers` (`escalations`, `verdict_for`),
+  `fixtures/crossed-answers/`, `scripts/check` (`check_cross_answers`).
+- **Decisions:**
+  - **Stopped the run rather than accepting its verdict.** Two turns in, reviewing my own
+    morning's code, I found two shapes in `lint-answers` that a competent worker would plausibly
+    write and the rule would have refused: an escalation whose two answer IDs live in
+    `## Options considered` — which is how a good escalation reads, the person's two statements
+    as the two options — and a verdict whose word wraps onto the second line of its bullet. Both
+    would have produced gate failures that had nothing to do with F-062, and 3b exists to answer
+    one question: *is the contradiction escalated?* A regression run whose result is dominated by
+    a linter's fussiness proves nothing. Killed at turn 2, project wiped, run archived, relaunched
+    from nothing.
+  - **A third defect fell out of fixing the first two: a conflict could escalate itself.**
+    `escalations()` paired each named ID with the naming question's *own* ID, so a record that
+    mentions the answer it contradicts counted as having asked somebody. That is precisely the
+    private settlement ADR-0008 §3 refuses, passing the gate that refuses it. Removed.
+  - **Rule 3's test is deliberately weaker than rule 2's, and now says so.** Rule 2 has two
+    recorded answers, so an escalation can be required to show both IDs. Rule 3 has one recorded
+    answer and an edit — the thing overtaking it may be a sign-off condition or simply the
+    behaviour being built, and neither necessarily has an ID — so naming the answer in a question
+    to its author is the whole of the ask. Separating them is what made case 4 of the F-062 step
+    pass again after the self-pairing came out.
+  - **Set equality was not enough, so the fixture gained two counts.** The compliant control
+    lives inside the must-fail fixture, so a rule that starts firing on correct work emits a code
+    the set already contains and the assertion does not move. `answer.conflict.unescalated` and
+    `answer.cross-check.no-verdict` must each fire exactly once, and each count was confirmed to
+    move under a mutation that reverts the rule it guards. `WI-0004/Q-001`'s context now names
+    the answer it contradicts, so the self-escalation defect is load-bearing too.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green. Three reverting mutations run against the whole gate: two
+  fail `cross-answer consistency`, and the third fails its new count.
+- **Artifacts:** `scripts/lint-answers` (`escalations`, `asked_about`, `verdict_for`),
+  `scripts/check` (the two count assertions), `fixtures/crossed-answers/` (WI-0003/Q-001's
+  wrapped verdict, WI-0003/Q-002's options-only escalation, WI-0004/Q-001's naming context,
+  README), re-rendered dist. `harness/runs/iteration-3b-mdtab.1/` is the two-turn run that was
+  archived; the live 3b starts from an empty project.
