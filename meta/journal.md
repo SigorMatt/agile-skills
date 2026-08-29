@@ -3599,3 +3599,51 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `first_job`, `open_console_log`/`close_console_log`, the budget block, `--console-log`),
   `harness/tests/test_harness.py` (`TerminalWorkspace`, `FirstJob`, `ConsoleLog`),
   `harness/USAGE.md` §3/§4/§9, `harness/skills/simulated-human/SKILL.md` 1.1.0.
+
+---
+
+## 2026-08-30 — META-127, META-128 — the regressions launched, and the ledger triaged
+
+- **Unit:** META-127 (3b and 4b configured and launched) and META-128 (cluster 5)
+- **Inputs read:** `harness/iterations/iteration-3-mdtab.json`, `iteration-4-recall.json`,
+  `harness/skills/simulated-human/probes/iteration-3-mdtab.md` (including
+  `P-signoff-extension`), `harness/provision.py`, `harness/USAGE.md`, and every open entry in
+  `meta/findings/FINDINGS.md`.
+- **Decisions:**
+  - **The regression configs differ in three keys and nothing else** — `id`, `project`,
+    `max-turns` — so that "unchanged" is a fact a reader can check by diffing two small JSON
+    files, not a claim in a report. Persona and probe are the same files that produced
+    F-062..F-067.
+  - **Sequential, not parallel — and that decision is a finding (H-015).** Both runs would have
+    rendered their persona and probe into the *same* global directory,
+    `harness/.claude/skills/simulated-human/`, at the start of every sim turn. Two drivers would
+    have interleaved a contradictory stakeholder and a cooperative one into both trails, and the
+    evidence would have been quietly worthless rather than obviously broken. The driver refuses a
+    second driver on the same iteration and nothing refuses two on different ones. Filed, with
+    the better fix named: render into the run directory, which also banks the exact persona a run
+    used.
+  - **H-011 and H-012 were visible in 3b's first two lines.** `console log: …/driver-console.log`
+    and `first turn: sim (open) — the project has no IDEA.md, so the engagement has not been
+    opened`. The fixes are load-bearing in the run that is meant to judge them.
+  - **Two deferrals are classes, not backlogs.** ADR-0006 exists because five findings were each
+    fixable with one more row. F-036/F-043/F-051/F-053 are one derivation — *one command writes
+    one half of a record* — and F-057/F-058 are another — *a document can be the deliverable, and
+    no dispatchable skill may write it*. Picking either off one finding at a time is the exact
+    move that produced the class. Each carries a named gate.
+  - **Five accepted for this session** (F-035, F-048, F-054, F-056, F-059), all small and all in
+    scripts or a self-check. They wait for META-131 because a harness run is in flight and the W4
+    rule fires on a repository that changes mid-turn.
+  - **F-024 recurred, in this session's own hand.** Seven new citations were written as
+    ``commit `sha` `` — the backticked form this repository uses for shas everywhere else — and
+    `scripts/check`'s pattern does not match it, so all seven were unverified while the step
+    printed PASS. The count went 30 → 37 after normalising. The residual hole is written into the
+    addendum rather than fixed: the verifier's pattern is narrower than the ways a human writes a
+    sha, and the honest repair is for the step to report what it *skipped*.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green; `findings citations resolve` **38 cited** (was 30 before the
+  normalisation, over the same set of claims).
+- **Artifacts:** `harness/iterations/iteration-3b-mdtab.json`,
+  `harness/iterations/iteration-4b-recall.json`, both projects provisioned under
+  `~/agile-skills-throwaway/`, `harness/runs/iteration-3b-mdtab/` (in flight),
+  `meta/findings/FINDINGS.md` (14 statuses triaged, the triage note, **H-015**, the F-024
+  addendum).
