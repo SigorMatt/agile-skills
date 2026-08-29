@@ -22,9 +22,18 @@ says."* Both are recorded. They cannot both hold.
 | `WI-0004/Q-004` | a section that reads like a check and says nothing checkable | `answer.cross-check.malformed` |
 | `EP-001/Q-005` | the sign-off consumed with no cross-answer check at all — the iteration-3 instance | `answer.cross-check.missing` |
 
-`WI-0003` is the control. If the escalation search breaks, `WI-0003/Q-001` starts producing
-`answer.conflict.unescalated`, an extra code appears, and the assertion fails — which is why the
-compliant case lives in the must-fail fixture rather than beside it.
+`WI-0003` is the control, and it is deliberately awkward in two ways that a real record is
+awkward: `WI-0003/Q-002` names the two answers **only inside `## Options considered`**, because
+putting the person's two statements side by side as the options is how a good escalation reads;
+and `WI-0003/Q-001`'s verdict word sits on the *second* line of its bullet, because a verdict with
+its reason attached wraps.
+
+Set equality cannot see the control regressing — `WI-0003` would start emitting a code `WI-0004`
+already emits — so `scripts/check` also pins two **counts**: `answer.conflict.unescalated` and
+`answer.cross-check.no-verdict` must each fire exactly once. Both were confirmed to move under a
+reverting mutation. `WI-0004/Q-001` completes the set from the other side: its `## Context` names
+`WI-0002/Q-001`, and that must **not** count as having asked anybody — a record that mentions the
+answer it contradicts is the private settlement, not the escalation.
 
 Rule 3 (a claim sourced to a human answer, rewritten by the execution that overtook it) is not
 here: it reads a **diff**, so its case is built as a throwaway git repository inside

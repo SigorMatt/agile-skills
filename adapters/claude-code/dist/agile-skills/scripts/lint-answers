@@ -135,19 +135,45 @@ class AnswerLinter:
         for identifier, item, question in self.questions:
             if question.fields.get("addressed-to") != "human":
                 continue
-            # Only what the person is actually shown counts. A cross-answer check names the
-            # answer it conflicts with by construction, so scanning the whole body would make
-            # every declared conflict its own escalation and the rule would never fire.
-            asked = "\n".join(question.sections.get(name, {}).get("text", "")
-                               for name in ("## Context", "## Question"))
+            # Everything the person is shown counts — `## Context`, `## Question` and
+            # `## Options considered`, because putting the two statements side by side as the
+            # options is exactly how a good escalation reads. What is excluded is
+            # `## Cross-answer check`: it names the answer it conflicts with by construction, so
+            # counting it would make every declared conflict its own escalation and the rule
+            # would never fire at all.
+            asked = "\n".join(text["text"] for name, text in question.sections.items()
+                               if name != SECTION)
             named = {f"{a}/{b}" for a, b in ANSWER_ID_RE.findall(asked)}
+            # The question's own ID is not one of the two it can be putting to anyone: a record
+            # that mentions the answer it contradicts is the *private* settlement ADR-0008 §3
+            # refuses, and counting it would let every conflict escalate itself. An escalation
+            # shows the person both statements, so it names both IDs.
             named.discard(identifier)
-            for first in named:
-                for second in named:
+            for first in sorted(named):
+                for second in sorted(named):
                     if first != second:
                         pairs.add(frozenset((first, second)))
-                pairs.add(frozenset((first, identifier)))
         return pairs
+
+    def asked_about(self):
+        """Answer IDs that some question, addressed to the human, puts back to them.
+
+        Rule 3's test, and deliberately weaker than rule 2's. Rule 2 has *two* recorded answers,
+        so an escalation can be required to show both. Rule 3 has one recorded answer and an edit
+        — the thing overtaking it may be a sign-off condition, or simply the behaviour being
+        built, and neither necessarily has an ID. Naming the answer in a question to its author
+        is the whole of what is being asked for.
+        """
+        named = set()
+        for identifier, item, question in self.questions:
+            if question.fields.get("addressed-to") != "human":
+                continue
+            asked = "\n".join(text["text"] for name, text in question.sections.items()
+                               if name != SECTION)
+            found = {f"{a}/{b}" for a, b in ANSWER_ID_RE.findall(asked)}
+            found.discard(identifier)
+            named.update(found)
+        return named
 
     # ---- rule 1 and rule 2 -------------------------------------------------------------
 
@@ -232,13 +258,35 @@ class AnswerLinter:
 
     @staticmethod
     def verdict_for(text: str, named_id: str):
+        """The verdict recorded against one answer, read from its whole bullet.
+
+        Scoped to the bullet rather than to the line: a verdict with its reason attached wraps,
+        and one entry stays one entry however the author broke the line. A rule that fires on
+        where a paragraph happened to wrap is a rule that teaches people to fight the linter.
+        """
+        bullet, collecting = [], False
         for raw in text.split("\n"):
-            if named_id not in raw:
+            starts_bullet = raw.lstrip().startswith(("-", "*"))
+            if starts_bullet:
+                if collecting:
+                    break
+                collecting = named_id in raw
+                if collecting:
+                    bullet.append(raw)
                 continue
-            lowered = raw.lower()
-            for verdict in VERDICTS:
-                if verdict in lowered:
-                    return verdict
+            if collecting:
+                bullet.append(raw)
+        if not collecting and not bullet:
+            # Not written as a bullet at all — fall back to the line, which is what the earlier
+            # rule did and is still right for `Checked against: X — compatible, different subject.`
+            for raw in text.split("\n"):
+                if named_id in raw:
+                    bullet = [raw]
+                    break
+        joined = "\n".join(bullet).lower()
+        for verdict in VERDICTS:
+            if verdict in joined:
+                return verdict
         return None
 
     # ---- rule 3 ------------------------------------------------------------------------
@@ -268,7 +316,7 @@ class AnswerLinter:
                 hint=window.hint)
             return
         self.report.note(f"claim window: {window.detail}")
-        escalated = {member for pair in self.escalations() for member in pair}
+        escalated = self.asked_about()
         journalled = self.journal_checks()
         for relative in window.paths:
             if not relative.startswith("docs" + os.sep) and not relative.startswith("docs/"):

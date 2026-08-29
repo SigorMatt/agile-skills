@@ -183,8 +183,24 @@ def check_cross_answers(runner: Runner) -> None:
                              fixture], capture_output=True, text=True, cwd=ROOT)
     with open(expected_path, "r", encoding="utf-8") as handle:
         expected = {line.strip() for line in handle if line.strip()}
-    actual = codes_from(result.stdout + result.stderr)
+    output = result.stdout + result.stderr
+    actual = codes_from(output)
     missing, extra = sorted(expected - actual), sorted(actual - expected)
+    # Set equality alone cannot see the compliant escalation regressing: WI-0003 would start
+    # producing a code WI-0004 already produces, and the set would not move. The count can.
+    # Set equality alone cannot see a rule regressing on the *compliant* half of the fixture:
+    # WI-0003 would start producing a code WI-0004 already produces, and the set would not move.
+    # Two counts can. Each is pinned to a rule that was fragile when it was written — the
+    # escalation whose IDs live in `## Options considered`, and the verdict that wraps onto the
+    # next line — and each was confirmed to move under a reverting mutation.
+    for code, expected_count, why in (
+            ("answer.conflict.unescalated", 1,
+             "WI-0003's escalation names both answers in its options and must produce none"),
+            ("answer.cross-check.no-verdict", 1,
+             "WI-0003's verdict wraps onto a second line and must still be read")):
+        seen = output.count(f"[{code}]")
+        if seen != expected_count:
+            extra = extra + [f"{code} fired {seen} time(s), expected {expected_count} — {why}"]
     if result.returncode == 0 or missing or extra:
         detail = ["the reduced iteration-3 record did not produce the expected findings:"]
         detail += [f"  - {code} (expected, not emitted)" for code in missing]
