@@ -2295,3 +2295,59 @@ exited 1, which is how the new shipped-scripts step first failed. Fixed in the s
 lesson is the finding's own: a suite-wide promise is kept only where something checks every
 member, and until F-072's step existed nothing enumerated the suite.
 
+## F-073 — `lint-answers` reads a bullet past its end and a declaration one line short
+- Severity: correctness of enforcement, medium — it fails a gate on correct work, and passes one
+  over work it did not read
+- Component: scripts/lint-answers (`verdict_for`, `CHECKED_AGAINST_RE`)
+- Symptom: two defects in the same section-parser, both found by regression 4b's `review-close`
+  and both reproduced here before being believed.
+  1. **A bullet was read to the next bullet, so a section's closing sentence was swallowed into
+     its last entry.** `answer-questions` in 4b wrote the sentence this skill's own examples end
+     on — *"No verdict is `conflicts`, so no question is filed"* — after the list, and the word
+     `conflicts` turned the last bullet's `compatible` verdict into a declared conflict. The gate
+     failed `answer.conflict.unescalated` on a correct record; the skill cleared it by moving the
+     sentence above the list, which is a worker rearranging prose to satisfy a parser.
+  2. **`Checked against:` was read as one line.** 4b's `EP-001/Q-004` named nine prior answers
+     across four wrapped lines; six of them were never resolved and never verdict-checked, and the
+     check passed. The reviewer found it while examining the first defect and noted that the
+     question *"escapes only by accident"*.
+- Diagnosis: the same mistake twice — a rule about a *record's structure* implemented against
+  lines. Defect 1 fails loudly on good work, which is survivable; defect 2 passes quietly over
+  what it did not read, which is the F-033 class and is the worse of the two.
+- Evidence: meta/harness/evidence/iteration-4b/tracker/items/EP-001/artifacts/review.md finding 3;
+  `EP-001/journal.md` for the turn that hit it. Both halves reproduced directly against the
+  script before the fix (2026-08-30, META-129).
+- Status: **fixed** — a bullet now ends at the next bullet, a blank line, or unindented prose; a
+  declaration continues until a blank line or a bullet. `fixtures/crossed-answers` carries both
+  shapes permanently: `WI-0003/Q-001` has a wrapped declaration, a wrapped verdict and a closing
+  sentence and must produce **nothing**, and `WI-0004/Q-002` hides its unresolvable ID on the
+  continuation line, so a linter that reads one line reports a clean check and the fixture's code
+  set moves. Reverting either half fails `./scripts/check`.
+
+---
+
+### Positive record (2026-08-30, regression 4b) — the ending audited itself and asked
+Four gates over the finished workspace, all clean: `validate-workspace` 0/0 over 6 items and 13
+documents, `lint-answers` 0/0 over 11 consumed human answers, **`lint-claims --all` 0/0 over every
+document**, and `check-epic-signoff` PASS naming all five children with DE8 satisfied by the
+elicitation `intake` filed at `Q-001`. `epic-done` at turn 27 of 30, with the closing turn given
+and the completed engagement labelled correctly (H-014).
+
+The audit's own finding is the one to read. `review-close` discovered that `EP-001/Q-004` — the
+sign-off it had written — described a `RECALL_DECK` environment variable that does not exist, in
+the paragraph describing what the stakeholder was being asked to accept. It did not edit the
+question (*"rewriting the text after they answered would destroy the evidence of what they
+actually accepted"*), did not accept it as a gap, and escalated it as a blocking `Q-005` to the
+person, citing the class by name: *"Whether their acceptance survives the correction is not a
+judgement this skill may make on their behalf; it is the same class of move `ADR-0008` refuses."*
+The stakeholder: *"they caught their own mistake … before closing, and came back to check it
+actually mattered to me instead of just fixing the document quietly. That's the right instinct."*
+
+That is ADR-0008 generalising past its own scope. It was written about a conflict between two
+recorded human answers; what `review-close` applied it to was a false statement the pipeline had
+made *to* the stakeholder — and reached the same conclusion, unprompted, in a run with no probes
+in it at all.
+
+Closing assessment, in the stakeholder's words: *"This was the boring run it was supposed to be,
+and I have no complaint to register."*
+

@@ -14,19 +14,26 @@ says."* Both are recorded. They cannot both hold.
 | Question | What it is | Code |
 |----------|-----------|------|
 | `WI-0002/Q-001` | the first answer, with nothing prior to reconcile | — (must produce nothing) |
+| `WI-0002/Q-002` | a second real answer, so a `Checked against:` list has something to wrap onto | — (must produce nothing) |
 | `WI-0003/Q-001` | the later, contradicting answer, **handled correctly**: the conflict is declared and `WI-0003/Q-002` puts both to their author | — (must produce nothing) |
 | `WI-0003/Q-002` | the escalation itself, still `open` — it quotes both answers by ID and asks which wins | — |
 | `WI-0004/Q-001` | the same conflict, declared and then settled privately: *"Corrected the vision document to match the newer answer"* | `answer.conflict.unescalated` |
-| `WI-0004/Q-002` | a check citing an answer this workspace does not have | `answer.cross-check.unresolved` |
+| `WI-0004/Q-002` | a check citing an answer this workspace does not have, on the wrapped second line of its declaration | `answer.cross-check.unresolved` |
 | `WI-0004/Q-003` | an answer named with no verdict — "looked at it" | `answer.cross-check.no-verdict` |
 | `WI-0004/Q-004` | a section that reads like a check and says nothing checkable | `answer.cross-check.malformed` |
 | `EP-001/Q-005` | the sign-off consumed with no cross-answer check at all — the iteration-3 instance | `answer.cross-check.missing` |
 
-`WI-0003` is the control, and it is deliberately awkward in two ways that a real record is
+`WI-0003` is the control, and it is deliberately awkward in four ways that a real record is
 awkward: `WI-0003/Q-002` names the two answers **only inside `## Options considered`**, because
 putting the person's two statements side by side as the options is how a good escalation reads;
-and `WI-0003/Q-001`'s verdict word sits on the *second* line of its bullet, because a verdict with
-its reason attached wraps.
+`WI-0003/Q-001`'s verdict word sits on the *second* line of its bullet, because a verdict with its
+reason attached wraps; its `Checked against:` list wraps onto a second line, because a real one
+does; and it ends with a closing sentence after the last bullet, because that is where a section's
+summary goes. The last two are F-073, found by regression 4b — reading a bullet to the next bullet
+swallowed the closing sentence and turned `compatible` into `conflicts`, and reading the
+declaration as one line left six of nine named answers unresolved and unchecked. `WI-0004/Q-002`
+carries the other side of the second one: its unresolvable ID sits on the **continuation** line,
+so a linter that reads one line reports a clean check over a list it read a third of.
 
 Set equality cannot see the control regressing — `WI-0003` would start emitting a code `WI-0004`
 already emits — so `scripts/check` also pins two **counts**: `answer.conflict.unescalated` and
