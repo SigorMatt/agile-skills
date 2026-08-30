@@ -1,38 +1,36 @@
 # CHECKPOINT
 
-## Current unit: META-140 and META-141 — the two tests, in flight
+## Current unit: META-142 — the findings pass, then META-143 — the final report
 
-META-132..139 are committed. `./scripts/check` is green across **29 steps**;
-`harness/tests/test_harness.py` is 74 tests, OK.
+META-132..141 are committed. `./scripts/check` is green across **30 steps**;
+`harness/tests/test_harness.py` is 74 tests; `scripts/lib/selftest.py` is 252 cases.
 
-**META-140's ground-truth subset is written and committed** (journal, 2026-08-30, "the
-ground-truth subset, written before anything ran"). It must not be revised after seeing results:
-five workspace-visible findings — F-061, F-062, F-063 (bar lowered, with the reason recorded),
-F-064, F-065 — out of ten filed across iterations 2 and 3, plus three positive-record targets.
-The five excluded are all harness findings whose evidence is a run transcript, a driver log or
-the sim's own skill file.
+**Both tests are done and read.**
+- **META-140, the ground-truth reading:** scored against the subset written and committed
+  *before* the runs — **1 full hit, 2 partial, 2 misses** of five workspace-visible findings;
+  strictly 1/5, with partials at half credit 2/5. The marquee case (F-062) was **missed** and the
+  journal says so. Precision is the strong half: 28 proposals, nine verified in depth against the
+  current kernel, **zero unfounded**. Reports banked verbatim in
+  `meta/evidence/retro-calibration/`.
+- **META-141, the live test:** `next` dispatched `retro` at step 7 on the `ended` verdict, the
+  report filed, `next` then reported `closed` and stopped. Only two files were written, verified
+  by mtime.
 
-**In flight** — three context-free subagents, each confined to its own scratch directory under
-`.../scratchpad`:
-- `gt/iteration-2` and `gt/iteration-3` — the rendered `retro` skill run against a banked
-  engagement (META-140).
-- `live` — `next`, then whatever it dispatches, then `next` again, over recall-4c's workspace
-  (META-141).
+**Filed since:** F-075 (a quoted citation read as a real one — found by the live test, fixed),
+F-076 (a claims window empty by construction — verified, **deferred** to the
+document-as-deliverable derivation), F-077 (`path:line` unbounded — fixed), F-078 (the retro's
+own calibration defect — fixed in `retro` 0.2.0), and an addendum to F-061 recording that the
+retro answered the question that entry was holding open.
 
-Each scratch copy carries a `RECORD-NOTICE.md`: the product source and the commit history were
-never banked, so `workspace-valid` fails on `claim.citation.unresolved` for that reason and no
-other, and the installed contracts are newer than the versions the record names.
+**In flight:** one context-free subagent re-running `retro` **0.2.0** over `gt2/iteration-3`.
+It is a check that 0.2.0's new instruction is followable, **not** an independent measurement —
+the change was made after reading the miss, and everything written about it must say so.
 
-**If this session is resumed with the agents gone:** re-run them. The setup is reproducible —
-copy `meta/harness/evidence/<iteration>/{tracker,docs}` into scratch, run
-`python3 adapters/claude-code/install.py <scratch>`, write the notice, and dispatch a
-context-free subagent with the workspace path and nothing else.
+**What remains**
+1. Finish META-142: a positive record for the retro's first runs, and statuses current.
+2. META-143: `meta/FINAL-REPORT-4.md`, and the ROADMAP §3 stamp for the retro track.
 
-**Done when** both tests are read and journaled — the rediscovery fraction and the noise count
-stated and judged honestly, and the live dispatch shown end to end with `engagement-state`
-reporting `closed`.
-
-**Next unit:** META-142 — the findings pass over both tests.
+**Next unit:** META-143.
 
 ## Standing instructions (still in force)
 
