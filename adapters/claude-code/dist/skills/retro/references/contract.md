@@ -1,4 +1,4 @@
-# Contract — retro v0.1.0
+# Contract — retro v0.2.0
 
 Rendered from `methodology/skills/retro/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -55,6 +55,7 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] artifacts/retro.md exists with its four sections in order, and its frontmatter counts agree with the workspace.
 - [ ] Every item in the engagement appears in the declared scope, or the report says which did not and why.
 - [ ] Every observation and every proposal carries at least one citation, and every citation resolves.
+- [ ] Every citation of the form <ITEM>/Q-nnn appearing under docs/ was followed to the answer it cites and read against the answers that came after it, and the count is stated.
 - [ ] Every proposal carries a classification from the closed set, and every toolkit-defect proposal carries its counterfactual and its recurrence.
 - [ ] The positive record names at least one thing that held, or states that nothing did and why that is the honest reading.
 - [ ] Nothing in the engagement was written except artifacts/retro.md and the epic's journal.md.

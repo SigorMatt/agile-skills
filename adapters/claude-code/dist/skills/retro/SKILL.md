@@ -4,7 +4,7 @@ description: "Read an ended engagement's record and report what it shows about h
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: retro
-  methodology-version: 0.1.0
+  methodology-version: 0.2.0
   persona: process-analyst
   human-interaction: none
 ---
@@ -117,10 +117,38 @@ the work is finished. This is the team reading its own trail before the engageme
    recorded whether the stakeholder's statements were checked against each other. A check
    declaring `none` on the ninth answer of an engagement is worth an observation.
 
-5. **Read the documents against the record that produced them.** For each document under `docs/`,
-   read its change log and match each version row to the item and the execution that wrote it. A
-   version with no execution behind it, or a sentence sourced to a human answer that a later
-   answer overtook, is exactly the shape the record is designed to make visible.
+   **Then read the questions as a set, and answer three things about the whole set.** Each is a
+   fact you count, not an impression you form, and each is invisible from inside any single file:
+   - **What shape do they share?** How many are addressed to the human and how many to the
+     architect; how many are closed-form with options and how many are open; how many carry the
+     team's own preference alongside the options. A property that holds of *every* question in
+     an engagement is a property of the procedure that wrote them, not of any one exchange.
+   - **What was never asked?** Name what the stakeholder was given no vehicle to say. An absence
+     is the hardest thing in a record to see and the easiest to see once you go looking for it,
+     because you are counting a set you have just enumerated.
+   - **Did any later answer narrow an earlier one?** List the answers in time order and read each
+     against the ones before it. This is step 5's input.
+
+5. **Read the documents against the record that produced them**, and do the join rather than
+   watching for it. Two passes:
+
+   a. For each document under `docs/`, read its change log and match each version row to the item
+      and the execution that wrote it. A version with no execution behind it is an edit nobody
+      owns.
+
+   b. **Find every `[src: <ITEM>/Q-nnn]` anywhere under `docs/` and follow it.** For each: open
+      the answer it cites, then open every answer the same person gave *afterwards* (step 4's
+      time-ordered list). Where a later answer narrows or contradicts the cited one, the sentence
+      standing in the document is standing on an answer that has been overtaken — and the record
+      then shows one of two things happening, which you must say which:
+      - **the author was asked** — a question quoting both answers, addressed to the human; or
+      - **the sentence was repaired** — some execution rewrote it to match the newer answer, and
+        the person who wrote the original was never told their two statements collided.
+
+      The second is a finding every time, and it is the one this step exists for, because it is
+      invisible from any single file: the document reads correctly, the citation resolves, the
+      gates pass, and the only evidence is the pair of answers and the edit between them. Do this
+      pass even when the change logs look tidy — especially then.
 
 6. **Write the observations.** One `###` heading per observation, each a **statement** and not a
    topic, each carrying at least one citation that resolves, each about the work and never about
@@ -241,16 +269,26 @@ the journal tool.
 4. Did this execution write anything other than `artifacts/retro.md` and the epic's `journal.md`?
 5. Does `## What was read` name every item in the engagement, or say which it did not read and
    why?
-6. Is there anything in `## Positive record`? If not, is that the honest reading of this record,
+6. Did you follow **every** `[src: <ITEM>/Q-nnn]` under `docs/` to the answer it cites, and read
+   that answer against the ones that came after it? State how many you followed. Step 5b is the
+   one reading in this procedure that no other role in the pipeline is positioned to do.
+7. Is there anything in `## Positive record`? If not, is that the honest reading of this record,
    or did you only look for faults?
 
-**The three ways this skill goes wrong:**
+**The four ways this skill goes wrong:**
 
 - **Sympathy inflation — filing the project's difficulty as the toolkit's defect.** The most
   common failure and the most damaging, because it is invisible one entry at a time and fatal in
   aggregate: a channel that fills with "this was hard" stops being read, and the real defects
   arrive into it afterwards. The counterfactual test in step 9 exists for exactly this, and it
   only works if you actually try to write the sentence rather than assuming you could.
+- **Reading each file well and never reading the set.** Most of what a retrospective can find
+  that nobody else can is a property of a *collection*: every question carries the team's
+  preference; no question was ever open-form; a document sentence stands on an answer a later
+  answer overtook. None of those is visible from inside the file it lives in, and each is
+  cheap once you have enumerated the set and expensive if you wait to notice it. Steps 4 and 5b
+  are set readings for exactly this reason; a report with no observation about a collection is a
+  report that read carefully and looked at nothing.
 - **Reading the summaries.** The artifacts — `impl-report.md`, `verify-report.md`, `review.md` —
   are each a stage's account of itself, and a retrospective assembled from them reproduces the
   engagement's own view of the engagement. The journals and the history are where the account and
