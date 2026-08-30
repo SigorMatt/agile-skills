@@ -1,0 +1,104 @@
+name: retro
+version: 0.1.0
+persona: process-analyst
+purpose: Read an ended engagement's record and report what it shows about how the work went, with toolkit findings proposed for triage.
+
+when_to_use:
+  - An engagement has ended - the epic is done or blocked - and no artifacts/retro.md exists for it yet.
+  - The orchestrator reports an epic whose engagement-state verdict is ended rather than closed.
+  - Someone asks for a retrospective, a post-mortem, or lessons learned on a finished engagement.
+  - Someone wants to send feedback upstream about the skills or the tooling, based on a real run.
+
+dispatch:
+  on_status: []
+  item_types: [epic]
+
+human_interaction: none
+
+inputs:
+  - path: tracker/items/{{item.id}}/item.md
+    required: true
+    why: the goal the engagement was given, the ending recorded on it, and which children it names
+  - path: tracker/items/*/history.md
+    required: true
+    why: the timeline - every status change, its actor and its reason; send-backs and suspensions are read from here and nowhere else
+  - path: tracker/items/*/journal.md
+    required: true
+    why: the reasoning - decisions with their rationale, what each execution actually read, which gates ran and what they said
+  - path: tracker/items/*/item.md
+    required: true
+    why: criteria, their tick state, outcomes, and any accepted gap recorded in the notes
+  - path: tracker/items/*/questions/*.md
+    required: true
+    why: who was asked what, by whom, how long it took, and what the cross-answer check said
+  - path: tracker/items/*/artifacts/*.md
+    required: true
+    why: what each stage claimed for itself - the plan, the implementation report, the verification, the review
+  - path: tracker/requests/*.md
+    required: false
+    why: what the stakeholder said on their own initiative, which is the one channel nobody opened for them
+  - path: docs/**
+    required: false
+    why: the documents the engagement delivered, their version headers and their change logs
+  - path: "the project history - the commit log over the engagement's window"
+    required: false
+    why: when work actually happened, and whether the commits match what the record says happened
+  - path: "the installed contract of every skill named in the record"
+    required: true
+    why: whether a gate held because the contract required it or because the worker was careful - unanswerable without the contracts, and every project has them
+
+outputs:
+  - path: tracker/items/{{item.id}}/artifacts/retro.md
+    kind: file
+    when: always
+  - path: tracker/items/{{item.id}}/journal.md
+    kind: append
+    when: always
+
+quality_gates:
+  - name: engagement-has-ended
+    description: The engagement being read is over - a retrospective on a running engagement judges incomplete work and changes the run it observes.
+    command: "scripts/engagement-state {{item.id}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: retro-report-is-well-formed
+    description: The report has its four sections, every observation and proposal cites evidence that resolves, and every proposal carries its required fields.
+    command: "scripts/lint-retro {{item.id}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: scope-was-not-degenerate
+    description: The declared scope is the engagement's own - every item, and the journal entries in them.
+    command: "scripts/lint-retro {{item.id}} --require-scope"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: the-record-was-not-touched
+    description: This execution changed nothing in the engagement except its own report and its own journal entry.
+    manual_check: List every file this execution wrote. If it is not exactly artifacts/retro.md and the epic's journal.md, the retrospective has edited the record it is auditing and the report is void.
+    enforcement: hard
+    on_failure: stay
+  - name: workspace-valid
+    description: The workspace still satisfies the schemas after this skill's writes.
+    command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+
+escalation:
+  question: This skill never files questions. The engagement has ended - a blocking question would suspend an item with nowhere to resume to, and a question to the human would ask a person who has already been told the work is finished. Everything it would ask goes into the report as an observation or a proposal.
+  defect: This skill never files items. A defect it finds in delivered behaviour is written into the report as a proposal, with its evidence, for a human to act on. An auditor that can create work out of what it audits cannot be told apart, in the record, from one re-litigating a decision.
+  impasse: If the record cannot be read at all - the workspace does not validate, or the engagement has not ended - report that and stop without writing a report. If it can be read but poorly, that is not an impasse - say what could not be read under `## What was read`, and continue.
+
+exit_criteria:
+  - artifacts/retro.md exists with its four sections in order, and its frontmatter counts agree with the workspace.
+  - Every item in the engagement appears in the declared scope, or the report says which did not and why.
+  - Every observation and every proposal carries at least one citation, and every citation resolves.
+  - Every proposal carries a classification from the closed set, and every toolkit-defect proposal carries its counterfactual and its recurrence.
+  - The positive record names at least one thing that held, or states that nothing did and why that is the honest reading.
+  - Nothing in the engagement was written except artifacts/retro.md and the epic's journal.md.
+  - The journal entry for this execution is written, with the status unchanged.
+
+next_status: null
+failure_status: null

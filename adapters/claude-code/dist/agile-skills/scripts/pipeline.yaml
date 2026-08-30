@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.5.0
+version: 0.6.0
 
 item_types:
   - epic
@@ -24,6 +24,7 @@ skills:
   - verify
   - review-close
   - answer-questions
+  - retro
 
 priorities:
   - name: critical
@@ -353,6 +354,9 @@ orchestrator:
       action: end-the-engagement
       description: Else, for each epic still at open, run scripts/engagement-state EP-###. If it reports at-rest, dispatch review-close on that epic and stop. An engagement that can no longer progress must be ended through the stakeholder, not left on the board - which is what happened in a run that stopped here with the stakeholder recording that nobody ever asked them (F-045). The step terminates because both of review-close's moves from open leave open.
     - id: 7
+      action: retro-an-ended-engagement
+      description: Else, for each epic whose scripts/engagement-state verdict is ended - the ending is recorded and the retrospective is not written - dispatch retro on that epic and stop. The stakeholder is not waiting on this; their engagement ended at sign-off. This step terminates because writing the report changes the verdict to closed (ADR-0009 section 2).
+    - id: 8
       action: report-and-stop
       description: Else regenerate the board, report it with any blocked items and open non-blocking questions, and stop.
 
@@ -373,4 +377,5 @@ orchestrator:
     - An open stakeholder request was routed to intake.
     - A question addressed to the human is open.
     - No item is runnable, and review-close was dispatched to end an engagement at rest.
-    - No item is runnable and every engagement has already ended.
+    - No item is runnable, and retro was dispatched on an engagement that has ended.
+    - No item is runnable and every engagement is closed - ended, with its retrospective written.

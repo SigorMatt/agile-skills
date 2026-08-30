@@ -8,6 +8,12 @@ can advance any item in it and none ever will without a person acting (`spec/ids
   2. no question anywhere in the engagement — on the epic or on a child — is `open`;
   3. no request in `tracker/requests/` is `open`.
 
+An engagement that has ended is not yet **closed**: the retrospective is written after the
+ending and before the engagement is archived (`meta/adr/ADR-0009-retrospective-reading.md` §2).
+So `ended` means *the ending is recorded and the retro is still owed*, and `closed` means both
+are done. The orchestrator dispatches `retro` on `ended` and reports `closed` — it does not
+decide what "fully closed" means, for the same reason it does not decide what "over" means.
+
 This module exists because rest has two consumers — the orchestrator, which dispatches
 `review-close` on an epic at rest, and the termination gate, which dates the stakeholder's
 acknowledgment against it. The orchestrator and the gate disagreeing about whether an engagement
@@ -23,6 +29,7 @@ from __future__ import annotations
 import os
 
 TERMINAL_CHILD_STATUSES = ("done", "blocked")
+RETRO_ARTIFACT = "retro.md"
 DELIVERED_OUTCOMES = ("delivered", "duplicate")
 
 
@@ -94,15 +101,23 @@ def undelivered_children(children) -> list:
 
 
 def state(workspace, epic) -> Engagement:
-    """`active` | `at-rest` | `suspended` | `ended`, with the reasons that decided it."""
+    """`active` | `at-rest` | `suspended` | `ended` | `closed`, with the reasons why."""
     children = sorted(workspace.children_of(epic.identifier), key=lambda i: i.identifier)
     engagement = Engagement(epic, children)
     engagement.undelivered = undelivered_children(children)
     engagement.rest_since = rest_boundary(children)
 
     if epic.status in ("done", "blocked"):
-        engagement.verdict = "ended"
-        engagement.reasons.append(f"the epic is {epic.status!r}; the engagement has ended")
+        if epic.has_artifact(RETRO_ARTIFACT):
+            engagement.verdict = "closed"
+            engagement.reasons.append(
+                f"the epic is {epic.status!r} and artifacts/{RETRO_ARTIFACT} exists; the "
+                f"engagement is fully closed")
+        else:
+            engagement.verdict = "ended"
+            engagement.reasons.append(
+                f"the epic is {epic.status!r}; the engagement has ended and the retrospective "
+                f"has not been written")
         return engagement
     if epic.status == "awaiting-answer":
         engagement.verdict = "suspended"

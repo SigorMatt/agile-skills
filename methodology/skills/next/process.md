@@ -94,7 +94,25 @@ action.
    ask, and to `done` or `blocked` to record the ending — leave `open`, so the epic cannot be
    dispatched here twice for the same reason.
 
-7. **Report and stop.** Else nothing is runnable and every engagement has already ended.
+7. **Have an ended engagement read itself.** Else, for each epic still without a retrospective,
+   run the same command again and read the verdict:
+
+   ```
+   scripts/engagement-state <EP-ID>
+   ```
+
+   If it reports **`ended`** — the ending is recorded and `artifacts/retro.md` does not exist —
+   dispatch `retro` on that epic and stop. Name the epic and quote the verdict line.
+
+   Nobody is waiting on this. The stakeholder's engagement ended at sign-off and they have been
+   told the work is finished; the retrospective is the team reading its own trail before the
+   engagement is archived. You still dispatch it, because a step that depends on somebody
+   remembering is not a step.
+
+   This step terminates for the same reason step 6 does: writing the report changes the verdict
+   from `ended` to `closed`, so the epic cannot be dispatched here twice.
+
+8. **Report and stop.** Else nothing is runnable and every engagement is closed.
    Regenerate the board and report:
    - the board summary;
    - every `blocked` item with the reason from its last history row;
@@ -102,7 +120,8 @@ action.
    - every request whose `status` is still `open`, if any reached this step;
    - if every item is `done`: say so, and name any epic still `open` and why;
    - for each epic, the verdict `scripts/engagement-state` gave it, so a reader can see why the
-     loop stopped rather than inferring it.
+     loop stopped rather than inferring it. `closed` is the one that means finished; `ended` at
+     this step means step 7 did not run and something is wrong.
 
 ---
 
@@ -118,9 +137,11 @@ action.
 - **Never invent a status-to-skill mapping.** It comes from `pipeline.yaml`. If a status has no
   owner there and is not terminal, that is a defect in the pipeline — report it as one rather
   than picking a plausible skill.
-- **Never decide for yourself that an engagement is over.** Step 6 is a script's verdict, not
-  yours. Reading the board and concluding "this looks finished" is engineering judgement in the
-  one place in the system that must have none.
+- **Never decide for yourself that an engagement is over, or that it is finished with.** Steps 6
+  and 7 are a script's verdicts, not yours. Reading the board and concluding "this looks
+  finished" is engineering judgement in the one place in the system that must have none — and
+  `ended` and `closed` are different verdicts for the same reason: one of them still owes a
+  retrospective.
 
 ---
 
@@ -152,9 +173,10 @@ is the first thing to read when the pipeline picked something surprising.
 
 1. Did you apply any criterion that is not in `pipeline.yaml`'s `runnable` list or
    `selection_key`?
-2. If you stopped without dispatching: did you run `scripts/engagement-state` for every epic
-   still at `open`, and is its verdict in your report? Stopping on an engagement that is at rest,
-   without ending it, is the failure this step exists for.
+2. If you stopped without dispatching: did you run `scripts/engagement-state` for **every** epic,
+   not only the ones at `open`, and is its verdict in your report? Stopping on an engagement that
+   is at rest without ending it, or on one that has ended without having it read itself, are the
+   two failures steps 6 and 7 exist for.
 3. Can you state, for every candidate you rejected, which key value eliminated it?
 4. Did you read the contents of any artifact for anything other than the fields you need
    (status, priority, dependencies, question metadata)?

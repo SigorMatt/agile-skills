@@ -9,10 +9,12 @@ Prints one verdict per epic and the reasons behind it:
   active     — a child is still in flight, or a question or request is open
   at-rest    — every child has stopped, nothing is open: the engagement is over and unrecorded
   suspended  — the epic is awaiting an answer (often the acknowledgment itself)
-  ended      — the epic is `done` or `blocked`; the ending is recorded
+  ended      — the epic is `done` or `blocked`; the ending is recorded and the retrospective
+               is still owed
+  closed     — ended, and artifacts/retro.md exists: the engagement is fully closed
 
-`next` reads this at orchestrator step 6 rather than judging it, and dispatches `review-close`
-on an epic that is `at-rest`. An engagement that can no longer progress must be ended through
+`next` reads this at orchestrator steps 6 and 7 rather than judging it: it dispatches
+`review-close` on an epic that is `at-rest` and `retro` on one that is `ended`. An engagement that can no longer progress must be ended through
 the stakeholder, not left on the board — which is what a real run did, stopping with the
 stakeholder recording that the question never came (F-045, ADR-0006 §4).
 

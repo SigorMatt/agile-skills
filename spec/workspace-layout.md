@@ -77,6 +77,7 @@ worked on. The files are created with their headers at the moment the item is cr
 | `artifacts/impl-report.md` | `implement` | what was built, AC → evidence map, deviations from the plan |
 | `artifacts/verify-report.md` | `verify` | per-AC verdict with evidence, gates run, defects found. MUST contain a line `Verified-commit: <sha>` naming the commit that was verified — a verification that does not say what it verified cannot be shown to be current, and Definition of Done D10 turns on exactly that |
 | `artifacts/review.md` | `review-close` | what was examined, DoD result per criterion, verdict |
+| `artifacts/retro.md` | `retro` | on an **epic** only, after the engagement has ended: what the record shows about how the work went, and the toolkit findings it proposes upstream. Schema in [`retro.md`](retro.md) |
 
 Fixed names, not free choice. A skill looking for the previous stage's output must find it
 without searching, and a validator must be able to say "this item reached `verifying` but has
