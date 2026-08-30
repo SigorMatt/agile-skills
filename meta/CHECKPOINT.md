@@ -1,26 +1,31 @@
 # CHECKPOINT
 
-## Current unit: META-133 — ADR-0009, the retro skill's design
+## Current unit: META-134 — `scripts/lib/record.py`, the shared record model
 
-Builder session four (`meta/BUILDER-4-PROMPT.md`) is running: the first gated-track session.
-Phase V is laid out in `meta/plan.md`. META-132 (the plan itself) is committed.
+Phase V is laid out in `meta/plan.md`. META-132 and META-133 are committed (ADR-0009 is the
+retro skill's design; read it before this unit — §6 and §7 name what `lint-retro` will need).
 
 **Steps**
-1. Write `meta/adr/ADR-0009-retrospective-reading.md`, in ADR-0006/0008's shape: context from
-   the banked evidence, then the derivation.
-2. It must settle, at minimum: what a retro reads (the workspace record only — no SIM-LOG, no
-   harness); that it is read-only over the engagement it audits; when it is dispatched (after
-   an ending, before archive, per `pipeline.yaml`); the two output audiences and why they are
-   separated; the three-way classification (toolkit defect / this-project circumstance /
-   observation) and the misclassification failure mode it exists to prevent; the citation rule;
-   and — in ADR-0008 §5's shape — what a lint over a retro can and cannot see.
-3. No code in this unit. Derivation only.
+1. Write `scripts/lib/record.py`: one parser for the workspace's record *structures*, so that
+   rules about a record's shape stop being reimplemented per script (F-069, F-073's class,
+   FINAL-REPORT-3 §6.3). At minimum it must model, with line spans:
+   - **blocks** inside a section: a bullet **with its continuation lines**, a labelled
+     declaration (`Label: ...`) **with its continuation lines**, a paragraph, a table, a fenced
+     block — the two shapes F-073 got wrong, in one place;
+   - the ledger/report **entry** shape (a `##`/`###` heading with labelled bullets under it),
+     which `lint-retro` will read.
+2. Cases in `scripts/lib/selftest.py`, taken from F-069 and F-073's own fixtures: a bullet that
+   wraps, a bullet followed by unindented closing prose, a declaration that wraps over four
+   lines, a declaration ended by a bullet, a fenced block that must not be read as prose.
+3. No caller changes in this unit — the migration is META-135, so that "behaviour-identical"
+   has a commit boundary it can be proved across.
 
-**Done when** the ADR is written, `./scripts/check` is still green (it does not read ADRs, but
-the tree must be clean), the box is ticked with the commit, the journal entry is written, and
-this file is advanced to META-134.
+**Done when** `python3 scripts/lib/selftest.py` passes with the new cases, `./scripts/check` is
+green (28 steps, unchanged codes), the box is ticked, the journal entry is written, and this
+file is advanced to META-135.
 
-**Next unit:** META-134 — `scripts/lib/record.py`, the shared record model.
+**Next unit:** META-135 — migrate `lint-answers`, `lint-claims` and `validate-workspace` onto
+the model; the 82 broken-workspace codes unchanged is the proof.
 
 ## Standing instructions (still in force)
 

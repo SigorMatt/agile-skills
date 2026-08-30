@@ -411,11 +411,11 @@ library FINAL-REPORT-3 §6.3 named as the residual class, plus three small fixes
 Order of work: the design first, then the parser the design depends on, then the contract,
 then the two tests that judge it. Cluster 3 yields if the budget runs short.
 
-- [ ] **META-132** — Phase V laid out here; `meta/CHECKPOINT.md` opened on the session.
+- [x] **META-132** — Phase V laid out here; `meta/CHECKPOINT.md` opened on the session.
 
 ### Cluster 1 — the retro skill (the centerpiece)
 
-- [ ] **META-133** — `meta/adr/ADR-0009-retrospective-reading.md`: what a retro reads, what it
+- [x] **META-133** — `meta/adr/ADR-0009-retrospective-reading.md`: what a retro reads, what it
       may not touch, the two audiences, the three-way classification (toolkit defect /
       this-project circumstance / observation), and what a lint over a retro can and cannot
       see. Derivation only; no code.

@@ -3800,3 +3800,67 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `fixtures/{crossed-answers,broken-workspace}`, re-rendered dist.
 
 **Phase IV ends here.** The kernel is proven; the gated tracks are the owner's to open.
+
+## 2026-08-30 — META-132, META-133 — Phase V opened; the retro skill derived before any code
+
+- **Unit:** META-132 (the plan), META-133 (ADR-0009)
+- **Inputs read:** `meta/BUILDER-4-PROMPT.md`; `meta/ROADMAP.md` §2 stamp and §3;
+  `meta/FINAL-REPORT-3.md` §6 with its three qualifications; `meta/findings/FINDINGS.md` read as
+  a corpus — F-001, F-033, F-062..F-066, F-069, F-073, H-017, the three "Positive record"
+  sections and the two ROADMAP addenda; `spec/skill-contract.md`, `spec/journal-and-history.md`
+  §3, `methodology/pipeline.yaml`, `methodology/skills/next/*` and `review-close/skill.yaml`;
+  `scripts/lib/{engagement,workspace,claims}.py`, `scripts/lint-answers` (`verdict_for` and the
+  `Checked against:` collector), `scripts/validate-workspace`'s artifact checks;
+  `meta/harness/evidence/iteration-2/` and `iteration-3/` as a reader — the history tables of
+  every item in both, `WI-0004/journal.md` in full, and the accepted-gap and forced-gate greps
+  across both trails.
+- **Decisions:**
+  - **The retro reads the record and the contracts, and nothing else.** The enumeration is in
+    ADR-0009 §3. The line that decided it: a consumer has no SIM-LOG, so calibrating the skill
+    on one would overstate everything it can do in the field. The installed skill contracts are
+    the one non-record input, because *"did that gate pass on the contract or on the worker's
+    discipline?"* is unanswerable without them, and every consumer has them.
+  - **Read-only is a refusal, and it is bounded by two paths.** `artifacts/retro.md` and the
+    epic's `journal.md`. No history row, no bug, no reopening — and, less obviously, **no
+    questions**: after an ending a blocking question has nowhere to resume to and a human-addressed
+    one asks a person who has already been told the work is finished. The report is the
+    escalation channel.
+  - **Dispatch keys on the engagement's state, not on a status.** `engagement-state` gains a
+    fifth verdict, `closed` = ended **and** the report exists; `ended` now means the retro is
+    still owed. `next` gains one step that dispatches on `ended`. That makes the step terminate
+    (writing the report changes the verdict) and keeps F-045's lesson: the orchestrator does not
+    decide what "over" means and does not decide what "fully closed" means either.
+  - **Nothing already valid becomes invalid.** `validate-workspace` will not require `retro.md`,
+    no gate depends on it, and no fixture or banked run fails because the skill now exists. The
+    retro is dispatched automatically and enforced nowhere, because after an ending there is
+    nobody left to escalate a refusal to.
+  - **The quality bar has to ship inside `process.md`.** The eighty-seven filed findings are why
+    this project's findings are written the way they are, and a consumer gets none of them. The
+    bar cannot be transmitted by corpus, so it is written into the procedure — evidence-first,
+    class over specimen, severity honest, positives recorded.
+  - **The classification is three-way and the counterfactual is what defends it.** The failure
+    mode is "this project was hard" filed as "the skill is broken", and it is the cheap failure:
+    friction is everywhere in a hard engagement and all of it can be phrased as a complaint about
+    a tool. Nothing mechanical decides the class; what is mechanical is that
+    `Counterfactual:` and `Recurrence:` must be *written* on every `toolkit-defect`, so a wrong
+    call is attributable instead of absent. ADR-0008 §4's move, used again.
+  - **One citation vocabulary.** The retro's evidence pointers are `doc-header.md` §4a's seven
+    forms, resolved by `claims.py`. Nothing new invented, and F-001's residual — resolution is
+    not support — is inherited verbatim rather than claimed away.
+  - **A retro that read nothing must not read as a clean retro.** A flawless engagement and an
+    unopened workspace produce the same empty observations list. `## What was read` is checked
+    against the workspace, and a degenerate scope fails — F-033/F-066's rule applied to the one
+    skill whose entire job is reading.
+  - **`process-analyst` is a new persona.** Every one of the six existing roles was on the team;
+    the retro's standing rests on not having been. Reusing `reviewer` would put the role that
+    signed the engagement off in charge of judging how it went.
+  - **Iteration 3's marquee case is workspace-visible, checked before designing for it.**
+    `WI-0004/journal.md` says in the pipeline's own words *"Fixed two false claims where the
+    review named one"* — one of them the stakeholder's own quoted sentence carrying
+    `[src: WI-0002/Q-001]` — and records in the same entry that `vision.md` had been sent back on
+    the same two criteria twice. Both are readable with no SIM-LOG. The ground-truth test has a
+    real target.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, 28 steps, unchanged — this unit is derivation only.
+- **Artifacts:** `meta/plan.md` (Phase V), `meta/CHECKPOINT.md`,
+  `meta/adr/ADR-0009-retrospective-reading.md`.
