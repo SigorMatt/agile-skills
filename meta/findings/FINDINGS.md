@@ -2706,3 +2706,555 @@ F-075 itself, where a report that *explains* the convention cannot pass its own 
 failures, masking that swallows a real citation is the one a reader can see and fix in the
 document; not masking is the one that makes the document unwritable.** Worth revisiting only if a
 second occurrence shows the error is common rather than incidental.
+
+# Findings accepted from retro 0.1.0 proposals (owner triage 2026-08-31)
+
+## F-080 — a skill that makes two transitions has one gate list, and nothing says what its first entry records
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, medium
+- **Component:** methodology (`implement`), `spec/journal-and-history.md` §2.2,
+  `scripts/validate-workspace`
+- **Symptom:** `implement`'s SKILL.md requires an opening journal entry at the move to
+  `in-progress`, "`**Gates:**` recording that the completion gates have not run yet"
+  [src: .claude/skills/implement/SKILL.md], while
+  `spec/journal-and-history.md` §2.2 admits only `pass`, `fail` and `skipped`. Across eleven
+  opening entries the record used three vocabularies — `skipped`, `not yet run`, `not run` —
+  and 44 of its 540 gate lines carry a verdict outside the three
+  [src: run: grep -rho '\*\*not yet run\*\*' tracker/items/*/journal.md | wc -l → 40]. The
+  advisory gate `no-unplanned-scope` appears in all six bug items' opening entries and in none
+  of the five work items'
+  [src: tracker/items/BUG-0004/journal.md; src: tracker/items/WI-0003/journal.md]. One hard
+  gate, `commits-reference-the-item`, is recorded as **fail, not blocking** on a move that
+  proceeded [src: tracker/items/WI-0001/journal.md:437] — it fails at the opening transition of
+  every `implement` execution, because the branch it inspects has no commits yet. Nothing
+  reports any of this: `validate-workspace`'s `journal.bullet.missing` tests that the
+  `**Gates:**` label exists and never compares its contents with the acting skill's contract,
+  though its hint claims that is what it prevents
+  [src: .claude/agile-skills/scripts/validate-workspace].
+- **Counterfactual:** any engagement that runs `implement` reaches this, twice per item. The
+  first entry is required by the skill, its gates cannot have run, the journal format offers no
+  word for that, and a hard gate that reads a commit range must fail on an empty one. Nothing
+  about a file-organising tool is load-bearing in that sentence.
+- **Recurrence:** eleven times in this engagement, once per `implement` execution, plus five
+  further entries in which a `review-close` or `answer-questions` execution had the same problem
+  and solved it differently.
+- **Direction:** give the format a fourth verdict for a gate that will run later in the same
+  execution, and make the check that reads the `**Gates:**` bullet compare its gate names against
+  the contract of the skill in the heading rather than only testing that the label is present.
+  Separately, decide whether a gate that cannot hold at a skill's opening transition belongs in
+  that entry at all.
+- **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-1); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-081 — the close-before-merge order leaves the merge unrecordable in the entry that reports it
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, medium
+- **Component:** methodology (`review-close`), `spec/journal-and-history.md`,
+  `scripts/check-commit-refs`
+- **Symptom:** `check-commit-refs` inspects `main..branch`, which merging empties, so the close
+  must precede the merge — every review in this engagement says so
+  [src: tracker/items/WI-0002/artifacts/review.md]. The closing journal entry is therefore
+  written before the merge exists, and the journal is append-only with exactly one sanctioned
+  in-place edit, a restamped `when`
+  [src: .claude/agile-skills/spec/journal-and-history.md]. Six closes solved this three ways:
+  three edited the stamped entry to fill in the sha and declared the edit inside it
+  [src: tracker/items/WI-0003/journal.md:514; src: tracker/items/BUG-0004/journal.md:432;
+  src: tracker/items/BUG-0005/journal.md:374], one used a follow-up commit on the trunk
+  [src: tracker/items/BUG-0002/journal.md], and two put the sha in `review.md` instead
+  [src: tracker/items/BUG-0001/artifacts/review.md].
+- **Counterfactual:** any engagement that closes any item on a branch reaches this. The gate's
+  ordering requirement and the record's append-only rule are both correct and they are jointly
+  unsatisfiable for one field. Nothing about the product being built enters the argument.
+- **Recurrence:** six closes, three different workarounds, three entries edited after stamping.
+- **Direction:** give the record a sanctioned place for a fact created after the entry — a
+  second, tiny entry appended after the merge, or a named field the transition tool fills in on a
+  later invocation — so that the honest answer is not "edit the entry and say so".
+- **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-4); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-082 — a standing delegation has unbounded scope and no route back to the person who gave it
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** methodology (`refine`, `review-close`), `spec/question.md` §1,
+  `spec/dor-dod.md` R8
+- **Symptom:** two stakeholder answers about the implementation language and the delivery order
+  [src: EP-001/Q-001; src: EP-001/Q-004] were read as standing deferrals over a whole category,
+  and 38 `[assumed]` decisions were taken under them across four items
+  [src: tracker/items/WI-0001/artifacts/refinement-qa.md;
+  src: tracker/items/WI-0003/artifacts/refinement-qa.md]. Several carry real product weight —
+  what happens to a file the tool does not recognise, whether hidden files are tidied, whether a
+  broken rule file stops every run [src: WI-0001 AC5; src: WI-0004 AC2]. All 38 were recorded,
+  tagged and carried into `## Notes`; the protocol was followed exactly. Exactly one reached the
+  stakeholder, and it did so because a reviewer chose to put it in a sign-off
+  [src: EP-001/Q-006]. `refine`'s own plan named the exposure at the time: "Five assumptions are
+  load-bearing and none was confirmed by the stakeholder"
+  [src: tracker/items/WI-0001/artifacts/plan.md].
+- **Counterfactual:** any engagement whose stakeholder answers one question with "whichever is
+  easier for you" hands every later `refine` execution a licence nothing bounds. The Definition
+  of Ready records an assumption and the sign-off template names children and accepted gaps;
+  neither surfaces the assumptions, and no rule says how far a category delegation reaches.
+  Nothing about tidying folders is load-bearing.
+- **Recurrence:** four refinement rounds across four items, 38 assumption markers, one surfaced.
+- **Direction:** two halves. Make a delegation's scope something the answer records rather than
+  something each later execution re-derives — the skill that consumes it writes down what
+  category it takes the answer to cover. And give the sign-off a place for the assumptions taken
+  under it, alongside the children and the accepted gaps, so that surfacing one is the default
+  rather than a reviewer's initiative.
+- **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-5); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-083 — `review-close`'s recorded step order fails its own `workspace-valid` gate
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, low
+- **Component:** methodology (`review-close`), `scripts/validate-workspace`
+  (`item.outcome.premature`)
+- **Symptom:** WI-0003's close records that `outcome: delivered` had to be written **after** the
+  transition rather than before it, because `item.outcome.premature` is not among the codes
+  `validate-workspace --resolving` downgrades — "so setting the outcome first, which is the
+  order `review-close`'s step 9 reads as, fails the `workspace-valid` hard gate on the very move
+  that would make it true" [src: tracker/items/WI-0003/journal.md:513]. The execution complied
+  and said so; the five other closes are silent about which order they used.
+- **Counterfactual:** any engagement closing any item meets it, because the outcome and the
+  status change together and one of the two orders is refused by a hard gate every skill runs.
+  The product is irrelevant.
+- **Recurrence:** recorded once, at WI-0003; the other five closes do not say, which is itself
+  the reason to fix the instruction rather than the execution.
+- **Direction:** either make the procedure state the order explicitly, or add
+  `item.outcome.premature` to the codes `--resolving` downgrades for the move that resolves it.
+  The skill should not have to discover that its own written order is illegal.
+- **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-6); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-084 — a document's version row is a self-reported field with nothing behind it
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, low
+- **Component:** `spec/doc-header.md` §3, `spec/journal-and-history.md` §0,
+  `scripts/validate-workspace` (`doc.updated`)
+- **Symptom:** §0 requires a journal entry's timestamp, skill and persona to come from a machine,
+  because those were the fields real runs invented
+  [src: .claude/agile-skills/spec/journal-and-history.md]. The rule was never extended to a
+  document's `updated` field or its change-log `when`, `by` and `for`, which carry the same
+  claim about the same things. Forty-five of this record's forty-six version rows fall inside an
+  execution of the skill and item they name; `docs/architecture/overview.md` v9 is attributed to
+  `implement` on WI-0003 at 22:05:00Z [src: docs/architecture/overview.md], twelve minutes after
+  that execution's closing entry and while the item sat at `awaiting-answer`
+  [src: tracker/items/WI-0003/journal.md; src: tracker/items/WI-0003/history.md].
+  `validate-workspace` checks the field's format and its ceiling and never compares it against
+  the executions [src: .claude/agile-skills/scripts/validate-workspace].
+- **Counterfactual:** any engagement reaches it, because a change-log row is typed by the same
+  worker whose journal heading the toolkit already refuses to let them type. The check that
+  would catch it — is there an execution of this skill on this item around this time — needs
+  only the tracker.
+- **Recurrence:** once in forty-six rows in this engagement. Low, and that is the honest number:
+  the discipline held forty-five times without anything checking it.
+- **Direction:** extend §0's rule to document headers, and have `validate-workspace` match each
+  change-log row against the journal of the item it names, reporting a row whose actor was not
+  executing then.
+- **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-7); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-085 — one contract serves two subjects, and at an engagement's ending half of it is undefined
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, medium
+- **Component:** methodology (review-close), `.claude/skills/review-close/references/contract.md`, `spec/dor-dod.md`
+- **Symptom:** `review-close` closes work items and also ends engagements, and its gate list is
+  written for the first. Three of its hard gates resolve `{{item.branch}}` or a merge, which an
+  epic does not have, and its `definition-of-done` gate says to walk `spec/dor-dod.md` section 3 —
+  the work-item checklist — when an ending must be judged by section 4. Every epic-level execution
+  in this engagement recorded the same three gates as skipped for the same reason
+  [src: tracker/items/EP-001/journal.md], and the termination review recorded walking section 4
+  "the contract's wording notwithstanding… as a contract defect rather than followed literally".
+  The same contract lists `artifacts/review.md` as an always-output, while the ask-and-stop path
+  has no verdict to write, which left the epic's `review.md` asserting "not ended" for eleven
+  hours after the finding that caused it had been fixed
+  [src: tracker/items/EP-001/artifacts/review.md]. The installed 0.6.0 contract still says
+  section 3 and still resolves `{{item.branch}}` [src: .claude/skills/review-close/references/contract.md].
+- **Counterfactual:** every engagement reaches an ending, and every ending is judged by a skill
+  whose gates were specified for a branch. Nothing about a project's subject matter is load-bearing:
+  an epic has no branch in any project.
+- **Recurrence:** five epic-level executions in this engagement, each skipping the same three
+  gates; once for the section-3/section-4 mismatch; once for the always-output.
+- **Direction:** give the ending its own gate list and its own outputs, or make each gate's row
+  state its subject so that "skipped, an epic has no branch" is the contract's answer rather than
+  the worker's. A gate that is skipped by every execution of a whole class is not a gate.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-1); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-086 — the acceptance is asked for before the epic's Definition of Done is applied, so a late finding invalidates an acceptance already given
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** methodology (review-close step 10), `spec/dor-dod.md` §4, `spec/question.md` §2
+- **Symptom:** the termination review files the sign-off and stops; DE1–DE6 are applied when the
+  reply arrives, because DE7 cannot be satisfied before it [src: tracker/items/EP-001/journal.md].
+  Here the stakeholder accepted at 22:29:11Z and the DE6 claim audit — run nine minutes later, in
+  the next execution — found a false absolute and filed a bug, which made the engagement leave
+  rest and made the sentence *"no bug was filed and left unfixed"* in the question they had just
+  answered false [src: EP-001/Q-004]. `check-epic-signoff` then correctly refused that acceptance
+  and a second sign-off was due [src: EP-001/Q-005]. The engagement paid one full extra round for
+  the ordering, and said so.
+- **Counterfactual:** any engagement whose termination review finds anything at DE1–DE6 reaches
+  this, because the audit that could find it runs after the question that would be invalidated by
+  it. The subject matter of the finding is irrelevant; only its timing matters.
+- **Recurrence:** once, and it produced a fourth child item, a second sign-off and a third.
+- **Direction:** apply the criteria that do not depend on the reply — DE1 through DE6 — before
+  the question is filed, and file the sign-off only against a state that has passed them. DE7
+  stays where it is; it is the one that genuinely cannot precede the answer.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-2); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-087 — the pipeline asks which documents a change touched, and never asks which documents it falsified, until the last gate
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, medium
+- **Component:** methodology (plan, implement, verify), `spec/dor-dod.md` D7
+- **Symptom:** D7 is a `review-close` criterion, so the question "what does this change make
+  false?" is first asked after `implement` and `verify` have both passed. The automated gate that
+  looks at documents is scoped to what the execution *changed*, not to what it *falsified*, so a
+  document the branch never touches is invisible to it [src: tracker/items/WI-0003/journal.md].
+  Two items were sent back on D7 and D12 and cleared by editing documents only, each costing a
+  full `implement → verify → review-close` cycle with no code change
+  [src: tracker/items/WI-0004/journal.md]. The second is the sharper case: WI-0004's plan had
+  learned from WI-0003 and carried a step for updating the architecture overview, which
+  `implement` executed faithfully; the document that failed was the product vision, which no step
+  named [src: tracker/items/WI-0004/artifacts/plan.md]. The installed `plan` skill's own step 8
+  still names `docs/architecture/overview.md` and no other document
+  [src: .claude/skills/plan/SKILL.md].
+- **Counterfactual:** any engagement whose change makes a sentence in a delivered document false
+  reaches this, and the later items of any engagement are the ones most likely to. What the
+  document says is not load-bearing; that nothing before the last gate is asked about it is.
+- **Recurrence:** twice as a send-back (WI-0003, WI-0004); a third time as a finding recorded
+  rather than sent back [src: tracker/items/WI-0002/artifacts/review.md].
+- **Direction:** make the set of documents a change invalidates an output of `plan` — enumerated
+  as a step, from the documents the plan itself cites — and have `implement`'s self-check answer
+  D7 before it hands over, so that the last gate confirms the answer instead of discovering it.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-3); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-088 — a claim audit is passed by an example that could not have falsified the claim
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, medium
+- **Component:** `spec/dor-dod.md` D12 and DE6, methodology (review-close)
+- **Symptom:** D12 says a claim is checked "by reading it against the code", and leaves the choice
+  of what to run to the reader. WI-0002's audit recorded *"no column's width depends on its
+  marker"* as **holds**, having laid the same table out under all four markers — a table whose
+  cells were wide enough that the rule the sentence denies never applied
+  [src: tracker/items/WI-0002/artifacts/review.md]. The unit test named for the claim had the same
+  blind spot [src: tracker/items/BUG-0001/artifacts/plan.md]. The sentence was false, and the
+  example that shows it is one empty column [src: BUG-0001]. The replacement sentence then passed
+  the item's own two reproduce commands and was still false, and what caught it was a verifier
+  choosing the boundary instead of the happy path: *"the item's own two reproduce commands both
+  agree with the new sentence… the one-colon markers are the case the sentence generalises over
+  and gets wrong"* [src: tracker/items/BUG-0001/artifacts/verify-report.md].
+- **Counterfactual:** any engagement whose documents state an absolute about a rule with a
+  boundary reaches this: the auditor picks the example, and the natural example is the one the
+  sentence was written from. Nothing about this project's subject is needed to state it.
+- **Recurrence:** twice — the original claim at WI-0002's close, and its replacement at BUG-0001's
+  first verification. Both were eventually caught by an example chosen to be able to fail.
+- **Direction:** an audit row records the example **and why that example could have falsified the
+  claim**; an absolute about a rule with a threshold is checked at the threshold. The audit table
+  already has a "what I opened" column; what it lacks is the obligation that what was opened be
+  capable of a `false`.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-4); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-089 — a criterion that counts artefacts is a criterion that will be amended after the fact
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** methodology (refine), `spec/dor-dod.md` R4
+- **Symptom:** four criteria in this engagement quantified over things the implementation would
+  change — "exactly `2 + max`" [src: WI-0001 AC12], "the suite runs unchanged" [src: WI-0002 AC14],
+  "exactly one of its 65 tests changes" [src: WI-0003/Q-002] — and each had to be amended by
+  `answer-questions` after the code existed [src: WI-0001/Q-005; WI-0002/Q-003]. Every amendment
+  was to a checking clause rather than to a requirement, and each execution checked that
+  distinction explicitly, so no criterion was reshaped around what was built; the cost was three
+  architect round trips and one criterion that still miscounts while remaining decidable
+  [src: tracker/items/WI-0003/artifacts/verify-report.md]. `refine`'s Definition of Ready asks
+  that a criterion be decidable; it does not ask whether the quantity it names is one the item
+  will move [src: .claude/agile-skills/spec/dor-dod.md].
+- **Counterfactual:** any engagement whose item modifies a suite an earlier item shipped reaches
+  this, because "unchanged" and "exactly n" are the natural way to write a regression guard and
+  both are false the moment the item touches the thing they count.
+- **Recurrence:** four reconciliations across three criteria — WI-0001 AC12, WI-0002 AC14, and
+  WI-0003 AC9 twice; the record's own running count reached four.
+- **Direction:** a criterion names the artefacts it constrains rather than counting them, and
+  where a count is genuinely wanted it is measured before the criterion is written. This
+  engagement adopted exactly that on its last item and recorded the measurement that justified it
+  [src: tracker/items/WI-0004/journal.md]; the practice is not in the toolkit.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-5); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-090 — work recorded in an artifact for a skill that is dispatched only by status or by an open question is inert
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** methodology (next, review-close), `pipeline.yaml`
+- **Symptom:** a review can accept a gap and record that the remedy belongs to
+  `answer-questions`; nothing then causes `answer-questions` to run. AC12's amendment was recorded
+  by `plan` under `## Assumptions`, confirmed by the first verification, and written into the
+  first review as an accepted gap naming the skill that owns it
+  [src: tracker/items/WI-0001/artifacts/review.md]; two executions passed over it, and it was
+  discharged only because the second verification chose to file a non-blocking question about it
+  and said what would have happened otherwise — the obligation would have died at close
+  [src: tracker/items/WI-0001/journal.md]. The orchestrator dispatches on status and on open
+  questions; an accepted gap is neither [src: .claude/agile-skills/pipeline.yaml].
+- **Counterfactual:** any engagement in which a review accepts a gap whose remedy belongs to a
+  skill it does not dispatch. The only reason it did not become a lost obligation here is that a
+  worker volunteered a question nobody required.
+- **Recurrence:** once as a near miss over three executions; twice more the discovering skill
+  filed the question immediately, which is the same mechanism working by choice rather than by
+  rule [src: WI-0002/Q-003; WI-0003/Q-002].
+- **Direction:** an accepted gap that names an owner is a dispatchable thing — either it is
+  recorded as an open question at the moment it is accepted, or the board carries it and the
+  orchestrator can see it. A to-do that only a reader can act on is not part of the pipeline.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-6); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-091 — nothing reconciles a journal entry's gate verdicts with the gate runner's output
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, medium
+- **Component:** `.claude/agile-skills/scripts/transition`, `.claude/agile-skills/scripts/journal-entry`
+- **Symptom:** `transition` runs the acting skill's gates, prints a report, and appends the body
+  the caller wrote — and the body's `**Gates:**` bullet is composed before the run. Two entries in
+  this engagement recorded a verdict the program had contradicted: `epic-sign-off` → **pass**
+  where `check-epic-signoff` printed FAIL, and `tests-pass-on-the-merge-result` → **skipped**
+  where `run-gate` printed PASS. Both were caught by the executions that wrote them and corrected
+  by a later entry, the second naming the cause exactly: *"`transition` prints a gate report and
+  appends a journal body, and nothing checks that the two agree"*
+  [src: tracker/items/EP-001/journal.md]. Completeness is unchecked in the same way: one
+  `implement` entry lists six gates where the other sixteen list seven
+  [src: tracker/items/WI-0002/journal.md]. `journal-entry` requires the bullet to exist and reads
+  nothing in it [src: .claude/agile-skills/scripts/journal-entry].
+- **Counterfactual:** every execution of every skill in every engagement writes this bullet, and
+  nothing anywhere compares it to what ran. The two mistakes here were caught by unusually careful
+  workers; the format's own premise is that it should not depend on that.
+- **Recurrence:** three times in 77 entries — two contradicted verdicts and one omitted gate.
+- **Direction:** the tool that runs the gates writes their verdicts into the entry it appends, the
+  way the transition tool already owns the `**Status:**` bullet; the worker supplies the evidence
+  sentence, not the pass or fail. Short of that, the tool can refuse a bullet that names a gate
+  the contract does not list, or omits one it does.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-7); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-092 — no criterion asks whether a change conforms to the decisions already recorded
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** `spec/dor-dod.md` §3, methodology (implement, verify)
+- **Symptom:** the Definition of Done asks that new decisions be written into an ADR (D6) and that
+  claims in `docs/` still be true (D12). Nothing asks whether the code and tests obey the ADRs
+  that already exist. ADR-0005's rule that a test may not build a document from a Python literal
+  was broken twice — once in WI-0001, with a module docstring asserting the opposite
+  [src: tracker/items/WI-0001/artifacts/review.md], and once in BUG-0001, after a verification that had passed all
+  six of its criteria [src: tracker/items/BUG-0001/artifacts/review.md]. Both were caught only by a
+  reviewer reading the diff against the ADR; both cost a send-back. `review-close`'s contract names
+  `docs/architecture/adr/` as an input whose purpose is that "the change must not silently
+  contradict a recorded decision", and no criterion turns that purpose into a check
+  [src: .claude/skills/review-close/references/contract.md].
+- **Counterfactual:** any engagement that records an ADR constraining how code or tests are
+  written reaches this, and the constraint is invisible to every gate until someone reads for it.
+  The content of the rule does not matter; that no stage owns conformance does.
+- **Recurrence:** twice, on the same ADR, four items apart.
+- **Direction:** make ADR conformance a criterion of its own, applied where the ADRs that bind the
+  change are named — most cheaply by having `plan` list the ADRs its steps are constrained by and
+  `verify` or `review-close` decide each one, the way D12's claims are decided.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-8); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-093 — a document sentence falsified by the pipeline's own closing act has no item left to carry the fix
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** methodology (review-close, answer-questions), `spec/dor-dod.md` D7 and DE4
+- **Symptom:** the product vision said the stakeholder had not yet been asked to accept the
+  engagement. That was true when `implement` wrote it at 08:05Z and false at 08:22Z, when the
+  same closing turn filed the sign-off. The item that owns the document was closed by that turn,
+  so `review-close` wrote the document itself and recorded that "there was no send-back available
+  that would not have been a fiction" [src: tracker/items/EP-001/journal.md]. `answer-questions`
+  wrote the next version and corrected a second sentence beyond its own answer's scope
+  [src: docs/product/vision.md]. The review that closed the item had predicted this precise
+  sentence going stale and written it into the item's Notes
+  [src: tracker/items/WI-0004/artifacts/review.md] — the record saw it coming and had nowhere to
+  put it.
+- **Counterfactual:** any engagement whose delivered documents describe the engagement's own state
+  reaches this, because the last acts of the pipeline are the ones that change that state and the
+  items that own the documents are closed by then.
+- **Recurrence:** twice in one turn, on the same document, by two different skills.
+- **Direction:** either a document section that states the engagement's state is owned by the
+  ending rather than by an item — written once, at the ending, by the skill that knows it — or the
+  authority to correct it there is stated in the contract rather than reasoned out per execution.
+  Both corrections here were declared and defensible; neither was authorised by anything.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-9); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-094 — a criterion cited by number keeps resolving after the number has come to mean something else
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, low
+- **Component:** `.claude/agile-skills/scripts/lib/claims.py`, `spec/doc-header.md` §4a
+- **Symptom:** criteria may be renumbered while an item is at `draft`, and they were, twice
+  [src: tracker/items/EP-001/journal.md]. WI-0003 was filed citing "WI-0002 AC7" and WI-0002's
+  round-2 rewrite made AC7 mean something else seven minutes later; `refine` found and corrected
+  two such citations by reading [src: tracker/items/WI-0003/journal.md]. The citation resolver
+  checks only that the item declares a criterion with that number
+  [src: .claude/agile-skills/scripts/lib/claims.py], so both the stale citations resolved cleanly
+  the whole time, and `validate-workspace` was green throughout.
+- **Counterfactual:** any engagement whose second item cites a first item's criterion by number,
+  which is the citation form the spec offers for exactly that purpose. Renumbering at `draft` is
+  legal and cheap, and every renumbering silently rewrites every outstanding citation.
+- **Recurrence:** twice — once producing two stale citations in another item, once flagged in the
+  entry that did the renumbering as a hazard for later readers.
+- **Direction:** either a criterion carries an identity that renumbering does not move, or the
+  skill that renumbers is required to rewrite the citations that name it — the same obligation
+  `answer-questions` already accepts for a `## Consequences` list. A resolver that cannot tell a
+  stale citation from a live one should say so where the rule is stated.
+- **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-10); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-095 — a claim quantified over a family is audited by opening the family's shared fixture, and the exception lives in a member
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, medium
+- **Component:** methodology (`review-close`'s D12, `plan`), `spec/dor-dod.md` D12,
+  `scripts/lint-claims`
+- **Symptom:** D12 asks whether each claim in `docs/` is still true and is satisfied by opening
+  what the claim cites. For a claim of the form "every X does Y", what a citation names is the
+  shared fixture, and the member that falsifies it is not cited. In this engagement the same
+  universal was audited **true** three times, at three item closes, each opening something real —
+  a test class's fixture [src: tracker/items/WI-0001/artifacts/review.md:37], four test modules
+  named in one row [src: tracker/items/WI-0002/artifacts/review.md:32], one helper in one file
+  [src: tracker/items/WI-0003/artifacts/review.md:37] — and the third audit wrote it into the
+  document on the strength of that reading [src: docs/architecture/overview.md:170]. The ending's
+  audit, whose scope was the whole document set, opened the one file the citations had omitted and
+  found two members that falsify it [src: tracker/items/EP-001/artifacts/review.md:133]. The same
+  document carried a second claim of the same shape — a module having no operation it in fact does
+  not have — through four versions and three items [src: tracker/items/WI-0003/artifacts/review.md].
+- **Counterfactual:** any engagement whose documentation describes a property of a family — every
+  test, every caller, every handler, no path — reaches this. The auditor opens the citation, the
+  citation names the general case because that is what the sentence is about, and the exception is
+  in a member the sentence does not name. Nothing about this project's subject is load-bearing;
+  `lint-claims` proves a citation resolves and states in its own docstring that it never proves the
+  citation supports the sentence.
+- **Recurrence:** twice in this engagement in the same document, one of them surviving three audits
+  and being restated more strongly by the third.
+- **Direction:** treat a quantifier as a distinct kind of claim. A sentence containing an absolute
+  over a set should require the auditor to name the set's members and say how the set was
+  enumerated, so that "I opened the fixture" and "I enumerated the members" are different entries in
+  the audit rather than the same one; the absolutes the gate already detects in `docs/` are the
+  place to hang it.
+- **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-2); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-096 — a criterion the environment cannot execute is ticked on a substitution, and the tick carries no mark of it
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, medium
+- **Component:** methodology (`verify`, `review-close`), `spec/work-item.md`, `spec/dor-dod.md`
+- **Symptom:** WI-0001 AC2 requires a machine restart [src: WI-0001 AC2]. No execution could
+  perform one. `verify` considered the `ambiguous` route and declined it as a round trip on a
+  criterion whose observable content is decidable, substituted a syscall trace and a post-exit
+  read, and ticked [src: tracker/items/WI-0001/journal.md:602]. `plan`, `implement`, `verify` and
+  `review-close` each declared the substitution in their own artifact
+  [src: tracker/items/WI-0001/artifacts/plan.md:190]
+  [src: tracker/items/WI-0001/artifacts/verify-report.md:111]
+  [src: tracker/items/WI-0001/artifacts/review.md:101], and it reached the item's `## Notes`
+  [src: tracker/items/WI-0001/item.md:155]. In `item.md` the criterion is `- [x] AC2`, spelled
+  identically to the seven settled by the observation they name. Every downstream reader — WI-0002's
+  close, WI-0003's close, the epic's DE3 — had to re-derive the qualification from prose, and the
+  person who could have changed the criterion's wording heard about it first in the sign-off, after
+  the work was done [src: EP-001/Q-006].
+- **Counterfactual:** any engagement with a criterion naming something its runs cannot do — a
+  reboot, a real device, a year elapsing, a second machine — reaches this. The skill's honest
+  choices are a tick with a declared substitution or an `ambiguous` that costs a round trip, and the
+  tick that follows is indistinguishable in the item from one settled directly. Nothing about
+  flashcards is load-bearing.
+- **Recurrence:** once as a criterion, and three more times as an inherited accepted gap at the two
+  later closes and the ending.
+- **Direction:** a criterion settled by something other than the observation it names should be
+  marked where the criterion is, not only where the reasoning is — a distinct tick state, or a
+  required annotation on the criterion line — and the substitution should oblige somebody to put
+  the criterion's wording to the stakeholder while the engagement can still act on the answer,
+  rather than disclosing it at sign-off.
+- **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-3); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-097 — the loop stops on the first human question, so an asynchronous stakeholder is asked one item at a time
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium
+- **Component:** methodology (`next`), `pipeline.yaml` `orchestrator.steps` 3 and 5
+- **Symptom:** `next` step 3 stops the whole loop on any open human-addressed question, and its
+  contract forbids dispatching more than one skill per run. When `refine` suspended WI-0001 with two
+  questions, WI-0003 was `draft`, runnable, and had two askable questions of its own; under the
+  pipeline as written they would have waited for the first pair to be answered. They did not,
+  because this run's harness overrode the one-action rule — WI-0003's `refine` entry names its own
+  trigger as *"the harness's batching rule (amendment A)"*
+  [src: tracker/items/WI-0003/journal.md:38] — and the four questions were answered in two rounds
+  minutes apart [src: WI-0001/Q-001] [src: WI-0003/Q-001]. The workaround is declared, which is why
+  it is visible; the thing worked around is in the pipeline.
+- **Counterfactual:** any engagement with a stakeholder who answers asynchronously and more than one
+  item needing refinement questions reaches this: the cost is one stakeholder round trip per item
+  rather than per round, and the only remedy available inside the pipeline is to violate the
+  one-action rule. Nothing about this project's subject appears in that sentence.
+- **Recurrence:** once in this engagement, and it is the only place the run had to step outside the
+  orchestrator's algorithm.
+- **Direction:** separate "collect what can be asked" from "dispatch work". A pass that lets every
+  currently-runnable item file the questions it can already state, before the loop stops on the
+  human, would make one round trip carry them all without giving the scheduler judgement or letting
+  two skills run against unwritten state.
+- **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-4); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+## F-098 — the toolkit's own ADRs and a consumer's ADRs share one citation form and one number space
+
+- **Classification:** toolkit-defect
+- **Severity:** doc error, low
+- **Component:** `spec/doc-header.md` §4a, `scripts/lib/claims.py`, and the skill prose that cites
+  `meta/adr/` by bare number
+- **Symptom:** the record cites `ADR-0008 §3` for the toolkit's cross-answer-consistency rule at
+  [src: tracker/items/WI-0003/journal.md:537], [src: tracker/items/WI-0003/journal.md:701] and
+  [src: tracker/items/WI-0003/artifacts/refinement-qa.md:175], and names the document in full once
+  [src: tracker/items/WI-0002/artifacts/refinement-qa.md:158]. This workspace's ADR-0008 is *"Where
+  the card file lives, and how it is written"* [src: ADR-0008]. The citation form `ADR-nnnn` is
+  defined to resolve inside `docs/architecture/adr/`, so a reader following the number lands on the
+  wrong document. The collision is created after the fact: the form is used on EP-001 at 11:20:13Z
+  [src: tracker/items/EP-001/journal.md:102] and the project's ADR-0008 is not allocated until
+  11:55:01Z [src: docs/architecture/overview.md:174]. Nothing mechanical breaks — these are prose
+  references rather than source markers, so no gate resolves them, which is also why nothing
+  caught it.
+- **Counterfactual:** every consumer reaches this the moment its own ADR sequence passes the numbers
+  the toolkit's `meta/adr/` uses, which is to say within the first ten decisions of any project.
+  The skills' own prose and specs cite those ADRs by bare number, and a worker quoting the rule it
+  is following writes the number down. No project's subject matter is involved.
+- **Recurrence:** four times in this engagement, in three different artifacts, all on one item.
+- **Direction:** give the toolkit's own decisions a distinguishable citation form in the prose a
+  consumer's workers copy from — a prefix, or the path — so that a bare `ADR-nnnn` in a consumer's
+  record always means the consumer's own. Resolving the form mechanically in tracker prose, rather
+  than only inside a source marker, would then make the collision a finding rather than a reading hazard.
+- **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-5); accepted at owner triage 2026-08-31.
+- **Status:** open
+
+### Triage record (2026-08-31)
+
+28 proposals triaged; **19 accepted** as F-080..F-098, each copied verbatim from its retro
+report with only its heading and status bullet changed.
+
+- **4 duplicates** of findings already in the ledger: i2-P2 → F-077, i2-P3 → F-061,
+  live-P1 → F-076, i3-P12 → F-062 context. Not noise: ADR-0009 §8 hands de-duplication to the
+  triager, because the reader has not seen the ledger.
+- **4 `project-circumstance` and 1 `observation` correctly classified** — no ledger entries, by
+  design. The classification held on every one.
+- **0 rejected.** Full-set precision is **28/28 founded**.
+
+Recall against the planted ground truth remains 0.1.0's reading: **1 full hit and 2 partial of
+5**. The 0.2.0 re-run is not a measurement and is not counted here (`meta/FINAL-REPORT-4.md`
+§4.2).
