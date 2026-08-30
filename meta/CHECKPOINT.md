@@ -1,35 +1,36 @@
 # CHECKPOINT
 
-## Current unit: META-129 — waiting on regression 3b, then 4b
+## Phase IV is complete. There is no next unit in this session.
 
-**Session:** builder 3. Phase IV of `meta/plan.md`. META-119..128 done and pushed;
-`meta/FINAL-REPORT-3.md` §1–§3 written.
+Builder session three (`meta/BUILDER-3-PROMPT.md`) is done: META-119 through META-131, all
+committed and pushed. `./scripts/check` is green across **28 steps**.
 
-**In flight:** `iteration-3b-mdtab`, relaunched 2026-08-29T21:10Z from an empty project after
-being stopped at turn 2 and its two brittle `lint-answers` rules fixed (journalled). Project
-`~/agile-skills-throwaway/mdtab-3b`; run `harness/runs/iteration-3b-mdtab/`; `--max-turns 30`.
-A background waiter reports when `state.json` reaches `stopped`.
+**The verdict:** all three ROADMAP §2 conditions read positive. **The kernel is proven.** The
+gated tracks — the retro skill, the Codex adapter, the content packs — are the owner's to open.
+The reasoning, the qualifications and the evidence line for each condition are in
+`meta/FINAL-REPORT-3.md` §6 and in the 2026-08-30 addendum in `meta/findings/FINDINGS.md`.
 
-**The two runs are sequential, not parallel — H-015.** `render_sim_skill` rewrites one global
-directory, `harness/.claude/skills/simulated-human/`, at the start of every sim turn. Two drivers
-would interleave a contradictory stakeholder and a cooperative one into both trails. Do not
-launch 4b until 3b has stopped.
+## What the owner does next
 
-## What to do next, in order
+The report names one thing as the next session's first unit, and it is not a fix:
 
-1. **When 3b stops:** its trail is read-only evidence from that moment. Read
-   `harness/runs/iteration-3b-mdtab/SIM-LOG.md` first — the pass condition is the sim saying its
-   reserved line, *"the multiline case wins; I over-spoke before"*, in answer to a question that
-   quotes both stakeholder answers by ID. Then the item trail, then the console log.
-2. **Launch 4b:** `python3 harness/provision.py --iteration iteration-4b-recall` is already done;
-   `nohup python3 harness/run_iteration.py --iteration iteration-4b-recall --max-turns 30 &`.
-   (Wipe and `--fresh` first if anything has touched `~/agile-skills-throwaway/recall-4b`.)
-3. **META-129:** findings pass over both trails; file F-069+ / H-016+; bank both trails under
-   `meta/harness/evidence/iteration-3b/` and `iteration-4b/`.
-4. **META-131:** the five small fixes accepted in META-128's triage — F-035, F-048, F-054, F-056,
-   F-059. Only once no run is in flight: `scripts/` is guarded by the W4 rule.
-5. **META-130:** `meta/FINAL-REPORT-3.md` §4, §5, §6 — the ROADMAP §2 verdict, condition by
-   condition, with an evidence line for each.
+**A regression run against the kernel as it now stands.** 4b ran on the kernel *after* 3b's four
+fixes and *before* F-073's and META-131's five. Nothing in those six touches a skill contract and
+every gate is green — but the last run tested a kernel one commit behind this one, and that is the
+one gap in the proof. `iteration-3c` or `iteration-4c`, same configs, one run, read for nothing
+but whether those six changes hold.
+
+Then the two classes META-128's triage deferred, each an ADR-0006-shaped derivation rather than a
+patch: the **half-written record** (F-036, F-043, F-051, F-053) and **document-as-deliverable**
+(F-057, F-058). And **H-015** early, because it constrains every future session: the simulated
+human's skill directory is one global path rewritten at the start of every sim turn, so two
+iterations cannot run at once and nothing refuses them — this session ran 3b and 4b in series for
+that reason alone.
+
+Findings, of 87 filed: **72 fixed**, 11 deferred behind a named gate (4 in the *half-written
+record* class, 2 in *document-as-deliverable*, 5 individually gated), **2 open** — F-061, the
+conditional-acceptance observation held open deliberately, and H-015, filed this session and not
+fixed because it touches `harness/` — 1 rejected, 1 a pointer to another entry (F-042 → F-029).
 
 ## Standing instructions (still in force)
 
@@ -37,5 +38,5 @@ launch 4b until 3b has stopped.
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
 - Toolkit commits and harness commits stay separate.
-- **A harness run is in flight.** `meta/` and `harness/` are exempt from the W4 rule; everything
-  else trips it and stops the run.
+- **No harness run is in flight.** `~/agile-skills-throwaway/mdtab-3b` and `recall-4b` hold the
+  two completed engagements; both trails are banked under `meta/harness/evidence/`.

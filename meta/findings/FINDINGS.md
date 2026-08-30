@@ -2371,3 +2371,37 @@ in it at all.
 Closing assessment, in the stakeholder's words: *"This was the boring run it was supposed to be,
 and I have no complaint to register."*
 
+---
+
+### ROADMAP §2 addendum (2026-08-30) — the verdict after the dual regression gate
+Superseding the 2026-08-29 addendum, which was written before builder session three ran.
+
+**Condition 1 holds.** Two full consumer runs — `mdtab-3b` (E1, turn 25/30) and `recall-4b` (E1,
+turn 27/30) — neither requiring a change to any skill contract. Every defect either run found is
+in `spec/` or `scripts/`, the enforcement layer, not in the methodology the runs executed. The
+2026-08-29 addendum read this condition more strictly, as *"the ending's own audit signs without
+findings"*, and was right to: F-066 meant an ending's audit examined nothing and F-067 meant a
+finding it made could not be repaired. Both are fixed and demonstrated fixed — 3b's audit caught a
+claim no item's diff could see, 4b's examined thirteen documents and found none.
+
+**Condition 2 holds**, unchanged. Endings scoreboard: E1 ×4 (tidy twice, mdtab, mdtab-3b,
+recall-4b), E3 ×1 (1e); E2 and E4 remain fixture-only. The three dead paths stay covered.
+
+**Condition 3 holds.** F-066 was its named counterexample and is gone. At an ending the scope is
+the whole document set; a window that could not have contained anything is a failing verdict; 3b's
+reviewer named the fix as what caught a real defect, and 4b's ending gate found zero over every
+document. Both runs also show the human half working past its written scope — 3b escalated a
+contradiction between two of the stakeholder's own sentences rather than repairing a document, and
+4b escalated a false sentence the pipeline had written *to* the stakeholder rather than quietly
+correcting it.
+
+**The kernel is proven.** The gated tracks — the retro skill, the Codex adapter, the content packs
+— are the owner's to open.
+
+Three qualifications belong with that sentence, and they are in `meta/FINAL-REPORT-3.md` §6 in
+full: "proven" means the three conditions hold and not that the toolkit is defect-free (the two
+runs filed seven findings, all fixed); **no run has been made against the final state of the
+kernel** — 4b ran one commit behind it, and the next session's first unit should be exactly that
+run; and F-069 and F-073 are the same mistake twice — a rule about a record's structure
+implemented against lines or against a state — which is the shape to watch in `scripts/`.
+

@@ -388,13 +388,13 @@ positive at the end or the report says which does not and why.
       projects, `--max-turns 30`) and launched detached.
 - [x] **META-128** — cluster 5: every remaining open finding gets fix / defer-with-gate /
       reject-with-reason. No status left stale.
-- [ ] **META-129** — findings pass over both regression trails; anything new filed as F-068+ /
+- [x] **META-129** — findings pass over both regression trails; anything new filed as F-068+ /
       H-015+; evidence banked.
-- [ ] **META-131** — the five findings accepted in META-128's triage, all small and all
+- [x] **META-131** — the five findings accepted in META-128's triage, all small and all
       script-level: F-035 (`check-commit-refs` advises on a merge that never happened), F-048
       (`plan`'s self-check gains "no step instructs another skill to break its contract"), F-054
       (a citation whose path is in backticks), F-056 (a duplicated section heading), F-059
       (`lint-skills` cross-checks the gate names in `process.md` against `skill.yaml`). After the
       runs stop — the W4 rule fires on a repository that changes mid-turn.
-- [ ] **META-130** — `meta/FINAL-REPORT-3.md`: what changed, versions bumped, what 3b and 4b
+- [x] **META-130** — `meta/FINAL-REPORT-3.md`: what changed, versions bumped, what 3b and 4b
       proved, and the ROADMAP §2 verdict — all three conditions, with the evidence line for each.

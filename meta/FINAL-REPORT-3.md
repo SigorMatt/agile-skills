@@ -2,8 +2,8 @@
 
 Mission: `meta/BUILDER-3-PROMPT.md`. Plan: `meta/plan.md` Phase IV. Units META-119..META-131.
 
-**Status of this document:** §1–§3 are complete and final. §4, §5 and §6 are written when the two
-regression runs stop; until then this file says so rather than guessing.
+**Status of this document:** complete. Both regression runs have stopped and their trails are
+banked under `meta/harness/evidence/iteration-3b/` and `iteration-4b/`.
 
 ---
 
@@ -129,13 +129,161 @@ All minor: every change adds an obligation without removing a legal move.
 
 ## 4. Regression 3b — the escalation
 
-*Pending: the run is in flight.*
+Iteration 3's config and probe, unchanged but for `id`, `project` and `--max-turns 30`. Persona
+`contradictory-stakeholder`; probe `iteration-3-mdtab` including `P-signoff-extension` — the same
+file that produced F-062. Ended **E1 delivered at turn 25 of 30**, four items, all done.
+
+**It passes, and the evidence is the stakeholder's, not mine.** Turn 16 of `run/SIM-LOG.md`:
+
+> they caught it. They did not quietly build what I asked for last turn and they did not tidy
+> their own documents to match my newer sentence — they put both of my sentences in front of me,
+> told me one of them had been written down as a decision in my name, and refused to choose
+> between them for me. That is the first time in this engagement I have been shown something I
+> had actually got wrong, and it took me one line to fix.
+
+The escalation is `EP-001/Q-005`, filed by `answer-questions`. It quotes both statements verbatim
+and by ID, names which one had been written into the design record *as a decision in the
+stakeholder's name* (`ADR-0005` decision 3), offers their two sentences as the two options and no
+third of its own, and says: *"We are not going to pick between two of your own sentences in a
+document of ours — that is the one move this process forbids us."* The reconciliation the probe
+script had held in reserve since iteration 3 — *"I over-spoke the first time — the later one
+wins"* — was elicited there. Every clause of the mission's 3b condition is met, including the
+last: the engagement ended through the gate.
+
+Two other fixes earned themselves in the same run.
+
+- **F-064.** `intake` filed the elicitation question at turn 2 and got back the three things the
+  stakeholder cared about most — non-table content byte for byte, a malformed table left alone,
+  no trailing whitespace and no maximum column width. Two of those are precisely the organic wants
+  that in iteration 3 sat in persona for a whole engagement and reached nobody until the closing
+  note. Closing note this time: *"The three things I said mattered most are all written into the
+  epic as measurable statements in something close to my own words."*
+- **F-066.** The epic-scope audit found a `claim.unsourced` in `ADR-0001` that no item's diff
+  could ever have seen. The reviewer wrote it down in terms: *"this is exactly the empty-window
+  failure F-066 records, and `--context epic` is what caught it."* Read against the code, found
+  true, repaired under §4b as `provenance` rather than recorded as a gap.
+
+**And it found four defects, three of them mine, one of them serious.**
+
+| Finding | What |
+|---------|------|
+| **F-069** | §4b tested the **state** — a superseded ADR with a corrections section — where it states a rule about the **act**. An ADR corrected while current and superseded afterwards therefore had *no valid state to be in*, and three verified-true claims in it had no legal repair. `review-close` ended the engagement with `transition --force`. |
+| **F-070** | A `run:` citation split on a semicolon inside its own command, so the reviewer replaced the strongest citation form with a weaker one that resolved. |
+| **H-016** | `validate-workspace` and `lint-claims` crashed with an uncaught `UnicodeDecodeError` on a `*.md` file that is not UTF-8 — a traceback where a finding belongs. |
+| **F-072** | Found by hand while fixing H-016: `textio.py` went into `scripts/lib/` and not into `LIB_TO_SHIP`, and every gate stayed green while every consumer install would have died on `ImportError`. The render step compares a copy against its source; it can see divergence, never omission. |
+
+All four were fixed **before** 4b ran. That is a judgement call and it is worth stating: F-069 is
+a defect this session introduced in its own fix for F-067, it forced a hard gate, and leaving it
+open would have turned 4b's acceptance condition into a lottery. 4b was two turns in, so
+restarting cost nothing.
 
 ## 5. Regression 4b — the boring run, audited
 
-*Pending.*
+Iteration 4's config and probe, unchanged but for the same three keys. Persona `cooperative-pm`,
+zero planted probes, everything organic. Ended **E1 delivered at turn 27 of 30**, six items, all
+done, the closing turn given, and the completed engagement labelled `epic-done` (H-014).
+
+**The four gates over the finished workspace:**
+
+```
+validate-workspace   0 errors, 0 warnings     6 items, 13 documents
+lint-answers         0 errors, 0 warnings     11 consumed human answers
+lint-claims --all    0 errors, 0 warnings     every document under docs/
+check-epic-signoff   PASS — names all 5 children, filed after rest; DE8 satisfied by Q-001
+```
+
+The mission's condition for 4b names three things, and all three hold: the claims gate examined a
+real scope (the whole document set, not an empty diff), nothing was legally unfixable (`Accepted
+gaps: None new`), and the driver labelled the completed engagement `epic-done`.
+
+**What the ending's own audit did find is the part worth reading.** `review-close` discovered that
+`EP-001/Q-004` — the sign-off it had itself written — described a `RECALL_DECK` environment
+variable that does not exist, in the paragraph describing what the stakeholder was being asked to
+accept. It did not edit the question (*"rewriting the text after they answered would destroy the
+evidence of what they actually accepted"*), did not accept it as a gap, and escalated it as a
+blocking `Q-005`, citing the class by name:
+
+> Whether their acceptance survives the correction is not a judgement this skill may make on
+> their behalf; it is the same class of move `ADR-0008` refuses.
+
+ADR-0008 was written about a conflict between two recorded *human* answers. What `review-close`
+applied it to was a false statement the pipeline had made **to** the stakeholder — a case the ADR
+does not cover — and it reached the same conclusion unprompted, in a run with no probes in it.
+The stakeholder: *"they caught their own mistake … before closing, and came back to check it
+actually mattered to me instead of just fixing the document quietly. That's the right instinct."*
+
+It also found **F-073**, a real defect in `lint-answers`, written six hours earlier: a bullet was
+read to the next bullet, so a section's closing sentence was swallowed into its last entry and
+turned a `compatible` verdict into a declared conflict — failing a gate on correct work; and
+`Checked against:` was read as one line, so a declaration naming nine answers across four wrapped
+lines had six of them silently unresolved and unchecked. Both halves were reproduced against the
+script before being believed, and both are fixed with the fixture carrying the shapes permanently.
+
+Closing assessment, in the stakeholder's words: *"This was the boring run it was supposed to be,
+and I have no complaint to register."*
 
 ## 6. The ROADMAP §2 verdict
 
-*Pending. It is stated condition by condition, with the evidence line for each, when both runs
-have stopped and their trails have been read.*
+**Condition 1 — a full consumer run completes with zero skill version bumps.** **Holds.** Two
+full consumer runs, `mdtab-3b` and `recall-4b`, both ending E1 delivered through the termination
+gate, and neither required a change to any skill contract. Every defect either run found is in
+`spec/` or in `scripts/` — the enforcement layer — and not in the methodology the runs executed.
+
+The 2026-08-29 addendum read this condition more strictly, as *"the ending's own audit signs
+without findings"*, and it was right to: at the time, an ending's audit was structurally unable to
+do its job. F-066 meant it examined nothing, F-067 meant a finding it made could not be repaired.
+Both are fixed and both are demonstrated fixed — 3b's audit caught a claim no item's diff could
+see, 4b's examined thirteen documents and found none. What 4b's audit produced instead was one
+defect in a script three days old. **That is the harness doing its job, not the audit layer being
+unsound**, and it is the distinction on which this condition turns.
+
+**Condition 2 — the three dead paths have each executed at least once.** **Holds**, unchanged.
+DoR override and both send-back transitions from earlier runs; `blocked` from 1e's impasse. 3b
+and 4b add two more E1 endings and were not expected to move this column. E2 and E4 remain
+fixture-only, which the endings model covers by execution in `./scripts/check`.
+
+**Condition 3 — the F-001 fix has survived a real run: wrong or unsourced justifications were
+caught at entry, none propagated.** **Holds.** F-066 was this condition's named counterexample in
+the addendum, and it is gone: at an ending the scope is now the whole document set, a window that
+could not have contained anything is a failing verdict, and 3b's reviewer identified the fix as
+what caught a real defect. In 4b, `lint-claims --all` reported zero errors over every document at
+the ending. Both runs also show the *human* half working past its written scope: 3b escalated a
+contradiction between two of the stakeholder's own sentences instead of repairing a document, and
+4b escalated a false sentence the pipeline had written to the stakeholder instead of quietly
+correcting it.
+
+### The verdict
+
+**All three conditions read positive. The kernel is proven.** The gated tracks — the retro skill,
+the Codex adapter, the content packs — are the owner's to open.
+
+Three things belong beside that sentence rather than in a footnote.
+
+1. **"Proven" means the three conditions hold, not that the toolkit is defect-free.** The two runs
+   filed seven findings between them (F-069, F-070, F-072, F-073, H-016, plus the F-026 and F-063
+   addenda). Every one is fixed, and the ledger says so with a citation that resolves. A queue
+   that stops finding things is a queue that has stopped looking.
+2. **No run has been made against the final state of the kernel.** 4b ran on the kernel *after*
+   3b's four fixes and *before* F-073's and META-131's five. Nothing in those six changes touches
+   a skill contract, and `./scripts/check` is green across all 28 steps — but the honest statement
+   is that the last run tested a kernel one commit behind this one.
+3. **There is a shape worth watching.** F-069 and F-073 are the same mistake in different places:
+   *a rule about a record's structure, implemented against lines or against a state.* F-069 tested
+   whether a section exists rather than when it was written; F-073 read a bullet to the next
+   bullet and a declaration to the end of its first line. Both were written this session, both
+   passed their own fixtures, and both were found by a run rather than by a test. The next thing
+   that goes wrong in `scripts/` will probably look like this.
+
+### What the next session's first unit should be
+
+Not a fix — the ledger's fixes are done. **A regression run against the kernel as it now stands**,
+which is the one thing §6.2 says is missing. `iteration-3c` or `iteration-4c`, same configs, one
+run, read for nothing but whether the six changes made since 4b hold. After that, the two deferred
+classes in META-128's triage are the real backlog: the **half-written record** (F-036, F-043,
+F-051, F-053) and **document-as-deliverable** (F-057, F-058), each an ADR-0006-shaped derivation
+rather than a patch.
+
+And one operational fix should ride along early, because it silently constrains every future
+session: **H-015** — the simulated human's skill directory is one global path, rewritten at the
+start of every sim turn, so two iterations cannot run concurrently and nothing refuses them. This
+session ran 3b and 4b in series for that reason alone.
