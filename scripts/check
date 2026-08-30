@@ -64,6 +64,10 @@ Steps, in order:
                                                written report produces nothing, and seven
                                                deliberately wrong ones produce exactly the codes
                                                in EXPECTED-CODES.txt, compared as a multiset
+ 19b. a retrospective invalidates nothing   — the toy project validates clean, gains an
+                                               artifacts/retro.md, validates clean again, and
+                                               its engagement-state verdict moves from `ended`
+                                               to `closed` (ADR-0009 §2)
  19. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
@@ -429,6 +433,61 @@ def check_retro(runner: Runner) -> None:
         runner.emit("the retrospective format", False, detail="\n".join(detail))
         return
     runner.emit(f"the retrospective format (must-pass, and {len(expected)} codes)", True)
+
+
+def check_retro_is_additive(runner: Runner) -> None:
+    """Adding a retrospective to a valid workspace invalidates nothing (ADR-0009 §2).
+
+    The retro was introduced after every existing workspace already existed, and the design says
+    plainly that none of them changes verdict class or fails a check because the skill now
+    exists. That is a claim about software, so it is executed rather than asserted: the toy
+    project validates clean, gains a report, and validates clean again — while the engagement's
+    verdict moves from `ended` to `closed`, which is the only thing that may change.
+    """
+    import shutil
+    import tempfile
+    example = os.path.join(ROOT, "examples", "toy-project")
+    if not os.path.isdir(example):
+        runner.skip("a retrospective invalidates nothing", f"{example} does not exist")
+        return
+    report = os.path.join(ROOT, "fixtures", "retro", "tracker", "items", "EP-001",
+                          "artifacts", "retro.md")
+    if not os.path.isfile(report):
+        runner.skip("a retrospective invalidates nothing", f"{report} does not exist")
+        return
+    validator = os.path.join(SCRIPTS, "validate-workspace")
+    state = os.path.join(SCRIPTS, "engagement-state")
+    with tempfile.TemporaryDirectory() as base:
+        workspace = os.path.join(base, "toy")
+        shutil.copytree(example, workspace)
+        before = subprocess.run([sys.executable, validator, workspace],
+                                capture_output=True, text=True, cwd=ROOT)
+        if before.returncode != 0:
+            runner.emit("a retrospective invalidates nothing", False, before,
+                        detail="the copied example does not validate before the report is added")
+            return
+        verdict_before = subprocess.run([sys.executable, state, "--all", "--root", workspace],
+                                        capture_output=True, text=True, cwd=ROOT)
+        shutil.copyfile(report, os.path.join(workspace, "tracker", "items", "EP-001",
+                                             "artifacts", "retro.md"))
+        after = subprocess.run([sys.executable, validator, workspace],
+                               capture_output=True, text=True, cwd=ROOT)
+        if after.returncode != 0:
+            runner.emit("a retrospective invalidates nothing", False, after,
+                        detail="adding artifacts/retro.md made a valid workspace invalid")
+            return
+        verdict_after = subprocess.run([sys.executable, state, "--all", "--root", workspace],
+                                       capture_output=True, text=True, cwd=ROOT)
+        if "EP-001 ended" not in verdict_before.stdout:
+            runner.emit("a retrospective invalidates nothing", False, verdict_before,
+                        detail="the engagement was expected to read 'ended' before the report")
+            return
+        if "EP-001 closed" not in verdict_after.stdout:
+            runner.emit("a retrospective invalidates nothing", False, verdict_after,
+                        detail="the engagement was expected to read 'closed' once the report "
+                               "exists — the orchestrator's step 7 does not terminate otherwise")
+            return
+    runner.emit("a retrospective invalidates nothing (clean, ended -> closed, clean)", True)
 
 
 def ordered_codes(output: str) -> list:
@@ -1452,6 +1511,7 @@ def main() -> int:
     check_claims(runner)
     check_cross_answers(runner)
     check_retro(runner)
+    check_retro_is_additive(runner)
     check_adr_correction(runner)
     check_signoff(runner)
     check_termination(runner)
