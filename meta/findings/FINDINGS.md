@@ -2514,3 +2514,31 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   known-wrong number in the sibling config while correcting its twin is fixing the specimen
   instead of the class, which is the shape this session exists to end.
 - Status: **fixed** (commit b9bc18b)
+
+## F-075 — `lint-retro` reads a *quoted* citation as a real one, and the first live run reworded its prose to get past it
+- Severity: correctness of enforcement, medium — F-037's class in a new reader, producing F-073's
+  pathology: a worker rearranging prose to satisfy a parser
+- Component: scripts/lint-retro (`check_citations`)
+- Symptom: the retrospective is, by construction, the document in a workspace most likely to
+  *explain* the citation convention — and `check_citations` scanned an entry's raw text with
+  `CITATION_RE`, so a marker written inside backticks as an example was read as a citation and
+  reported unresolvable. The live dispatch of the skill against `recall-4c`'s record hit it on
+  its first attempt: `lint-retro EP-001` exited 1 with three `retro.citation.unresolved`
+  findings, every one of them against a marker the author had quoted rather than made. **The
+  execution then reworded the prose until the gate passed**, which is exactly what F-073's first
+  half describes and exactly the behaviour a gate must not teach.
+- Diagnosis: `scripts/lib/claims.py` has carried the mask for this since F-037 — `mask_code`
+  blanks inline code spans while preserving offsets, and `lint-claims` uses it precisely so that
+  "a paragraph could satisfy the rule by talking about citations" is impossible. `lint-retro` was
+  written against the same citation vocabulary and did not use the same mask. One vocabulary, two
+  readers, one of them reading it differently — which is the shape META-134 exists to end, found
+  in a script written three units later in the same session.
+- Evidence: the live test (META-141), reported by the executing subagent: *"`lint-retro EP-001`
+  exit 1 first (3 × `retro.citation.unresolved`, 'an empty citation': literal `src` markers quoted
+  in my prose were parsed as citations), exit 0 after rewording."* Reproduced directly against
+  `CITATION_RE` before the fix was made.
+- Status: **fixed** (commit 78f4c5a) — `check_citations` reads `masked_lines(text)`, the same
+  mask `lint-claims` uses. `fixtures/retro` carries **both** directions permanently, because
+  masking that swallows a real citation is the worse failure of the two: `EP-001` now quotes a
+  marker beside a real one and must produce **nothing**, and `EP-002` carries an observation
+  whose only marker is quoted and must be reported as citing nothing (25 codes, was 24).
