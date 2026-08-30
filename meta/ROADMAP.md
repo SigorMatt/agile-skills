@@ -91,3 +91,28 @@ Full analyses behind this roadmap: BMAD review and quarry-don't-fork decision
 (F-009, F-010), async interaction (F-008), harness architecture
 (meta/harness/DESIGN.md), judgment-gate direction (F-001). The findings file
 is the single backlog; this document only orders it.
+
+## §2 stamp (2026-08-30) — proven, and confirmed against the final state
+
+FINAL-REPORT-3 declared all three conditions positive at a1bd33c, with the stated
+qualification that no run had touched the kernel's final state (4b predated F-073 and
+META-131's five fixes). Confirmation run 4c closes that gap: same probe and persona as
+iteration 4, fresh project, final kernel at 735095c (+5ef81b0 config), 28-step gate green.
+
+- Condition 1 — a full consumer run, zero version bumps, ending audit signs with no new
+  finding against the code: **holds.** 4c ended E1 delivered at turn 17/30; the audit's one
+  finding was a documentation citation defect the claims gate caught by its own discipline
+  and repaired legally (v5→v6, no code touched); three gaps disclosed pre-sign-off, none
+  hidden. Evidence: meta/harness/evidence/iteration-4c/.
+- Condition 2 — the three dead paths and the endings: **holds.** E1 (tidy twice-signed; 4b;
+  4c), E3 (1e), DoR override (1d), blocked (1d), send-backs (organic, multiple runs).
+  E2/E4 remain fixture-only, recorded as such.
+- Condition 3 — the F-001 machinery survives real runs and its contracted form is not
+  vacuous: **holds.** 3b escalated a planted stakeholder contradiction to its author
+  (the reserved reconciliation elicited); 4b/4c ran lint-claims --all over the full document
+  set with the degenerate scope a failing verdict; the named residual (resolution ≠ support)
+  is recorded at F-001/F-066's addendum as the mechanization boundary, owned by D12/DE6.
+
+**The kernel is proven. The gated tracks are open:** retro skill first (per §3), then the
+Codex CLI adapter, then content packs under F-010's rules. New-finding cadence continues to
+govern: any structural finding class re-closes the affected track until fixed.

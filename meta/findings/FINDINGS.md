@@ -2405,3 +2405,31 @@ kernel** — 4b ran one commit behind it, and the next session's first unit shou
 run; and F-069 and F-073 are the same mistake twice — a rule about a record's structure
 implemented against lines or against a state — which is the shape to watch in `scripts/`.
 
+
+## H-017 — A turn that exits without writing HARNESS-STATUS.md leaves the driver reading a stale report
+- Severity: harness, evidence integrity (H-005's pathology in normal operation)
+- Component: harness/run_iteration.py (status consumption), worker turn prompt
+- Symptom: 4c's turn 16 left no trace — no commit, no tracker change — and HARNESS-STATUS.md
+  still carried turn 15's heading when turn 17 began; the driver consumed the previous turn's
+  status as though it were current. Flagged by the run itself in turn 17's status report.
+  H-005 fixed this for killed turns via mtime; a turn that exits cleanly without writing was
+  not covered.
+- Evidence: meta/harness/evidence/iteration-4c/run/ — turn-17 HARNESS-STATUS content,
+  iteration-log.jsonl turns 15–17.
+- Direction: stamp the turn number driver-side into the status contract — the driver rejects
+  (records "no status written") any status file whose heading does not match the turn just
+  run. Minor companion: board-gen's "board already current; not rewriting" goes to stdout,
+  not stderr, so no-op success stops reading as failure to stderr scanners (re-reported
+  turns 10–15, 17).
+- Status: open
+
+---
+
+### Addendum to F-001 / F-066 (2026-08-30, run 4c) — the named residual: resolution is not support
+4c's ending audit caught a universal claim in overview.md whose three citations all resolved
+while none supported the sentence — "a citation that resolves is not a citation that supports
+the sentence, and lint-claims exits 0 on both" — and repaired it through the legal path with
+no code touched. This is the mechanization boundary stated precisely: lint-claims verifies
+resolution mechanically; support remains a judgment check owned by D12/DE6 discipline, which
+held here. Recorded as the known limitation of the claims machinery rather than a defect;
+any future attempt to mechanize "support" starts from this instance as its fixture.
