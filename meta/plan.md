@@ -398,3 +398,54 @@ positive at the end or the report says which does not and why.
       runs stop — the W4 rule fires on a repository that changes mid-turn.
 - [x] **META-130** — `meta/FINAL-REPORT-3.md`: what changed, versions bumped, what 3b and 4b
       proved, and the ROADMAP §2 verdict — all three conditions, with the evidence line for each.
+
+---
+
+## Phase V — builder session 4 (`meta/BUILDER-4-PROMPT.md`) — the retro skill
+
+The first gated-track session. The kernel is proven and stamped (ROADMAP §2, 2026-08-30;
+confirmation run 4c). Mission: the **retro skill** — the skill that reads a completed
+engagement's record and proposes findings and contract changes — plus the record-model
+library FINAL-REPORT-3 §6.3 named as the residual class, plus three small fixes.
+
+Order of work: the design first, then the parser the design depends on, then the contract,
+then the two tests that judge it. Cluster 3 yields if the budget runs short.
+
+- [ ] **META-132** — Phase V laid out here; `meta/CHECKPOINT.md` opened on the session.
+
+### Cluster 1 — the retro skill (the centerpiece)
+
+- [ ] **META-133** — `meta/adr/ADR-0009-retrospective-reading.md`: what a retro reads, what it
+      may not touch, the two audiences, the three-way classification (toolkit defect /
+      this-project circumstance / observation), and what a lint over a retro can and cannot
+      see. Derivation only; no code.
+- [ ] **META-134** — `scripts/lib/record.py`: the shared record model (cluster 2, but it lands
+      first because `lint-retro` and the migrated lints both consume it). Blocks with line
+      spans — bullets with their continuations, labelled declarations, paragraphs, tables —
+      plus the ledger-entry and retro-entry readers. Self-test cases from F-069/F-073.
+- [ ] **META-135** — migrate `lint-answers`, `lint-claims` and `validate-workspace` onto
+      `record.py`. Behaviour-identical: the 82 broken-workspace codes and all 28 gate steps
+      stay green, unchanged, and that is the whole proof.
+- [ ] **META-136** — `spec/retro.md`: the retro report schema, the PROPOSED finding format,
+      the citation rule (an uncited observation is a refused write), and the classification.
+- [ ] **META-137** — `methodology/skills/retro/` (`skill.yaml` + `process.md`),
+      `pipeline.yaml` dispatch after an ending, contracts that hand off to it, re-render.
+- [ ] **META-138** — `scripts/lint-retro` + `fixtures/retro/` both ways + a `./scripts/check`
+      step: a retro whose observations lack citations must fail.
+
+### Cluster 3 — small fixes
+
+- [ ] **META-139** — H-017 (the driver stamps and validates the turn number in
+      HARNESS-STATUS; `board-gen`'s no-op notice to stdout), the stale `max-turns: 24` in
+      `iteration-4-recall.json`, and the inert `*.1` run directories.
+
+### The tests
+
+- [ ] **META-140** — the ground-truth test: the honest workspace-visible subset written down
+      **before** the run, then the rendered retro run by context-free subagents against
+      iteration-2 and iteration-3, copied to scratch read-only. Rediscovery fraction and
+      noise count stated and judged honestly.
+- [ ] **META-141** — the live test: recall-4c's workspace to scratch, `next` dispatches retro
+      post-ending through the rendered skills, the report files, the engagement archives.
+- [ ] **META-142** — findings pass over both tests; F-074+/H-018+; statuses current.
+- [ ] **META-143** — `meta/FINAL-REPORT-4.md`.
