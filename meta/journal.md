@@ -4180,3 +4180,54 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Gates:** the three runs' own gates, recorded above and in the banked journal entries.
 - **Artifacts:** `meta/evidence/retro-calibration/` (three reports, three journal entries, a
   README).
+
+## 2026-08-30 — META-142 — the findings pass over both tests, and the re-run under 0.2.0
+
+- **Unit:** META-142
+- **Inputs read:** the four banked reports; `methodology/skills/implement/skill.yaml` and
+  `spec/doc-header.md` §5 (for F-076); `scripts/lib/claims.py` and a sweep of every citation in
+  `examples/toy-project` and all seven fixtures (for F-077); `scripts/lib/scope.py`'s three-state
+  docstring; F-053, F-057, F-058, F-061 and META-128's triage.
+- **Decisions:**
+  - **Four findings filed, two fixed, one deferred with its gate named, one an addendum.**
+    F-075 (a quoted citation read as a real one — the live run reworded prose to get past the
+    gate) **fixed**. F-077 (`path:line` resolved for ever whatever was at the line) **fixed**,
+    after a sweep proving no existing citation would newly fail. F-078 (the retro's own step 5
+    named a shape instead of instructing the join) **fixed** in 0.2.0. F-076 **deferred**.
+  - **F-076 was not fixed, and the reason is the point.** `implement`'s hard `claims-are-sourced`
+    gate examines a window that `spec/doc-header.md` §5 guarantees will be empty — §5 forbids
+    `implement` to write documents at all. But §5 is also violated in practice, by a D7/D12
+    send-back that had `implement` edit `vision.md`. **Both cannot stand**, and choosing is the
+    document-as-deliverable derivation (F-057, F-058), not a patch. Rescoping a hard gate on one
+    session's reading, in the session that introduced the reader, is how a gate gets weakened by
+    the thing it was meant to check.
+  - **F-061's addendum is the result I would keep if I could keep one.** That entry was filed as
+    an observation and closed with *"Revisit when the retro skill exists."* The retro revisited
+    it, from the record alone, with no access to this ledger, and found the mechanism the
+    original never had: the sign-off's option B — **the option `question.md` §2 obliges every
+    sign-off to offer** — promises an ending the status model forbids, because creating the
+    follow-up item destroys the rest the ending requires.
+  - **The 0.2.0 re-run: the misses were procedural, and the fix is followable.** Same record,
+    same setup, a fresh context-free subagent, one changed procedure. F-062 is found in full —
+    the quote, the three documents standing on it, both `answered-at` stamps, and the `implement`
+    entry that repaired it, ending *"the only evidence that anything happened is the pair of
+    answers and the edit between them."* F-063 and F-064 are found by the set reading, in one
+    observation counting all twenty questions. F-065 remains the same partial. On iteration 3's
+    four targets: **3 full and 1 partial**, against 0.1.0's **0 full and 2 partial**.
+  - **This number is not a measurement and the report says so wherever it appears.** The change
+    was made *after* reading the miss. What the re-run establishes is that the instruction is
+    followable and that the misses were in the procedure rather than inherent in reading a
+    record. The calibration reading remains 0.1.0's: 1 full, 2 partial, 2 misses.
+  - **Two behaviours in the re-run exceed what ADR-0009 §8 claims.** P-8 rediscovers F-064 and
+    then **declines to file it as a toolkit defect**, because it opened the installed contracts
+    and found `DE8` and `kind: elicitation` already there — de-duplication the ADR says a retro
+    cannot do. And the positive record carries *"The stakeholder overruled the team's
+    recommendation three times, so the closed-form questions did not steer the answers"* — the
+    counter-evidence to its own F-063 observation, found and recorded in the same report.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, 30 steps; `scripts/lib/selftest.py` 252 cases (six new for
+  F-077). The re-run's own gates: `lint-retro --require-scope` exit 0, `engagement-state`
+  `closed`, and exactly one file written after the copy was made besides the journal entry.
+- **Artifacts:** `meta/findings/FINDINGS.md` (F-075..F-078 and the F-061 addendum),
+  `scripts/lib/{claims,selftest}.py`, `meta/evidence/retro-calibration/` (+ the 0.2.0 report and
+  its journal entry, and a README pointing at the four things worth reading).

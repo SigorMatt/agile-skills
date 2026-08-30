@@ -441,11 +441,11 @@ then the two tests that judge it. Cluster 3 yields if the budget runs short.
 
 ### The tests
 
-- [ ] **META-140** — the ground-truth test: the honest workspace-visible subset written down
+- [x] **META-140** — the ground-truth test: the honest workspace-visible subset written down
       **before** the run, then the rendered retro run by context-free subagents against
       iteration-2 and iteration-3, copied to scratch read-only. Rediscovery fraction and
       noise count stated and judged honestly.
 - [x] **META-141** — the live test: recall-4c's workspace to scratch, `next` dispatches retro
       post-ending through the rendered skills, the report files, the engagement archives.
-- [ ] **META-142** — findings pass over both tests; F-074+/H-018+; statuses current.
+- [x] **META-142** — findings pass over both tests; F-074+/H-018+; statuses current.
 - [ ] **META-143** — `meta/FINAL-REPORT-4.md`.

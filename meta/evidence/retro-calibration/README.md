@@ -10,6 +10,7 @@ repository, the findings ledger, or each other.
 | `iteration-2-retro.md` | `iteration-2-tidy`, 11 items | ground-truth calibration (META-140) |
 | `iteration-3-retro.md` | `iteration-3-mdtab`, 6 items | ground-truth calibration (META-140) — the marquee case |
 | `live-recall-4c-retro.md` | `recall-4c`, 4 items | the live pipeline dispatch (META-141) |
+| `iteration-3-retro-0.2.0.md` | `iteration-3-mdtab`, re-run | the same record read again under `retro` 0.2.0 — **not** an independent measurement |
 | `*-journal-entry.md` | | the `retro` journal entry each execution appended to its epic |
 
 The two calibration reports are the **first** run of each engagement, unedited. `retro` 0.2.0
@@ -45,3 +46,11 @@ verified by modification time across `tracker/` and `docs/` after the fact, not 
 3. **`iteration-3-retro.md` P-12 against `meta/findings/FINDINGS.md` F-062.** The honest miss.
    The report found that fifteen human answers were never checked against each other and that two
    narrow an earlier one; it did not find what the record shows happening next.
+4. **`iteration-3-retro-0.2.0.md`, the same record after one procedure change**, for what the
+   miss cost and what fixing it bought. The observation *"A sentence standing on the
+   stakeholder's own words was repaired in place, and no question ever put their two statements
+   to them together"* is F-062, with the quote, the three documents it reached, the two
+   `answered-at` stamps and the `implement` entry that repaired it. Read `P-8` beside it: it
+   rediscovers F-064 and then **declines to file it as a defect**, because it checked the
+   installed contracts and found `DE8` and `kind: elicitation` already there — which is more
+   de-duplication than `meta/adr/ADR-0009-retrospective-reading.md` §8 claims a retro can do.
