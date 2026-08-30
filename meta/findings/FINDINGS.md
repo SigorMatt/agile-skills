@@ -2542,3 +2542,67 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   masking that swallows a real citation is the worse failure of the two: `EP-001` now quotes a
   marker beside a real one and must produce **nothing**, and `EP-002` carries an observation
   whose only marker is quoted and must be reported as citing nothing (25 codes, was 24).
+
+## F-076 — `implement`'s claims gate examines an empty window by construction, every time
+- Severity: correctness of enforcement, medium — F-033's class a **third** time, and the variant
+  `scripts/lib/scope.py` deliberately calls a pass
+- Component: methodology (implement), spec/doc-header.md §5, scripts/lint-claims
+- Symptom: `implement`'s hard `claims-are-sourced` gate is
+  `scripts/lint-claims --changed-since {{trunk}}` — a window over the documents this branch
+  changed. `spec/doc-header.md` §5 says in terms that **`implement` and `verify` do not write to
+  `docs/`**, and `plan` writes its ADRs and the overview on the trunk before the branch is cut.
+  So the window contains a document only if something wrote one on the branch, and nothing is
+  allowed to. The gate is not accidentally empty and not degenerate: it is empty *because the
+  toolkit's own rules make it so*, on every execution of `implement` in every engagement.
+- Why `scope.py` does not catch it: it models three states, and this is the middle one — *"real
+  and empty — the window is well formed and this execution touched nothing in it. That is a pass,
+  and it is honest, **because the comparison could have found something**."* That justification
+  is what fails here. The comparison could not have found something; the rule that forbids
+  `implement` to write documents guarantees it.
+- Evidence: found by the retro skill's live dispatch over `recall-4c`'s record
+  (`meta/evidence/retro-calibration/live-recall-4c-retro.md` P-1), which cites five journal
+  entries in which the engagement's own executions recorded the empty pass rather than banking
+  it; independently confirmed against the current kernel — `methodology/skills/implement/skill.yaml`
+  carries the gate with `--changed-since {{trunk}}`, and `spec/doc-header.md` §5 forbids the write
+  that would put anything in its scope. Corroborated from a second engagement:
+  `meta/evidence/retro-calibration/iteration-3-retro.md` reports the same mechanism at WI-0003
+  and names `plan`'s trunk commit as the reason.
+- Consequence: every `implement` execution records a hard gate as **passed** having examined
+  nothing it could ever have examined, and a reader of the journal cannot tell that from a gate
+  that looked. Twelve document defects in one banked engagement were caught by D12's *reading*
+  while this gate passed on all of them.
+- Direction: two moves and they are not alternatives.
+  1. **Say which it is.** A window that is empty *by construction* is a third state and should
+     print and journal as one — "nothing in this gate's scope could have been written by this
+     skill" — so that "passed over nothing" is never spelled the same as "passed".
+  2. **Decide whether the gate belongs on `implement` at all.** If §5 holds, it does not, and
+     the honest fix is to remove it and say why. If §5 does *not* hold — and it does not, in
+     practice: a D7/D12 send-back has had `implement` edit `docs/product/vision.md`
+     (`meta/harness/evidence/iteration-3/tracker/items/WI-0004/journal.md`) — then §5 is the
+     defect and this gate is right to be there. **The two cannot both stand**, and choosing
+     between them is the *document-as-deliverable* derivation, not a patch.
+- Status: **deferred**, gated on the *document-as-deliverable* class (F-057, F-058), which
+  META-128 triaged into exactly this question and which is an ADR-0006-shaped derivation rather
+  than a fix. Filed here with the mechanism proved so the derivation starts from evidence.
+  Recorded rather than patched deliberately: rescoping a hard gate on the strength of one
+  session's reading, in the session that also introduced the reader, is how a gate gets weakened
+  by the thing it was meant to check.
+
+## F-077 — a `path:line` citation resolves for ever, whatever is at the line
+- Severity: correctness of enforcement, low — but it is the citation form a reader trusts most
+- Component: scripts/lib/claims.py (`CitationResolver._resolve`)
+- Symptom: the workspace-path form accepts an optional `:NNN` suffix
+  (`spec/doc-header.md` §4a: `[src: src/store.py:42]`). The resolver split the line number off
+  and asked whether the **file** existed, so `[src: src/store.py:412]` resolved cleanly against a
+  forty-line file, and went on resolving after the code it pointed at moved or was deleted.
+- Consequence, and why it is worse than it looks: this is the most precise pointer the convention
+  offers and therefore the one a reader is least likely to re-check — it *looks* exact. It is
+  also the one most likely to rot, because code moves and documents do not.
+- Evidence: found by the retro skill over `iteration-2-tidy`'s record
+  (`meta/evidence/retro-calibration/iteration-2-retro.md` P-2); reproduced immediately against
+  the resolver — `resolve("scripts/board-gen:9999")` returned `''` on an 85-line file.
+- Status: **fixed** (commit 1971ffe) — a `path:line` citation is bounded by the file's length and
+  the message says what is wrong rather than blaming the path. Six cases in
+  `scripts/lib/selftest.py` (`run_citations`), including the last line, which must resolve.
+  A sweep over `examples/toy-project` and all seven fixtures before the change found **no**
+  existing citation that would newly fail, so nothing was retroactively invalidated.
