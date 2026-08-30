@@ -146,7 +146,30 @@ an acceptance — E3 exists so that "no" has somewhere honest to go.
 and reading the acknowledgment, which is already its job. An epic-level *question* may suspend
 the epic from anywhere (§4, and the F-013 note); an epic-level *ending* may not.
 
-The full derivation, including the endings that were rejected, is `meta/adr/ADR-0006`.
+### 3.6 An ending is not the same as being closed
+
+`scripts/engagement-state` distinguishes them, and the distinction is what makes the
+retrospective a step rather than a habit:
+
+| Verdict | Means |
+|---------|-------|
+| `ended` | the ending is recorded on the epic, and `artifacts/retro.md` does not exist yet |
+| `closed` | ended, **and** the engagement has read its own trail |
+
+At `ended`, the orchestrator dispatches `retro` on the epic once. **Nobody is waiting on it.**
+The stakeholder's engagement ended at sign-off and they have already been told the work is
+finished; the retrospective is the team studying itself before the engagement is archived. It
+therefore gates nothing: no workspace is invalid for lacking a report, no Definition of Done
+criterion mentions one, and an engagement that never runs it is ended and unread rather than
+broken.
+
+The step terminates for the same reason §3.5's does: writing the report changes the verdict, so
+the epic cannot be dispatched for this reason twice. `retro` writes exactly two things — the
+report and its own journal entry on the epic — and changes no status; the format is
+[`retro.md`](retro.md) and the derivation is `meta/adr/ADR-0009`.
+
+The full derivation of the endings, including the ones that were rejected, is
+`meta/adr/ADR-0006`.
 
 ## 4. Legal transitions
 
@@ -288,3 +311,4 @@ protecting.
 | 2 | 2026-08-22 | §4: statuses declare `suspendable` separately from `terminal`, so an epic at `open` can be suspended by a blocking question or an impasse (F-013). |
 | 3 | 2026-08-27 | §3.5: the four endings of an engagement, rest as the mechanical trigger, and the rule that every ending passes through the stakeholder (F-045, F-046). §4: transitions declare `applies_to`; the epic ending rows; the deferral row; an epic's terminal moves are gated. New §5: creation authority and `arose-from` provenance (F-029, F-042). Derived in ADR-0006. |
 | 4 | 2026-08-27 | §4: a rule elsewhere that requires an item to be at a status declares the move that satisfies it, in `pipeline.yaml`'s `rule_obligations`; the scope is checked against this table rather than remembered (F-050). |
+| 5 | 2026-08-30 | New §3.6: an ending is not the same as being closed. `engagement-state` gains the `closed` verdict, the orchestrator dispatches `retro` on `ended`, and the retrospective gates nothing (ADR-0009). |
