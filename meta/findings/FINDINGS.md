@@ -2433,3 +2433,38 @@ no code touched. This is the mechanization boundary stated precisely: lint-claim
 resolution mechanically; support remains a judgment check owned by D12/DE6 discipline, which
 held here. Recorded as the known limitation of the claims machinery rather than a defect;
 any future attempt to mechanize "support" starts from this instance as its fixture.
+
+# Builder session 4 (2026-08-30) — the retro skill
+
+## F-074 — the validator reads a journal bullet's first line and calls it the value
+- Severity: correctness of enforcement, medium — F-073's class, third occurrence, this time in
+  the loader every validator reads through
+- Component: scripts/lib/workspace.py (`load_journal`), scripts/validate-workspace
+  (`journal.item`, `check_journal_against_history`)
+- Symptom: `JOURNAL_BULLET_RE` matched a bullet and took `group("value")` — one line — as the
+  bullet's content. A journal bullet that wraps therefore reached every rule half-read. It was
+  invisible because it fails in both directions and neither is loud:
+  1. **`journal.item` passed on a wrap and would have failed without one.** The rule compared the
+     whole bullet value to the item ID, so `**Item:** EP-001` followed by an indented
+     parenthetical passed only because the parenthetical was on line 2 and the reader never saw
+     it. The same sentence written on one line is a false `journal.item` error on a correct
+     entry. `examples/toy-project/tracker/items/EP-001/journal.md:613` is that entry, and it has
+     been in the repository since META-067.
+  2. **`check_journal_against_history` passes quietly over a wrapped `**Status:**` bullet.** The
+     value is parsed for `X → Y`; a bullet broken after the arrow yields no claim at all, and an
+     entry claiming a move that never happened — F-019's exact failure, the one direction the
+     record could not detect — goes unchecked. This is the F-033 half: it examines nothing and
+     reports success.
+- Diagnosis: the same mistake F-073 named — *a rule about a record's structure implemented
+  against lines* — and it survived F-073's fix because that fix was applied in `lint-answers`,
+  where the defect had been observed, rather than to the thing both scripts were doing.
+- Evidence: found by META-135's migration, not by a run: moving `load_journal` onto
+  `scripts/lib/record.py` made the toy project's wrapped `**Item:**` bullet visible for the
+  first time and `./scripts/check` step "must-pass workspace" failed on it. Reproduced in both
+  directions before the fix.
+- Status: **fixed** (commit 33ec837) — two halves, because either alone leaves it half-read.
+  `load_journal` reads a bullet as a `record.Block`, so a bullet's value is its own line **and
+  its continuations**; and `journal.item` reads the item ID *out of* the bullet
+  (`ITEM_ID_IN_TEXT_RE`) instead of requiring the bullet to be nothing but the ID, which is what
+  the rule in `spec/journal-and-history.md` §2.2 actually says. Reverting either half fails
+  `./scripts/check`.
