@@ -3972,3 +3972,41 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `scripts/lib/engagement.py`, `scripts/engagement-state`, `scripts/lint-retro` (new),
   `fixtures/retro/` (new, with README and EXPECTED-CODES.txt), `scripts/check`,
   `adapters/claude-code/render.py`, re-rendered dist.
+
+## 2026-08-30 — META-139 — cluster 3, and a companion whose cause was not the reported one
+
+- **Unit:** META-139
+- **Inputs read:** `harness/run_iteration.py` (`worker_report`, `archive`, the worker turn's
+  status consumption), `harness/prompts/worker-turn.md` §F, `harness/runs/*.1/state.json`,
+  `harness/iterations/iteration-4*.json`, `scripts/board-gen`, `scripts/run-gate`,
+  `meta/harness/evidence/iteration-4c/run/{state.json,driver-console.log}` and turn 17's status
+  report, H-005 and H-017 in the ledger.
+- **Decisions:**
+  - **H-017's main half, as filed.** The prompt already asks for `# Harness status — turn N`, so
+    the driver reads that number instead of trusting the file's presence. It sits beside H-005's
+    mtime test rather than replacing it: the mtime catches a killed turn, the stamp catches a
+    turn that exited cleanly having written nothing, and 4c's turn 16 is only the second kind —
+    the file it left behind was not stale, it was somebody else's.
+  - **The companion's cause was not the one reported, and the ledger now says so.**
+    `board-gen`'s notice was already on stdout. What made four runs read it as a failure is that
+    `run-gate` merges a command's two streams into one tail, and the wording — *"not rewriting
+    the timestamp"* — describes a refusal. The fix is the wording. Implementing what the finding
+    literally asked for would have changed nothing, which is F-054's lesson in the same session
+    that filed F-074 about fixing where a defect was *seen* rather than what it *is*.
+  - **H-018, the archives.** `--fresh` left two run directories claiming `status: running` with a
+    live-looking pid. Nothing reads them today and the finding says so plainly — a wrong record
+    nothing currently reads is the expensive kind to find later. `archive()` now stamps the
+    directory terminal, removes the pid, and leaves an `ARCHIVED.md` for a person; the seven
+    existing archives were marked with the same function, additively, no log rewritten.
+  - **H-019, the budgets, fixed in both files.** `iteration-4-recall.json` and its `-4c-` twin
+    both said 24; `recall-4b` ended at turn 27. The mission named one file. Correcting one and
+    leaving the other is fixing the specimen instead of the class, which is the shape this
+    session exists to end, so both were corrected and the finding records that choice.
+  - **Toolkit and harness commits stayed separate**, per the standing instruction: `bb2a6f1` is
+    `board-gen`, `b9bc18b` is the driver, the configs and the tests.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, 29 steps. `harness/tests/test_harness.py` 74 tests, OK
+  (was 70) — four new: two for the turn stamp, two for the archive marker.
+- **Artifacts:** `harness/run_iteration.py`, `harness/tests/test_harness.py`,
+  `harness/iterations/iteration-4-recall.json`, `iteration-4c-recall.json`, `scripts/board-gen`,
+  re-rendered dist, `meta/findings/FINDINGS.md` (H-017 closed with a correction; H-018, H-019).

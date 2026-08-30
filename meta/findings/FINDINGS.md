@@ -2421,7 +2421,18 @@ implemented against lines or against a state — which is the shape to watch in 
   run. Minor companion: board-gen's "board already current; not rewriting" goes to stdout,
   not stderr, so no-op success stops reading as failure to stderr scanners (re-reported
   turns 10–15, 17).
-- Status: open
+- Status: **fixed** (commit b9bc18b, and bb2a6f1 for the companion), with one correction to what
+  the finding said. **The main half, as filed:** the prompt already asks the worker for a
+  `# Harness status — turn N` heading, so `worker_report()` now reads that number and refuses a
+  file stamped for another turn, alongside H-005's mtime test — the two catch different things,
+  and 4c's turn 16 is the case only the stamp catches, because it exited cleanly and the file it
+  left behind was not stale by mtime, it was somebody else's. The driver now says so on every
+  turn that writes no status of its own, not only on a killed one. Two regression tests.
+  **The companion's cause was not the one reported.** `board-gen`'s notice was already on stdout;
+  what made it read as a failure is that `run-gate` merges a command's stdout and stderr into one
+  tail, and the wording — *"not rewriting the timestamp"* — describes a refusal. It now reads
+  *"board is current; nothing to rewrite"*, which is the result rather than the abstention.
+  Fixing what the finding described would have changed nothing, which is F-054's lesson.
 
 ---
 
@@ -2468,3 +2479,38 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   (`ITEM_ID_IN_TEXT_RE`) instead of requiring the bullet to be nothing but the ID, which is what
   the rule in `spec/journal-and-history.md` §2.2 actually says. Reverting either half fails
   `./scripts/check`.
+
+
+## H-018 — an archived run directory says it is still running, with a pid to match
+- Severity: harness, operability — latent; nothing acts on it today, which is why it was cheap
+  to close now and would not have been later
+- Component: harness/run_iteration.py (`archive`)
+- Symptom: `--fresh` moves a run directory to `<name>.<n>` and leaves it exactly as it was. Two
+  of the seven archives on the owner's machine carry `"status": "running"` in `state.json` and a
+  `driver.pid` naming a process that has not existed for days. Nothing distinguishes an archive
+  from a live run except its name, and the driver's own orphan-reaper reads pid files.
+- Evidence: `harness/runs/iteration-3b-mdtab.1/state.json` and `iteration-4b-recall.1/state.json`
+  (`status: running`), each beside a `driver.pid`; `harness/runs/` is gitignored, so this is
+  local working state rather than banked evidence.
+- Consequence, stated honestly: **no tool reads these today.** The finding is that the record is
+  wrong, not that something is broken by it — and a record that is wrong in a way nothing
+  currently reads is exactly the kind that is expensive to discover later.
+- Status: **fixed** (commit b9bc18b) — `archive()` stamps the moved directory terminal:
+  `state.json` becomes `status: archived` with `archived-from-status` keeping what it was, an
+  `ARCHIVED.md` says the same thing to a person, and `driver.pid` is removed, since a pid that
+  names nothing can only mislead. The seven existing archives were marked with the same function,
+  additively — no log was rewritten. Two regression tests.
+
+## H-019 — the iteration-4 configs still budget 24 turns for a run that needs 30
+- Severity: harness, configuration — low, and only bites on a rerun
+- Component: harness/iterations/iteration-4-recall.json, iteration-4c-recall.json
+- Symptom: both declare `"max-turns": 24`. The two runs of that probe and persona were launched
+  with `--max-turns 30` from the command line, and `recall-4b` ended at **turn 27** — three turns
+  past what its own config would have allowed. A rerun from the config alone would be cut off
+  mid-engagement and the stop would read as a budget exhaustion rather than as a misconfiguration.
+- Evidence: `meta/harness/evidence/iteration-4b/` (E1 at turn 27/30) and `iteration-4c/run/state.json`
+  (`turn: 17`, launched at 30); `harness/iterations/iteration-4b-recall.json` already says 30.
+- Note: fixed in **both** files rather than only the one the mission named. Leaving a
+  known-wrong number in the sibling config while correcting its twin is fixing the specimen
+  instead of the class, which is the shape this session exists to end.
+- Status: **fixed** (commit b9bc18b)

@@ -435,7 +435,7 @@ then the two tests that judge it. Cluster 3 yields if the budget runs short.
 
 ### Cluster 3 — small fixes
 
-- [ ] **META-139** — H-017 (the driver stamps and validates the turn number in
+- [x] **META-139** — H-017 (the driver stamps and validates the turn number in
       HARNESS-STATUS; `board-gen`'s no-op notice to stdout), the stale `max-turns: 24` in
       `iteration-4-recall.json`, and the inert `*.1` run directories.
 
