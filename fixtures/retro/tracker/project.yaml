@@ -1,0 +1,11 @@
+project:
+  name: retro-fixture
+  trunk-branch: main
+  description: A fixture workspace for the retrospective report format.
+commands:
+  test: "true"
+  lint: "true"
+  build: "true"
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

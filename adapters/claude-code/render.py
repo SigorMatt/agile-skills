@@ -44,7 +44,7 @@ SCRIPTS_TO_SHIP = [
     "validate-workspace", "board-gen", "workspace-init", "new-item",
     "check-commit-refs", "check-verify-freshness", "run-gate", "transition",
     "journal-entry", "lint-claims", "lint-answers", "check-epic-signoff",
-    "engagement-state", "export",
+    "engagement-state", "export", "lint-retro",
 ]
 LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "record.py",
                "workspace.py", "board.py", "claims.py", "engagement.py", "scope.py",

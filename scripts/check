@@ -60,6 +60,10 @@ Steps, in order:
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
  18. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
+ 19a. the retrospective format             — scripts/lint-retro over fixtures/retro: a correctly
+                                               written report produces nothing, and seven
+                                               deliberately wrong ones produce exactly the codes
+                                               in EXPECTED-CODES.txt, compared as a multiset
  19. harness self-test                       — harness/tests/test_harness.py: the contamination
                                                assertions fire on transcripts that must be
                                                rejected, and pass on ones that must not
@@ -374,6 +378,82 @@ def check_rewritten_claim(runner: Runner) -> None:
         runner.emit(label, False, detail="\n".join(detail))
     else:
         runner.emit(label, True)
+
+
+def check_retro(runner: Runner) -> None:
+    """A retrospective says what it read and cites what it claims (spec/retro.md).
+
+    Two directions in one fixture, which is the pattern `lint-claims` established: a report a
+    person would actually write must produce **zero** findings, and seven deliberately wrong ones
+    must produce exactly the listed codes. The comparison is a multiset rather than a set, so a
+    rule that starts firing twice fails as loudly as one that stops firing.
+    """
+    fixture = os.path.join(ROOT, "fixtures", "retro")
+    expected_path = os.path.join(fixture, "EXPECTED-CODES.txt")
+    if not os.path.isfile(expected_path):
+        runner.skip("the retrospective format", f"{expected_path} does not exist")
+        return
+    linter = os.path.join(SCRIPTS, "lint-retro")
+
+    # The must-pass half first: the report EP-001 carries is what the format asks for.
+    for extra in ([], ["--require-scope"]):
+        clean = subprocess.run([sys.executable, linter, "EP-001", "--root", fixture] + extra,
+                               capture_output=True, text=True, cwd=ROOT)
+        if clean.returncode != 0:
+            runner.emit("the retrospective format", False, clean,
+                        detail="a correctly written retrospective must produce nothing"
+                               + (" (with --require-scope)" if extra else ""))
+            return
+
+    result = subprocess.run([sys.executable, linter, "--all", "--require-scope",
+                             "--root", fixture], capture_output=True, text=True, cwd=ROOT)
+    if result.returncode == 0:
+        runner.emit("the retrospective format", False, result,
+                    detail="the deliberately broken reports produced no findings")
+        return
+    actual = sorted(ordered_codes(result.stdout + result.stderr))
+    with open(expected_path, "r", encoding="utf-8") as handle:
+        expected = sorted(line.strip() for line in handle if line.strip())
+    if actual != expected:
+        missing = sorted(_multiset_difference(expected, actual))
+        extra = sorted(_multiset_difference(actual, expected))
+        detail = []
+        if missing:
+            detail.append("rules that stopped firing (or fire fewer times):")
+            detail += [f"  - {code}" for code in missing]
+        if extra:
+            detail.append("codes emitted that EXPECTED-CODES.txt does not account for:")
+            detail += [f"  + {code}" for code in extra]
+        detail.append("if this change is intended, update EXPECTED-CODES.txt in the same "
+                      "commit and say why")
+        runner.emit("the retrospective format", False, detail="\n".join(detail))
+        return
+    runner.emit(f"the retrospective format (must-pass, and {len(expected)} codes)", True)
+
+
+def ordered_codes(output: str) -> list:
+    """Every finding code in emission order, duplicates kept."""
+    found = []
+    for line in output.split("\n"):
+        for level in ("ERROR [", "WARNING ["):
+            index = line.find(level)
+            if index != -1:
+                start = index + len(level)
+                end = line.find("]", start)
+                if end != -1:
+                    found.append(line[start:end])
+    return found
+
+
+def _multiset_difference(left: list, right: list) -> list:
+    remaining = list(right)
+    surplus = []
+    for item in left:
+        if item in remaining:
+            remaining.remove(item)
+        else:
+            surplus.append(item)
+    return surplus
 
 
 def check_render(runner: Runner) -> None:
@@ -1371,6 +1451,7 @@ def main() -> int:
     check_example(runner)
     check_claims(runner)
     check_cross_answers(runner)
+    check_retro(runner)
     check_adr_correction(runner)
     check_signoff(runner)
     check_termination(runner)

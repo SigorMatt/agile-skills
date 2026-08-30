@@ -1,0 +1,351 @@
+#!/usr/bin/env python3
+"""Gate: a retrospective report says what it read, and cites what it claims.
+
+Usage:
+  scripts/lint-retro <EP-ID> [--root .] [--require-scope] [--quiet]
+  scripts/lint-retro --all [--root .] [--require-scope] [--quiet]
+
+Derived from `meta/adr/ADR-0009-retrospective-reading.md` and `spec/retro.md`. It checks the
+report's **shape and its evidence**, and it claims nothing about its conclusions — ADR-0009 §8
+states the boundary and this script does not exceed it.
+
+  1. **The report exists, for an engagement that has ended**, at
+     `tracker/items/<EP-ID>/artifacts/retro.md`, with the frontmatter `spec/retro.md` §1 defines.
+
+  2. **The four sections are present, in order.** `## What was read`, `## Engagement
+     retrospective`, `## Positive record`, `## Proposed toolkit findings`. The last is last
+     because it is the one that gets lifted out and sent upstream.
+
+  3. **The declared scope is real and is not degenerate** (`--require-scope`). Every item in the
+     engagement is named under `## What was read`, or the report says which were not read; the
+     frontmatter counts agree with the section and do not exceed what the workspace holds. A
+     retro that read nothing produces a report identical in shape to one that found nothing,
+     and this is the only place a program can tell them apart — F-033 and F-066 are the same
+     defect twice in this project's own scripts, and reading *is* this skill's whole job.
+
+  4. **Every observation and every proposal cites its evidence, and every citation resolves.**
+     The forms are `spec/doc-header.md` §4a's, resolved by `scripts/lib/claims.py` — the same
+     code that resolves an ADR's citations, so one vocabulary is checked once. The known limit
+     is F-001's standing residual: a citation that resolves is not a citation that supports the
+     sentence, and nothing here claims otherwise.
+
+  5. **Every proposal carries its required fields**, a classification from the closed set, and
+     the literal `PROPOSED`; and every `toolkit-defect` carries `Counterfactual:` and
+     `Recurrence:`. The classification itself is judgement and no linter decides it. What this
+     rule buys is that the distinguishing work was written down, so a wrong call is attributable
+     rather than absent (ADR-0008 §4's move, reused).
+
+Exit codes: 0 clean, 1 findings, 2 usage. Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import frontmatter  # noqa: E402
+from claims import CITATION_RE, CitationResolver, split_sources  # noqa: E402
+from record import entries, sections as split_sections  # noqa: E402
+from report import Report  # noqa: E402
+from workspace import Workspace, resolve_root  # noqa: E402
+
+ARTIFACT = "retro.md"
+SECTIONS = ["## What was read", "## Engagement retrospective", "## Positive record",
+            "## Proposed toolkit findings"]
+FRONTMATTER_FIELDS = ["engagement", "ending", "written", "items-read", "journal-entries-read",
+                      "proposals"]
+COUNT_FIELDS = ["items-read", "journal-entries-read", "proposals"]
+ENDINGS = ("E1", "E2", "E3", "E4")
+CLASSIFICATIONS = ("toolkit-defect", "project-circumstance", "observation")
+TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+PROPOSAL_ID_RE = re.compile(r"\bP-\d+\b")
+FINDING_ID_RE = re.compile(r"\b[FH]-\d{3}\b")
+ITEM_ID_RE = re.compile(r"\b(?:EP-\d{3}|WI-\d{4}|BUG-\d{4})\b")
+PROPOSAL_FIELDS = ["Classification", "Severity", "Component", "Symptom", "Direction", "Status"]
+TOOLKIT_DEFECT_FIELDS = ["Counterfactual", "Recurrence"]
+
+
+class RetroLinter:
+    def __init__(self, root: str, require_scope: bool = False) -> None:
+        self.root = os.path.abspath(root)
+        self.report = Report("lint-retro", self.root)
+        self.require_scope = require_scope
+        self.workspace = Workspace(self.root).load()
+        self.resolver = CitationResolver(self.root)
+
+    # ---- entry points ------------------------------------------------------------------
+
+    def check_all(self) -> None:
+        epics = sorted(self.workspace.epics(), key=lambda item: item.identifier)
+        if not epics:
+            self.report.note("no epics in this workspace; nothing to read")
+            return
+        for epic in epics:
+            self.check_epic(epic.identifier)
+
+    def check_epic(self, identifier: str) -> None:
+        epic = self.workspace.items.get(identifier)
+        if epic is None or epic.type != "epic":
+            self.report.error(self.root, 0, "retro.engagement.unknown",
+                              f"{identifier} is not an epic in this workspace")
+            return
+        path = os.path.join(epic.root, "artifacts", ARTIFACT)
+        if epic.status not in ("done", "blocked"):
+            # Not an error on its own: the report is due after the ending, and a workspace with
+            # a running engagement is the normal case. It is an error only if a report exists.
+            if os.path.isfile(path):
+                self.report.error(path, 0, "retro.engagement.not-ended",
+                                  f"{identifier} is at {epic.status!r}; a retrospective on a "
+                                  f"running engagement judges work that is not finished",
+                                  hint="the retro is dispatched after the ending is recorded "
+                                       "(ADR-0009 §2)")
+            return
+        if not os.path.isfile(path):
+            self.report.error(path, 0, "retro.missing",
+                              f"{identifier} has ended and has no artifacts/{ARTIFACT}",
+                              hint="an ended engagement is not closed until it has read its own "
+                                   "trail (spec/retro.md)")
+            return
+        try:
+            fields, body, body_line = frontmatter.load_file(path)
+        except frontmatter.FrontmatterError as exc:
+            self.report.error(path, exc.line, "retro.unparsable", exc.message)
+            return
+        fields = fields or {}
+        found = split_sections(body, body_line)
+        self.check_frontmatter(path, epic, fields)
+        self.check_sections(path, body, body_line, found)
+        self.check_citations(path, found, "## Engagement retrospective",
+                             "retro.observation.uncited", "observation")
+        self.check_citations(path, found, "## Positive record",
+                             "retro.observation.uncited", "entry")
+        proposals = self.check_proposals(path, found)
+        self.check_counts(path, epic, fields, found, proposals)
+        if self.require_scope:
+            self.check_scope(path, epic, found)
+
+    # ---- rules -------------------------------------------------------------------------
+
+    def check_frontmatter(self, path, epic, fields) -> None:
+        for field in FRONTMATTER_FIELDS:
+            if field not in fields:
+                self.report.error(path, 0, "retro.frontmatter.missing",
+                                  f"frontmatter has no {field!r}",
+                                  hint="spec/retro.md §1 — the counts are declared rather than "
+                                       "inferred because a retro's failure mode is silence")
+        if fields.get("engagement") not in (None, epic.identifier):
+            self.report.error(path, 0, "retro.engagement.mismatch",
+                              f"the report declares engagement {fields['engagement']!r} but is "
+                              f"filed under {epic.identifier}")
+        ending = fields.get("ending")
+        if ending is not None and ending not in ENDINGS:
+            self.report.error(path, 0, "retro.frontmatter.field",
+                              f"ending {ending!r} is not one of {', '.join(ENDINGS)}")
+        written = fields.get("written")
+        if written is not None and not TIMESTAMP_RE.match(str(written)):
+            self.report.error(path, 0, "retro.frontmatter.field",
+                              f"written {written!r} is not a UTC ISO-8601 timestamp",
+                              hint="read from a clock at the moment it is written "
+                                   "(spec/journal-and-history.md §0)")
+        for field in COUNT_FIELDS:
+            value = fields.get(field)
+            if value is not None and not isinstance(value, int):
+                self.report.error(path, 0, "retro.frontmatter.field",
+                                  f"{field} is {value!r}; it must be a number")
+
+    def check_sections(self, path, body, body_line, found) -> None:
+        present = [name for name in SECTIONS if name in found]
+        for name in SECTIONS:
+            if name not in found:
+                self.report.error(path, 0, "retro.section.missing",
+                                  f"the report has no {name!r} section",
+                                  hint="an absent section and an empty one are different "
+                                       "claims, and only one of them was made on purpose")
+        if len(present) > 1:
+            order = [found[name]["line"] for name in present]
+            if order != sorted(order):
+                self.report.error(path, order[0], "retro.section.order",
+                                  "the sections are out of order; "
+                                  + " then ".join(SECTIONS))
+        last = SECTIONS[-1]
+        if last in found:
+            after = [name for name, entry in found.items()
+                     if entry["line"] > found[last]["line"]]
+            if after:
+                self.report.error(path, found[last]["line"], "retro.section.order",
+                                  f"{last!r} is followed by {', '.join(sorted(after))}; it must "
+                                  f"be last",
+                                  hint="the proposals are lifted out and sent upstream; a "
+                                       "section that ends the document can be copied without "
+                                       "deciding where it stops")
+        for name in ("## Engagement retrospective", "## Positive record"):
+            if name in found and not found[name]["text"].strip():
+                self.report.error(path, found[name]["line"], "retro.section.empty",
+                                  f"{name!r} is empty",
+                                  hint="say `None.` and why; a reading that reports only faults "
+                                       "cannot be told apart from a lazy one")
+
+    def check_citations(self, path, found, section, code, noun) -> list:
+        """Every `###` entry in `section` cites something, and every citation resolves."""
+        if section not in found:
+            return []
+        block = found[section]
+        seen = entries(block["text"], block["line"] + 1, level=3)
+        for entry in seen:
+            text = "\n".join([entry.heading] + [b.text for b in entry.blocks])
+            citations = CITATION_RE.findall(text)
+            if not citations:
+                self.report.error(path, entry.line, code,
+                                  f"the {noun} {entry.title!r} cites nothing",
+                                  hint="an uncited observation is a refused write: it asks a "
+                                       "reader to believe you about a record they are holding")
+            for body in citations:
+                for part in split_sources(body):
+                    message = self.resolver.resolve(part)
+                    if message:
+                        self.report.error(path, entry.line, "retro.citation.unresolved",
+                                          f"in {entry.title!r}: {message}")
+        # Prose written outside any `###` entry is not checked for citations — it is the
+        # section's framing, not a claim about the record. A section that is *only* framing is
+        # caught by `retro.section.empty` above.
+        return seen
+
+    def check_proposals(self, path, found) -> list:
+        section = "## Proposed toolkit findings"
+        proposals = self.check_citations(path, found, section, "retro.observation.uncited",
+                                         "proposal")
+        for entry in proposals:
+            if not PROPOSAL_ID_RE.search(entry.title):
+                self.report.error(path, entry.line, "retro.proposal.unnumbered",
+                                  f"{entry.title!r} has no local P-n identifier")
+            if FINDING_ID_RE.search(entry.title):
+                self.report.error(path, entry.line, "retro.proposal.not-proposed",
+                                  f"{entry.title!r} allocates an upstream finding ID",
+                                  hint="the upstream sequence is not the consumer's to "
+                                       "allocate; every consumer would allocate the same "
+                                       "numbers (spec/retro.md §6)")
+            if "PROPOSED" not in entry.title:
+                self.report.error(path, entry.line, "retro.proposal.not-proposed",
+                                  f"{entry.title!r} is not marked PROPOSED",
+                                  hint="the block is designed to be copied out, and a copied "
+                                       "block that has lost the word is a finding nobody filed")
+            for field in PROPOSAL_FIELDS:
+                if entry.field(field) is None:
+                    self.report.error(path, entry.line, "retro.proposal.malformed",
+                                      f"{entry.title!r} has no `{field}:` field")
+            classification = entry.value("Classification").strip().strip("`").lower()
+            if classification and classification not in CLASSIFICATIONS:
+                self.report.error(path, entry.line, "retro.proposal.classification",
+                                  f"{entry.title!r} is classified {classification!r}, which is "
+                                  f"not one of {', '.join(CLASSIFICATIONS)}")
+            status = entry.value("Status").lower()
+            if status and "proposed" not in status:
+                self.report.error(path, entry.line, "retro.proposal.not-proposed",
+                                  f"{entry.title!r} declares status {status!r}; a retro files "
+                                  f"nothing, it proposes")
+            if classification == "toolkit-defect":
+                for field in TOOLKIT_DEFECT_FIELDS:
+                    if entry.field(field) is None:
+                        self.report.error(
+                            path, entry.line, "retro.proposal.unjustified",
+                            f"{entry.title!r} is a toolkit-defect with no `{field}:` field",
+                            hint="a proposal whose counterfactual cannot be written without "
+                                 "this project's subject matter is a project-circumstance; "
+                                 "writing the sentence is what exposes that (spec/retro.md §7)")
+        return proposals
+
+    def check_counts(self, path, epic, fields, found, proposals) -> None:
+        declared = fields.get("proposals")
+        if isinstance(declared, int) and declared != len(proposals):
+            self.report.error(path, 0, "retro.count.mismatch",
+                              f"the frontmatter declares {declared} proposal(s) and the report "
+                              f"contains {len(proposals)}")
+        entries_in_workspace = sum(len(item.journal) for item in self.engagement_items(epic))
+        read = fields.get("journal-entries-read")
+        if isinstance(read, int) and read > entries_in_workspace:
+            self.report.error(path, 0, "retro.scope.overclaimed",
+                              f"the report declares {read} journal entries read; the engagement "
+                              f"has {entries_in_workspace}")
+        items = fields.get("items-read")
+        if isinstance(items, int) and items > len(self.engagement_items(epic)):
+            self.report.error(path, 0, "retro.scope.overclaimed",
+                              f"the report declares {items} items read; the engagement has "
+                              f"{len(self.engagement_items(epic))}")
+
+    def engagement_items(self, epic) -> list:
+        return [epic] + sorted(self.workspace.children_of(epic.identifier),
+                               key=lambda item: item.identifier)
+
+    def check_scope(self, path, epic, found) -> None:
+        """`--require-scope`: the declared scope is the engagement's own, and it is not empty."""
+        section = "## What was read"
+        if section not in found:
+            return
+        text = found[section]["text"]
+        line = found[section]["line"]
+        if not text.strip():
+            self.report.error(path, line, "retro.scope.degenerate",
+                              "`## What was read` is empty; a gate that examined nothing is not "
+                              "a pass (F-033, F-066)")
+            return
+        named = set(ITEM_ID_RE.findall(text))
+        missing = [item.identifier for item in self.engagement_items(epic)
+                   if item.identifier not in named]
+        if missing:
+            self.report.error(path, line, "retro.scope.item-unread",
+                              f"`## What was read` does not name {', '.join(missing)}",
+                              hint="name every item, or say which were not read and why; a "
+                                   "retro that skipped an item silently has read a different "
+                                   "engagement")
+        entries_in_workspace = sum(len(item.journal) for item in self.engagement_items(epic))
+        if entries_in_workspace and not re.search(r"\d", text):
+            self.report.error(path, line, "retro.scope.degenerate",
+                              "`## What was read` declares no counts",
+                              hint="spec/retro.md §3 — the scope is checked against the "
+                                   "workspace rather than believed")
+
+
+def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
+    positional, options, flags = [], {}, set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--all", "--require-scope", "--quiet"):
+            flags.add(token[2:])
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"lint-retro: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+
+    if not positional and "all" not in flags:
+        print("lint-retro: usage: lint-retro <EP-ID> [--require-scope] | --all", file=sys.stderr)
+        return 2
+
+    root = resolve_root(options.get("root"), tool="lint-retro")
+    linter = RetroLinter(root, require_scope="require-scope" in flags)
+    if "all" in flags:
+        linter.check_all()
+    else:
+        for identifier in positional:
+            linter.check_epic(identifier)
+    if "quiet" in flags and linter.report.ok():
+        return 0
+    return linter.report.emit()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
