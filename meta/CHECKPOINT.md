@@ -1,27 +1,28 @@
 # CHECKPOINT
 
-## Current unit: META-136 — `spec/retro.md`, the retro report and the proposal format
+## Current unit: META-139 — cluster 3, the small fixes
 
-META-132..135 are committed: Phase V is planned, ADR-0009 is the design, `scripts/lib/record.py`
-is the shared record model and every lint now reads it (F-074 filed and fixed along the way).
-**Read `meta/adr/ADR-0009-retrospective-reading.md` before this unit** — §4 (two audiences),
-§5 (the classification and its two required fields), §6 (citations reuse `doc-header.md` §4a's
-seven forms) and §7 (non-vacuity) are what this spec writes down.
+META-132..138 are committed. The retro skill exists end to end: ADR-0009, `spec/retro.md`,
+`methodology/skills/retro/` 0.1.0, `next` 0.4.0's dispatch step, `scripts/lint-retro` and
+`fixtures/retro/`. `./scripts/check` is green across **29 steps**. `scripts/lib/record.py` is the
+shared record model and every lint reads it.
 
-**Steps**
-1. Write `spec/retro.md`: the schema of `tracker/items/<EP>/artifacts/retro.md` — required
-   sections in order, the observation format, the PROPOSED proposal format with its required
-   fields, the classification's closed set, the citation rule, and the `## What was read` scope
-   declaration.
-2. Add it to `spec/README.md`'s index and to `SPEC_TO_SHIP` in the renderer.
-3. Add `process-analyst` to `spec/skill-contract.md`'s persona enum (ADR-0009 §9) and to
-   `scripts/lint-skills`' persona list, with the revision row.
-4. No skill and no lint in this unit.
+**Steps** — three fixes, and this unit yields first if the budget runs short.
+1. **H-017**, harness: the driver stamps the turn number into the HARNESS-STATUS contract and
+   rejects (records "no status written") a status file whose heading does not match the turn
+   just run. Companion, toolkit side: `board-gen`'s "board already current" notice goes to
+   stdout, not stderr. **Separate commits** — toolkit and harness never share one.
+2. The stale `max-turns: 24` in `harness/iterations/iteration-4-recall.json`.
+3. The inert `*.1` run directories: a terminal marker or a driver startup sweep if it is cheap;
+   otherwise file the H-finding properly and defer it with the gate named.
+4. File anything new; do not fix silently.
 
-**Done when** `./scripts/check` is green, the box is ticked, the journal entry is written, and
-this file is advanced to META-137.
+**Done when** `./scripts/check` and `harness/tests/test_harness.py` are green, H-017's status is
+current in the ledger, the box is ticked, the journal entry is written, and this file is advanced
+to META-140.
 
-**Next unit:** META-137 — `methodology/skills/retro/`, the pipeline dispatch, the re-render.
+**Next unit:** META-140 — the ground-truth test. Write the honest workspace-visible subset into
+the journal **before** running anything.
 
 ## Standing instructions (still in force)
 

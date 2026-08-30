@@ -3912,3 +3912,63 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Artifacts:** `scripts/lib/record.py` (new), `scripts/lib/{workspace,claims,selftest}.py`,
   `scripts/{lint-answers,lint-claims,validate-workspace,transition}`,
   `adapters/claude-code/render.py`, re-rendered dist, `meta/findings/FINDINGS.md` (F-074).
+
+## 2026-08-30 — META-136, META-137, META-138 — the retro skill exists, contracted and gated
+
+- **Unit:** META-136 (`spec/retro.md`), META-137 (the skill and the dispatch), META-138
+  (`scripts/lint-retro` and `fixtures/retro/`)
+- **Inputs read:** `meta/adr/ADR-0009-retrospective-reading.md`; `spec/doc-header.md` §4a (the
+  seven citation forms), `spec/journal-and-history.md` §3, `spec/workspace-layout.md` §1.2,
+  `spec/skill-contract.md` §1–2; `methodology/skills/next/*` and `review-close/skill.yaml`;
+  `scripts/lib/{engagement,claims,record,report}.py`; `fixtures/ended-engagement/README.md` for
+  the gate-fixture convention; `adapters/claude-code/render.py`.
+- **Decisions:**
+  - **Dispatch keys on the engagement's state.** `engagement-state` gained a fifth verdict,
+    `closed` — ended *and* the report exists. `next` 0.4.0 gained step 7, which dispatches
+    `retro` on `ended`. The step terminates because writing the report changes the verdict, and
+    it is the same argument step 6 makes. `next` also gained a hard `ended-engagements-are-read`
+    manual gate, so "I did not notice the epic" is not available to it.
+  - **Nothing already valid became invalid.** `validate-workspace` does not require `retro.md`;
+    `examples/toy-project`, every fixture and every banked run are unchanged. The retro is
+    dispatched automatically and enforced nowhere, because after an ending there is nobody left
+    to escalate a refusal to.
+  - **The retro files nothing and asks nobody.** No question, no bug, no reopening — its
+    escalation section says so and gives the reason: after an ending a blocking question has
+    nowhere to resume to and a human-addressed one asks a person who has been told the work is
+    finished. The report is the escalation channel, and the contract's
+    `the-record-was-not-touched` gate is where that is checked.
+  - **`process-analyst` is the persona**, added to the enum with the revision row. Every other
+    role was on the team.
+  - **The quality bar is written into `process.md`, not assumed.** A consumer has no ledger to
+    calibrate against, so the procedure carries the bar itself — evidence first, class over
+    specimen, severity honest, positives recorded — plus two worked examples: one proposal that
+    travels and one that does not, differing only in whether its counterfactual can be written
+    without naming the project's subject.
+  - **The counterfactual is the mechanism against the failure mode.** Nothing can decide a
+    classification, so what is enforced is that the distinguishing sentence was *written*:
+    `Counterfactual:` and `Recurrence:` are required on every `toolkit-defect`, and the rule
+    that decides the class is "if you cannot write the counterfactual without this project's
+    subject matter, it is a `project-circumstance`". ADR-0008 §4's move, reused.
+  - **One citation vocabulary.** The report's evidence pointers are `doc-header.md` §4a's seven
+    forms, resolved by `claims.py`'s `CitationResolver` — the same code that resolves an ADR's.
+    F-001's residual is inherited verbatim and stated in both the spec and the script: a
+    citation that resolves is not a citation that supports the sentence.
+  - **The non-vacuity check is the one that matters.** A retro that opened no files and a
+    diligent retro of a flawless engagement produce the same empty report. `## What was read`
+    is declared, and `--require-scope` checks it against the workspace: every item named, counts
+    that do not exceed what exists. That is F-033 and F-066's rule applied to the one skill whose
+    entire job is reading.
+  - **The fixture carries both directions, and the must-pass half is the harder one.**
+    `fixtures/retro/EP-001` is a report a person would actually write, with one entry of each
+    classification, and it must produce **zero** findings — a rule nobody can satisfy is not a
+    rule. The other six epics produce exactly 24 codes, compared as a **multiset**, so a rule
+    that starts firing twice fails as loudly as one that stops.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, now **29 steps**. `lint-retro` mutation-tested (dropping
+  the `PROPOSED` check fails the fixture). `fixtures/retro` 24 codes.
+- **Artifacts:** `spec/retro.md` (new), `spec/README.md`, `spec/skill-contract.md` (revision 5),
+  `spec/workspace-layout.md`, `methodology/skills/retro/{skill.yaml,process.md}` (new, 0.1.0),
+  `methodology/skills/next/*` (0.4.0), `methodology/pipeline.yaml` (0.6.0),
+  `scripts/lib/engagement.py`, `scripts/engagement-state`, `scripts/lint-retro` (new),
+  `fixtures/retro/` (new, with README and EXPECTED-CODES.txt), `scripts/check`,
+  `adapters/claude-code/render.py`, re-rendered dist.

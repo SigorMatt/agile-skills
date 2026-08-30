@@ -426,11 +426,11 @@ then the two tests that judge it. Cluster 3 yields if the budget runs short.
 - [x] **META-135** — migrate `lint-answers`, `lint-claims` and `validate-workspace` onto
       `record.py`. Behaviour-identical: the 82 broken-workspace codes and all 28 gate steps
       stay green, unchanged, and that is the whole proof.
-- [ ] **META-136** — `spec/retro.md`: the retro report schema, the PROPOSED finding format,
+- [x] **META-136** — `spec/retro.md`: the retro report schema, the PROPOSED finding format,
       the citation rule (an uncited observation is a refused write), and the classification.
-- [ ] **META-137** — `methodology/skills/retro/` (`skill.yaml` + `process.md`),
+- [x] **META-137** — `methodology/skills/retro/` (`skill.yaml` + `process.md`),
       `pipeline.yaml` dispatch after an ending, contracts that hand off to it, re-render.
-- [ ] **META-138** — `scripts/lint-retro` + `fixtures/retro/` both ways + a `./scripts/check`
+- [x] **META-138** — `scripts/lint-retro` + `fixtures/retro/` both ways + a `./scripts/check`
       step: a retro whose observations lack citations must fail.
 
 ### Cluster 3 — small fixes
