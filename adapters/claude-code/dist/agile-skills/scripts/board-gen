@@ -68,7 +68,11 @@ def main(argv: list) -> int:
         return 0
 
     if existing and not board_lib.differs(rendered, existing):
-        print("board-gen: board already current; not rewriting the timestamp")
+        # Deliberately stdout, and deliberately worded as a result rather than as a warning.
+        # This is a success — the board says what the tracker says — and four regression runs
+        # reported it as a suspected failure because a caller scanning stderr sees only that a
+        # gate wrote something (H-017's companion, 4c turns 10-15 and 17).
+        print("board-gen: board is current; nothing to rewrite", file=sys.stdout)
         return 0
 
     with open(path, "w", encoding="utf-8") as handle:
