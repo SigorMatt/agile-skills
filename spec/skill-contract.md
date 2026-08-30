@@ -97,7 +97,7 @@ failure_status: blocked
 |-------|----------|------|-------|
 | `name` | yes | string | lowercase kebab-case; MUST equal the directory name |
 | `version` | yes | string | semantic version `MAJOR.MINOR.PATCH` |
-| `persona` | yes | enum | `product-analyst` \| `architect` \| `developer` \| `qa-engineer` \| `reviewer` \| `scheduler` |
+| `persona` | yes | enum | `product-analyst` \| `architect` \| `developer` \| `qa-engineer` \| `reviewer` \| `scheduler` \| `process-analyst` |
 | `purpose` | yes | string | one sentence, ≤ 160 characters, no line breaks |
 | `when_to_use` | yes | list of strings | ≥ 2 entries, each a **concrete situation**, not a restatement of the purpose |
 | `dispatch` | yes | mapping | `on_status`: list of statuses (may be empty); `item_types`: list of item types |
@@ -302,3 +302,4 @@ what makes "the toy run used skill X v0.1.0, and it went wrong here" an actionab
 | 2 | 2026-08-22 | §2.3 added: a transition is a checkpoint, never chained; commands are invoked by a CWD-independent path (F-019). |
 | 3 | 2026-08-22 | §2.2: the journal entry is written in the same command as the transition, not before it (F-017, F-019). |
 | 4 | 2026-08-27 | §2.3: the window in which the tracker is committed-invalid after a transition, and the rule that a skill does not end an execution inside it (F-038). |
+| 5 | 2026-08-30 | §1.1: `process-analyst` added to the persona enum. Every other role was on the team; the retro's standing rests on not having been (ADR-0009 §9). |

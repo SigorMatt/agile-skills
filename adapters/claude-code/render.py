@@ -52,7 +52,7 @@ LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "record.py",
 SPEC_TO_SHIP = [
     "README.md", "ids-and-statuses.md", "work-item.md", "journal-and-history.md",
     "question.md", "request.md", "doc-header.md", "dor-dod.md", "skill-contract.md",
-    "workspace-layout.md",
+    "workspace-layout.md", "retro.md",
 ]
 
 # A skill that must not be able to ask the human has the capability removed by the runtime,

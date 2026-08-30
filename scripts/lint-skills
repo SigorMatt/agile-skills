@@ -31,7 +31,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 
-PERSONAS = {"product-analyst", "architect", "developer", "qa-engineer", "reviewer", "scheduler"}
+PERSONAS = {"product-analyst", "architect", "developer", "qa-engineer", "reviewer",
+            "scheduler", "process-analyst"}
 HUMAN_INTERACTION = {"none", "direct", "via-questions"}
 OUTPUT_KINDS = {"file", "append", "branch", "commit", "status"}
 OUTPUT_WHEN = {"always", "on-success", "on-failure", "conditional"}

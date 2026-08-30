@@ -21,6 +21,7 @@ Nothing here names a particular agent runtime, tool, CLI, or vendor. That is a h
 | [`dor-dod.md`](dor-dod.md) | Definition of Ready and Definition of Done, per item type |
 | [`skill-contract.md`](skill-contract.md) | `skill.yaml` schema and what a `process.md` must contain |
 | [`workspace-layout.md`](workspace-layout.md) | the full directory tree a workspace must have, and which files are generated |
+| [`retro.md`](retro.md) | `artifacts/retro.md` — the retrospective report and the PROPOSED finding format it exports |
 
 ## Normative language
 
