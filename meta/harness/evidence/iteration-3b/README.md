@@ -28,3 +28,8 @@ to force); `tracker/items/EP-001/journal.md`. Findings: F-069, F-070, F-071 and 
 record, in `meta/findings/FINDINGS.md`.
 
 Read-only history. Nothing here is edited after banking.
+
+---
+Correction (2026-08-31): line 27's "F-071" matches no ledger entry and never did; the
+batch filed F-069, F-070 and H-016 (commit f737eae). See FINDINGS.md F-071 tombstone
+and F-099.

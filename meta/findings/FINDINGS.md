@@ -2707,6 +2707,16 @@ failures, masking that swallows a real citation is the one a reader can see and 
 document; not masking is the one that makes the document unwritable.** Worth revisiting only if a
 second occurrence shows the error is common rather than incidental.
 
+## F-071 — number never filed (tombstone, 2026-08-31)
+- This number was skipped: the 3b findings pass (commit f737eae) filed F-069, F-070 and
+  H-016; meta/harness/evidence/iteration-3b/README.md:27 cites "F-071", which matches no
+  entry and never did — a mislabel of H-016. Confirmed: the README (b2cbb9d) was committed
+  66 seconds before the findings commit and named three consecutive F-numbers before they
+  were written; the third finding was a harness finding and took H-016 instead. The
+  journal's artifacts line for the pass names F-069, F-070, F-072 and H-016, never F-071,
+  and F-071 appears in no committed version of this file. The number is burned, not
+  reused. The class this exposed is filed as F-099.
+
 # Findings accepted from retro 0.1.0 proposals (owner triage 2026-08-31)
 
 ## F-080 — a skill that makes two transitions has one gate list, and nothing says what its first entry records
@@ -3258,3 +3268,18 @@ report with only its heading and status bullet changed.
 Recall against the planted ground truth remains 0.1.0's reading: **1 full hit and 2 partial of
 5**. The 0.2.0 re-run is not a measurement and is not counted here (`meta/FINAL-REPORT-4.md`
 §4.2).
+
+## F-099 — Citations from banked evidence into the ledger are resolved by nothing
+- Severity: correctness of the record, medium — F-024's class, opposite direction
+- Component: scripts/check (findings-citations step), meta/harness/evidence conventions
+- Symptom: iteration-3b's banked README cites "F-071"; no such entry exists or ever did.
+  The check "findings citations resolve" resolves citations within FINDINGS.md and never
+  resolves references into it from evidence READMEs — so the durable record can cite
+  phantom findings indefinitely. Found by arithmetic during the retro triage (expected 98,
+  got 97).
+- Evidence: meta/harness/evidence/iteration-3b/README.md:27 vs commit f737eae; ops
+  session report 2026-08-31; the F-071 tombstone above.
+- Direction: the findings-citation step also scans meta/harness/evidence/**/README.md
+  (and meta/**.md generally) for F-###/H-### references and requires each to resolve to a
+  ledger heading; a tombstone counts as resolving.
+- Status: open
