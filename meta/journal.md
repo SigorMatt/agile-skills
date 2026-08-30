@@ -3743,3 +3743,60 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `examples/toy-project` ADR-0010, `fixtures/broken-workspace` (ADR-0002 rebuilt, ADR-0003 added),
   `adapters/claude-code/render.py`, re-rendered dist.
 - **In flight:** 4b relaunched 2026-08-30T01:26Z from a wiped project against the repaired kernel.
+
+---
+
+## 2026-08-30 — META-129 (part two), META-131, META-130 — 4b read, the ledger closed, the verdict written
+
+- **Unit:** META-129 (4b), META-131 (the five accepted fixes), META-130 (the report)
+- **Inputs read:** `harness/runs/iteration-4b-recall/SIM-LOG.md`; the recall-4b project's
+  `tracker/items/EP-001/artifacts/review.md` (both passes), `questions/Q-004.md` and `Q-005.md`;
+  the four gates over the finished workspace; `scripts/{check-commit-refs,lint-skills,
+  validate-workspace,lib/claims.py}`; `meta/ROADMAP.md` §2 and its 2026-08-29 addendum.
+- **Decisions:**
+  - **4b meets its condition on the mission's own definition of it.** The mission spells out what
+    "signs with zero new findings" means in three clauses — the claims gate examines a real scope,
+    nothing is legally unfixable, the driver labels the engagement `epic-done` — and all three
+    hold: 13 documents examined, `Accepted gaps: None new`, `epic-done` at turn 27 of 30. That the
+    audit *also* found a defect in a script three days old is the harness working, and the report
+    says so rather than letting the two readings blur.
+  - **F-073 was reproduced before it was believed.** 4b's reviewer described two defects in
+    `lint-answers` precisely; I ran both against the script before accepting either. Both were
+    real, and the second — `Checked against:` read as one line, leaving six of nine named answers
+    unresolved — is the worse one, because it passes quietly over what it did not read. The first
+    fails loudly on good work, which is survivable.
+  - **The fixture now carries the shapes, not just the rules.** `WI-0003/Q-001` has a wrapped
+    declaration, a wrapped verdict *and* a closing sentence after the last bullet, and must
+    produce nothing; `WI-0004/Q-002` hides its unresolvable ID on the continuation line, so a
+    linter that reads one line reports a clean check and the fixture's code set moves. Reverting
+    either half of the fix fails the gate — the second only after that second change, which is
+    why it was made.
+  - **F-054's real mechanism was not the one the finding named.** The citation resolver already
+    strips backticks; what blanked the path was the code-span *mask* that F-037 added to stop a
+    quoted citation being read as one. Masking preserves offsets, so a marker surviving in the
+    masked line is real and its body can be read from the raw line. Fixing what the finding
+    described rather than what was happening would have changed nothing.
+  - **F-059 was fixed as the class the finding asked for, in one direction only.** A gate named in
+    prose must exist in the contract; a contract gate the prose does not name by id is ordinary,
+    because `## Journaling` says "all four" and `run-gate --all` runs them regardless. Reading
+    prose with a regex costs a list of known non-gates, and that cost is in the script where a
+    reader will meet it.
+  - **The verdict is positive and its qualifications are in the same section, not a footnote.**
+    All three ROADMAP §2 conditions hold. Three things sit beside that: "proven" means the
+    conditions hold and not that the toolkit is defect-free (seven findings from two runs, all
+    fixed); **no run has been made against the final state of the kernel** — 4b ran one commit
+    behind it, and that is the next session's first unit; and F-069 and F-073 are the same mistake
+    twice, a rule about a record's structure implemented against lines or against a state, which
+    is the shape to watch.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — **28 steps**, from 19 at the start of the session.
+  `fixtures/broken-workspace` **82 codes** (was 69). Every fix in this unit mutation-tested.
+- **Artifacts:** `meta/harness/evidence/iteration-4b/` (+ README), `meta/FINAL-REPORT-3.md`
+  (complete), `meta/findings/FINDINGS.md` (F-073 and the 4b positive record; F-035, F-048, F-054,
+  F-056, F-059 closed; the 2026-08-30 ROADMAP §2 addendum), `scripts/lint-answers`,
+  `scripts/check-commit-refs`, `scripts/lint-skills` (`check_gate_names`),
+  `scripts/lib/{claims,workspace}.py`, `scripts/validate-workspace`, `scripts/check`
+  (`check_process_gate_names`), `methodology/skills/plan/*` (0.4.1),
+  `fixtures/{crossed-answers,broken-workspace}`, re-rendered dist.
+
+**Phase IV ends here.** The kernel is proven; the gated tracks are the owner's to open.
