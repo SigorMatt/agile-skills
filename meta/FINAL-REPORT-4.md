@@ -11,7 +11,7 @@ tests (was 70). `scripts/lib/selftest.py` is 252 cases (was 213). `fixtures/brok
 
 ## 1. What was built
 
-**`retro` 0.2.0** — a ninth skill, and the first one whose subject is the record rather than the
+**`retro` 0.2.1** — a ninth skill, and the first one whose subject is the record rather than the
 work. It reads an ended engagement's trail and writes one report with two audiences: an
 engagement-local retrospective for the team that ran it, and candidate toolkit findings marked
 `PROPOSED`, in the ledger's own format, for a human to send upstream. It is the community
@@ -237,7 +237,7 @@ written three units later in the session that made *one parser, every reader* it
 
 ## 6. Findings
 
-Eight entries this session — F-074 … F-078, H-017 … H-019 — plus an addendum to F-061.
+Nine entries this session — F-074 … F-079, H-017 … H-019 — plus addenda to F-061 and F-075.
 
 | # | What | Status |
 |---|------|--------|
@@ -246,6 +246,7 @@ Eight entries this session — F-074 … F-078, H-017 … H-019 — plus an adde
 | F-076 | `implement`'s claims gate examines an empty window **by construction** | **deferred** |
 | F-077 | a `path:line` citation resolved for ever, whatever was at the line | fixed |
 | F-078 | the retro's step 5 named a shape instead of instructing the join | fixed (0.2.0) |
+| F-079 | the retro must journal and had nowhere legal to put the entry body | fixed (0.2.1) |
 | H-017 | a turn that exits without writing a status leaves the driver reading a stale one | fixed, with a correction to its companion's cause |
 | H-018 | an archived run directory says it is still running, with a pid | fixed |
 | H-019 | the iteration-4 configs budget 24 turns for a run that needs 27 | fixed |
@@ -267,7 +268,9 @@ reason** rather than skipped or passed, on a gate failing for something outside 
 All four declared a scope that `--require-scope` checked against the workspace and accepted. Three
 of the four wrote a `project-circumstance` entry rather than inflating it, and one withheld two
 proposals because the installed toolkit already fixed them, putting them in the positive record
-instead.
+instead. Two of the four hit a gate on their own correct work and **neither weakened the work to
+pass it**: one declared a stray scratch file in the gate's own bullet rather than tidying it away
+(F-079), and one recorded `workspace-valid` as failed with its reason on every run.
 
 ---
 
@@ -275,7 +278,7 @@ instead.
 
 | Skill | From | To | Why |
 |-------|------|----|-----|
-| `retro` | — | **0.2.0** | new; then the set reading and the citation join (F-078) |
+| `retro` | — | **0.2.1** | new; the set reading and the citation join (F-078); the journal body on stdin (F-079) |
 | `next` | 0.3.0 | **0.4.0** | orchestrator step 7 and the `ended-engagements-are-read` gate |
 
 `pipeline.yaml` 0.5.0 → **0.6.0**. `spec/skill-contract.md` revision 5 (`process-analyst`),

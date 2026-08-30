@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: living document. Owner: project owner. Last updated: 2026-08-21.
+Status: living document. Owner: project owner. Last updated: 2026-08-30.
 Supersedes the roadmap sketch in meta/FINAL-REPORT.md §5 where they differ.
 
 ## 1. What this project is (positioning)
@@ -116,3 +116,33 @@ iteration 4, fresh project, final kernel at 735095c (+5ef81b0 config), 28-step g
 **The kernel is proven. The gated tracks are open:** retro skill first (per §3), then the
 Codex CLI adapter, then content packs under F-010's rules. New-finding cadence continues to
 govern: any structural finding class re-closes the affected track until fixed.
+
+
+## §3 stamp (2026-08-30) — the retro skill is built; the track is open, not finished
+
+Builder session four delivered the first gated-track item (`meta/FINAL-REPORT-4.md`). `retro`
+0.2.1 ships as the ninth skill: it reads an ended engagement's record — tracker, docs, questions,
+journals, history, git log, and the installed contracts — and writes one report with an
+engagement-local retrospective and a set of candidate toolkit findings marked `PROPOSED` for a
+human to triage upstream. `next` dispatches it after an ending on `engagement-state`'s new
+`closed`/`ended` distinction; it is read-only over the engagement it audits, and it gates nothing.
+
+**What is proven, by execution.** The pipeline dispatch works end to end on a real ended
+engagement, the read-only boundary held in four independent runs, and the skill found a live
+defect in the current kernel that nothing else had (**F-076**) plus the mechanism behind a finding
+this ledger had been holding open (**F-061**'s addendum).
+
+**What is not proven: recall.** Against a ground-truth subset written down before the runs, the
+first honest reading rediscovered **one of five** workspace-visible findings outright, two more in
+part, and missed two. A procedure fix afterwards raised that sharply, and the report says in three
+places that the fix was made after reading the miss and is therefore not a measurement.
+
+**The track stays open.** The next step is the one thing no banked record can test: run `retro`
+inside a live harness iteration, where the product source and the commit history are present, and
+read its report as part of that iteration's findings pass. A held-out engagement — banked, ground
+truth written, the skill unchanged afterwards — is what a real recall number would take.
+
+**Still gated behind this, in order:** the Codex CLI adapter, then content packs under F-010's
+rules. Neither is opened by this session. The new-finding cadence continues to govern: F-076 has
+joined the *document-as-deliverable* class (F-057, F-058) and sharpened it into a question with
+two answers that cannot both be right.
