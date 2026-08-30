@@ -217,12 +217,20 @@ Then, for any item:
 | `tracker/items/<ID>/journal.md` | The detail: what each skill read, decided, ran, and which gates passed |
 | `tracker/items/<ID>/questions/` | What was unclear, who decided it, and which files changed as a result |
 | `tracker/items/<ID>/artifacts/` | The plan, the implementation report, the verification report, the review |
+| `tracker/items/<EP-ID>/artifacts/retro.md` | On an epic, after the engagement ended: what the record shows about how the work went, and the toolkit findings it proposes |
 | `git log --grep <ID>` | Every commit for that item |
 
 `docs/architecture/adr/` holds the decisions with their alternatives and their reversibility.
 
 The rule of thumb: **`history.md` tells you what happened, `journal.md` tells you why.** Scan
 the first; open the second when a line in it surprises you.
+
+**The retrospective is worth reading twice.** Its first half is about your engagement and is
+read once. Its second half — `## Proposed toolkit findings` — is written to be lifted out and
+sent upstream: candidate defects in the skills, the specs or the scripts, each marked `PROPOSED`
+with evidence pointing back into your own record. Nothing is filed on your behalf; a person
+decides what travels. Entries classified `project-circumstance` are about your engagement rather
+than the toolkit, and they stay where they are.
 
 `examples/toy-project/` is a complete worked example, including
 [`AUDIT.md`](examples/toy-project/AUDIT.md) — an independent reconstruction of the run from the
