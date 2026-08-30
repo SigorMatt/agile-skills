@@ -4,7 +4,7 @@ description: "Read an ended engagement's record and report what it shows about h
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: retro
-  methodology-version: 0.2.0
+  methodology-version: 0.2.1
   persona: process-analyst
   human-interaction: none
 ---
@@ -244,6 +244,13 @@ Append one entry to `tracker/items/<EP-ID>/journal.md` for this execution, with 
 `spec/journal-and-history.md` §2.2 requires. You write no history row and change no status, so
 `**Status:**` reads `<status>` → `<status>` (unchanged) — the entry is written on its own with
 the journal tool.
+
+**Pipe the body in; do not write it to a file in the workspace.** The journal tool takes
+`--body-file -` and reads the entry from standard input. You are the one skill for which a
+scratch file inside the workspace is a **contract violation** — `the-record-was-not-touched`
+counts every file this execution wrote, and a temporary file at the workspace root is a file this
+execution wrote, however briefly it lived. If you must use a file, put it outside the workspace
+and say where in the gate's bullet.
 
 - `**Inputs read:**` is the same list as `## What was read` in the report. If the two disagree,
   one of them is wrong and it is not the one a linter checks.

@@ -2670,3 +2670,39 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   **The honest limit on this fix:** it was made after reading the miss, so the re-run recorded
   beside it is a check that the new instruction is followable, **not** an independent measurement.
   The first run's numbers stand as the calibration reading and are not restated.
+
+## F-079 — the retro must journal, and its procedure never said where the entry body may live
+- Severity: methodology, low — but it makes the skill's own hard gate unsatisfiable by the route
+  a worker will reach for first
+- Component: methodology (retro 0.2.0, `process.md` `## Journaling`)
+- Symptom: `retro`'s `the-record-was-not-touched` gate counts every file the execution wrote and
+  requires the answer to be exactly two. Writing a journal entry means calling the journal tool,
+  which takes `--body-file <path>` — and nothing in the procedure said where that path may be.
+  The 0.2.0 re-run wrote `retro-entry.tmp.md` **at the workspace root**, noticed, moved it out
+  before using it, and declared the whole episode in the gate's own bullet rather than tidying it
+  away. That is the right behaviour on a rule that gave it nowhere to stand.
+- Diagnosis: F-050's shape in miniature — a rule whose satisfying move is not stated. The route
+  exists and is documented in the tool: `--body-file -` reads the body from standard input, so no
+  file need exist anywhere. The skill that most needs to know that was the one skill not told.
+- Evidence: the executing subagent's own report of the 0.2.0 re-run, and the
+  `the-record-was-not-touched` bullet in
+  `meta/evidence/retro-calibration/iteration-3-journal-entry-0.2.0.md`, which declares it.
+- Status: **fixed** — `retro` 0.2.1: `## Journaling` names `--body-file -`, says why this skill in
+  particular may not write a scratch file into the workspace, and says what to do if a file is
+  unavoidable — put it outside the workspace and name it in the gate's bullet.
+
+### Addendum to F-075 (2026-08-30, the 0.2.0 re-run) — what the mask costs, said rather than buried
+The fix masks inline code spans before reading citations, and an **unbalanced** backtick in prose
+therefore blanks everything to the next one — which can swallow a real citation and report a cited
+observation as citing nothing. It happened once, on the first `lint-retro` run of the 0.2.0
+re-run, and the author rewrote the paragraph: the same rewording-to-satisfy-a-parser this finding
+was filed about, now on the other side of the fix.
+
+Left as it is, deliberately, and the reasoning is on the record rather than implied. `lint-claims`
+has behaved this way since F-037 and F-054 examined it directly; an unbalanced code span is a
+markdown authoring error that renders wrongly too, so the linter is agreeing with the renderer
+rather than inventing a rule; and the alternative — reading citations out of unmasked text — is
+F-075 itself, where a report that *explains* the convention cannot pass its own gate. **Of the two
+failures, masking that swallows a real citation is the one a reader can see and fix in the
+document; not masking is the one that makes the document unwritable.** Worth revisiting only if a
+second occurrence shows the error is common rather than incidental.

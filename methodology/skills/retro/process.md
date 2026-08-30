@@ -218,6 +218,13 @@ Append one entry to `tracker/items/<EP-ID>/journal.md` for this execution, with 
 `**Status:**` reads `<status>` → `<status>` (unchanged) — the entry is written on its own with
 the journal tool.
 
+**Pipe the body in; do not write it to a file in the workspace.** The journal tool takes
+`--body-file -` and reads the entry from standard input. You are the one skill for which a
+scratch file inside the workspace is a **contract violation** — `the-record-was-not-touched`
+counts every file this execution wrote, and a temporary file at the workspace root is a file this
+execution wrote, however briefly it lived. If you must use a file, put it outside the workspace
+and say where in the gate's bullet.
+
 - `**Inputs read:**` is the same list as `## What was read` in the report. If the two disagree,
   one of them is wrong and it is not the one a linter checks.
 - `**Gates:**` lists all five from the contract: `engagement-has-ended`,

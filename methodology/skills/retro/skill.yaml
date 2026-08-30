@@ -1,5 +1,5 @@
 name: retro
-version: 0.2.0
+version: 0.2.1
 persona: process-analyst
 purpose: Read an ended engagement's record and report what it shows about how the work went, with toolkit findings proposed for triage.
 
