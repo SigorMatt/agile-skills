@@ -4066,3 +4066,53 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Gates:** none — this half of the unit writes down what the next half is measured against.
 - **Artifacts:** this entry; two scratch workspaces with the toolkit installed and their
   `RECORD-NOTICE.md`.
+
+## 2026-08-30 — META-141 — the live test: `next` dispatched retro, and the engagement closed
+
+- **Unit:** META-141
+- **Inputs read:** the scratch copy of `recall-4c`'s workspace after the run — its
+  `tracker/items/EP-001/artifacts/retro.md` (451 lines) and the `retro` journal entry appended to
+  the epic; `engagement-state --all` before and after; the file mtimes across `tracker/` and
+  `docs/`; the executing subagent's report.
+- **Decisions:**
+  - **The dispatch works as designed, end to end, and it was verified rather than believed.**
+    A context-free subagent given only the workspace path ran `next`; `next` reached step 7,
+    quoted the verdict — *"EP-001 ended … the engagement has ended and the retrospective has not
+    been written"* — and dispatched `retro`. After the report was written, `next` run twice
+    reported **`closed`** and stopped. I checked the end state myself: `engagement-state` reports
+    `closed`, and the **only two files with a modification time after the copy was made** are
+    `EP-001/journal.md` and `EP-001/artifacts/retro.md`. The read-only boundary held under a real
+    execution, not merely in the contract.
+  - **The report's quality is the result worth recording.** Eight observations, six
+    positive-record entries, six proposals, every one cited. Two of the proposals are findings I
+    would have been glad to receive: *a claims gate scoped to a work item's branch diff is empty
+    by construction* — with five journal entries in which the engagement's own executions noticed
+    and said so — and *a claim quantified over a family is audited by opening the family's shared
+    fixture, and the exception lives in a member*, which is F-001's residual ("resolution is not
+    support") sharpened into something a rule could bite on.
+  - **The classification machinery did the work it was designed for, visibly.** The journal entry
+    records the two calls that were close and why they went as they did, and one candidate was
+    filed as a `project-circumstance` on the counterfactual test — *"its counterfactual cannot be
+    written without 'two flashcards may share a front side'"*. That is the sentence ADR-0009 §5
+    exists to force, written by an execution that had never seen the ADR, only the procedure.
+  - **Four candidates were deliberately left as observations with no proposal**, which is the
+    other half of the same discipline: an observation is not a change.
+  - **`workspace-valid` failed, honestly, for the copy's known gap.** 48
+    `claim.citation.unresolved` errors, all naming the product source that was never banked, the
+    same count before and after the execution, recorded as **failed with that reason** rather
+    than skipped or passed. That is what `RECORD-NOTICE.md` asked for and it is what a consumer
+    would do with a gate failing for a reason outside the execution.
+  - **The test found a defect, and it is the one worth having: F-075.** `lint-retro` read a
+    citation quoted inside backticks as a real one, failed the gate three times on correct prose,
+    **and the execution reworded its prose until the gate passed** — F-073's pathology exactly.
+    The cause is F-037's class: `claims.py` has carried `mask_code` for this since F-037 and
+    `lint-claims` uses it; `lint-retro`, written three units later in the same session that made
+    "one parser, every reader" its theme, did not. Reproduced against `CITATION_RE` before it was
+    believed, fixed, and both directions are now permanent in `fixtures/retro` — because masking
+    that swallows a real citation is the worse failure of the two.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, 30 steps, `fixtures/retro` now **25 codes** (was 24).
+- **Artifacts:** `scripts/lint-retro`, `fixtures/retro/{EP-001,EP-002}/…/retro.md`,
+  `fixtures/retro/{EXPECTED-CODES.txt,README.md}`, re-rendered dist,
+  `meta/findings/FINDINGS.md` (F-075). The live workspace itself is scratch and is not banked;
+  its report and journal entry are quoted where they matter in `meta/FINAL-REPORT-4.md`.
