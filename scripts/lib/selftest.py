@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
+import claims as claims_lib  # noqa: E402
 import record as record_lib  # noqa: E402
 import report as report_lib  # noqa: E402
 import scope as scope_lib  # noqa: E402
@@ -672,6 +673,27 @@ def run_record(results) -> None:
                   ["a", "str | None", "b"])
 
 
+def run_citations(results) -> None:
+    """`path:line` is the most precise citation form, and it was the least checked (F-077)."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as root:
+        os.makedirs(os.path.join(root, "tracker", "items"), exist_ok=True)
+        target = os.path.join(root, "notes.md")
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write("one\ntwo\nthree\n")
+        resolver = claims_lib.CitationResolver(root)
+        results.check("citations/a path with no line resolves", resolver.resolve("notes.md"), "")
+        results.check("citations/a line inside the file resolves",
+                      resolver.resolve("notes.md:2"), "")
+        results.check("citations/the last line resolves", resolver.resolve("notes.md:3"), "")
+        beyond = resolver.resolve("notes.md:400")
+        results.check("citations/a line past the end does not resolve", bool(beyond), True)
+        results.check("citations/the message says what is wrong",
+                      "points past the end" in beyond, True)
+        results.check("citations/a missing file still reports the file",
+                      "does not exist" in resolver.resolve("gone.md:2"), True)
+
+
 def main() -> int:
     results = Results()
     run_accept(results)
@@ -680,6 +702,7 @@ def main() -> int:
     run_frontmatter(results)
     run_report(results)
     run_record(results)
+    run_citations(results)
     run_workspace(results)
     run_root_resolution(results)
     run_escaping(results)

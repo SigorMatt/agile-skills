@@ -20,6 +20,8 @@ __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
            "looks_like_code", "mask_code", "masked_lines"]
 
 CITATION_RE = re.compile(r"\[src:\s*(?P<body>[^\]]+)\]")
+# The `:NNN` suffix of a workspace-path citation, and nothing else after it.
+PATH_LINE_RE = re.compile(r"^:(\d+)$")
 CODE_SPAN_RE = re.compile(r"(`+)(?:(?!\1).)*?\1", re.DOTALL)
 
 # The words that turn a description into a claim nothing can hedge.
@@ -211,9 +213,24 @@ class CitationResolver:
 
         candidate = citation.split(":")[0].split(" ")[0]
         if "/" in candidate or "." in candidate:
-            if os.path.exists(os.path.join(self.root, candidate)):
-                return ""
-            return f"{candidate!r} does not exist in this workspace"
+            target = os.path.join(self.root, candidate)
+            if not os.path.exists(target):
+                return f"{candidate!r} does not exist in this workspace"
+            # `path:line` is the most precise citation form the convention offers, and it was the
+            # only one whose precision was not checked: the resolver split the line number off
+            # and asked whether the *file* existed, so `store.py:412` resolved for ever against a
+            # forty-line file. It is the pointer most likely to go stale — code moves — and the
+            # one a reader is least likely to re-check, because it looks exact (F-077).
+            rest = citation[len(candidate):]
+            match = PATH_LINE_RE.match(rest)
+            if match and os.path.isfile(target):
+                wanted = int(match.group(1))
+                with open(target, "r", encoding="utf-8", errors="replace") as handle:
+                    lines = sum(1 for _ in handle)
+                if wanted > max(lines, 1):
+                    return (f"{citation} points past the end of the file, which has "
+                            f"{lines} line{'' if lines == 1 else 's'}")
+            return ""
 
         return (f"{citation!r} is not a citation form this gate can check "
                 f"(spec/doc-header.md, the citation forms table)")
