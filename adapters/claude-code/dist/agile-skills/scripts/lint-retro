@@ -48,7 +48,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
 import frontmatter  # noqa: E402
-from claims import CITATION_RE, CitationResolver, split_sources  # noqa: E402
+from claims import (CITATION_RE, CitationResolver, masked_lines,  # noqa: E402
+                    split_sources)
 from record import entries, sections as split_sections  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import Workspace, resolve_root  # noqa: E402
@@ -197,7 +198,13 @@ class RetroLinter:
         seen = entries(block["text"], block["line"] + 1, level=3)
         for entry in seen:
             text = "\n".join([entry.heading] + [b.text for b in entry.blocks])
-            citations = CITATION_RE.findall(text)
+            # A *quoted* citation is a mention, not a use, and this report's whole subject is a
+            # record full of citations — so a retrospective that explains the convention is the
+            # likeliest document in the workspace to write one inside backticks. `lint-claims`
+            # masks code spans for exactly this reason (F-037) and this reader must use the same
+            # mask, or it reports errors on prose and teaches the author to reword around it
+            # (F-075).
+            citations = CITATION_RE.findall("\n".join(masked_lines(text)))
             if not citations:
                 self.report.error(path, entry.line, code,
                                   f"the {noun} {entry.title!r} cites nothing",

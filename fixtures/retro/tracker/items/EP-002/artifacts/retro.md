@@ -20,6 +20,11 @@ proposals: 1
 
 There was not much time and the team moved quickly.
 
+### An observation whose only citation is quoted rather than made
+
+The plan explains the convention — every claim carries `[src: WI-0003]` — and quotes it inside
+backticks. Nothing here points at anything, so this observation cites nothing.
+
 ### The plan cited an item that is not in this workspace
 
 The plan names an item that does not exist [src: tracker/items/WI-0099/item.md].

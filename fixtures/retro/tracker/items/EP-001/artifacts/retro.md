@@ -32,6 +32,11 @@ anything either had a very well-specified goal or did not look for the places it
 `WI-0001`'s only criterion is ticked with nothing recorded against it
 [src: WI-0001 AC1]. A tick that cites nothing is the same shape as an untested claim.
 
+The convention this report follows is written `[src: <thing>]`, and a marker shown inside
+backticks like `[src: ...]` is an example of the form rather than a pointer at anything — a
+retrospective is the document in a workspace most likely to say so, and the sentence above is
+still cited by the marker that is not quoted.
+
 ## Positive record
 
 ### The history chains and the endings are recorded on both children
