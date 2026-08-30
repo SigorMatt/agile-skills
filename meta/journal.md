@@ -4010,3 +4010,59 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Artifacts:** `harness/run_iteration.py`, `harness/tests/test_harness.py`,
   `harness/iterations/iteration-4-recall.json`, `iteration-4c-recall.json`, `scripts/board-gen`,
   re-rendered dist, `meta/findings/FINDINGS.md` (H-017 closed with a correction; H-018, H-019).
+
+## 2026-08-30 — META-140 (part one) — the ground-truth subset, written before anything ran
+
+- **Unit:** META-140
+- **Inputs read:** `meta/findings/FINDINGS.md` — every finding filed against iterations 2 and 3
+  (H-009, F-061, H-010, H-011 and the iteration-2 coverage addendum; F-062, F-063, F-064, F-065,
+  H-012, H-013, the H-010 addendum and the iteration-3 positive record), each read against the
+  banked workspace to decide whether it is discoverable from the record alone;
+  `meta/harness/evidence/iteration-2/tracker/items/EP-001/history.md` in full;
+  `meta/harness/evidence/iteration-3/tracker/items/*/questions/Q-*.md` (all nineteen, for where
+  the recommendation sits) and `WI-0004/journal.md`.
+- **Decisions:**
+  - **The subset is decided by where the evidence lives, not by what would flatter the number.**
+    A finding is *workspace-visible* when a reader holding only `tracker/`, `docs/` and the
+    installed contracts could reach it. Ten findings were filed across the two iterations. **Five
+    are workspace-visible. Five are not, and all five of those are harness findings** whose
+    evidence is a run transcript, a driver log or the sim's own skill file — nothing a consumer's
+    project contains.
+
+    | Finding | Visible? | Why |
+    |---------|----------|-----|
+    | **F-061** conditional acceptance costs a full cycle | **yes** | `EP-001/history.md` carries both sign-off cycles and says so in its reason column |
+    | **F-062** a stakeholder conflict is adjudicated by rewriting | **yes** | `WI-0004/journal.md` says *"Fixed two false claims where the review named one"*, and the sentence carried `[src: WI-0002/Q-001]` |
+    | **F-063** every refinement question carries the team's recommendation | **partly** | see below |
+    | **F-064** refinement never makes an open-elicitation move | **yes, as an absence** | no question in the record is open-form |
+    | **F-065** "existing criteria still hold" verified against the suite | **yes** | `WI-0004/item.md` AC5 and its resolution note |
+    | H-009 W3 scrapes heredoc bodies | no | evidence is `turns/006-worker.stream.jsonl` |
+    | H-010 a budget stop mid-acknowledgment is terminal | no | evidence is the run segments and the driver's refusal text |
+    | H-011 a fresh run's first job is always `open` | no | evidence is turn-1 entries in the run log |
+    | H-012 the driver does not own its console log | no | evidence is the console log itself |
+    | H-013 the sim describes the job frame, not the disk | no | evidence is `SIM-LOG.md` |
+  - **F-063 is counted, and its bar is lowered to what the record actually supports.** The
+    finding as filed says the recommendation is *"printed above the options"*. Reading all
+    nineteen question files: it is not — in every one it is the **last bullet inside
+    `## Options considered`**. What the record does show, mechanically, is that **19 of 19
+    questions carry the team's recommendation**. The anchoring effect and the stakeholder's
+    *"I would rather have been asked plainly"* are SIM-LOG-only. So the bar for a match is "the
+    retro notices that every question carries a recommendation and treats it as a design
+    question", not "the retro reproduces the stakeholder's complaint". Recorded here rather than
+    after the run, because moving this line afterwards is exactly how a ground-truth test gets
+    flattered.
+  - **Three positive-record targets, judged separately**, from the iteration-3 positive record
+    and all three workspace-visible: D12 catching the planted falsehood twice in two documents;
+    `intake` refusing to widen a closed item and saying why; BUG-0001 as the claim machinery
+    limiting the contradiction's blast radius.
+  - **The copy is honest about what it is missing.** The banked evidence has no product source
+    and no commit history, so `validate-workspace` reports 181 (iteration 2) and 13
+    (iteration 3) `claim.citation.unresolved` errors against source files that were never
+    banked. A `RECORD-NOTICE.md` in each scratch copy states that, tells the reader to record
+    the `workspace-valid` gate as **failed with that reason** rather than passed, and says the
+    installed contracts are newer than the ones the record names. Nothing else is waived. The
+    original throwaway projects no longer exist on this machine, so this is not avoidable.
+- **Questions raised:** none.
+- **Gates:** none — this half of the unit writes down what the next half is measured against.
+- **Artifacts:** this entry; two scratch workspaces with the toolkit installed and their
+  `RECORD-NOTICE.md`.
