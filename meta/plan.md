@@ -419,11 +419,11 @@ then the two tests that judge it. Cluster 3 yields if the budget runs short.
       may not touch, the two audiences, the three-way classification (toolkit defect /
       this-project circumstance / observation), and what a lint over a retro can and cannot
       see. Derivation only; no code.
-- [ ] **META-134** — `scripts/lib/record.py`: the shared record model (cluster 2, but it lands
+- [x] **META-134** — `scripts/lib/record.py`: the shared record model (cluster 2, but it lands
       first because `lint-retro` and the migrated lints both consume it). Blocks with line
       spans — bullets with their continuations, labelled declarations, paragraphs, tables —
       plus the ledger-entry and retro-entry readers. Self-test cases from F-069/F-073.
-- [ ] **META-135** — migrate `lint-answers`, `lint-claims` and `validate-workspace` onto
+- [x] **META-135** — migrate `lint-answers`, `lint-claims` and `validate-workspace` onto
       `record.py`. Behaviour-identical: the 82 broken-workspace codes and all 28 gate steps
       stay green, unchanged, and that is the whole proof.
 - [ ] **META-136** — `spec/retro.md`: the retro report schema, the PROPOSED finding format,

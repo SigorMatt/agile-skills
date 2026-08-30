@@ -3864,3 +3864,51 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Gates:** `./scripts/check` green, 28 steps, unchanged — this unit is derivation only.
 - **Artifacts:** `meta/plan.md` (Phase V), `meta/CHECKPOINT.md`,
   `meta/adr/ADR-0009-retrospective-reading.md`.
+
+## 2026-08-30 — META-134, META-135 — one record model, and the third occurrence of F-073's class
+
+- **Unit:** META-134 (`scripts/lib/record.py`), META-135 (the migration)
+- **Inputs read:** `scripts/lib/{workspace,claims,selftest}.py`, `scripts/lint-answers`
+  (`verdict_for`, the `Checked against:` collector), `scripts/lint-claims`,
+  `scripts/validate-workspace` (the journal and artifact checks), `scripts/journal-entry`,
+  `scripts/transition`, `adapters/claude-code/render.py`; F-069, F-073, F-056, F-044 and
+  `meta/FINAL-REPORT-3.md` §6.3 for the class this unit exists to end.
+- **Decisions:**
+  - **The library owns the structures; the callers keep the rules.** `record.py` decides where a
+    bullet ends, how far a labelled declaration runs, what a fence is, and what an entry is.
+    What a *journal* bullet looks like — a bolded label at the left margin — stayed in
+    `workspace.py`, because that is a domain rule, not a structural one. The two questions were
+    being answered in one regex, which is how F-073 happened.
+  - **Two granularities, both named.** `blocks()` is the fine unit (a bullet **with** its
+    continuations); `paragraphs()` is the coarse one (blank-line separated, fences skipped) and
+    deliberately does not split on bullets, because a claim and the clause qualifying it live in
+    one paragraph however the author wrapped it. Collapsing them into one would have changed
+    `lint-claims`' findings, which is not what "behaviour-identical" means.
+  - **The self-test's cases are specimens, not inventions.** Every case in `run_record` is a
+    shape from the ledger: F-073's swallowed closing sentence, F-073's nine-answer declaration
+    over four lines, F-056's repeated heading, F-044's escaped pipe. A parser whose tests are all
+    invented passes on the shapes its author imagined.
+  - **The migration was mutation-tested, not asserted.** Reverting the bullet-end rule to "the
+    next bullet only" fails `./scripts/check` at the crossed-answers fixture *and* at the
+    self-test; so does making a declaration one line. The 82 broken-workspace codes and all 28
+    steps are unchanged otherwise, which is the whole proof the mission asked for.
+  - **The migration found a defect, and it is filed rather than absorbed.** Moving `load_journal`
+    onto the model made a wrapped `**Item:**` bullet visible for the first time and the toy
+    project — green since META-067 — failed. **F-074**: the validator read a journal bullet one
+    line deep, so `journal.item` passed on a wrap and would have failed without one, and a
+    wrapped `**Status:**` bullet yields no claim at all, leaving F-019's exact failure unchecked.
+    That is F-073's class a third time, and it survived F-073's fix because the fix went where
+    the defect had been *seen* rather than to the thing two scripts were both doing.
+  - **`journal.item` now reads the ID out of the bullet.** The rule in `journal-and-history.md`
+    §2.2 is "the item ID this execution acted on", not "this bullet contains nothing but the ID".
+    A real entry names the item and then says which sibling the same execution created.
+  - **`record.py` ships.** It is in `LIB_TO_SHIP`, so the installed toolkit carries it; the
+    "every shipped script imports" step caught its absence immediately, which is what that step
+    is for.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, **28 steps**, `fixtures/broken-workspace` **82 codes** —
+  both unchanged, which is the point. `scripts/lib/selftest.py` 243 passed (30 new record cases).
+  Two mutations verified to fail the gate.
+- **Artifacts:** `scripts/lib/record.py` (new), `scripts/lib/{workspace,claims,selftest}.py`,
+  `scripts/{lint-answers,lint-claims,validate-workspace,transition}`,
+  `adapters/claude-code/render.py`, re-rendered dist, `meta/findings/FINDINGS.md` (F-074).

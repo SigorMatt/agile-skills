@@ -1,31 +1,27 @@
 # CHECKPOINT
 
-## Current unit: META-134 — `scripts/lib/record.py`, the shared record model
+## Current unit: META-136 — `spec/retro.md`, the retro report and the proposal format
 
-Phase V is laid out in `meta/plan.md`. META-132 and META-133 are committed (ADR-0009 is the
-retro skill's design; read it before this unit — §6 and §7 name what `lint-retro` will need).
+META-132..135 are committed: Phase V is planned, ADR-0009 is the design, `scripts/lib/record.py`
+is the shared record model and every lint now reads it (F-074 filed and fixed along the way).
+**Read `meta/adr/ADR-0009-retrospective-reading.md` before this unit** — §4 (two audiences),
+§5 (the classification and its two required fields), §6 (citations reuse `doc-header.md` §4a's
+seven forms) and §7 (non-vacuity) are what this spec writes down.
 
 **Steps**
-1. Write `scripts/lib/record.py`: one parser for the workspace's record *structures*, so that
-   rules about a record's shape stop being reimplemented per script (F-069, F-073's class,
-   FINAL-REPORT-3 §6.3). At minimum it must model, with line spans:
-   - **blocks** inside a section: a bullet **with its continuation lines**, a labelled
-     declaration (`Label: ...`) **with its continuation lines**, a paragraph, a table, a fenced
-     block — the two shapes F-073 got wrong, in one place;
-   - the ledger/report **entry** shape (a `##`/`###` heading with labelled bullets under it),
-     which `lint-retro` will read.
-2. Cases in `scripts/lib/selftest.py`, taken from F-069 and F-073's own fixtures: a bullet that
-   wraps, a bullet followed by unindented closing prose, a declaration that wraps over four
-   lines, a declaration ended by a bullet, a fenced block that must not be read as prose.
-3. No caller changes in this unit — the migration is META-135, so that "behaviour-identical"
-   has a commit boundary it can be proved across.
+1. Write `spec/retro.md`: the schema of `tracker/items/<EP>/artifacts/retro.md` — required
+   sections in order, the observation format, the PROPOSED proposal format with its required
+   fields, the classification's closed set, the citation rule, and the `## What was read` scope
+   declaration.
+2. Add it to `spec/README.md`'s index and to `SPEC_TO_SHIP` in the renderer.
+3. Add `process-analyst` to `spec/skill-contract.md`'s persona enum (ADR-0009 §9) and to
+   `scripts/lint-skills`' persona list, with the revision row.
+4. No skill and no lint in this unit.
 
-**Done when** `python3 scripts/lib/selftest.py` passes with the new cases, `./scripts/check` is
-green (28 steps, unchanged codes), the box is ticked, the journal entry is written, and this
-file is advanced to META-135.
+**Done when** `./scripts/check` is green, the box is ticked, the journal entry is written, and
+this file is advanced to META-137.
 
-**Next unit:** META-135 — migrate `lint-answers`, `lint-claims` and `validate-workspace` onto
-the model; the 82 broken-workspace codes unchanged is the proof.
+**Next unit:** META-137 — `methodology/skills/retro/`, the pipeline dispatch, the re-render.
 
 ## Standing instructions (still in force)
 
