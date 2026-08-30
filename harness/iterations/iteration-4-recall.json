@@ -4,7 +4,7 @@
   "project": "recall",
   "persona": "cooperative-pm",
   "probe": "iteration-4-recall",
-  "max-turns": 24,
+  "max-turns": 30,
   "worker-model": "opus",
   "sim-model": "sonnet"
 }

@@ -383,6 +383,33 @@ class WorkspaceReading(unittest.TestCase):
                 states[audit.frontmatter(text)["id"]] = bool(body)
             self.assertEqual(states, {"Q-001": False, "Q-002": True})
 
+    def test_an_archived_run_directory_is_marked_terminal(self):
+        """`--fresh` used to leave an archive saying it was still running, with a live pid."""
+        with tempfile.TemporaryDirectory() as root:
+            run_dir = os.path.join(root, "iteration-x.1")
+            os.makedirs(run_dir)
+            with open(os.path.join(run_dir, "state.json"), "w", encoding="utf-8") as handle:
+                json.dump({"status": "running", "turn": 4}, handle)
+            with open(os.path.join(run_dir, "driver.pid"), "w", encoding="utf-8") as handle:
+                handle.write("222595\n")
+            run_iteration.mark_archived(run_dir, when="2026-08-30T12:00:00Z")
+            with open(os.path.join(run_dir, "state.json"), encoding="utf-8") as handle:
+                state = json.load(handle)
+            self.assertEqual(state["status"], "archived")
+            self.assertEqual(state["archived-from-status"], "running")
+            self.assertEqual(state["turn"], 4)
+            self.assertFalse(os.path.exists(os.path.join(run_dir, "driver.pid")))
+            self.assertTrue(os.path.isfile(os.path.join(run_dir, "ARCHIVED.md")))
+
+    def test_marking_an_archive_survives_a_state_file_it_cannot_read(self):
+        with tempfile.TemporaryDirectory() as root:
+            run_dir = os.path.join(root, "iteration-y.2")
+            os.makedirs(run_dir)
+            with open(os.path.join(run_dir, "state.json"), "w", encoding="utf-8") as handle:
+                handle.write("{ this is not json")
+            run_iteration.mark_archived(run_dir, when="2026-08-30T12:00:00Z")
+            self.assertTrue(os.path.isfile(os.path.join(run_dir, "ARCHIVED.md")))
+
     def test_the_worker_status_block_is_read_from_the_last_json_fence(self):
         with tempfile.TemporaryDirectory() as root:
             with open(os.path.join(root, "HARNESS-STATUS.md"), "w", encoding="utf-8") as handle:
@@ -393,6 +420,35 @@ class WorkspaceReading(unittest.TestCase):
             report, text = run_iteration.worker_report(root)
             self.assertEqual(report["stop_reason"], "human-question-open")
             self.assertIn("Some prose.", text)
+
+    def test_a_status_file_stamped_for_another_turn_is_not_this_turn_s_report(self):
+        """H-017: 4c's turn 16 exited cleanly having written nothing.
+
+        No commit, no tracker change and no status file — so the mtime test H-005 added could
+        not see it, and turn 17's driver consumed turn 15's heading as though it were current.
+        The turn number is in the heading the prompt already asks for; the driver reads it.
+        """
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "HARNESS-STATUS.md")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("# Harness status — turn 15\n\nWhat turn 15 did.\n\n"
+                             "```json\n{\"stop_reason\": \"nothing-runnable\"}\n```\n")
+            stale, text = run_iteration.worker_report(root, turn=17)
+            self.assertIsNone(stale)
+            self.assertEqual(text, "")
+            fresh, text = run_iteration.worker_report(root, turn=15)
+            self.assertEqual(fresh["stop_reason"], "nothing-runnable")
+            self.assertIn("What turn 15 did.", text)
+
+    def test_a_status_file_with_no_turn_in_its_heading_is_refused_when_a_turn_is_named(self):
+        """A heading the prompt's own template would not produce cannot be attributed."""
+        with tempfile.TemporaryDirectory() as root:
+            with open(os.path.join(root, "HARNESS-STATUS.md"), "w", encoding="utf-8") as handle:
+                handle.write("# Harness status\n\n```json\n{\"stop_reason\": \"error\"}\n"
+                             "```\n")
+            report, text = run_iteration.worker_report(root, turn=3)
+            self.assertIsNone(report)
+            self.assertEqual(text, "")
 
     def test_a_status_file_with_no_json_block_is_not_fatal(self):
         with tempfile.TemporaryDirectory() as root:

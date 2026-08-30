@@ -33,6 +33,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -394,13 +395,67 @@ def first_job(project_dir):
                            "stakeholder"
 
 
-def worker_report(project_dir, not_before=None):
+STATUS_HEADING_RE = re.compile(r"^#\s*Harness status\s*[—-]\s*turn\s*(?P<turn>\d+)\s*$",
+                               re.IGNORECASE | re.MULTILINE)
+
+
+def mark_archived(run_dir, when=None):
+    """Make an archived run directory terminal, so nothing can read it as one in flight.
+
+    `--fresh` moved a run aside and left it exactly as it was — including a `state.json` saying
+    `"status": "running"` and a `driver.pid` naming a process that has not existed for days. Two
+    of the seven archives on this machine were in that state. Nothing acts on them today, which
+    is why this is cheap now and would not be later: a sweep, a resume, or a person reading the
+    directory has no way to tell an archive from a live run except by its name.
+
+    So the archive says what it is, in the file a program reads and in a file a person reads,
+    and the pid — which can only mislead once the process is gone — is removed.
+    """
+    state_path = os.path.join(run_dir, "state.json")
+    stamp = when or now()
+    previous = None
+    try:
+        with open(state_path, "r", encoding="utf-8") as handle:
+            state = json.load(handle)
+    except (OSError, ValueError):
+        state = None
+    if isinstance(state, dict):
+        previous = state.get("status")
+        state["status"] = "archived"
+        state["archived"] = stamp
+        if previous is not None:
+            state["archived-from-status"] = previous
+        with open(state_path, "w", encoding="utf-8") as handle:
+            json.dump(state, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+    write(os.path.join(run_dir, "ARCHIVED.md"),
+          f"# Archived run\n\nThis directory was moved aside by `--fresh` at {stamp}. It is a "
+          f"record, not a run:\nnothing here is in flight, the driver process it names is gone, "
+          f"and no tool resumes it.\nIts last live status was "
+          f"`{previous if previous is not None else 'unknown'}`.\n")
+    pid_path = os.path.join(run_dir, "driver.pid")
+    if os.path.isfile(pid_path):
+        os.remove(pid_path)
+    return True
+
+
+def worker_report(project_dir, not_before=None, turn=None):
     """The worker's self-report: the last fenced json block in HARNESS-STATUS.md.
+
+    Two independent ways the file on disk can fail to be *this* turn's report, and both have
+    happened:
 
     `not_before` is the turn's start time. A turn that was killed never writes the file, and the
     driver used to read whatever was there and log it as that turn's report — iteration 1's turn
     4 was killed after a full Opus-hour and is recorded carrying turn 2's status, two hours stale
     (H-005). A status file older than the turn is not this turn's status.
+
+    `turn` is the turn just run, and it is checked against the file's own heading. 4c's turn 16
+    exited cleanly having written nothing at all — no commit, no tracker change, no status — and
+    the file still carried turn 15's heading when turn 17 began, so the mtime test could not see
+    it and the driver consumed the previous turn's report as current (H-017). The prompt already
+    makes the worker write `# Harness status — turn N`; the driver now reads that number rather
+    than trusting the file's presence.
     """
     path = os.path.join(project_dir, STATUS_FILE)
     if not_before is not None and os.path.isfile(path):
@@ -409,6 +464,10 @@ def worker_report(project_dir, not_before=None):
     text = read(path)
     if not text:
         return None, ""
+    if turn is not None:
+        match = STATUS_HEADING_RE.search(text)
+        if match is None or int(match.group("turn")) != int(turn):
+            return None, ""
     blocks = []
     marker = "```json"
     index = text.find(marker)
@@ -646,8 +705,10 @@ class Run:
         index = 1
         while os.path.isdir(f"{self.run_dir}.{index}"):
             index += 1
-        shutil.move(self.run_dir, f"{self.run_dir}.{index}")
-        say(f"archived the previous run to {os.path.basename(self.run_dir)}.{index}")
+        destination = f"{self.run_dir}.{index}"
+        shutil.move(self.run_dir, destination)
+        mark_archived(destination)
+        say(f"archived the previous run to {os.path.basename(destination)}")
 
     def stop(self, reason, detail=""):
         self.state["status"] = "stopped"
@@ -689,12 +750,14 @@ class Run:
         repo_before = self.state.get("repo-snapshot") or []
         violations = audit.audit_worker(uses, self.project_dir, HERE, REPO) + \
             audit.audit_repo_tree(REPO, repo_before)
-        report, status_text = worker_report(self.project_dir, not_before=started_at)
+        report, status_text = worker_report(self.project_dir, not_before=started_at,
+                                            turn=number)
         if status_text:
             write(os.path.join(self.turns_dir, f"{number:03d}-worker.status.md"), status_text)
-        elif outcome.get("killed"):
-            say("    ! this turn wrote no status file; the one on disk is older than the turn "
-                "and is not being attributed to it")
+        else:
+            say(f"    ! turn {number} wrote no status file of its own; whatever is on disk is "
+                f"older than this turn or is stamped for another one, and is not being "
+                f"attributed to it")
         return {"role": "worker", "prompt-version": version, "model": self.worker_model,
                 "transcript": os.path.relpath(transcript, self.run_dir),
                 "outcome": outcome, "result": fields, "violations": violations,
