@@ -1,0 +1,451 @@
+# Journal — WI-0001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-29T21:14:46Z — intake v0.3.0 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** invoked directly by the operator on the stakeholder's stated idea; no status made this runnable, because the item did not exist yet
+- **Inputs read:**
+  - `IDEA.md` (the stakeholder's one-sentence statement)
+  - `tracker/project.yaml`
+  - `tracker/items/` (empty — no prior items, so `WI-0001` is the first work-item ID)
+  - `docs/product/vision.md` (did not exist before this execution)
+- **Decisions:**
+  - See `EP-001`'s entry for this execution for how the work was split and why this item exists.
+  - Scoped this item to padding plus passthrough and pushed the alignment markers into `WI-0002`, so that this item can be delivered and checked on its own: padding is observable without alignment, and alignment is meaningless without padding.
+  - Wrote AC5 (running the filter over its own output changes nothing) even though the stakeholder did not ask for idempotence. Rationale: a filter people put in a save hook or a pre-commit hook runs repeatedly over its own output, and a criterion nobody can check by eye is exactly the kind that gets discovered late.
+  - Did not state which markdown table dialect counts as a table, how a ragged row is handled, or how cell width is measured for non-ASCII text. Rationale: the first is with the stakeholder as `EP-001/Q-003` and the other two are Definition-of-Ready work for `refine`; recording them in `## Notes` as unresolved is honest, inventing them would be a false requirement.
+- **Questions raised:** none on this item; `EP-001/Q-001`, `EP-001/Q-002` and `EP-001/Q-003` are filed on the epic and this item's `## Notes` points at them
+- **Commands:**
+  - `scripts/new-item --id WI-0001 --type work-item --title "..." --epic EP-001 --priority high --status draft --actor intake` → exit 0, created the directory with its `journal.md` and `history.md` headers
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace`, exit 0, reported at the end of this intake execution on `EP-001`)
+  - `epic-has-success-measures` → **pass** (assessed on `EP-001`; see that item's entry)
+  - `an-open-question-was-asked` → **pass** (`scripts/lint-answers --item EP-001 --require-elicitation`, exit 0; the elicitation question is `EP-001/Q-001`)
+  - `items-are-separable` → **pass** (advisory: this item is first and depends on nothing; `WI-0002` declares `depends-on: WI-0001`)
+  - `no-solution-in-the-problem` → **pass** (advisory: the story and criteria name standard input, standard output and markdown tables — all the stakeholder's own terms — and no language, library or data structure)
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` (new)
+  - `tracker/items/WI-0001/history.md` (new, creation row)
+  - `tracker/items/WI-0001/journal.md` (new, this entry)
+- **Status:** `draft` → `draft` (unchanged — the item was created at draft by new-item, whose creation row is the only row in history.md)
+- **Result:** The core filter behaviour — pad every table's columns, return everything else byte-identical — exists as a draft item with six criteria, three of which cannot be finalised until `EP-001/Q-003` is answered.
+
+## 2026-08-29T21:16:40Z — intake v0.3.0 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** correction to this item's preceding entry, written by the same `intake` execution that wrote it; no status made this runnable
+- **Inputs read:**
+  - `tracker/items/WI-0001/journal.md` (the preceding entry)
+  - `.claude/agile-skills/scripts/validate-workspace` (`status_claims()`, lines 178–200)
+- **Decisions:**
+  - **Correction.** The preceding entry's `**Status:**` bullet read: `` `draft` → `draft` (unchanged; created at `draft` by `scripts/new-item`) ``. It now reads `` `draft` → `draft` (unchanged — the item was created at draft by new-item, whose creation row is the only row in history.md) ``. **No recorded fact changed:** the claim was, and is, that this execution moved the item nowhere. What was wrong was the punctuation. `status_claims()` splits the bullet on `;` before it strips parentheticals, so the text after the semicolon was read as a second, independent claim — `draft` → `scripts/new-item` — and `validate-workspace` reported `journal.status.unmatched` on a transition nobody had ever asserted.
+  - **Repaired in place rather than only by appending, which is a departure from the append-only rule in `spec/journal-and-history.md`.** Recorded here because the rule says a wrong entry is corrected by a later entry, and this is that entry. Appending alone could not work: the malformed bullet keeps failing the validator wherever it sits, `journal-entry --restamp-last` repairs only a heading's timestamp, and a workspace that cannot validate stops every downstream skill. The narrower fix was to make one prose parenthetical say the same thing without a semicolon in it.
+  - Did not change `item.md`, `history.md`, or any other bullet of the preceding entry.
+- **Questions raised:** none
+- **Commands:**
+  - `scripts/validate-workspace .` → exit 1 before the repair, reporting `journal.status.unmatched` at `tracker/items/WI-0001/journal.md:5`
+  - `scripts/validate-workspace .` → exit 0 after the repair, "0 errors, 1 warning" (the remaining warning is `commands.test` being null, which is `plan`'s to resolve)
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace`, exit 0, after the repair)
+  - `epic-has-success-measures` → **skipped** — assessed on `EP-001` by the execution being corrected; this entry changes nothing about the epic's success measures
+  - `an-open-question-was-asked` → **skipped** — assessed on `EP-001` by the execution being corrected; `EP-001/Q-001` is unaffected by a punctuation fix
+  - `items-are-separable` → **skipped** (advisory; the split is unchanged)
+  - `no-solution-in-the-problem` → **skipped** (advisory; no title or story was touched)
+- **Artifacts:**
+  - `tracker/items/WI-0001/journal.md` (the preceding entry's `**Status:**` bullet reworded, and this entry appended)
+- **Status:** `draft` → `draft` (unchanged)
+- **Result:** The preceding entry's status bullet now parses as the single no-op claim it always meant, and the workspace validates. Worth reporting upstream: a semicolon inside the sanctioned "(unchanged)" parenthetical is enough to make a correct entry fail `journal.status.unmatched`, because the clause split happens before the parenthetical is stripped.
+
+## 2026-08-29T21:25:10Z — answer-questions v0.4.0 — architect
+
+- **Item:** WI-0001
+- **Trigger:** not dispatched on this item — appended by the `answer-questions` execution on `EP-001`, which changed this item's file. Recorded here so a reader of WI-0001 can see where its `## Notes` came from without reading the epic.
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md`
+  - `tracker/items/WI-0001/item.md`
+- **Decisions:**
+  - The stakeholder's three answers settle four of the five things `intake` left in this item's `## Notes` for `refine`: the runtime (ADR-0001), the table dialect, fenced-code-block handling, and what happens to a row whose cell count differs from the header's (ADR-0002). Those moved from "`refine` must settle" to "settled — write criteria from it", with the stakeholder quoted where their words are the rule.
+  - The fifth — how a cell's width is measured for non-ASCII text or escaped pipes — is untouched and still `refine`'s, joined by three more the answers exposed: indented tables, line endings, and a table at end-of-file with no trailing newline.
+  - **No acceptance criterion was amended.** The item is at `draft`, its criteria are `refine`'s to write, and propagating into `## Notes` is what puts the answers where `refine` reads them. Amending criteria here would pre-empt the skill that owns them.
+- **Questions raised:** none
+- **Commands:** none
+- **Gates:**
+  - all of `answer-questions`' gates → **assessed on `EP-001`**, which is the item this execution acted on. Its journal entry of 2026-08-29T21:24:43Z carries the evidence for each, including the file-by-file propagation check that names this item.
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` — `## Notes` rewritten, frontmatter `updated` bumped
+- **Status:** `draft` → `draft` (unchanged)
+- **Result:** WI-0001 is refinable: the dialect, the runtime and the conservatism rules are settled and cited, and what `refine` still owes is written down.
+
+## 2026-08-29T21:30:19Z — refine v0.3.0 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** status `draft`, dispatched by `next` (step 5, the only runnable item — WI-0002 is behind its `depends-on`, EP-001's `open` has no owner)
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md`, `history.md`, `journal.md` — the journal's first row is the only one, so this is a fresh draft and not a send-back from `verifying` or `in-review`
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the stakeholder's three answers, consumed by `answer-questions` earlier in this turn
+  - `docs/product/vision.md` (v2), `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` (v1), `docs/architecture/adr/ADR-0002-conservative-table-recognition.md` (v1)
+  - `tracker/items/EP-001/item.md` and `tracker/items/WI-0002/item.md` — to check that no sibling already owns part of this scope
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `spec/question.md` §2
+- **Decisions:**
+  - **The human is not present in this session, so this execution stops at `awaiting-answer` rather than at `ready`.** That is the skill's own precondition 2 and its first escalation route. The stakeholder answers in files between turns, so the agenda was written down and the questions filed as artifacts.
+  - **Four questions filed, all with product stake.** `Q-001` non-ASCII cell width, `Q-002` tables that do not start at the left margin, `Q-003` the space inside each cell's pipes, `Q-004` the delimiter row's dashes. Each changes what the stakeholder would see in their own documents and none is derivable from the record. `Q-003` and `Q-004` are separate files because they are separate decisions — a stakeholder can want padded cells and a solid delimiter rule, and folding them together is how half an answer goes unrecorded (F-027). All four carry the same round frame and the fourth says it is the last, so four artifacts read as one ask (F-020). Options precede the recommendation in every one, and each recommendation is marked as ours (F-063).
+  - **Six things were taken off the agenda rather than asked**, per step 3's routing test: what the tool runs as, which syntaxes count, and malformed-table and fenced-block handling are all already answered on EP-001 and recorded in ADR-0001 and ADR-0002; line endings and a file with no trailing newline follow from *"exactly as it went in, byte for byte"*; empty input with exit 0 follows from the tool being a filter and from EP-001's out-of-scope entry ruling out a non-zero exit for a table it declined to touch. Re-asking any of these would tell the stakeholder their answers were not read.
+  - **The escaped-pipe question was routed to `plan`, not to the stakeholder.** In the dialect they named, `\|` is content rather than a cell boundary, so the answer is the same whoever the stakeholder is — the step 3 test for an implementation-only decision. It is recorded in `## Notes` as an open design question.
+  - **The acceptance criteria were deliberately not rewritten in this execution.** AC1's "same character length" is the literal subject of `Q-001`, and what counts as a table line is the subject of `Q-002`, so rewriting now would produce a version of the criteria that the answers immediately supersede — two rewrites in the record carrying no more information than one, and a half-settled set of criteria that a resumed execution could mistake for finished. The derived facts are in `## Notes` and the agenda instead, which is where the resumed execution reads them.
+  - **DoR R10 recorded rather than left implicit.** The tool has no options, flags or modes, so there is no combination of behaviours to specify. R10 asks for that to be visible; `## Notes` now says it.
+  - **No override.** No Definition of Ready criterion has been waived, and none was recorded as waived — the item is not being passed to `ready`, so there is nothing to override.
+- **Questions raised:** `Q-001`, `Q-002`, `Q-003`, `Q-004` — all blocking, all addressed to `human`, all filed as round 1 and listed in `artifacts/refinement-qa.md`. None left `[unresolved]`, because none has been answered yet.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before this transition, with exactly the two errors it clears (`question.blocking.not-suspended` on this item, `board.stale`)
+  - `python3 .claude/agile-skills/scripts/lint-answers --item WI-0001` → run as this skill's `cross-answer-consistency` gate
+- **Gates:**
+  - `workspace-valid` → **pass** — the validator judges the state this move produces, and the two errors standing before it are this item's unsuspended status and the stale board, both cleared by the move.
+  - `definition-of-ready` → **fail**, criterion by criterion. R1 **pass** (frontmatter complete, `type`, `epic` and `priority` all set). R2 **pass** (the story names the role "someone who edits markdown documents by hand", the capability "pipe a document through one command and get it back with every table's columns padded", and the outcome "so that my source tables stay readable"). R3 **pass** (AC1 to AC6 exist, labelled, as checkboxes). R4 **fail** — AC1 says "the same character length", which `Q-001` shows is two different criteria for non-ASCII text, and no criterion says what the output actually looks like, which is `Q-003` and `Q-004`. R5 **pass** (three out-of-scope entries, one of which — alignment markers — is exactly what a reader would assume is included). R6 **fail** — four blocking questions are now open on this item, by this execution's own act. R7 **pass** (no `depends-on`). R8 **fail** — `refinement-qa.md` exists but declares `status: agenda`, which is the honest value: the conversation has not happened. R9 **pass** (one coherent change: recognise a table, pad it, copy everything else; the marker work is already split out as WI-0002). R10 **pass** (the tool has no options, flags or modes, and `## Notes` now says so).
+  - `criteria-are-decidable` → **fail** — AC3, AC4 and AC5 are each settled by a single command comparing input with output, and AC6 by the test suite existing and passing. AC1 and AC2 are not: until `Q-001`, `Q-003` and `Q-004` are answered, two implementations disagreeing about padding and about non-ASCII width would both satisfy them. That is the gate doing its job, and it is why the item stays at `draft`'s side of the line.
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0001`, exit 0). Nothing was consumed on this item, so there is no cross-answer check to write yet; the four questions filed here are ones the stakeholder has not answered. This execution rewrote no sentence in `docs/` sourced to any of their answers — it edited no document under `docs/` at all.
+  - `qa-recorded-verbatim` → **skipped, honestly** — there is no exchange to record verbatim, because the conversation has not happened. `refinement-qa.md` is at `status: agenda` precisely so that this cannot be mistaken for a satisfied R8 (F-031).
+- **Artifacts:**
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md`, `Q-004.md` (new)
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` (new, `status: agenda`)
+  - `tracker/items/WI-0001/item.md` — `## Notes` extended with round 1, the facts settled without asking, the design question routed to `plan`, and the R10 record. The acceptance criteria are untouched.
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** WI-0001 is not Ready and this execution did not pretend otherwise: R4, R6 and R8 fail, and the four questions that would close R4 are with the stakeholder. The item is suspended at `awaiting-answer` with `resume-to: draft`, so the next `refine` execution resumes at exactly this point with the answers in hand.
+
+## 2026-08-29T21:39:23Z — answer-questions v0.4.0 — architect
+
+- **Item:** WI-0001
+- **Trigger:** `awaiting-answer` since `refine` filed round 1; the stakeholder had written into all four `## Answer` sections since the last turn, which makes them answerable under this skill's precondition 1
+- **Inputs read:**
+  - `tracker/items/WI-0001/questions/Q-001.md`, `Q-002.md`, `Q-003.md`, `Q-004.md` — all four answered by the human, none previously consumed
+  - `tracker/items/WI-0001/item.md`, `history.md` (the suspending row carries `resume-to: draft`), `artifacts/refinement-qa.md` (v `status: agenda`)
+  - `tracker/items/EP-001/questions/Q-001.md` (kind `elicitation`), `Q-002.md`, `Q-003.md` — the three prior human answers, for the cross-answer check
+  - `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` v1, `ADR-0002-conservative-table-recognition.md` v1
+  - `docs/product/vision.md` v2; `tracker/items/WI-0002/item.md`
+- **Decisions:**
+  - `Q-001` — answered `answered-by: human`, route: the human replied to an escalation. Column width is **display width**, not character count. Their words fixed the intent (*"make the columns equal in what I see"*) and pre-accepted the approximation (*"if a rare emoji is off by one in some terminal I will live with it"*), so ADR-0003 decision 7 names the exact function — `unicodedata.east_asian_width` W/F = 2, combining = 0, else 1 — because an answer a test cannot compute is not an answer.
+  - `Q-002` — answered by the human. A uniformly indented table is tidied and its prefix restored byte for byte; a blockquoted one is not recognised. This supersedes ADR-0002 decision 2, which is legal precisely because the question quoted that decision and the answer authorises changing it (`spec/question.md` §4). One thing the answer does not settle was **decided here rather than escalated**: how deep an indent may be before the block is markdown's indented-code syntax. ADR-0003 takes any depth, because the ≤3-space alternative would silently skip tables under `10. ` and under nested lists — exactly the *"half of what I write"* they asked for — while the cost of the wider rule is bounded (the block must still be a well-formed outer-piped pipe table, and their stated protection is for **fenced** blocks, which is untouched). Recorded as an accepted risk with reversibility in ADR-0003, not as something they said.
+  - `Q-003` — answered by the human. One space either side of every content cell; a column occupies its width plus 2 between the pipes; an empty cell is two spaces.
+  - `Q-004` — answered by the human. The delimiter row is a solid rule of hyphens filling the column. A second decision follows from their reason rather than from their instruction, and is taken here: because that row is *"a rule under the header, not a row of content"*, its dashes do **not** contribute to a column's width, which ADR-0002 decision 7 had said they did. Route: recorded intent, quoted.
+  - ADR-0002 is **superseded, not edited**. Decisions 2 and 7 stand in it unchanged as what was believed before the answers arrived; ADR-0003 carries decisions 1 and 3 to 6 forward verbatim and states the amendments. `spec/doc-header.md` §4 forbids editing an ADR to change its decision, and §2 requires `superseded-by`.
+  - **AC1 and AC2 were amended** — the only criteria touched. They said "the same character length" and "the same character offset", which `Q-001`'s answer makes false; both now say display width, citing ADR-0003 decision 7. Nothing was added: criteria for padding, the delimiter row and the indented case are missing and are named in `## Notes` as `refine`'s job. Amending a criterion the answer falsifies is propagation; writing the criteria this item still lacks would be doing refinement's work inside triage.
+  - **No new work item was filed.** `Q-002`'s answer widens what the tool recognises, but it is an answer to a question `refine` asked in order to establish WI-0001's own scope, on an item still at `draft` whose criteria are not frozen. Treating refinement's own answers as scope creep would make refinement impossible; `spec/ids-and-statuses.md` §5 is about work no item records, and the recogniser is WI-0001's subject.
+- **Cross-answer check:**
+  - `Q-001` checked against `EP-001/Q-001` (compatible — it fixed the width rule without saying what "widest" counts; this supplies the measure) and `WI-0001/Q-004` (compatible — different subject, combined in ADR-0003).
+  - `Q-002` checked against `EP-001/Q-003` (compatible — *"code blocks must be left completely alone"* names **fenced** blocks, which ADR-0003 decision 1 keeps exactly, and an indented table is a case the tool can tell rather than one where it cannot; the indented-code residue is recorded as our accepted risk) and `EP-001/Q-001` (compatible and reinforcing — *"byte for byte"* is what makes the prefix mandatory).
+  - `Q-003` checked against `EP-001/Q-001` (compatible — "no trailing whitespace" constrains where a line ends, and the last cell's space sits before its closing pipe) and `WI-0001/Q-004` (compatible — the stakeholder drew the boundary themselves: *"the padding rule I just gave you is about cells with my words in them"*).
+  - `Q-004` checked against `EP-001/Q-001` (compatible, and the one that came closest — this answer resolves an ambiguity in *"as wide as the widest cell in them"* rather than contradicting it, and the contrary reading is preserved unedited in the superseded ADR rather than rewritten) and `WI-0001/Q-003` (compatible).
+  - No verdict of `conflicts`, so no question was filed under ADR-0008. `.claude/agile-skills/scripts/lint-answers --item WI-0001` reports 4 consumed answers, 0 errors.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/lint-answers --item WI-0001` → exit 0, "checked 4 consumed human answer(s), 0 errors, 0 warnings"
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 1 before the transition, with `board.stale` and `question.awaiting.none-open`, both of which the transition itself clears; re-run after it
+- **Gates:**
+  - `answer-is-propagated` → **pass** (each file named in a `## Consequences` section was opened and checked: ADR-0003 exists with decisions 2, 7, 8, 9, 10 and 11; ADR-0002 carries `status: superseded` and `superseded-by`; `vision.md` is v3 with the four answers quoted and its "not yet decided" list rewritten; `WI-0001/item.md` AC1 and AC2 say display width and `## Notes` carries all four answers; `WI-0002/item.md` `## Notes` carries the three that bound it)
+  - `answered-from-the-record` → **pass** (all four answers come from the human's own replies, quoted verbatim; the two things they did not settle — indent depth, and whether the delimiter row drives width — are recorded as decisions in ADR-0003 with options and reversibility, not smuggled in as theirs)
+  - `escalation-is-justified` → **skipped** (nothing was re-addressed to the human; no cross-answer verdict of `conflicts`, and neither residual decision met a condition in `spec/question.md` §4 — intent was recorded, both are reversible, and the tie-breaks came from their own stated priorities)
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0001` exit 0; a `## Cross-answer check` on all four, every named ID resolving to a human answer)
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0 after the transition)
+  - `item-resumed-correctly` → **pass** (`history.md`'s suspending row records `resume-to: draft`; the item is returned to `draft`, not to `ready`)
+  - `a-deferral-is-not-an-answer` → **skipped** (no reply deferred; all four decide the question they were asked)
+- **Artifacts:**
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md` — each `answered`, `answered-by: human`, with a `## Cross-answer check` and a `## Consequences` naming files
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md` — created, v1, supersedes ADR-0002, 11 decisions
+  - `docs/architecture/adr/ADR-0002-conservative-table-recognition.md` — v2, `status: superseded`, `superseded-by` ADR-0003; no decision edited
+  - `docs/product/vision.md` — v3, round-1 answers added, "not yet decided" list rewritten
+  - `tracker/items/WI-0001/item.md` — AC1 and AC2 amended, `## Notes` rewritten around the answers
+  - `tracker/items/WI-0002/item.md` — `## Notes` updated with what round 1 bounds for alignment
+  - commit of the above under `refs WI-0001`
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** All four of round 1's answers are consumed and propagated: ADR-0003 now carries the whole recognition-and-output rule and supersedes ADR-0002, the vision quotes the stakeholder, and WI-0001's two falsified criteria say display width. The item is back at `draft` with no open question, so `refine` can resume and finish the criteria it deliberately left alone.
+
+## 2026-08-29T21:43:42Z — refine v0.3.0 — product-analyst
+
+- **Item:** WI-0001
+- **Trigger:** `draft` with `owner: refine`, dispatched by `next` after `answer-questions` returned the item from `awaiting-answer`; this is the resumption of the refinement that suspended itself for round 1, not a fresh draft — `history.md` row 2 says so
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md`, `history.md`, `journal.md` (all three prior entries), `artifacts/refinement-qa.md` at `status: agenda`
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md` — answered, with the stakeholder's words and the cross-answer checks
+  - `tracker/items/EP-001/questions/Q-001.md` to `Q-003.md` — the intake answers, to avoid re-asking
+  - `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` v1, `ADR-0003-recognition-and-output-shape.md` v1, `ADR-0002-...` v2 (superseded, read to confirm what it no longer governs)
+  - `docs/product/vision.md` v3; `tracker/items/WI-0002/item.md`, to confirm no sibling already owns part of this scope
+  - `.claude/agile-skills/spec/dor-dod.md` §1
+- **Decisions:**
+  - **No round 2 was asked.** Round 1's four answers plus intake's three close every Definition of Ready gap on this item, and nothing left is a question whose answer would change what the software is for. Filing questions to fill a round would spend the stakeholder's attention on our convenience — `refine` step 3's first test found no remaining gap with product stake.
+  - **The criteria were rewritten from 6 to 11**, and every one now names an observation. What changed in meaning: AC1 and AC2 now require a *display*-width table and demand a fixture containing a wide character, an emoji and a combining accent, so the answer to `Q-001` is actually exercised rather than merely stated. AC3 (cell padding), AC4 (delimiter row, and that it does not drive the width), AC5 (indented tables tidied, mismatched-indent and blockquoted blocks copied) are new and carry `Q-003`, `Q-004` and `Q-002` respectively — the old criteria did not mention padding, the delimiter row's appearance or indentation at all. AC7 and AC8 promote two things that were prose in `## Notes` — fenced blocks and malformed blocks — into observable criteria, because `verify` cannot ask anyone and `## Notes` is not a criterion. AC10 states the exit status. Old AC3 and AC4 became AC6 and AC7, old AC5 became AC9, old AC6 became AC11.
+  - **AC6 gained a case nobody asked for: input containing bytes that are not valid UTF-8.** It is the stakeholder's own byte-for-byte promise applied to a case they never named, and without it a decoding error would break the promise they said they care about most, on a document they cannot get back. Recorded as `[assumed]` in the Q&A rather than as their instruction, and the technique is left to `plan`.
+  - **A criterion should be readable by a stranger with a terminal, so the two terms every criterion leans on are defined once**, in an italic preamble above the list — what "running the filter" means and what "display width" means, each pointing at the ADR that fixes it. The alternative was repeating the `unicodedata` rule in three criteria, where it would drift.
+  - **Four things were routed to `plan` rather than to the stakeholder**, each because the answer would be the same whoever the stakeholder was (`refine` step 3, last test): escaped pipes, how non-UTF-8 bytes are read and re-emitted, where the script lives and what `commands.test` becomes, and that a tab counts as one column. All four are in `## Notes` with the skill that owns them, so none is invisible.
+  - **`## Out of scope` grew from 3 entries to 7.** The three that matter are the ones a reader would otherwise assume: blockquoted tables (the stakeholder declined them in as many words), tables without outer pipes, and any attempt to distinguish a table inside an *indented* code block from one indented under a list — ADR-0003 accepts that the latter will be tidied, and a reader deserves to meet that where they meet the scope rather than in an ADR.
+  - **No split (R9).** Recognition, width and output shape are one pass over one document in one script; splitting them would produce items that cannot be verified apart. WI-0002 already owns alignment markers and nothing here duplicates it.
+  - **No override.** All ten criteria are met, and recording a waiver for a criterion that is not failing would be a false entry.
+- **Cross-answer check:** this execution recorded no new answer, so it introduced no new check. Checked against: `EP-001/Q-001`, `EP-001/Q-003`, `WI-0001/Q-001` to `Q-004` — every criterion written above was read against all six, and none contradicts any of them. The nearest thing to a conflict, *"as wide as the widest cell in them"* [src: EP-001/Q-001] against *"a rule under the header, not a row of content"* [src: WI-0001/Q-004], was consumed by `answer-questions` as a clarification and is recorded as such in `Q-004`'s own check. No sentence of theirs was edited by this execution.
+- **Questions raised:** none. Round 1's four are answered and recorded in `artifacts/refinement-qa.md`; nothing is left `[unresolved]`.
+- **Commands:**
+  - `.claude/agile-skills/scripts/lint-answers --item WI-0001` → exit 0, 4 consumed answers, 0 errors
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 1 warning (`project.commands.test-null`, which AC11 and `## Notes` hand to `plan`)
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0)
+  - `definition-of-ready` → **pass**, criterion by criterion:
+    - R1 pass — frontmatter complete, `type: work-item`, `epic: EP-001`, `priority: high`
+    - R2 pass — role "someone who edits markdown documents by hand", capability "pipe a document through one command and get it back with every table's columns padded", outcome "so that my source tables stay readable"
+    - R3 pass — AC1 to AC11, each labelled and a checkbox
+    - R4 **fail on entry, pass now** — the old AC1 and AC2 were decidable only for ASCII and the old set said nothing about padding, the delimiter row or indentation. Rewritten as 11 criteria, each naming an input, an observation and a verdict. No adjective without a threshold remains: the one term of judgement, "display width", is defined in the preamble by the exact function
+    - R5 pass — 7 exclusions, three of which a reader would otherwise assume are included
+    - R6 **fail on entry, pass now** — four blocking questions were open; all four are `answered` and none remains open on this item
+    - R7 pass — `depends-on` is absent, so nothing is unfinished ahead of it
+    - R8 **fail on entry, pass now** — `artifacts/refinement-qa.md` was `status: agenda`; it now holds every question and every answer verbatim, each tagged `[human]` or `[assumed]`, and declares `status: recorded`
+    - R9 pass — one coherent change, one script, one pass over a document; WI-0002 holds the part that was split off at intake
+    - R10 pass — the tool has no options, flags or modes, recorded in `## Notes` as deliberately having no combinations to specify rather than left absent
+  - `criteria-are-decidable` → **pass**. AC1, AC2: run the filter on a fixture with a ragged table containing a wide character, an emoji and a combining accent, compute the display-width function over each output line, compare. AC3, AC4: read the output's bytes against the stated shape. AC5: three fixtures — uniform indent, mismatched indent, `> ` prefix — diff each against its expected file. AC6: `cmp` the output against the input, for five inputs including a non-UTF-8 one. AC7, AC8: `diff` the non-table lines against the input. AC9: run the filter twice, `cmp` run 2 against run 1. AC10: `echo $?`. AC11: the test suite named in `tracker/project.yaml` runs and passes, and each test names its criterion
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0001` exit 0)
+  - `qa-recorded-verbatim` → **pass** — all four questions and all four answers are in `artifacts/refinement-qa.md` in the stakeholder's own words, including the two where they chose against the team's recommendation, which are recorded as such
+- **Artifacts:**
+  - `tracker/items/WI-0001/item.md` — acceptance criteria rewritten (11), `## Out of scope` rewritten (7), `## Notes` rewritten around ADR-0003 and the four questions routed to `plan`
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md` — `status: recorded`, round 1 verbatim, the settled-without-asking list tagged, `## Round 2` and `## Override` both stating none
+  - commit of the above under `refs WI-0001`
+- **Status:** `draft` → `ready`
+- **Result:** WI-0001 is Ready on all ten criteria with no override. The stakeholder chose against the team's recommendation twice, both choices are the ones written into the criteria, and the two questions they were never asked — escaped pipes and non-UTF-8 bytes — are named in `## Notes` as `plan`'s, not left for `implement` to discover.
+
+## 2026-08-29T21:49:46Z — plan v0.4.0 — architect
+
+- **Item:** WI-0001
+- **Trigger:** `ready` with `owner: plan`, dispatched by `next`; the first item in the project to be planned, so `docs/architecture/overview.md` and `tracker/project.yaml`'s commands are part of this execution rather than a later one
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` (AC1 to AC11, `## Out of scope`, `## Notes`), `history.md`, `journal.md`, `artifacts/refinement-qa.md` at `status: recorded` — especially the eight `[assumed]` entries, which are this design's soft ground
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md`; `tracker/items/EP-001/questions/Q-001.md` to `Q-003.md`
+  - `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` v1, `ADR-0003-recognition-and-output-shape.md` v1, `ADR-0002-conservative-table-recognition.md` v2 (superseded, read to confirm what it no longer governs)
+  - `docs/product/vision.md` v3; `tracker/items/WI-0002/item.md`, whose `## Out of scope` is load-bearing for ADR-0004
+  - `tracker/project.yaml`; `git ls-files` — **there is no source code in this repository yet**, so step 2 of the procedure had nothing to read and this plan creates the whole tool
+- **Decisions:**
+  - **ADR-0004, written by this execution — the delimiter row keeps its alignment markers.** Route: the documents, and they disagreed. AC4 read literally turns `:---:` into hyphens, which changes how a document renders; WI-0001's `## Out of scope`, ADR-0003 decision 10 and WI-0002's `## Out of scope` all say markers are untouched, and `Q-004` asked the stakeholder only about *"a delimiter row that carries no marker at all"*. The ADR records the composition rule that satisfies both readings, and a second thing nothing on record covers: a column whose delimiter carries two colons needs a minimum width of 1, or the filter emits `::` — a table it would not recognise on the next run, failing AC9 on its own output.
+  - **One module, four layers** — edges, measurement, recognition, composition — with the interfaces named in `## Approach` and no bodies. The split is what makes AC1 testable at all: `display_width` is the one function the tests and the code have to agree about, and it is separately unit-testable against literal integers, which `## Risks` names as the mitigation for the tautology this criterion invites.
+  - **`split_lines` rather than `str.splitlines`.** Route: decided here. `str.splitlines` also splits on `\v`, `\f` and ` `, so a document containing one would be re-joined differently and the byte-for-byte promise would break on exactly the input nobody tests. The property `"".join(split_lines(t)) == t` is what AC6 rests on.
+  - **Bytes at the edges, decoded with `errors="surrogateescape"`.** Route: assumption, recorded in the plan and explained in the overview. It is what makes AC6's non-UTF-8 case pass without pushing `bytes` handling into every width and splitting function. Reversible: two lines, one at each edge.
+  - **`commands.test` = `python3 -m unittest discover -s tests -t .`** and **`commands.lint` = `python3 -m compileall -q -x '(^|/)\.claude(/|$)' .`**. Both were run in this project before being recorded. The test command exits **5** on an empty suite rather than 0, which is what makes it a real gate rather than one that passes vacuously; the lint command is a stdlib syntax check and is recorded as being only that, because no linter is installed here and ADR-0001 forbids adding one. `commands.build` stays null: there is nothing to build, which is the property the stakeholder actually asked for [src: EP-001/Q-002].
+  - **Four smaller choices are assumptions with their reversal named**, not ADRs, because each is one file to undo: the script is `mdtab.py` at the root with a shebang; `unittest` under `tests/`; an escaped `\|` is content and both its characters count towards the cell's width; command-line arguments are ignored rather than rejected. The escaped-pipe width is the only one with a real trade-off, and the plan says which way it cuts — the tool aligns the source a person reads, so the source's characters are what it counts.
+  - **`docs/architecture/overview.md` created**, because this is the first planned item and an overview written after three items is archaeology. It records the pipeline shape, why the edges are bytes, and the three ADRs a reader should read instead of the code.
+  - **Nothing was asked of the human.** No decision here is irreversible and none depends on intent no document records; the one contradiction found was between our own criterion and our own documents, which is mine to resolve and is resolved in an ADR rather than in a plan step where nobody would see it was a choice.
+- **Cross-answer check:** this execution recorded no new human answer and relied on four already consumed. Checked against: `EP-001/Q-001`, `EP-001/Q-002`, `EP-001/Q-003`, `WI-0001/Q-001` to `Q-004` — every design decision above was read against all seven and none contradicts any of them. The pair that bears on one rule, *"as wide as the widest cell in them"* [src: EP-001/Q-001] and *"a rule under the header, not a row of content"* [src: WI-0001/Q-004], was consumed as a clarification by `answer-questions`, is recorded in `Q-004`'s own check, and is used here exactly as ADR-0003 states it. ADR-0004 settles a contradiction between **our** criterion and **our** documents, not between two of their statements, which is the thing `plan` step 5a forbids. `lint-answers --uncommitted` exit 0.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 5, "NO TESTS RAN" (the suite is empty until `implement` writes it; recorded because it proves the command runs and cannot pass vacuously)
+  - `python3 -m compileall -q -x '(^|/)\.claude(/|$)' .` → exit 0
+  - `.claude/agile-skills/scripts/lint-claims --uncommitted` → exit 0, 2 documents checked
+  - `.claude/agile-skills/scripts/lint-answers --uncommitted` → exit 0, 7 consumed answers checked
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 warnings (the `project.commands.test-null` warning is gone, this execution being what cleared it)
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0, 0 errors 0 warnings)
+  - `every-criterion-is-addressed` → **pass** — `artifacts/plan.md` `## Acceptance criteria mapping` has one row for each of AC1 to AC11, each naming the step that satisfies it and the named test and fixture that demonstrates it. No row says "tests"; every row names a fixture file or an assertion
+  - `project-commands-resolved` → **pass** — `commands.test` and `commands.lint` are set to commands run in this project before being written down, and neither passes without checking something: the test command exits 5 on an empty suite, and the lint command fails on a syntax error in any project `.py`
+  - `decisions-recorded` → **pass** — the plan's `## Decisions and ADRs` table lists every choice with its route: ADR-0003 and ADR-0001 for what was documented, ADR-0004 for what was decided here, and five entries under `## Assumptions` each with what reversing it costs
+  - `plan-is-executable-without-you` (advisory) → **pass** — the ten steps each name the file they touch and what is observably true afterwards; the interfaces are named with their rules, and no step defers a decision as "handle appropriately"
+  - `cross-answer-consistency` → **pass** (`lint-answers --uncommitted` exit 0)
+  - `claims-are-sourced` → **pass** (`lint-claims --uncommitted` exit 0 over the two documents this execution wrote under `docs/`)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/plan.md` — created: problem, approach with named interfaces, 10 steps, an 11-row AC mapping, 5 assumptions, the decision table, scaffolding, 5 risks, out of scope
+  - `docs/architecture/adr/ADR-0004-delimiter-row-preserves-alignment-markers.md` — created, v1
+  - `docs/architecture/overview.md` — created, v1
+  - `tracker/project.yaml` — `commands.test` and `commands.lint` set, with a comment recording that they were verified and what the exit-5 behaviour means
+  - `tests/__init__.py` — scaffolding, empty, declared in the plan; without it the recorded test command cannot start
+  - commit of the above under `refs WI-0001`
+- **Status:** `ready` → `planned`
+- **Result:** WI-0001 is planned. The design is four testable layers in one file, every criterion maps to a named fixture and test, and the one trap in the item — AC4 read without its `## Out of scope` would have the tool silently change how a marked table renders — is recorded as ADR-0004 and as the first entry under `## Risks`, so `implement` and `verify` meet it before it costs a round trip.
+
+## 2026-08-29T21:51:42Z — implement v0.3.0 — developer
+
+- **Item:** WI-0001
+- **Trigger:** status `planned`, dispatched by `next`
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` (AC1-AC11, `## Out of scope`, `## Notes`)
+  - `tracker/items/WI-0001/artifacts/plan.md` (ten steps, the criteria mapping, `## Risks`)
+  - `tracker/items/WI-0001/history.md` (five rows; last is `ready` → `planned` by `plan` — a fresh start, not a resumption, and no send-back)
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md` (all `answered`, all propagated into ADR-0003 before `plan` ran)
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md` (decisions 1-11)
+  - `docs/architecture/adr/ADR-0004-delimiter-row-keeps-alignment-markers.md` (the AC4 reading and the two-colon minimum width)
+  - `tracker/project.yaml` (`commands.test`, `commands.lint`, `conventions.branch-prefix`, `conventions.commit-subject`)
+  - the working tree: no `mdtab.py` exists, `tests/` holds only `__init__.py`, so this is the execution that creates the tool
+- **Decisions:**
+  - none yet — this entry opens the execution. The plan's latitude has not been exercised at all: no code is written.
+- **Cross-answer check:** none — this execution has edited no file yet, so no claim in `docs/` sourced to a stakeholder answer has been touched.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0001` → 0 (branched from `main`; no prior branch existed for this item)
+- **Gates:**
+  - `tests-pass` → **skipped** (not yet run: the completion gates belong to the closing entry, and no code exists to test)
+  - `lint-clean` → **skipped** (not yet run, same reason)
+  - `workspace-valid` → **skipped** (not yet run in this execution; `next` reported 0 errors, 0 warnings immediately before dispatching)
+  - `every-criterion-has-a-test` → **skipped** (not yet run: no test exists)
+  - `commits-reference-the-item` → **skipped** (not yet run: the branch has no commits)
+  - `cross-answer-consistency` → **skipped** (not yet run: nothing has changed since `main`)
+  - `claims-are-sourced` → **skipped** (not yet run: nothing has changed since `main`)
+- **Artifacts:**
+  - branch `wi/WI-0001`, created from `main` at `ac16080`, no commits yet
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of WI-0001 has started on branch `wi/WI-0001`. The plan is executable as written — nothing in it contradicts the working tree — and the ten steps will be worked in order, each with its test in the same commit. The closing entry will carry the gates and the criteria evidence.
+
+## 2026-08-29T22:03:44Z — implement v0.3.0 — developer
+
+- **Item:** WI-0001
+- **Trigger:** status `in-progress`, this skill's own opening transition earlier in this execution
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1 to AC11, `## Out of scope`, `## Notes`
+  - `tracker/items/WI-0001/artifacts/plan.md` — the ten steps, the criteria mapping, `## Assumptions`, `## Risks`
+  - `tracker/items/WI-0001/history.md`, `journal.md`
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md` — all `answered` and already propagated; read for context, not acted on directly
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md` — decisions 1 to 11
+  - `docs/architecture/adr/ADR-0004-delimiter-row-keeps-alignment-markers.md` — the AC4 reading and the two-colon minimum width
+  - `docs/architecture/overview.md` (v1, edited to v2 by this execution)
+  - `tracker/project.yaml`, `.claude/agile-skills/spec/doc-header.md` (§4a, the citation forms)
+  - `.claude/agile-skills/scripts/validate-workspace` and `scripts/lint-claims` — read only to locate why both crashed on a fixture; see `**Decisions:**`
+- **Decisions:**
+  - **Tests written alongside each step, not collected at plan step 9.** The `implement` procedure requires the test to come with the change in the same commit. Only the ordering moved; step 9's content is exactly what was produced. A criterion whose behaviour was not final until step 7 got its test at step 7, so no failing test was ever committed.
+  - **`tests/fixtures/not_utf8.md` renamed `not_utf8.markdown`.** AC6 requires an input that is not valid UTF-8. `validate-workspace` (`check_claim_citations`) and `lint-claims` (`all_markdown`) both walk every non-ignored `*.md` file in the repository and open it with `encoding="utf-8"` and no error handler — `validate-workspace` catches only `OSError` — so with a `.md` name both gates died with an uncaught `UnicodeDecodeError` traceback instead of reporting anything. Taken as an in-plan choice rather than escalated: it is a fixture's filename, it changes no behaviour, no criterion names a filename, and reversing it is one `git mv`. Recorded in `overview.md`'s layout table and in `fixture()`'s docstring so the next person finds out before the gate crashes on them.
+  - **The `wide_chars` fixture was rewritten after a mutation check.** Its first version had every column's width set by an ASCII header, so `len()` and `display_width()` agreed everywhere and a filter measuring characters instead of display columns passed the whole suite. That is the tautology `plan.md`'s `## Risks` warned AC1 could fail to pin down. The fixture now makes the two measures disagree in all three columns; both it and its expected file are hand-written, and the expected file matched the code's output first time.
+  - **Two fixtures added beyond the plan's list — `crlf_table` and `table_no_final_newline`** — because a mutant that normalised every composed line's terminator to `\n` survived the whole suite. No criterion names that case; the rule is ADR-0003 decision 6 and the item's `## Notes`, so the test is named for the rule rather than for a criterion.
+  - **Plan step 5's temporary block-collection test was run ad hoc and not committed**, as the plan directed — it asserted on an internal shape no criterion needs.
+  - **`docs/architecture/overview.md` v1 → v2**, D12 ordinary repair: its layout table said `tests/` holds "test modules, one per group of acceptance criteria", and the code as built has one module, which the plan's own step 9 authorised. The corrected row and the fixture-naming note are the only content changes; change-log row and version bump added.
+  - **Escalated nothing.** No decision met the "not yours" test: nothing changes an interface WI-0002 depends on, nothing contradicts an ADR, and nothing decides user-visible behaviour that no criterion covers. AC4's apparent conflict with the alignment markers was already decided by ADR-0004 and was implemented as that ADR states, not re-litigated.
+- **Cross-answer check:** none. This execution edited one file under `docs/` — `overview.md`'s layout table and its header and change log. Neither edited sentence carries a `[src: <ITEM>/Q-nnn]` citation, and no sentence in the workspace sourced to a stakeholder answer was touched, rewritten or contradicted. `lint-answers --changed-since main` exits 0 over the 7 consumed human answers.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0001` → 0
+  - `printf 'hello\n' | python3 mdtab.py` → 0, prints `hello` (plan step 1 check)
+  - `./mdtab.py </dev/null` → 0, prints nothing (plan step 1 check)
+  - `cmp` of the filter's output against each passthrough fixture → identical for all 8 (plan step 2 check)
+  - `cmp` of the filter's output against each hand-written expected file → identical for all 8 (plan step 7 check)
+  - `python3 -m unittest discover -s tests -t .` → **0**, `Ran 14 tests ... OK` (run after every step; final run on the branch head)
+  - `python3 -m compileall -q -x '(^|/)\.claude(/|$)' .` → 0
+  - `.claude/agile-skills/scripts/validate-workspace .` → 0, 0 errors 0 warnings
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0001 wi/WI-0001` → 0, all 7 commits name the item
+  - `.claude/agile-skills/scripts/lint-answers --changed-since main` → 0
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main` → 0
+  - nine one-at-a-time mutations of `mdtab.py`, suite re-run against each → every one detected; the two that initially survived are the fixture gaps described above, and both are now killed
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` exit 0, `Ran 14 tests ... OK`, on the branch head after the last commit)
+  - `lint-clean` → **pass** (`python3 -m compileall -q -x '(^|/)\.claude(/|$)' .` exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0, 0 errors 0 warnings)
+  - `every-criterion-has-a-test` → **pass** (each of AC1 to AC11 is mapped to a named test method in `artifacts/impl-report.md`; `SuiteCoverageTest.test_ac11_each_criterion_has_a_named_test` re-checks that mapping mechanically, and nine mutants confirm the methods would fail if the behaviour were removed)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs WI-0001 wi/WI-0001` exit 0, "all 7 commit(s) on main..wi/WI-0001 name WI-0001")
+  - `no-unplanned-scope` → **pass** (advisory; 31 files in `main..HEAD` — `mdtab.py` and `tests/test_mdtab.py` are plan steps 1 to 9, the 24 fixtures are step 8, `overview.md` is the D12 repair recorded above, the rest is this item's own tracker record. No hunk is unrelated, and no defect noticed on the way was fixed)
+  - `cross-answer-consistency` → **pass** (`lint-answers --changed-since main` exit 0; the `**Cross-answer check:**` bullet above states the finding rather than staying silent)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` exit 0)
+- **Artifacts:**
+  - `mdtab.py` — the filter, 312 lines, executable
+  - `tests/test_mdtab.py` — 14 test methods; `tests/fixtures/` — 24 files
+  - `tracker/items/WI-0001/artifacts/impl-report.md`
+  - `docs/architecture/overview.md` v2
+  - branch `wi/WI-0001`, commits `ac16080..e2beac6` (7)
+- **Status:** `in-progress` → `verifying`
+- **Result:** WI-0001 is built and every one of its eleven criteria has a named test, checked against nine mutations rather than merely run. Two of those mutations initially survived — a fixture whose columns were all sized by ASCII headers, and a missing table-with-CRLF case — and both gaps are closed with new fixtures. All eight gates pass on the branch head. One thing `verify` must not miss: **AC4 read on its own contradicts the code**, deliberately, and ADR-0004 with the item's own `## Out of scope` is the resolution — a table whose delimiter row carries `:---:` keeps its colons. One toolkit defect is reported in `impl-report.md` and was worked around, not fixed: `validate-workspace` and `lint-claims` crash on any non-UTF-8 `.md` file in the repository.
+
+## 2026-08-29T22:10:05Z — verify v0.2.0 — qa-engineer
+
+- **Item:** WI-0001
+- **Trigger:** status `verifying`, dispatched by `next`
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — AC1 to AC11 and `## Out of scope`, read **before** the implementation report, as the procedure requires
+  - `tracker/items/WI-0001/artifacts/plan.md` — `## Approach`, `## Assumptions`, `## Risks`, read to find behaviour no criterion accounts for
+  - `tracker/items/WI-0001/artifacts/impl-report.md` — read as a claim to be checked, cited as evidence for nothing
+  - `tracker/items/WI-0001/history.md`
+  - `tracker/items/WI-0001/questions/Q-004.md` — read verbatim because AC4's wording is contested; its `## Context` scopes the question to *"a delimiter row that carries no marker at all"*
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md` decision 10, `docs/architecture/adr/ADR-0004-delimiter-row-keeps-alignment-markers.md`
+  - the code on branch `wi/WI-0001` at **c1c79dc2639eab98a3e0d9ffce631c996e50ad2d** — `mdtab.py` in full, and `tests/test_mdtab.py` parsed with `ast` rather than read for reassurance
+  - `tracker/project.yaml` — `commands.test` and `commands.lint`
+- **Decisions:**
+  - **No criterion was judged `ambiguous` and no question was filed.** The one criterion whose text is contested is AC4, and the record settles it in four places rather than leaving it open: the item's own `## Out of scope` (*"AC4's hyphen rule describes a delimiter cell that carries no marker"*), ADR-0003 decision 10, ADR-0004, and `Q-004`'s `## Context`, which put the question to the stakeholder about a markerless row explicitly. So this is a criterion beside its own scope statement, written by the same skill in the same file — not two criteria contradicting each other, which is the F-065 shape. Recorded at length in the report so `review-close` cannot reach AC4 without meeting the reading first.
+  - **The reading was not chosen because it makes the code pass.** AC4's actual subject — a markerless delimiter row, and the narrowing rule — was verified on its own input independently, and passes on its own terms. The marker behaviour was triggered and recorded separately.
+  - **Nothing was verified with the project's own fixtures.** Every input in the criteria table was written by this skill. Display width was measured with a nine-line function written from the item's preamble, not by importing `mdtab.display_width`, because importing it would have made AC1 and AC2 assert that the code agrees with itself.
+  - **No send-back and no bug item.** No criterion of this item failed; no behaviour delivered by another item failed, and no other item has delivered anything yet.
+  - **The toolkit defect the implementation hit was recorded, not filed as a bug.** `validate-workspace` and `lint-claims` crash with an uncaught `UnicodeDecodeError` on any non-UTF-8 `*.md` file in the repository. A `bug` item here is filed against behaviour an *item* delivered, and no item owns the pipeline's scripts, so it goes in `verify-report.md` and the turn's harness status instead. The workaround (`not_utf8.markdown`) was confirmed to hold: `validate-workspace` exits 0 on the branch head.
+  - **Two behaviours that look like defects were triggered and judged not to be**: a pipe table inside an *indented* code block is tidied (ADR-0003 decision 2 and the item's `## Out of scope` both accept it), and a header row that itself looks like a delimiter row becomes a table with the literal text `---` in its header (ADR-0003 decision 3; the output renders identically to the input and is idempotent).
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → **0**, `Ran 14 tests in 2.409s ... OK`
+  - `python3 -m compileall -q -x '(^|/)\.claude(/|$)' .` → **0**
+  - `.claude/agile-skills/scripts/validate-workspace .` → **0**, 3 items, 6 documents, 0 errors 0 warnings
+  - AC1: my own wide/emoji/combining table through the filter, then `/tmp/vwi1/w.py` → input widths `24, 7, 21, 17`; output `25, 25, 25, 25`
+  - AC2: `/tmp/vwi1/off.py` on that output → `[0, 9, 17, 24]` on all four rows
+  - AC3: a table with padded cells, tab-wrapped text and an empty cell through the filter, `cat -A` → `| Padded | Tight |  |$`, `| a      | b     |  |$`; `grep -nP '[ \t]$'` → no match
+  - AC4: an 18-hyphen delimiter run → narrowed to `|----|---|`; and a marked row `|:---|:--:|---:|` → `|:-----|:------:|------:|`
+  - AC5: four runs — 4-space indent, tab indent, mismatched indent (`cmp` identical), `> ` prefix (`cmp` identical)
+  - AC6: six of my own inputs `cmp`'d against their filter output → all byte-identical, exit 0; `md5sum` on the invalid-UTF-8 pair → both `2b51efba8923e9b7de78472141951224`
+  - AC7: `diff -u` of a fenced document against its output → only the real table's two lines changed; and a 3-backtick line inside a 4-backtick fence → `cmp` identical
+  - AC8: five malformed blocks → `cmp` identical for all five, well-formed rows untouched
+  - AC9 and AC10: 22 inputs, filter run on its own output → `idempotent` and `exit 0/0` for all 22, stderr empty
+  - AC11: `tests/test_mdtab.py` parsed with `ast` → 14 methods, `AC1 -> OK` … `AC10 -> OK`, exactly one named test each, docstring quoting the criterion
+  - boundaries: escaped pipe, row ending in an escaped pipe, `--nonsense -x` arguments, single-column table, adjacent tables, degenerate `||` table, two-colon empty column, CRLF table, table as final line with no newline — each triggered, output recorded in the report
+  - eleven mutations of the branch head, suite re-run against each, tree restored → every criterion's own test fails when its behaviour is removed; `git status --short` empty afterwards and the suite green again
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` exit 0, `Ran 14 tests ... OK`, run by this skill on branch head `c1c79dc`)
+  - `lint-clean` → **pass** (`python3 -m compileall -q -x '(^|/)\.claude(/|$)' .` exit 0)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0, 0 errors 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (all eleven rows of `verify-report.md`'s criteria table name a command this skill ran and quote its actual output; no row cites `impl-report.md`, and no verdict rests on a project fixture)
+  - `negative-cases-exercised` → **pass** (0-byte input, invalid UTF-8, no final newline, CRLF, lone CR, five malformed blocks, indent mismatch, blockquote, escaped pipes, unexpected arguments, two degenerate tables, the two-colon minimum width and a fence-length boundary — each triggered, not read about)
+  - `a-criterion-about-criteria-is-read` → **pass** (AC11 names AC1 to AC10 by ID; each got a per-criterion verdict read from the test file's source, with the suite as evidence for that verdict rather than its definition. Non-intersection: none — `test_ac11_each_criterion_has_a_named_test` exercises the mapping at run time and mutation M11 confirms it is sensitive)
+  - `tests-would-fail-without-the-change` → **pass** (advisory; eleven mutations, one per criterion, each detected by that criterion's own named test — including M2, the `len()`-instead-of-display-width tautology `plan.md`'s `## Risks` warned about)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/verify-report.md` — `Verified-commit: c1c79dc2639eab98a3e0d9ffce631c996e50ad2d`
+  - `tracker/items/WI-0001/item.md` — all eleven criteria ticked, each against a command in that report
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** WI-0001 passes all eleven criteria on evidence gathered independently: 22 inputs written by this skill, an independent display-width measure, every negative and boundary case triggered rather than read about, and eleven mutations confirming each criterion's test is sensitive. The one thing `review-close` must not do is read AC4 alone — its literal text does not describe the code, deliberately, and the item's own `## Out of scope`, ADR-0003 decision 10, ADR-0004 and `Q-004`'s own context all scope it to a delimiter cell that carries no marker. No defect was found in this item or in any other. One defect in the **toolkit** is recorded in the report: `validate-workspace` and `lint-claims` crash on any non-UTF-8 `*.md` file in the repository.
+
+## 2026-08-29T22:14:55Z — review-close v0.6.0 — reviewer
+
+- **Item:** WI-0001
+- **Trigger:** status `in-review`, dispatched by `next`
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — the eleven criteria, their tick state, `## Out of scope`, `## Notes`
+  - `tracker/items/WI-0001/journal.md` — all ten entries in full, from `intake` at 21:14:46 to `verify` at 22:10:05
+  - `tracker/items/WI-0001/history.md` — all eight rows, checked for chaining
+  - `tracker/items/WI-0001/artifacts/plan.md`, `impl-report.md`, `verify-report.md` — the last two read as claims to be checked, cited as evidence for nothing
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md`, and `Q-004`'s `## Context` in full
+  - **the diff `main..68cd5fb`, hunk by hunk** — `mdtab.py` end to end (all 15 functions), `tests/test_mdtab.py`, the 26 fixtures, and `docs/architecture/overview.md`'s v1 → v2 change
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md` decisions 1 to 11 and `ADR-0004-delimiter-row-preserves-alignment-markers.md` decisions 1 to 3, read against the functions that implement them
+  - `docs/product/vision.md` v3 including `## What is not yet decided`; `docs/architecture/overview.md` v2
+  - `tracker/items/WI-0002/item.md` — to confirm the one outstanding product property has a home that survives this close
+- **Decisions:**
+  - **Accept and close as `delivered`.** All twelve Definition of Done criteria pass with their own evidence; the per-criterion table is in `artifacts/review.md`, not a single verdict.
+  - **AC4's apparent contradiction is not one, and no question was filed.** A `:---:` delimiter cell comes back with its colons, which AC4's literal sentence does not describe. The record resolves it in four independent places — the item's own `## Out of scope`, ADR-0003 decision 10, ADR-0004, and `Q-004`'s `## Context`, which put the question to the stakeholder as *"only the appearance of a delimiter row that carries no marker at all"*. The code therefore contradicts no ADR, nothing is superseded, and this is a criterion beside its own scope statement rather than two criteria disagreeing. Verified independently rather than taken from the reports.
+  - **No send-back and no bug item.** No defect in this item, and none in behaviour delivered elsewhere — this is the project's first delivered item.
+  - **Five findings recorded, none requiring action**: the AC4 reading; `table_or_none`'s signature differing from the plan's while its behaviour does not; four helper functions the plan implies in prose but does not name; a hunk-by-hunk confirmation that nothing in the diff serves neither a criterion nor a plan step; and one maintainability note — `transform`'s `flush()` empties its block with `del block[:]` rather than rebinding, which is correct but is the one place the mechanism is not obvious from the shape.
+  - **Six accepted gaps written into the item's `## Notes`**, not left in the reports: alignment inside a non-UTF-8 document, display width as an approximation, an indented code block being tidied, unmeasured performance, the vision's marker-positioning property (WI-0002 delivers it — checked its AC1 to AC3), and the toolkit defect below. A gap that lives only in a closed item's report is a gap nobody reads again.
+  - **The toolkit defect was recorded, not filed as a bug.** `validate-workspace` and `lint-claims` decode every `*.md` file in the repository as UTF-8 with no error handler and crash on the fixture AC6 requires. No `bug` item could carry a valid `found-in`, because no item owns the pipeline's scripts. It is in `## Notes` so that renaming the fixture back to `.md` is not a trap.
+  - **Merge order: trial, then close, then merge.** The trial used `git worktree add --detach`, so no branch could be advanced by it; `git rev-parse main` returned `ac16080` both before and after, confirmed rather than assumed. The real merge follows this transition, because `commits-reference-the-item` inspects `main..branch` and merging first would empty that range.
+  - **The engagement was not ended.** `scripts/engagement-state EP-001` reports `active`, with WI-0002 still in flight, so no sign-off question was filed and the epic was not touched. That is the script's verdict, not a read of the board.
+- **Cross-answer check:** none consumed by this execution — it received no new human answer. The seven already-consumed answers were re-checked in place by `scripts/lint-answers --context work-item --changed-since main`, exit 0. The one place two of the stakeholder's sentences bear on the same rule — *"as wide as the widest cell in them"* [src: EP-001/Q-001] against *"a rule under the header, not a row of content"* [src: WI-0001/Q-004] — was reconciled by `answer-questions` at the time, is recorded in `Q-004`'s own cross-answer check, and this review confirmed the code follows that reconciliation rather than re-deciding it. No sentence in `docs/` sourced to a stakeholder answer was edited by this execution.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/check-verify-freshness WI-0001 wi/WI-0001` → **0**: *"verified at c1c79dc2; wi/WI-0001 has moved to 68cd5fbd but only the record changed (5 file(s) under tracker/ or docs/)"*
+  - `git log --oneline --name-only c1c79dc..HEAD` → one commit, touching `tracker/` only — D10 confirmed independently of the script
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0001 wi/WI-0001` → **0**, "all 9 commit(s) on main..wi/WI-0001 name WI-0001"
+  - `git rev-parse main` → `ac1608057ca42ca416a54fa9b9b0f8b13a34f85c` (before the trial)
+  - `git worktree add --detach /tmp/trial-wi1 main`; `git -C /tmp/trial-wi1 merge --no-ff wi/WI-0001` → clean, trial head `cad9b3b`
+  - `python3 -m unittest discover -s tests -t .` **inside the trial worktree** → **0**, `Ran 14 tests in 2.390s ... OK`
+  - `python3 -m compileall -q -x '(^|/)\.claude(/|$)' .` inside the trial worktree → **0**
+  - `git worktree remove --force /tmp/trial-wi1`; `git rev-parse main` → `ac16080…` again, unchanged
+  - `.claude/agile-skills/scripts/validate-workspace .` → **0**, 3 items, 6 documents, 0 errors 0 warnings
+  - `.claude/agile-skills/scripts/lint-claims --context work-item --changed-since main` → **0**
+  - `.claude/agile-skills/scripts/lint-answers --context work-item --changed-since main` → **0**
+  - `.claude/agile-skills/scripts/check-epic-signoff WI-0001` → **0** (not an epic)
+  - `.claude/agile-skills/scripts/engagement-state EP-001` → `EP-001 active`, *"still in flight: WI-0001, WI-0002"*
+  - `grep -c '^- \[x\] AC' item.md` → 11; `ls setup.py pyproject.toml setup.cfg` → all absent; `grep -nE '\bopen\(|logging|argparse|import ' mdtab.py` → three stdlib imports and nothing else
+- **Gates:**
+  - `definition-of-done` → **pass** (D1 to D12 each with its own result and evidence in `artifacts/review.md`'s table; no single overall verdict was used)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; corroborated by `git log --name-only c1c79dc..HEAD` showing only `tracker/` files)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 9 commits)
+  - `tests-pass-on-the-merge-result` → **pass** (`python3 -m unittest discover -s tests -t .` exit 0 inside the detached trial worktree at `cad9b3b`, which is the merge result and not the branch)
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0, 0 errors 0 warnings)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log` alone: *what was built and why* — `plan.md` and `impl-report.md`, and `git log --grep WI-0001` returns all nine commits; *which decisions and by which skill* — ADR-0003 by `answer-questions`, ADR-0004 by `plan`, the reversible ones by `implement` in its journal entry, each with its actor in `history.md`; *what questions arose and how they resolved* — `Q-001` to `Q-004`, all `answered` with `## Consequences` naming real files, and their verbatim text in `refinement-qa.md`; *what verification found* — `verify-report.md`, 22 self-written inputs and eleven mutations, `Verified-commit` naming the exact state
+  - `claims-are-sourced` → **pass** — the gate ran over the scope *"1 document(s) in 1 path(s) differ from main (ac16080) under docs"*, quoted from its own output. That is this item's only `docs/` change and not an empty window, so the gate could have found something. The human half is the nine-row audit in `## What I examined`, each row decided by opening the cited source
+  - `cross-answer-consistency` → **pass** (`lint-answers --context work-item --changed-since main` exit 0 over *"1 path(s) differ"* and 7 consumed human answers)
+  - `epic-sign-off` → **pass, not applicable** (`check-epic-signoff WI-0001` exit 0: *"WI-0001 is a 'work-item', not an epic"*. `engagement-state EP-001` reports `active` with WI-0002 in flight, so no engagement ended here and no sign-off was due)
+- **Artifacts:**
+  - `tracker/items/WI-0001/artifacts/review.md` — what was examined, the twelve-row Definition of Done table, five findings, six accepted gaps
+  - `tracker/items/WI-0001/item.md` — `outcome: delivered`, and the six accepted gaps plus the toolkit defect written into `## Notes`
+  - the merge of `wi/WI-0001` into `main`, made immediately after this transition
+  - no bug item, no question, no change to EP-001
+- **Status:** `in-review` → `done`
+- **Result:** WI-0001 is accepted and closed as `delivered`. All twelve Definition of Done criteria pass on their own evidence, the diff was read hunk by hunk rather than summarised, and the suite passes on the merge result rather than only on the branch. The engagement is **not** over — `engagement-state` reports EP-001 `active` with WI-0002 still in flight — so no sign-off was filed and the epic stands untouched. The one thing a later reader must not do is read AC4 alone; the item's own `## Out of scope`, ADR-0003 decision 10, ADR-0004 and `Q-004`'s context all scope it to a delimiter cell carrying no marker, and the code is right.

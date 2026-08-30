@@ -1,0 +1,407 @@
+# Journal — EP-001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-29T21:15:47Z — intake v0.3.0 — product-analyst
+
+- **Item:** EP-001
+- **Trigger:** invoked directly by the operator on the stakeholder's stated idea in `IDEA.md`; not dispatched by `next`, and not routed from a request — `tracker/requests/` is empty
+- **Inputs read:**
+  - `IDEA.md` — the stakeholder's statement, verbatim: *"A filter that reads markdown on stdin and pretty-aligns its tables: pads columns, honours alignment markers, leaves non-table content untouched."*
+  - `SIMULATION-NOTICE.md` — the stakeholder is asynchronous and not present in this session
+  - `tracker/project.yaml` — name `mdtab-3b`, trunk `main`, all three of `commands.test`, `commands.lint`, `commands.build` null, `description` null
+  - `tracker/items/` — empty, so no prior epic, no allocated IDs and no overlapping work
+  - `docs/product/vision.md` — did not exist; there was therefore no existing vision to conflict with
+- **Decisions:**
+  - **Restated the idea in the epic's `## Goal` rather than in conversation, because the stakeholder is not in this session.** The restatement step exists to surface a misunderstanding at the cheapest moment; with an asynchronous stakeholder the cheapest available moment is a written goal they can contradict when they answer the questions below. `## Goal` is deliberately written in their terms — piping a document through one command, source tables that stop looking ragged — and not in the tracker's.
+  - **Split the work into two items, not three.** The stakeholder's sentence names three behaviours (pad columns, honour alignment markers, leave non-table content untouched). Padding and passthrough are one item (`WI-0001`) because neither is separately deliverable: a filter that pads but mangles prose is unusable, and a filter that only passes content through does nothing. Alignment is a second item (`WI-0002`) because it is an observable change on top of a working filter and can be checked on its own. A third "skeleton" item — read stdin, write stdout — was considered and rejected: it delivers nothing to a user, and each item costs a full plan/implement/verify/review round trip.
+  - **Ordered them `WI-0001` (high) then `WI-0002` (medium), and recorded the order as a dependency rather than only as a priority.** The stakeholder gave no ordering, and the procedure says not to guess one — but this ordering is not a guess about their preference, it is a technical entailment: alignment decides which side padding goes on, so it cannot precede padding. `WI-0002` declares `depends-on: WI-0001`, which is checkable, and the priorities merely agree with it.
+  - **Wrote `## Out of scope` on the epic although the stakeholder named no exclusions.** Derived from what a reader would reasonably assume: file arguments and in-place editing (they said stdin), HTML rendering, prose wrapping and heading normalisation (they said tables), repairing malformed tables, and any configuration file. The vision's "what it deliberately is not" carries the same list. This is the section that prevents an argument at review, and any of these is cheap to add back if the stakeholder says we drew the line wrongly.
+  - **Recorded "conservative beats helpful" in the vision as a design tie-break.** The stakeholder said "leaves non-table content untouched", which is a constraint, not a feature; stating explicitly that declining to reformat is a smaller failure than damaging a document gives `plan` and `refine` something to decide edge cases against instead of re-asking.
+  - **Left `commands.test`, `commands.lint` and `commands.build` null in `project.yaml`.** They are unknowable until `EP-001/Q-002` settles what the tool runs as, and the file's own comment says a null command is honest — inventing one would make the first gate report a pass for a command nobody can run. Filled in `project.description` only.
+  - **Did not name a language, a library or a data structure anywhere in the epic, the items or the vision.** `EP-001/Q-002` names four candidate runtimes because that question is precisely about the constraint, and its options are the stakeholder's to choose between.
+- **Questions raised:** `Q-001` (non-blocking, `kind: elicitation`, to human), `Q-002` (blocking, to human), `Q-003` (blocking, to human) — all three filed on this epic and presented as one round of three. **No human answer has been received; none of the three has been answered, and nothing in this execution's artifacts is based on an answer.** The stakeholder is asynchronous (`SIMULATION-NOTICE.md`), so the questions in the procedure's step-3 batch were filed rather than asked in conversation:
+  - `Q-002` covers "what already exists that this must fit into" — the repository is empty, so nothing in it constrains the runtime, and the answer decides what the stakeholder can actually type at a shell.
+  - `Q-003` covers "what is deliberately not in scope" at the level that matters most here: where the line between "a table" and "non-table content" falls, including whether fenced code blocks are excluded. It is the one question whose wrong answer damages documents rather than merely declining to help.
+  - `Q-001` is the elicitation question the procedure requires: what matters to the stakeholder that we did not ask about. It is non-blocking and does not stop the loop.
+  - Not asked, deliberately: who this is for and what they do today instead (the idea states a filter for hand-edited markdown, and asking it would be padding the batch); ragged-row handling, cell-width measurement for non-ASCII text, and exact marker syntax (Definition-of-Ready work recorded in each item's `## Notes` for `refine`, not epic-level scope).
+- **Commands:**
+  - `scripts/workspace-init .` → exit 0, "workspace already present; nothing to do"
+  - `scripts/new-item --id EP-001 --type epic ... --actor intake` → exit 0
+  - `scripts/new-item --id WI-0001 --type work-item --epic EP-001 --priority high --status draft --actor intake` → exit 0
+  - `scripts/new-item --id WI-0002 --type work-item --epic EP-001 --priority medium --status draft --actor intake` → exit 0
+  - `scripts/lint-answers --item EP-001 --require-elicitation` → exit 0, "0 errors, 0 warnings"
+  - `scripts/board-gen .` → exit 0, wrote `tracker/board.md`
+  - `scripts/validate-workspace .` → exit 1 before the journal entries and this transition existed (4 × `journal.execution.missing`, 1 × `question.blocking.not-suspended`); re-run by `scripts/transition` as this move's `workspace-valid` gate
+- **Gates:**
+  - `workspace-valid` → **pass** (`scripts/validate-workspace`, run by `scripts/transition` against the state this move produces; the earlier failures were the three missing journal entries, now written, and this item not being suspended, which is this move)
+  - `epic-has-success-measures` → **pass** — each of the five is a check a person could run rather than a restatement of the goal: equal character width across a table's rows; byte-identical output for an input with no table; a diff whose changed lines fall only inside tables; a second run producing the same bytes as the first; and cell text positioned per its column's marker. None contains the word "successfully" or any synonym for it.
+  - `an-open-question-was-asked` → **pass** (`scripts/lint-answers --item EP-001 --require-elicitation`, exit 0; `Q-001` is `kind: elicitation`, `addressed-to: human`, `blocking: false`)
+  - `items-are-separable` → **pass** (advisory) — `WI-0001` is buildable first and depends on nothing; `WI-0002` is buildable second and declares `depends-on: WI-0001`. Each delivers something observable alone: `WI-0001` a tidy table with an untouched document around it, `WI-0002` cell text moving to the side its marker names.
+  - `no-solution-in-the-problem` → **pass** (advisory) — re-read both titles and both stories: they name standard input, standard output, markdown tables, columns, alignment markers and delimiter rows. Every one of those is either the stakeholder's word or markdown's own vocabulary. Nothing was removed, because nothing was added.
+- **Artifacts:**
+  - `tracker/items/EP-001/item.md` (new), `history.md` (new), `journal.md` (this entry)
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` (new)
+  - `tracker/items/WI-0001/` and `tracker/items/WI-0002/` — `item.md`, `history.md`, `journal.md` (new)
+  - `docs/product/vision.md` (new, version 1)
+  - `tracker/project.yaml` (updated: `project.description`)
+  - `tracker/board.md` (regenerated)
+- **Status:** `open` → `awaiting-answer`
+- **Result:** The idea is now an epic with five checkable success measures and two draft work items. Two blocking questions and one elicitation question are with the stakeholder, so the epic is suspended at `awaiting-answer` with `resume-to: open`; nothing was guessed in their absence, and `refine` cannot honestly start on `WI-0001` until `Q-003` says what a table is.
+
+## 2026-08-29T21:24:43Z — answer-questions v0.4.0 — architect
+
+- **Item:** EP-001
+- **Trigger:** status `awaiting-answer`, with all three human-addressed questions replied to in the file; dispatched by the turn's section-B check ahead of `next`
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` (all three replied to, none previously consumed)
+  - `tracker/items/EP-001/item.md`, `history.md`, `journal.md`
+  - `tracker/items/WI-0001/item.md` and `tracker/items/WI-0002/item.md`
+  - `docs/product/vision.md` (v1)
+  - `docs/architecture/adr/` — empty, so no recorded decision could be contradicted
+  - `tracker/project.yaml`
+  - no `plan.md` and no `refinement-qa.md` exist yet on any item — nothing has been refined or planned
+- **Decisions:**
+  - **Q-002 (runtime) — decided, route "decide it yourself".** The stakeholder fixed the shape (a script, no build step, nothing to install) and explicitly delegated the language. Recorded as ADR-0001: one Python 3 script, standard library only, minimum 3.8, tested with `unittest`. Rationale for Python over shell-plus-awk or Perl 5 is in the ADR: the problem is column bookkeeping and byte-exact passthrough, which needs to be readable more than it needs to be fast, and the tool is one file so a port is cheap if the interpreter assumption fails.
+  - **Q-003 (dialect) — decided, route "recorded intent, then decide the remainder".** Three parts came straight from the answer: no grid tables, fenced code blocks copied whatever they contain, and pass through when unsure. One part the answer did not address — whether the outer pipes are required — was decided rather than escalated, because the record is not silent on it: they pointed at an example carrying outer pipes and gave the tie-break, "where it cannot tell, it should pass the text through and do nothing". ADR-0002 decision 2 records it as ours, with the asymmetry that justifies it — widening the recogniser later only changes input that is currently copied, so every existing test keeps its meaning, while narrowing it after documents have been reformatted is the expensive direction.
+  - **Q-001 (elicitation) — consumed and propagated.** Its three constraints are now ADR-0002 decisions 4, 6 and 7. Decision 4 takes the strictest reading of "leave it alone rather than guess what I meant": one bad row suppresses the whole block rather than the good rows being tidied around it, because a half-reformatted table is exactly the mangled output they said they did not want.
+  - **The one reading inside Q-001 that needed a decision.** "No trailing whitespace at the end of any line it writes" would, read as covering copied lines, contradict "anything that is not a table comes out exactly as it went in, byte for byte" two sentences earlier in the same answer. The colon in the original scopes the clause to table columns, and they ranked byte-exact passthrough as the part they care about most, so ADR-0002 decision 6 reads "writes" as "composes" and leaves copied lines untouched. Recorded as a decision with its reasoning rather than as a fact about what they said.
+  - **No new work item filed.** Nothing in the three answers is work no item records: fence awareness and malformed-table passthrough are both inside WI-0001's story ("passing all other content through unchanged") and both were named in its `## Notes` by `intake` as things `refine` must settle. Widening nothing, adding nothing to the board.
+  - **No acceptance criterion amended.** Both work items are at `draft`, their criteria are `refine`'s to write, and the answers were propagated into their `## Notes` where `refine` will read them.
+  - **`tracker/project.yaml` left alone.** `commands.test` stays null: that file's comment makes it `plan`'s field, and ADR-0001 records what `plan` must set it to. The validator's warning about it therefore still stands, correctly.
+- **Cross-answer check:**
+  - `EP-001/Q-001` checked against `EP-001/Q-002` (compatible — runtime versus behaviour, orthogonal) and `EP-001/Q-003` (compatible and mutually reinforcing — "do nothing when unsure" and "do nothing when broken" are one rule in ADR-0002). The trailing-whitespace clause is an intra-answer reading, not a contest between two answers, so it was decided in the ADR rather than put back to them.
+  - `EP-001/Q-002` checked against `EP-001/Q-001` and `EP-001/Q-003` — compatible with both; nothing in either argues for a different language.
+  - `EP-001/Q-003` checked against `EP-001/Q-001` (compatible, read together in ADR-0002) and `EP-001/Q-002` (compatible, different subject).
+  - No verdict of `conflicts` anywhere, so no question was filed under ADR-0008 §3. Nothing in `docs/` sourced to one of their answers was rewritten by this execution: `vision.md` v1 carried no `[src: EP-001/Q-nnn]` citation, because these are the first answers this engagement has had.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/lint-answers --item EP-001` → exit 0, 3 consumed human answers checked, 0 errors
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before this transition, with exactly the two errors this transition and `board-gen` clear (`question.awaiting.none-open`, `board.stale`)
+- **Gates:**
+  - `answer-is-propagated` → **pass** — every file named in a `## Consequences` section was opened and the change is present: ADR-0001 and ADR-0002 exist and carry the decisions cited; `docs/product/vision.md` is at v2 with the three answers quoted and a change-log row; `tracker/items/EP-001/item.md` carries three new success measures, two new scope entries and three sharpened out-of-scope entries; `WI-0001` and `WI-0002` `## Notes` carry the settled constraints and a narrowed list of what `refine` still owes.
+  - `answered-from-the-record` → **pass** — Q-001 and Q-003 answered from the stakeholder's own words, quoted verbatim in the ADRs; the two parts the record did not settle (outer pipes, and the reading of "writes") are recorded as new decisions in ADR-0002 with their options and reversibility, as this gate requires.
+  - `escalation-is-justified` → **skipped** — nothing was escalated. Neither open decision meets a condition in `spec/question.md` §4: the record is not silent on either, and both are reversible in the widening direction.
+  - `cross-answer-consistency` → **pass** (`lint-answers --item EP-001`, exit 0, 3 answers examined)
+  - `workspace-valid` → **pass** — re-run after this transition and `board-gen`; the two errors standing before it were the item's own `awaiting-answer` status and the stale board, both cleared by this move.
+  - `item-resumed-correctly` → **pass** — the suspending row (2026-08-29T21:15:47Z, `open` → `awaiting-answer`, actor `intake`) records `resume-to: open`, and this transition targets `open`.
+  - `a-deferral-is-not-an-answer` → **skipped** — no reply deferred. All three settle what they were asked, and Q-002 explicitly hands its remainder to us rather than postponing it.
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — answered, `answered-by: human`, with `## Consequences` and `## Cross-answer check` filled in
+  - `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` (new)
+  - `docs/architecture/adr/ADR-0002-conservative-table-recognition.md` (new)
+  - `docs/product/vision.md` (v1 → v2)
+  - `tracker/items/EP-001/item.md` — success measures, scope and out-of-scope updated
+  - `tracker/items/WI-0001/item.md`, `tracker/items/WI-0002/item.md` — `## Notes` updated, criteria untouched
+- **Status:** `awaiting-answer` → `open`
+- **Result:** All three of the stakeholder's answers are consumed and propagated into two ADRs, the vision, the epic and both work items. The epic returns to `open` with nothing outstanding, and `WI-0001` is refinable with the dialect, the runtime and the conservatism rules already settled.
+
+## 2026-08-29T21:39:45Z — answer-questions v0.4.0 — architect
+
+- **Item:** EP-001
+- **Trigger:** consuming WI-0001's round-1 answers changed two things that belong to the engagement rather than to one item, so this entry exists where a reader of the epic will find them
+- **Inputs read:**
+  - `tracker/items/WI-0001/questions/Q-001.md` to `Q-004.md` — the stakeholder's round-1 answers
+  - `docs/architecture/adr/ADR-0002-conservative-table-recognition.md` v1, written for EP-001
+  - `docs/product/vision.md` v2
+- **Decisions:**
+  - **ADR-0002 is superseded by ADR-0003.** ADR-0002 was decided for this epic from the intake answers; the stakeholder has now changed two of its decisions — recognition may cross a uniform indent, and width is display width taken over content rows only. Superseded, not edited, so what was believed at intake survives intact.
+  - **The vision is v3.** Its recognition-rule sentence points at ADR-0003, its "what is not yet decided" list loses the non-ASCII width unknown, and it gains the stakeholder's four round-1 quotations.
+  - No change to the epic's scope, success measures or exclusions: all four answers are about what a tidied table looks like, which EP-001 already scoped to WI-0001 and WI-0002. Nothing here implies work no item records.
+- **Cross-answer check:** recorded in full on WI-0001, where the answers were consumed — `Q-001` to `Q-004` each checked against `EP-001/Q-001` and one sibling, every verdict `compatible`, none escalated. The one worth an epic-level reader's attention: `Q-004` refines what *"as wide as the widest cell in them"* [src: EP-001/Q-001] counts, and the earlier reading is preserved unedited in the superseded ADR rather than rewritten.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/lint-answers --item WI-0001` → exit 0
+- **Gates:** none apply to this entry; every gate for this execution is recorded on WI-0001, where the transition was made
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0002-conservative-table-recognition.md` — v2, `status: superseded`
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md` — created, v1
+  - `docs/product/vision.md` — v3
+- **Status:** `open` (unchanged, this entry makes no transition)
+- **Result:** The epic's own architecture decision has been replaced with the stakeholder's authorisation, and the vision now states what a tidied table looks like. EP-001 stays open; its two children carry the work.
+
+## 2026-08-29T23:45:31Z — review-close v0.6.0 — reviewer
+
+- **Item:** EP-001
+- **Trigger:** the epic is at `open` and `scripts/engagement-state EP-001` reports `at-rest` — *"every child has stopped, no question is open, no request is open; rest reached at 2026-08-29T23:41:41Z"*. `next` step 6 dispatched `review-close` to end the engagement. This is the ending path (SKILL precondition 4), not an item review: there is no branch and no code to merge.
+- **Inputs read:**
+  - `tracker/items/EP-001/item.md` — the `## Goal`, `## Why now`, the eight `## Success measures`, `## Scope` and `## Out of scope`
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the stakeholder's own words, quoted into the sign-off's `## Context` rather than paraphrased into tracker vocabulary
+  - `tracker/items/WI-0001/item.md` and `tracker/items/WI-0002/item.md` — both children, their statuses and outcomes
+  - `tracker/items/WI-0002/questions/Q-001.md` — the centring answer, whose consequence the sign-off asks the stakeholder to weigh
+  - `IDEA.md` — the opening sentence the `## Context` restates
+  - `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` — audited and repaired, see Decisions
+  - `docs/` in full, as the scope of the epic-level claims audit
+  - no diff range: an ending has no diff of its own, which is why the audit scope is the whole document set rather than `--changed-since`
+- **Decisions:**
+  - **Filed the sign-off rather than recording an ending.** `check-epic-signoff EP-001` reported *"FAIL — EP-001 has no usable sign-off"*, and no acknowledgment has been filed since rest was reached. The engagement is at rest and both children delivered, so it would have been easy to close it as E1 and call that tidying. It is not tidying: it is the one decision in this pipeline that belongs to the person who asked for the work, and a run that ended exactly here left the stakeholder recording that nobody ever asked them (F-045). Filed `Q-004`, `kind: sign-off`, blocking, addressed to `human`.
+  - **`Q-004` names every child by ID** — WI-0001 and WI-0002 — each marked delivered with one line of why, and states explicitly that there are no other children: no bug was ever filed and nothing was dropped or blocked. "Name every child" is checkable in a way that "list what was not delivered" is not, and here it happens to be a list with nothing missing from it.
+  - **Options before the recommendation, and the recommendation marked as ours.** `## Options considered` gives A (accept as complete), B (accept with follow-ups the stakeholder names) and C (do not accept, with what is missing) as real choices, each with its consequence, and puts `- **Recommendation:** A` last with an explicit note that it is ours and not theirs to inherit (F-063). C is described as a legitimate ending rather than a failure, because it is one.
+  - **Surfaced the two places where what was built could still differ from what they pictured** — that a centred column leans left on an odd remainder, and that widths are terminal columns rather than characters, so a character-counting tool will disagree that a CJK table is aligned. Both are consequences of answers they gave; putting them in front of the stakeholder now is cheaper than a closure they would not recognise.
+  - **DE8 needed nothing.** `EP-001/Q-001` is already `kind: elicitation`, addressed to `human`, `status: answered`, with a substantive reply that shaped the whole engagement (byte-for-byte passthrough, leave malformed tables alone, no trailing whitespace). `intake` asked the open question, so this execution did not file a second one.
+  - **The epic-scope claims audit found a real defect the item windows could not see, and I repaired it.** `lint-claims --context epic` examines the whole document set, and reported `claim.unsourced` at `ADR-0001:58` — an absolute (*only*) about `./mdtab.py` with no citation. No work item ever edited `ADR-0001`, so `--changed-since main` could never have seen it: this is exactly the empty-window failure F-066 records, and `--context epic` is what caught it. I read the sentence against the code before touching it: `mdtab.py` imports `re`, `sys` and `unicodedata` and nothing else, it is the only `.py` at the repository root, there is no dependency manifest, and it is mode 100755 with a `python3` shebang so `./mdtab.py` runs — the claim is **true**. Under `spec/doc-header.md` §4b that makes it a `provenance` repair, not an accepted gap: `ADR-0001` v1 → v2, citation added in place, change-log row, and a new append-only `## Corrections` section. No code would change to satisfy the new text, so nothing is superseded (F-067).
+  - **One citation form had to be simplified.** My first `## Corrections` entry cited `run: python3 -c "import sys; print(...)"`; `lint-claims` split it on the embedded `;` and reported two `claim.citation.unresolved` errors. I replaced that one citation with `[src: mdtab.py]` rather than leave an unresolvable pointer, which is the appearance of evidence. Recorded as a toolkit observation, not a defect in this project.
+  - **No ending recorded, and no epic Definition of Done applied.** DE1–DE8 belong to the execution that records the ending, once the reply is in the file. Applying them now would be deciding the ending before asking.
+  - **Merge decision:** none. An ending has no branch. The epic's record commit goes on the trunk, and `main` is already checked out.
+- **Cross-answer check:** none consumed — this execution **asks** rather than answers, so no human answer entered it and ADR-0008's rule 3 has no edit to check. `lint-answers --context epic` confirms the shape: *"an ending has no diff of its own; rule 3 checks an execution's own edits and does not run here"*, over *"8 consumed human answer(s) in the workspace"*, 0 errors. What I did do is quote four prior answers into `Q-004` verbatim — `EP-001/Q-001`, `EP-001/Q-002`, `EP-001/Q-003` and `WI-0002/Q-001` — and check them against each other for consistency before putting them in front of the stakeholder: `EP-001/Q-001`'s *"no trailing whitespace at the end of any line it writes"* and `WI-0002/Q-001`'s *"every row, every column, no exceptions"* are compatible, the second placing text inside a width the first bounds, which is what `ADR-0005` decision 6 records. **The sign-off's own answer will be a recorded human answer like any other**, and the execution that consumes it must write its `## Cross-answer check` against these four — `WI-0002/Q-001` in particular, since a condition attached to a sign-off is where a contradiction with a refinement answer surfaces (ADR-0008; F-062).
+- **Questions raised:** EP-001/Q-004 (`kind: sign-off`, blocking, addressed to human)
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → 0 (`EP-001 at-rest`; *"every child has stopped, no question is open, no request is open"*; *"rest reached at 2026-08-29T23:41:41Z"*)
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff EP-001` → 1, twice: before filing, *"FAIL — EP-001 has no usable sign-off"*; after filing, *"Q-004.md is still 'open' — the engagement waits on the stakeholder, which is the point of the gate"*
+  - `python3 .claude/agile-skills/scripts/lint-claims --context epic --changed-since main` → 1 (`ADR-0001:58 claim.unsourced`), then 1 again (two `claim.citation.unresolved` from my own first repair), then **0** after the citation was simplified — scope: *"an ending has no diff of its own, so the scope is the whole document set… absolute claims: every document under …/docs; citations: every markdown file in the workspace"*
+  - `python3 .claude/agile-skills/scripts/lint-answers --context epic --changed-since main` → 0 (*"an ending has no diff of its own; rule 3 checks an execution's own edits and does not run here"*; *"checked 8 consumed human answer(s)"*)
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0 before filing; 1 after filing, reporting `question.blocking.not-suspended` on EP-001 and a stale board — both the expected mid-flight state this transition and `board-gen` resolve
+  - `python3 .claude/agile-skills/scripts/board-gen .` → 0
+  - `grep -n '^import\|^from' mdtab.py` → 0 (`re`, `sys`, `unicodedata` — nothing else)
+  - `find . -maxdepth 1 -name '*.py'` → 0 (`./mdtab.py` only)
+  - `ls requirements.txt pyproject.toml setup.py Pipfile` → 2 (all absent — no dependency manifest)
+  - `git ls-files -s mdtab.py` → 0 (mode `100755`); `head -1 mdtab.py` → `#!/usr/bin/env python3`
+  - `printf '| a | b |\n|:-|-:|\n| xx | y |\n' | ./mdtab.py` → 0 (table aligned via the shebang form)
+- **Gates:**
+  - `definition-of-done` → **skipped, with the reason** — the epic Definition of Done (DE1–DE8) is applied by the execution that **records the ending**, and this execution asks rather than ends. Applying it now would be deciding the ending before the stakeholder was asked, which is the failure the ask exists to prevent (F-045). Its inputs are nonetheless already in hand and recorded in `Q-004`: every child terminal and named, every outcome recorded, the eight success measures addressed.
+  - `verification-postdates-the-code` → **skipped** — an epic has no branch and no verification of its own; the gate is about an item's code state. Both children passed it at their own closes.
+  - `commits-reference-the-item` → **skipped** — an ending has no branch and no commit range. `check-commit-refs` inspects `main..<branch>`, and there is none.
+  - `tests-pass-on-the-merge-result` → **skipped** — nothing to merge. The suite was last run green on the merge result at `0cf7528` when WI-0002 closed, 24 tests, `OK`.
+  - `workspace-valid` → **pass** (`validate-workspace` exit 0 before filing; the two errors it reports after filing are `question.blocking.not-suspended` and a stale board, which this transition and `board-gen` resolve — the validator is re-run by the transition against the state the move produces)
+  - `record-is-reconstructible` → **pass** — from tracker, docs and `git log` alone: *what was built* — one stdlib Python script, `mdtab.py`, per ADR-0001; *why* — EP-001's `## Goal` and the four answered stakeholder questions; *which skill decided what* — ADR-0001 and ADR-0003 by `answer-questions`, ADR-0002 by `plan`, ADR-0004 by `plan`, ADR-0005 by `answer-questions`, ADR-0006 by `plan`, two errata by `review-close`; *what questions arose and how they resolved* — six, all `answered`, each with `## Consequences` naming real files; *what verification found* — three `verify-report.md` executions across the two items, all with their own commands
+  - `claims-are-sourced` → **pass** — **scope examined, quoted from the gate:** *"an ending has no diff of its own, so the scope is the whole document set rather than anything --changed-since could name; absolute claims: every document under /home/msi/agile-skills-throwaway/mdtab-3b/docs; citations: every markdown file in the workspace"*. It found one real error on the first run and exits 0 only after the repair — a window that could have found something, and did (F-066)
+  - `cross-answer-consistency` → **pass** (`lint-answers --context epic` exit 0, scope quoted above)
+  - `epic-sign-off` → **fail, deliberately and correctly** — *"Q-004.md is still 'open' — the engagement waits on the stakeholder, which is the point of the gate"*. This is not a blocked ending; it is the gate doing its job. The move being made is `open → awaiting-answer`, the suspension row, not an ending, so the gate reports rather than refuses.
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-004.md` — the sign-off question, `kind: sign-off`, blocking, addressed to human, naming both children by ID with three options and the recommendation last
+  - `docs/architecture/adr/ADR-0001-python3-stdlib-script.md` — v1 → v2: the `## Decision` absolute now carries a citation, one `## Change log` row, and a new append-only `## Corrections` section
+  - `tracker/board.md` — regenerated
+  - no `review.md`: an ending writes one when it **records** the ending, and this execution asks
+  - no bug item, no merge commit
+- **Status:** `open` → `awaiting-answer`
+- **Result:** EP-001 reached rest with both children delivered, and is suspended on `Q-004` while the stakeholder says whether they accept the engagement. The epic-scope claims audit — which sees what no item's window could — found one unsourced absolute in `ADR-0001` about `./mdtab.py`, verified it true against the code, and repaired it in place as a `provenance` correction rather than banking it as an accepted gap. Nothing else is outstanding; the ending itself is the stakeholder's to authorise.
+
+## 2026-08-29T23:54:28Z — answer-questions v0.4.0 — architect
+
+- **Item:** EP-001
+- **Trigger:** status `awaiting-answer`; the stakeholder filled in `## Answer` on the sign-off question `Q-004`, which only this skill may consume (`spec/question.md` §3)
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-004.md` — the sign-off and its reply
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the three intake answers, for the cross-answer check
+  - `tracker/items/WI-0001/questions/Q-001.md` … `Q-004.md` — round 1, for the cross-answer check
+  - `tracker/items/WI-0002/questions/Q-001.md` — round 2, the answer this reply collides with, including the cross-answer check `answer-questions` already wrote on it
+  - `tracker/items/EP-001/item.md` and `history.md` — the goal, the success measures, and the `resume-to: open` recorded on the row `review-close` suspended the epic with
+  - `docs/product/vision.md` v4 — where round 2's sentence is quoted verbatim with its citation
+  - `docs/architecture/adr/ADR-0005-alignment-markers-place-cell-text.md` v3 — decisions 1–6, and decision 3 in particular
+  - `docs/architecture/adr/ADR-0003-recognition-and-output-shape.md`, `ADR-0004-delimiter-row-preserves-alignment-markers.md` — the cell shape and the delimiter row, both cited by the compatible verdicts
+  - `.claude/agile-skills/spec/question.md` §2 and §4, `spec/work-item.md` §4, `spec/doc-header.md` §3 — the sign-off rules, the four escalation conditions, the epic body, the citation forms
+- **Decisions:**
+  - **The reply is an answer, not a deferral and not an acceptance.** *"Not quite as it stands — one thing before I sign … Fix the multiline cells and we are done."* It settles something (what they want), so `a-deferral-is-not-an-answer` does not bite; and it withholds acceptance, so the engagement did not end. Route: the reply itself.
+  - **It is not ending C either.** `spec/question.md` §2 maps "do not accept" onto the impasse, but the impasse is for an engagement with nothing left to run. This one has runnable work again the moment `Q-005` is answered, and §2 already provides for it: *"Exactly one sign-off is due per rest. If the engagement re-enters rest after further work, the acknowledgment is due again."* So the engagement reopens rather than ending, and a fresh sign-off is due later. Route: decided, from the spec.
+  - **The implied work is filed as `WI-0003` at `draft`, `arose-from: EP-001/Q-004`** (SKILL §3b; `spec/ids-and-statuses.md` §5; the `from: null → draft, actor: answer-questions` row in `pipeline.yaml`). Its body records that its scope is contingent on `Q-005` and that it is to be dropped if the earlier sentence wins. It was not folded into WI-0002 as an amended criterion: WI-0002 is `done`, and widening a closed item to swallow new work hides the change from the board.
+  - **The contradiction with `WI-0002/Q-001` is escalated as `EP-001/Q-005`, not resolved here.** Route: escalated. Condition: `spec/question.md` §4's **third** — *"The answer would contradict an existing ADR or product doc, which only the human can authorise."* The earlier sentence is `ADR-0005` decision 3 (*"No content cell is exempt"*) and a sourced paragraph of `docs/product/vision.md` v4. The later reply carries the stakeholder's own reconciliation — *"markers are for normal cells, not for those"* — and that is very probably what they mean, but accepting it silently is us grading their reconciliation and superseding a decision recorded in their name. `Q-005` quotes both verbatim and by ID and asks which wins, with `Recommendation: none`.
+  - **Nothing in `docs/` that carries their round-2 sentence was edited, and neither was success measure 5 of the epic.** `spec/question.md` §2: a claim sourced to a human answer that a later answer of theirs overtakes is not a document defect, and rewriting it decides on their behalf which of their statements loses. The new material is *added* as round 3 and as an unsettled bullet; round 2 stands byte for byte.
+  - **The epic stays at `awaiting-answer` rather than returning to `resume-to: open`.** SKILL §7: an item returns to `resume-to` only once every blocking question on it is answered, and this execution escalated one. `Q-005` is blocking and addressed to the human.
+- **Cross-answer check:** `EP-001/Q-004` checked against `WI-0002/Q-001` (**conflicts** — "every row, every column, no exceptions" against an exemption for a class of cell; escalated as `EP-001/Q-005`, which names both), `EP-001/Q-001` (compatible — no column's width changes and the padding stays inside the cell, so no line gains trailing whitespace), `EP-001/Q-003` (compatible, and pointing the same way — "where it cannot tell, do nothing"), `WI-0001/Q-001` (compatible, and reaffirmed in this very reply — display width is "the whole point"), `WI-0001/Q-003` (compatible — the two spaces either side of a cell's text are untouched), `WI-0001/Q-004` (compatible — a delimiter cell holds no text and can hold no `<br>`). `EP-001/Q-002` and `WI-0001/Q-002` were read and deliberately not listed, with the reason in the question file.
+- **Questions raised:** EP-001/Q-005 — blocking, addressed to human, quoting `WI-0002/Q-001` and `EP-001/Q-004` verbatim and by ID and asking which governs a cell containing a line break.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/new-item --id WI-0003 --type work-item --title "..." --epic EP-001 --priority high --status draft --actor answer-questions --arose-from EP-001/Q-004 --reason "..."` → exit 0, created WI-0003 at draft
+  - `python3 .claude/agile-skills/scripts/lint-answers --item EP-001` → exit 0, 4 consumed human answers checked, 0 errors
+  - `python3 .claude/agile-skills/scripts/lint-answers` → exit 0, 9 consumed human answers checked workspace-wide, 0 errors
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0 after the board was regenerated and this entry written
+- **Gates:**
+  - `answer-is-propagated` → **pass** — every file named in `Q-004`'s `## Consequences` was opened and contains the change: `tracker/items/WI-0003/item.md` exists at `draft` with `arose-from: EP-001/Q-004` and a `## Notes` recording the contingency; `tracker/items/EP-001/questions/Q-005.md` exists and names both answers; `docs/product/vision.md` is v5 with `### Round 3 of refinement, on EP-001` and a new `## What is not yet decided` bullet; this journal entry is the fourth. The section also names the three files deliberately **not** changed and why, which is the other half of an honest propagation record
+  - `answered-from-the-record` → **pass** — every verdict in the cross-answer check cites the answer or the ADR it follows from; the one thing the record could not settle was escalated rather than decided, and no new ADR was written because no new decision was taken
+  - `escalation-is-justified` → **pass** — `Q-005` states `spec/question.md` §4's third condition (contradicts an existing ADR and product doc) in its `## Context`. Effort was not the reason: answering it would have been quicker than asking
+  - `cross-answer-consistency` → **pass** — `lint-answers --item EP-001` exit 0, and again over the whole workspace, exit 0. The declared conflict resolves to `Q-005`, which names both IDs outside its own cross-answer section
+  - `workspace-valid` → **pass** — `validate-workspace .` exit 0, 4 items and 8 documents
+  - `item-resumed-correctly` → **pass, by not moving** — the suspending row records `resume-to: open`; the epic stays at `awaiting-answer` because this execution left a blocking human-addressed question open on it (SKILL §7). No history row is written, so nothing can disagree with `resume-to`
+  - `a-deferral-is-not-an-answer` → **pass** — the reply is not a deferral. It names a specific change and states the condition on which the engagement ends, so it settles what they want; move 1 does not apply because nothing was decided *under* a deferral, and move 2 does not apply because nothing was postponed
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-004.md` — `status: answered`, `answered-by: human`, `answered-at: 2026-08-29T23:51:02Z`; `## Cross-answer check` and `## Consequences` written. `## Answer` is the stakeholder's text, untouched
+  - `tracker/items/EP-001/questions/Q-005.md` — created; blocking, addressed to human, both statements quoted verbatim and by ID, options are their two sentences, `Recommendation: none`
+  - `tracker/items/WI-0003/` — created at `draft` (`item.md`, `history.md`, `journal.md`, `questions/`), `arose-from: EP-001/Q-004`
+  - `docs/product/vision.md` — v5; round 3 added, one bullet added to `## What is not yet decided`, change-log row added. Rounds 1 and 2 unchanged
+  - `tracker/board.md` — regenerated
+  - commit — `tracker: the answered sign-off, the escalation it produced and WI-0003 (refs EP-001)`
+- **Status:** `awaiting-answer` → `awaiting-answer` (no move; a blocking human question is open)
+- **Result:** The stakeholder did not accept the engagement: they want a cell containing a line break or a `<br>` left plain at the left of its column, whatever the marker says. That work is now `WI-0003` at `draft`. The sentence they used to say it contradicts one of their own earlier answers that we had recorded as a decision in their name, so `EP-001/Q-005` puts both in front of them and asks which wins, and no document of theirs was rewritten to make the contradiction go away.
+
+## 2026-08-30T00:04:54Z — answer-questions v0.4.0 — architect
+
+- **Item:** EP-001
+- **Trigger:** status `awaiting-answer`; the human answered `EP-001/Q-005` in the file between turns, and `answer-questions` is the only skill that may consume an escalated answer
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` (the intake answers), `Q-004.md` (the sign-off and its cross-answer check), `Q-005.md` (the escalation, now answered)
+  - `tracker/items/WI-0002/questions/Q-001.md` (the round-2 answer this one narrows) and `Q-002.md` (architect-answered, so not a cross-answer candidate)
+  - `tracker/items/WI-0001/questions/Q-001.md`–`Q-004.md`
+  - `tracker/items/EP-001/item.md`, `history.md`; `tracker/items/WI-0003/item.md`, `history.md`
+  - `docs/architecture/adr/ADR-0005-alignment-markers-place-cell-text.md` (v3), `ADR-0004-...` , `ADR-0003-...`, and the ADR index for the next free number
+  - `docs/product/vision.md` (v5)
+  - `.claude/agile-skills/spec/question.md`, `spec/doc-header.md`, `spec/journal-and-history.md`
+- **Decisions:**
+  - Consumed the reply as an **answer**, not a deferral. It chooses option B by name, states the rule in one sentence, and grants the authorisation in as many words — *"treat this as me superseding what I said before"*. Nothing about it is provisional, so step 3a does not apply and the epic returns to its recorded `resume-to`.
+  - Recorded the supersession as a **new ADR** rather than editing ADR-0005 decision 3 in place. What changes is what the code must do, which `spec/doc-header.md` §4b puts on the far side of the line between a repair and a new decision, so §4's supersession rule applies with full force.
+  - Made ADR-0007 **carry ADR-0005's decisions 1, 2, 4, 5 and 6 forward verbatim** rather than superseding decision 3 alone. Supersession in the spec is at document granularity; leaving five live decisions inside a document marked `superseded` would leave a reader with no current answer to where a cell's text sits.
+  - Wrote ADR-0007 to state **only what the stakeholder authorised**, and to say plainly that the five edges of the exemption are not decided in it. They settled which of their two sentences wins; they did not settle what counts as a line break, whether an exempt cell is still padded, whether the exemption is per cell or per column, whether the delimiter row's marker is still preserved, or what "top" means in a one-line cell. Deciding any of those here would be the guess the protocol exists to prevent.
+  - Did **not** rewrite round 2's paragraph in `docs/product/vision.md`, and did not touch ADR-0005's assertions. A sentence that is wrong because its author has since said something else is not a document defect (`spec/question.md` §2), and rewriting it is the F-062 move. The narrowing is recorded beside it instead, and the supersession is recorded in the header and change log where a reader meets it before the decisions.
+  - **Amended the epic's success measure 5 and added a `## Scope` bullet.** This widens what EP-001 will be judged against, and it is the stakeholder's own addition made at their sign-off, not a target reshaped around what was built — the code today does not satisfy the amended measure, which is why `WI-0003` exists.
+  - Recorded the `WI-0002/Q-001` cross-answer verdict as **compatible, because this answer is the reconciliation**, not as `conflicts`. The contradiction was declared on `EP-001/Q-004` and escalated as `EP-001/Q-005`; this is the author's resolution of it, and declaring the same pair in conflict again would ask them the question they have just answered.
+- **Cross-answer check:** on `EP-001/Q-005`, checked against `WI-0002/Q-001` — **compatible**, as the reconciliation of the contradiction this question escalated; `EP-001/Q-004` — compatible, the same person completing the same thought; `EP-001/Q-001` — compatible, no line gains trailing whitespace and no column's width changes; `WI-0001/Q-001` — compatible, display width is still how a column is measured; `WI-0001/Q-003` — compatible, the two spaces either side are untouched; `WI-0001/Q-004` — compatible, a delimiter cell holds no text and can hold no `<br>`. `EP-001/Q-002` and `WI-0001/Q-002` were read and deliberately not listed, with the reason in the section; `WI-0002/Q-002` is not a human answer.
+- **Questions raised:** none. Nothing in this answer is unanswerable from the record, and the five open edges belong to `WI-0003`, where `refine` will put them to the stakeholder as one ask.
+- **Commands:**
+  - `.claude/agile-skills/scripts/lint-answers --item EP-001` → exit 1 first (`answer.conflict.unescalated`), then exit 0 after the verdict was restated as compatible — 5 consumed human answers checked, 0 errors
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 1 (`adr.correction.superseded`, `board.stale`, `question.awaiting.none-open`), then exit 1 with only the latter two after ADR-0005's corrections section was closed, both of which this transition and `board-gen` clear
+  - `.claude/agile-skills/scripts/board-gen .` → exit 0, wrote `tracker/board.md`
+  - `.claude/agile-skills/scripts/journal-entry WI-0003 --skill answer-questions --body-file ...` → exit 0
+- **Gates:**
+  - `answer-is-propagated` → **pass**. Every file named in `Q-005`'s `## Consequences` was opened and read back after writing: ADR-0007 exists at v1 with the exemption as decision 3; ADR-0005 is `superseded` with `superseded-by` set and a `**Superseded by:**` header line; `vision.md` is v6 and carries round 4 with the reply verbatim; `WI-0003/item.md`'s contingency paragraph is replaced; `EP-001/item.md` success measure 5 and `## Scope` carry the exemption; both journals are appended.
+  - `answered-from-the-record` → **pass**. The answer is the stakeholder's own, quoted verbatim in `Q-005`, in ADR-0007's `## Context`, in `vision.md` round 4 and in `WI-0003`'s notes; the new decision is recorded as ADR-0007 and cited from the question.
+  - `escalation-is-justified` → **skipped** — this execution escalated nothing. The escalation it consumed was `Q-005` itself, filed under `spec/question.md` §4's third condition (an answer that would contradict an existing ADR, which only the human may authorise), and that condition is now satisfied by their reply.
+  - `cross-answer-consistency` → **pass** (`lint-answers --item EP-001`, exit 0).
+  - `workspace-valid` → **pass** (`validate-workspace .`, exit 0 after this transition and `board-gen`; the run before it reported only `board.stale` and `question.awaiting.none-open`, which are the two states this move exists to clear).
+  - `item-resumed-correctly` → **pass**. `history.md`'s suspending row of 2026-08-29T23:45:31Z records `resume-to: open`, and this row's target is `open`.
+  - `a-deferral-is-not-an-answer` → **skipped**, with the reason: no reply consumed here defers. `Q-005`'s answer chooses option B by name and authorises the supersession, so step 3a's two moves do not arise.
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-005.md` — `status: answered`, `answered-by: human`, `answered-at`; `## Cross-answer check` and `## Consequences` written
+  - `docs/architecture/adr/ADR-0007-a-cell-containing-a-line-break-is-exempt-from-its-marker.md` (new, v1, accepted, supersedes ADR-0005)
+  - `docs/architecture/adr/ADR-0005-alignment-markers-place-cell-text.md` — v4, `status: superseded`, `superseded-by` set; `## Corrections` heading closed with a paragraph saying why, no entry edited or removed
+  - `docs/product/vision.md` — v6, round 4 added, round 2 annotated but not rewritten, the unsettled marker-reach bullet replaced by the five edges
+  - `tracker/items/EP-001/item.md` — success measure 5 amended, `## Scope` bullet added
+  - `tracker/items/WI-0003/item.md` — contingency lifted; `tracker/items/WI-0003/journal.md` — entry appended
+  - `tracker/board.md` — regenerated
+- **Status:** `awaiting-answer` → `open`
+- **Result:** The stakeholder chose option B and authorised superseding their own earlier decision, so ADR-0007 records the exemption and ADR-0005 is superseded with nothing in it rewritten. EP-001 returns to `open` with runnable work — `WI-0003` at `draft`, for `refine` — and a fresh sign-off will be due when the engagement next reaches rest.
+
+## 2026-08-30T01:01:13Z — review-close v0.6.0 — reviewer
+
+- **Item:** EP-001
+- **Trigger:** status `open` with `scripts/engagement-state EP-001` reporting `at-rest`, dispatched by `next` at its step 6 — no item was runnable, every child having closed
+- **Inputs read:**
+  - `tracker/items/EP-001/item.md` — the goal, the eight success measures, the scope
+  - `tracker/items/EP-001/questions/Q-001.md` (the `kind: elicitation` one), `Q-004.md` and `Q-005.md` in full, including their `## Cross-answer check` and `## Consequences`
+  - `tracker/items/WI-0001/item.md`, `tracker/items/WI-0002/item.md`, `tracker/items/WI-0003/item.md` — titles, outcomes and, for WI-0003, all eleven criteria and the `## Notes`
+  - `tracker/items/WI-0003/artifacts/review.md` — its findings and accepted gaps
+  - `docs/architecture/adr/ADR-0005`, `ADR-0007`, `ADR-0008` — the paragraphs the claims audit flagged, each read against what it cites
+  - `docs/product/vision.md` `## What is not yet decided`
+  - `.claude/agile-skills/spec/dor-dod.md` §4, `spec/question.md` §2, `spec/doc-header.md` §4, §4a and §4b
+  - `mdtab.py` lines 263 and 303; `.claude/agile-skills/scripts/validate-workspace` line 1230; `git show 8c58ac1:docs/architecture/adr/ADR-0005-...md`
+  - no diff: an ending has no branch of its own, so there is no `main..head` range to read
+- **Decisions:**
+  - **Filed a second sign-off rather than reusing `Q-004`.** `check-epic-signoff` refused `Q-004` because it predates this rest, and it is right on the substance and not only the timestamp: `Q-004` asked them to accept a two-item engagement and they answered *"not quite as it stands"*. `spec/question.md` §2 — exactly one sign-off per rest, because the previous one accepted something else.
+  - **Put three caveats in front of the question, all new with WI-0003.** That a cell merely *mentioning* `<br>` is exempted too; that *"top-left"* was implemented as *"left"* because a pipe-table cell is one physical line; and that a cell containing both a `<br>` and an escaped pipe is unspecified. Rationale: each is a place where what was built and what they pictured could differ, and a sign-off that hides them buys an acceptance of something they have not seen.
+  - **Repaired four claims and refused to repair three.** `lint-claims --context epic` found 7. Four sit in ADRs at `status: accepted` and were repaired under `spec/doc-header.md` §4b — three in ADR-0007 (two `provenance`, one `erratum`) and one in ADR-0008 — each read against what it cites before deciding. The erratum is the substantive one: ADR-0007's reversibility paragraph still said *"Nothing has been built against it yet"* three commits after WI-0003 shipped `has_break_tag`. That is DE6 working: a false claim in a current ADR that no single item's diff would have put in scope.
+  - **The remaining three are in ADR-0005, which is `superseded`, and §4b forbids correcting it.** All three were read against their sources and are **true**; the repair route §4b sanctions requires an entry in that ADR's `## Corrections`, which was explicitly closed at supersession. So no legal move clears them. Recorded as finding 1 in `review.md` rather than papered over, and the gate is reported below as **fail**, not as a pass.
+  - **Split ADR-0007's change log into one row per correction.** `validate-workspace`'s `adr.correction.changelog` refused a single row covering three corrections, correctly — §4b says every correction is a version. Versions 3, 4 and 5 carry the same timestamp because they were one edit, and the version-3 row says so.
+  - **Did not apply the epic Definition of Done.** Applying DE1 to DE8 now would mean recording a verdict on DE7 — whether the stakeholder was asked *and answered* — before they have answered. `review.md` says so in its first paragraph and the ending's execution applies it.
+  - **Did not write anything into `item.md`'s success measures or scope.** Nothing this execution learned changes what the epic is judged against, and amending it while the acceptance question is open would be reshaping the criteria around the answer.
+- **Questions raised:** `EP-001/Q-006` (blocking, `kind: sign-off`, to human)
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/engagement-state EP-001` → exit 0, `at-rest`, rest reached 2026-08-30T00:52:41Z
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff EP-001` → exit 1 before filing (`Q-004` predates rest); exit 1 after filing (`Q-006` is open, which is the point of the gate)
+  - `python3 .claude/agile-skills/scripts/lint-claims --context epic --changed-since main` → exit 1, 7 errors; after the repairs, exit 1, 3 errors
+  - `python3 .claude/agile-skills/scripts/lint-answers --context epic --changed-since main` → exit 0, 12 consumed human answers checked
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 37 tests, on `main` at `0500edf`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 with the two errors this transition resolves (`board.stale`, `question.blocking.not-suspended`)
+  - `git show 8c58ac1:docs/architecture/adr/ADR-0005-alignment-markers-place-cell-text.md` → the two `## Corrections` rows, diffed against today's and identical
+- **Gates:**
+  - `definition-of-done` → **skipped** (this execution files the acknowledgment; DE7 asks whether the stakeholder was asked *and answered*, and recording a verdict on it before they reply is the failure the criterion exists to prevent. Applied in full by the execution that records the ending)
+  - `verification-postdates-the-code` → **skipped** (an ending has no branch and no verification report; `check-verify-freshness` has nothing to compare)
+  - `commits-reference-the-item` → **skipped** (no branch; an epic is not a branch-scoped unit of work, `spec/workspace-layout.md` §5)
+  - `tests-pass-on-the-merge-result` → **skipped as a merge check**, run as a state check: no merge was performed, and `python3 -m unittest discover -s tests -t .` on `main` at `0500edf` is exit 0, 37 tests
+  - `workspace-valid` → **pass** (`validate-workspace` reported only `board.stale` and `question.blocking.not-suspended`, both of which this transition resolves; the transition tool judges the state the move produces, F-014)
+  - `record-is-reconstructible` → **pass** (all four questions answerable from the tracker and `git log`: what was built and why — the epic's `## Goal` and three items' `## Story`; which skill decided what — 3 history files chaining without a gap and their journals; what questions arose and how — six on the epic and eight on the items, every one `answered` with `## Consequences` naming real files; what verification found — three `verify-report.md`s with per-criterion evidence)
+  - `claims-are-sourced` → **fail** (`lint-claims --context epic --changed-since main`, exit 1. Scope, quoted from the gate's own output: *"an ending has no diff of its own, so the scope is the whole document set rather than anything --changed-since could name; absolute claims: every document under docs; citations: every markdown file in the workspace"*. 7 errors → 4 repaired → 3 remain, all in `ADR-0005` at `status: superseded`, all read against their sources and **true**, and none repairable because §4b forbids correcting a superseded ADR and that ADR's `## Corrections` is closed. Finding 1 in `review.md`)
+  - `cross-answer-consistency` → **pass** (`lint-answers --context epic --changed-since main`, exit 0, 12 consumed human answers checked)
+  - `epic-sign-off` → **fail, and expected to** (`check-epic-signoff EP-001`, exit 1: *"`Q-006.md` is still 'open' — the engagement waits on the stakeholder, which is the point of the gate"*. It is the gate that made this execution file `Q-006`, and it cannot pass until they reply)
+- **Cross-answer check:** none — this execution consumed no human answer. `Q-006` is filed, not answered; `Q-004` and `Q-005` were consumed by `answer-questions` on 2026-08-29 and each already carries its own check. The check belongs to the execution that consumes an answer, and there was none to consume (ADR-0008 §4).
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-006.md` (new) — the sign-off
+  - `tracker/items/EP-001/artifacts/review.md` (new)
+  - `docs/architecture/adr/ADR-0007-a-cell-containing-a-line-break-is-exempt-from-its-marker.md` v5 — three corrections
+  - `docs/architecture/adr/ADR-0008-edges-of-the-multiline-cell-exemption.md` v2 — one correction, first `## Corrections` section
+  - no merge commit, no bug filed, no code changed
+- **Status:** `open` → `awaiting-answer`
+- **Result:** The engagement reached rest and the stakeholder has been asked, for the second time, whether they accept it — `Q-006` names all three children with their outcomes and offers accept, accept-with-follow-ups, or refuse. The ending's claims audit found one false sentence in a current ADR and repaired it, three more true-but-unsourced ones it could repair, and three in a superseded ADR that no legal move can clear. `EP-001` suspends at `awaiting-answer` with `resume-to: open`.
+
+## 2026-08-30T01:07:00Z — answer-questions v0.4.0 — architect
+
+- **Item:** EP-001
+- **Trigger:** status `awaiting-answer`, dispatched by the harness ahead of `next` — the stakeholder had written a reply into `EP-001/Q-006`'s `## Answer`, and this is the only skill that may consume one
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-006.md` (the sign-off, with the reply)
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md`, `Q-004.md`, `Q-005.md` (the five prior questions on the epic; `Q-001` is the elicitation, `Q-004` the refused sign-off, `Q-005` the supersession)
+  - `tracker/items/WI-0002/questions/Q-001.md`, `tracker/items/WI-0003/questions/Q-001.md`, `Q-002.md` (the child answers this reply could contradict)
+  - `tracker/items/EP-001/item.md` (goal, scope, the eight success measures) and `history.md` (the `resume-to` on the row that suspended the epic: `open`)
+  - `docs/product/vision.md` (v7)
+  - `docs/architecture/adr/ADR-0008-edges-of-the-multiline-cell-exemption.md` (v2) and `ADR-0009-break-tag-exemption-is-applied-per-cell-at-composition.md` (v1)
+  - `.claude/agile-skills/spec/question.md` §2, §3, §4; `spec/ids-and-statuses.md` §3.5 and §4; `spec/journal-and-history.md`
+- **Decisions:**
+  - Consumed the reply as an **answer**, not a deferral. It chooses one of the three options by name — *"your option A"* — and gives a reason for declining B, so nothing is left pending; step 3a does not apply.
+  - Did **not** record the engagement's ending. The reply accepts the engagement, but `answer-questions` does not end engagements: `spec/ids-and-statuses.md` §3.5 reserves `open → done` for `review-close`, which reads the answered sign-off through `check-epic-signoff`. This execution propagates the reply's content and returns the epic to `open` so that step can run. Recording the outcome here would have made the gate that exists to check the acknowledgment read a record we had written ourselves.
+  - Filed **no** work item under step 3b. The answer widens no scope: the stakeholder was offered option B — accept and name follow-ups — with four candidates including the escaped-pipe case, and declined it in terms (*"a new job rather than call this one unfinished"*). Filing an item anyway would record work they explicitly did not ask for.
+  - Propagated three things from the reply rather than only the "yes", because each settles something the record was carrying as ours rather than theirs: the mention-only cost of the exemption test is now acknowledged by the person who pays it; *"top-left"* meaning *"left"* stops being our assumption and becomes their decision; and the escaped-pipe question stays open by their choice rather than by omission.
+  - Made both ADR-0008 changes by **addition**, leaving every existing sentence standing. Decision 8 still says it was recorded as an assumption and why, with the confirmation appended; the "Hard" consequence still says the cost had not been raised, with the sign-off that raised it appended. A reader needs to see that the assumption was held openly and then closed, not a document that reads as though it was always their decision.
+  - Left `EP-001/item.md` untouched. The eight success measures are what the sign-off was written against and the reply accepts them as stated; amending an epic's success measures at the moment they are accepted would reshape the target around the answer.
+- **Cross-answer check:** `EP-001/Q-006`, answered by the human, checked against `EP-001/Q-004` — compatible, and its completion: it refused the sign-off on one condition and this releases that condition; `EP-001/Q-005` — compatible and reaffirmed: this accepts a tool that behaves exactly as that answer directed, and note 1 endorses the textual rule that implements it; `EP-001/Q-001` — compatible: the eight success measures are that answer made checkable and nothing in the reply qualifies any of them; `WI-0002/Q-001` — compatible by way of `Q-005`, which is where its absolute was narrowed by its own author, and this answer sits on the settled side of that; `WI-0003/Q-001` — compatible, and this is the same rule seen from its cost side, accepted rather than narrowed; `WI-0003/Q-002` — compatible, and it closes the assumption that answer left standing, since *"left"* is now their word. No verdict is `conflicts`, so nothing is escalated. The four human answers not named — `EP-001/Q-002`, `EP-001/Q-003`, `WI-0001/Q-002`, `WI-0001/Q-004` — are about what the tool runs as, what counts as a table, indented tables and the delimiter row, and this reply touches none of them; the reasoning is written into the question's own section rather than left implicit.
+- **Questions raised:** none
+- **Commands:**
+  - `date -u +%Y-%m-%dT%H:%M:%SZ` → `2026-08-30T01:04:46Z`, the stamp used for the answer and both document versions
+  - `.claude/agile-skills/scripts/lint-answers --item EP-001` → exit 0, 6 consumed human answers checked, 0 errors
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before the transition, with the two errors this move clears (`question.awaiting.none-open` on EP-001, and `board.stale`); re-run after the transition and `board-gen`
+- **Gates:**
+  - `answer-is-propagated` → **pass**. Each of the three files named in `Q-006`'s `## Consequences` was opened after writing and contains the change: `docs/product/vision.md` carries the new *"Round 6, on EP-001 — the acceptance"* section with the reply verbatim and the rewritten escaped-pipe bullet under *"What is not yet decided"*; `ADR-0008` carries the appended confirmation on decision 8 and the appended paragraph in its "Hard" consequence; `Q-006` itself carries the stamps, the cross-answer check and the consequences list.
+  - `answered-from-the-record` → **pass**. Nothing was decided by this skill: every proposition propagated is a sentence of the stakeholder's, quoted from `EP-001/Q-006` and cited as `[src: EP-001/Q-006]` at each landing site. No ADR was written, because no decision was taken.
+  - `escalation-is-justified` → **skipped** — no question was re-addressed to the human by this execution, and the cross-answer check declared no conflict that would oblige one.
+  - `cross-answer-consistency` → **pass** (`.claude/agile-skills/scripts/lint-answers --item EP-001`, exit 0).
+  - `workspace-valid` → **pass** (`python3 .claude/agile-skills/scripts/validate-workspace .`, exit 0 after this transition and `board-gen`; before it, the only two errors were the ones this move exists to clear).
+  - `item-resumed-correctly` → **pass**. The row that suspended the epic — `2026-08-30T01:01:13Z`, `open → awaiting-answer`, actor `review-close` — records `resume-to: open`, and this execution moves it to `open`.
+  - `a-deferral-is-not-an-answer` → **pass**, vacuously and deliberately checked: the reply defers nothing. It names its option, gives its reason for rejecting another, and its one forward-looking sentence — *"If that last one ever bites me I will come back to you with it as a new job"* — is a statement about a future engagement, not a thing this one is waiting on.
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-006.md` — `status: answered`, `answered-by: human`, `answered-at: 2026-08-30T01:04:46Z`; `## Cross-answer check` and `## Consequences` written
+  - `docs/product/vision.md` — v7 → v8: round 6 added (the acceptance verbatim, and the three things in it that outlive the closing); the escaped-pipe bullet now records that they were shown it and declined to hold the engagement for it
+  - `docs/architecture/adr/ADR-0008-edges-of-the-multiline-cell-exemption.md` — v2 → v3: decision 8's assumption confirmed by its subject; the "Hard" consequence's *"was not raised with them"* answered by the sign-off that raised it. No decision changed
+  - `tracker/board.md` — regenerated
+- **Status:** `awaiting-answer` → `open`
+- **Result:** The stakeholder accepted the engagement as it stands, option A, with no follow-up work. The reply is propagated into the vision and into ADR-0008, `Q-006` is answered, and `EP-001` returns to `open` — its recorded `resume-to` — where `review-close` can now record the ending.
+
+## 2026-08-30T01:10:42Z — review-close v0.6.0 — reviewer
+
+- **Item:** EP-001
+- **Trigger:** status `open` with `scripts/engagement-state EP-001` reporting `at-rest`, dispatched by `next` step 6 — the one exception under which the orchestrator dispatches against an open epic (`spec/ids-and-statuses.md` §3.5)
+- **Inputs read:**
+  - `tracker/items/EP-001/item.md`, `history.md`, `journal.md`, and `artifacts/review.md` (the first half of this ending, written by the execution that filed `Q-006`)
+  - all six questions on the epic: `Q-001` (the elicitation), `Q-002`, `Q-003`, `Q-004` (the refused sign-off), `Q-005` (the supersession), `Q-006` (the sign-off, with the reply and the cross-answer check `answer-questions` wrote on it)
+  - `tracker/items/WI-0001/item.md` and `artifacts/review.md`; the same two for `WI-0002` and `WI-0003`
+  - `docs/product/vision.md` (v8) end to end; `docs/architecture/adr/ADR-0005-alignment-markers-place-cell-text.md` (v4, superseded) at lines 13, 116, 155–175; `ADR-0008-edges-of-the-multiline-cell-exemption.md` (v3)
+  - `.claude/agile-skills/spec/doc-header.md` §4b and `.claude/agile-skills/scripts/validate-workspace` around line 1229 — opened to check two of ADR-0005's flagged claims against what they cite, rather than against the first half's table
+  - `mdtab.py` as a program: run over a fixture at this ending to gather DE3's evidence. No diff was reviewed and none exists — an ending has no branch
+- **Decisions:**
+  - **E1, delivered**, and not E2. Their reply accepts (*"Yes — I accept it as it stands, your option A"*), and all three children are `done` with `outcome: delivered`, which is the row `spec/ids-and-statuses.md` §3.5 gives to E1. E2 would have been the honest ending had anything not delivered; nothing did not.
+  - **Gathered DE3's evidence by running the tool, not by quoting the children's verify reports.** Each child verified its own criteria; nobody had yet checked the epic's eight success measures as measures. All eight pass, including a discriminating case for measure 5 — a centre-marked and a right-marked column each holding one ordinary cell and one break-tag cell, where the ordinary cells were placed by the markers and the exempt ones sat flush left, still padded to full width.
+  - **Re-derived the `claims-are-sourced` impasse rather than inheriting it.** The first half recorded three unrepairable errors; I opened `ADR-0005:116`, `spec/doc-header.md` §4b and `validate-workspace:1229` and confirmed each flagged sentence is true and that §4b's repair route is genuinely shut for a superseded ADR. Same conclusion, independently reached — countersigning the previous execution's audit is the failure this skill's self-check names.
+  - **Forced the transition on `claims-are-sourced` alone.** Every other hard gate was run and passed. The alternative is an engagement that can never end, which is a worse record than one that says on its face it was forced; `--force` stamps `[gates forced]` into the history reason permanently. Recorded as a toolkit defect in `review.md` finding 1, with the observation that two of the three sentences are supersession bookkeeping the pipeline itself wrote, which is not the case §4b's prohibition was reasoning about.
+  - **Filed no follow-up item.** The stakeholder was offered option B by name, with the escaped-pipe case as its leading candidate, and declined it in terms. Filing one anyway would record work they explicitly did not ask for.
+  - **Appended the ending to `review.md` rather than overwriting it.** The first half carries the seven-error claims audit and the three repairs made under §4b; overwriting would destroy the only record of that execution's examination.
+- **Cross-answer check:** `EP-001/Q-006`, the sign-off reply, was consumed by `answer-questions` at `2026-08-30T01:07:00Z`, which wrote its `## Cross-answer check` against `EP-001/Q-004`, `EP-001/Q-005`, `EP-001/Q-001`, `WI-0002/Q-001`, `WI-0003/Q-001` and `WI-0003/Q-002` — every verdict `compatible`, none `conflicts`, nothing escalated. This execution consumed **no** human answer of its own: it reads that reply as an already-consumed record, and re-running the check here would either duplicate it or, worse, reach a different verdict on the same pair with no question filed. Verified rather than assumed: `scripts/lint-answers --context epic --changed-since main --item EP-001` → exit 0 over all 6 consumed answers.
+- **Questions raised:** none — the sign-off `Q-006` was filed by the previous execution and answered before this one ran, and nothing in the ending needed a decision this skill may not make
+- **Commands:**
+  - `.claude/agile-skills/scripts/engagement-state EP-001` → exit 0, `at-rest`, rest reached 2026-08-30T00:52:41Z
+  - `.claude/agile-skills/scripts/check-epic-signoff EP-001 --resolving 'EP-001:open->done'` → exit 0, PASS, names all 3 children, filed after rest, DE8 satisfied by `Q-001`
+  - `.claude/agile-skills/scripts/lint-answers --context epic --changed-since main --item EP-001` → exit 0, 6 consumed human answers, 0 errors
+  - `.claude/agile-skills/scripts/lint-claims --context epic --changed-since main` → exit 1, 3 errors, all `ADR-0005`
+  - `python3 .claude/agile-skills/scripts/validate-workspace --root . --resolving 'EP-001:open->done+journal'` → exit 0
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 37 tests, on `main`
+  - `python3 mdtab.py` over two fixtures, with `cmp`, `diff`, `awk` line-width measurement and `grep -nP '[ \t]+$'` → the eight rows of DE3's evidence table in `review.md`
+- **Gates:**
+  - `definition-of-done` → **pass**. `spec/dor-dod.md` §4 walked criterion by criterion, DE1 to DE8, each with its own result and evidence in `review.md`'s Definition of Done table. DE6 passes with the recorded gap below.
+  - `verification-postdates-the-code` → **skipped** — an ending has no branch and no code of its own; `check-verify-freshness` compares a verification against a branch head and there is neither. Each child ran it at its own close.
+  - `commits-reference-the-item` → **skipped** — same reason: `check-commit-refs` inspects the commits on a branch not yet on the trunk, and this execution merges nothing. The epic's own record commits reference `EP-001` in their subjects and are on `main`.
+  - `tests-pass-on-the-merge-result` → **pass**, read as "the trunk is green at the ending" since there is no merge result: `python3 -m unittest discover -s tests -t .` → exit 0, 37 tests, on `main`.
+  - `workspace-valid` → **pass** (`validate-workspace --resolving 'EP-001:open->done+journal'`, exit 0 before the move; the transition re-ran it after).
+  - `record-is-reconstructible` → **pass**. From the tracker, `docs/` and `git log` alone: *what was built* — the vision's six rounds and three children's items; *which skill decided what* — every history row names its actor and every journal entry its skill and version; *what questions arose and how they were resolved* — fourteen questions, all `answered`, each with `## Consequences` naming files that contain the change; *what verification found* — three `verify-report.md` files with evidence against 32 criteria. The one thing a reader cannot reconstruct from the record is why `ADR-0005`'s three claims are unsourced, which is why finding 1 spells it out.
+  - `claims-are-sourced` → **FAIL, forced**. `lint-claims --context epic --changed-since main` → exit 1, 3 errors, over the scope it reported for itself: *"an ending has no diff of its own, so the scope is the whole document set rather than anything --changed-since could name; absolute claims: every document under docs; citations: every markdown file in the workspace"*. All three are in `ADR-0005`, all three were read against their sources and are **true**, and no legal move clears them: §4b forbids correcting a superseded ADR and that ADR's `## Corrections` was closed at supersession. Forced, with the reason in `review.md` finding 1 and in this history row.
+  - `cross-answer-consistency` → **pass** (`lint-answers --context epic --changed-since main --item EP-001`, exit 0; rule 3 correctly did not run, an ending having no diff of its own).
+  - `epic-sign-off` → **pass** (`check-epic-signoff EP-001 --resolving 'EP-001:open->done'`, exit 0; the reply names all three children and postdates rest, and DE8 is satisfied by the elicitation `intake` filed).
+- **Artifacts:**
+  - `tracker/items/EP-001/artifacts/review.md` — the ending appended below the first half, with what was examined, the eight-measure evidence table, the DE1–DE8 table, three findings, three accepted gaps and the verdict. The first half is untouched
+  - `tracker/items/EP-001/item.md` — `status: done`, `outcome: delivered`
+  - `tracker/board.md` — regenerated by the transition
+  - no bug filed, no follow-up item filed, no merge commit: an ending produces none
+- **Status:** `open` → `done`
+- **Result:** The engagement is over and ended at E1, delivered. `mdtab.py` pads every column of a recognised pipe table to its widest cell, places text by the delimiter row's markers with the stakeholder's line-break exemption, and returns everything else byte for byte; all eight of the epic's success measures were re-checked at this ending and all eight hold. The stakeholder accepted it as it stands with no follow-up work. One gate was forced — `claims-are-sourced`, on three true-but-unsourceable sentences in a superseded ADR — and that is a defect in the toolkit, recorded as finding 1 rather than worked around.
