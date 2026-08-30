@@ -198,8 +198,20 @@ Rules:
 - Every entry has a matching `## Change log` row and a `version` bump. The two sections answer
   different questions — the change log says *a version happened*, the corrections say *what a
   sentence used to say* — and neither substitutes for the other.
-- An ADR at `status: superseded` is **not** corrected. It records what was believed then, and it
-  is no longer the document a reader acts on.
+- A superseded ADR takes **no new correction**, and keeps every correction it already made. The
+  rule is about the *act*, not the state: an ADR corrected while it was `accepted` and superseded
+  afterwards is perfectly legal, and its `## Corrections` section stays exactly as it was — the
+  section is append-only, so removing the entries to satisfy a state rule would destroy the
+  evidence it exists to keep. `validate-workspace` therefore refuses a correction **dated at or
+  after** the supersession, and nothing else.
+
+  Reading it as a state rule was this section's own first defect, and a regression run found it
+  within a day: an ADR that had been corrected and was then correctly superseded had *no valid
+  state to be in*. The team renamed its heading to `## Corrections — closed on supersession`,
+  wrote a paragraph saying plainly that the rename was a workaround, and then could not clear
+  three true-but-unsourced claims in the same file, because §4b's repair route was shut for it.
+  `review-close` ended that engagement with a forced hard gate (F-069). A rule nobody can satisfy
+  is the F-050 mistake, and this is what it looks like when it is made in a fix for F-067.
 - `scripts/validate-workspace` enforces the shape; it cannot enforce condition one. Whether the
   assertion really is unchanged is a judgement, and the entry is what makes it attributable.
 
@@ -247,6 +259,16 @@ tree — the same scoping `dor-dod.md` applies to D7 and D12. A record written b
 convention existed is not retroactively invalid; the next execution that edits a document is the
 one that must source what it writes.
 
+It also does not apply to a document at `status: superseded`. The rule exists so that a confident
+sentence **a reader will act on** points at something, and a superseded document is by
+construction not one anybody acts on: `superseded-by` is mandatory and names what replaced it. It
+is also the one document with no legal way to gain a citation, because §4b takes no new
+corrections on it — so the rule would demand a repair it forbids, which is how a regression run
+ended with a forced gate over three sentences that were every one of them true (F-069). Rule 1
+still reads them: a citation that does not resolve is a broken pointer whatever the document's
+status, and `lint-claims` prints how many documents rule 2 skipped and why rather than passing
+over them in silence.
+
 ---
 
 ## 5. Which skill writes what
@@ -273,3 +295,4 @@ the check would be circular.
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §4a added: absolute claims about named code carry a resolvable `[src: ...]` citation (F-001). |
 | 3 | 2026-08-29 | §4b added: a standing ADR is repaired in place through an append-only `## Corrections` section — `provenance` or `erratum`, never a change to what the code must do. §5's ADR row says which half is superseded-only (F-067). |
+| 4 | 2026-08-30 | §4b: a superseded ADR takes no **new** correction and keeps the ones it made — the rule is about the act, not the state, and as a state rule it described a document that could not exist. §4a: rule 2 does not read a superseded document, which has no legal way to gain a citation (F-069). |

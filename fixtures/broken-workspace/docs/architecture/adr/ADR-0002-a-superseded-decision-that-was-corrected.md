@@ -1,7 +1,8 @@
 ---
 title: A superseded decision that was corrected anyway
-version: 2
-status: current
+version: 3
+status: superseded
+superseded-by: docs/architecture/adr/ADR-1-Bad_Name.md
 updated: 2026-08-16T10:00:00Z
 updated-by: plan
 updated-for: WI-0001
@@ -35,6 +36,7 @@ Easy: nothing. Hard: nothing. Reversing it is free.
 
 | version | when | by | for | what changed |
 |---------|------|----|-----|--------------|
+| 3 | 2026-08-16T12:00:00Z | plan | WI-0001 | a correction made after this decision was already superseded |
 | 2 | 2026-08-16T10:00:00Z | plan | WI-0001 | superseded by a later decision |
 | 1 | 2026-08-15T10:00:00Z | plan | WI-0001 | First version |
 
@@ -42,3 +44,4 @@ Easy: nothing. Hard: nothing. Reversing it is free.
 
 | when | by | for | kind | what changed |
 |------|----|-----|------|--------------|
+| 2026-08-16T12:00:00Z | plan | WI-0001 | provenance | `## Decision` gained a source [src: docs/architecture/overview.md] — but this ADR was superseded at 10:00:00Z, so the correction is an act on a document nobody acts on |

@@ -2160,7 +2160,15 @@ absent. Neither is done here.
   in a superseded ADR that is true-but-unsourced is either exempt from rule 2 (a superseded
   document is not one a reader acts on) or repairable by provenance alone. Decide which in the
   same change; leaving it as an accepted gap is what F-067 was filed to end.
-- Status: open — filed from regression 3b, not fixed there
+- Status: **fixed** — both halves, because either alone leaves the document unrepairable.
+  `spec/doc-header.md` §4b now states the **act**: a superseded ADR takes no *new* correction and
+  keeps every one it made, and `validate-workspace` refuses only a correction dated at or after
+  the supersession. §4a exempts a superseded document from rule 2, because it is not one a reader
+  acts on and §4b gives it no way to gain a citation — and `lint-claims` **prints** how many
+  documents it skipped and why, since an exemption nobody is told about is F-033's failure in a
+  different hat. `examples/toy-project`'s ADR-0010 is the legal shape (corrected while current,
+  superseded afterwards) and `fixtures/broken-workspace`'s ADR-0002 is the illegal one (corrected
+  after supersession); reverting either half fails `./scripts/check`
 
 ## F-070 — a `run:` citation is split on a semicolon inside its own command
 - Severity: UX, low — but it teaches a worker to weaken a citation
@@ -2180,7 +2188,10 @@ absent. Neither is done here.
 - Direction: do not split inside a `run:` part — it extends to the marker's end, or to a `;` that
   is not inside quotes. Whichever is chosen, the error message for an unresolvable `run:` citation
   should say what it could not parse rather than reporting a missing file.
-- Status: open — filed from regression 3b
+- Status: **fixed** — `split_sources()` in `scripts/lib/claims.py`: a `run:` part owns every
+  remaining semicolon and runs to the end of the marker. The limit is stated in the docstring
+  rather than left to be discovered — a `run:` citation cannot be followed by a second source
+  inside the same marker, and does not need to be
 
 ## H-016 — the validators crash on a `*.md` file that is not UTF-8
 - Severity: toolkit robustness — an uncaught traceback where a finding belongs
@@ -2199,7 +2210,10 @@ absent. Neither is done here.
   that fails: the run stops with a traceback and the record says nothing.
 - Note: filed as H-### rather than F-### only because it was found by the harness; it is a defect
   in the toolkit's scripts, not in the harness.
-- Status: open — filed from regression 3b
+- Status: **fixed** — `scripts/lib/textio.py`: every walk of the workspace decodes with
+  replacement and reports `doc.not-utf-8` as a **warning** rather than raising. A warning and not
+  an error deliberately: a project may legitimately hold bytes that are not text, and stopping
+  its run over one is not proportionate — what was wrong was the traceback, not the file
 
 ---
 

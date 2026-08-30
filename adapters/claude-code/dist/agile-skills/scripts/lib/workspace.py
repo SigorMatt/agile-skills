@@ -375,7 +375,7 @@ class Workspace:
                       hint="it is created with its header when the item is created, so "
                            "'empty' and 'lost' stay distinguishable")
             return
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
             text = handle.read()
         for cells, line in _parse_table(text, 0):
             if len(cells) != 6:
@@ -390,7 +390,7 @@ class Workspace:
         if not os.path.isfile(path):
             self.fail(path, 0, "journal.missing", "journal.md does not exist")
             return
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
             lines = handle.read().split("\n")
         current = None
         for index, raw in enumerate(lines, start=1):

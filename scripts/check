@@ -549,6 +549,46 @@ def check_adr_correction(runner: Runner) -> None:
                            "finding it exists to clear")
         return
     runner.emit("the legal repair for a standing ADR (F-067, before and after)", True)
+    check_superseded_adr(runner)
+
+
+def check_superseded_adr(runner: Runner) -> None:
+    """F-069: the repair rule is about the act, not the state.
+
+    Two assertions the fixtures cannot make on their own, because both live inside
+    `examples/toy-project`'s `ADR-0010` — an ADR corrected while it was current and superseded
+    afterwards, which is the shape that had no valid state to be in:
+
+    * `validate-workspace` accepts it (the corrections predate the supersession) — covered by the
+      must-pass workspace step, and asserted here on the code so a silent rule change is loud;
+    * `lint-claims --all` does not read its absolute claim, and **says** how many documents it
+      skipped. An exemption nobody is told about is F-033's failure wearing a different hat.
+    """
+    label = "a superseded ADR keeps its corrections and is not read for absolutes (F-069)"
+    example = os.path.join(ROOT, "examples", "toy-project")
+    adr = os.path.join(example, "docs", "architecture", "adr",
+                       "ADR-0010-counting-lines-with-a-generator.md")
+    if not os.path.isfile(adr):
+        runner.skip(label, "examples/toy-project has no superseded-and-corrected ADR")
+        return
+    result = subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-claims"),
+                             "--root", example, "--all"], capture_output=True, text=True)
+    output = result.stdout + result.stderr
+    problems = []
+    if "ADR-0010-counting-lines-with-a-generator.md" in output.replace(
+            "rule 2 skipped 1 superseded document(s) — "
+            "docs/architecture/adr/ADR-0010-counting-lines-with-a-generator.md", ""):
+        problems.append("  rule 2 read a superseded document, which has no legal way to gain a "
+                        "citation")
+    if "rule 2 skipped" not in output:
+        problems.append("  the exemption was applied without saying so — an exemption nobody is "
+                        "told about is a gate that examined less than the reader thinks")
+    validation = subprocess.run([sys.executable, os.path.join(SCRIPTS, "validate-workspace"),
+                                 example], capture_output=True, text=True)
+    if "adr.correction.superseded" in (validation.stdout + validation.stderr):
+        problems.append("  an ADR corrected while it was current is refused after it is "
+                        "superseded — the rule is testing the state again, not the act")
+    runner.emit(label, not problems, detail="\n".join(problems))
 
 
 # fixtures/ended-engagement: one epic per verdict the termination gate has to reach.

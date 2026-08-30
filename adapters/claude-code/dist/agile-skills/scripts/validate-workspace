@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 
 import board as board_lib  # noqa: E402
 from claims import CITATION_RE, CitationResolver  # noqa: E402
+from textio import read_text  # noqa: E402
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
@@ -1092,8 +1093,7 @@ class Validator:
                               "tracker/board.md does not exist but items do",
                               hint="run scripts/board-gen")
             return
-        with open(path, "r", encoding="utf-8") as handle:
-            existing = handle.read()
+        existing, _ = read_text(path)
         if BOARD_MARKER not in existing:
             self.report.error(path, 1, "board.marker",
                               "the generated-file marker is missing; the board may have been "
@@ -1218,19 +1218,35 @@ class Validator:
         if section is None:
             return
         line = section.get("line", doc.body_line)
-        # Either marker counts. The frontmatter field is the one with rules, and an ADR also
-        # carries a `- **Status:**` bullet in its body; a document that says "superseded"
-        # anywhere is not one a reader acts on, so it is not one to repair.
+        # F-069. This rule used to test the **state** — a superseded ADR that has a
+        # `## Corrections` section — where §4b states a rule about the **act**: do not correct a
+        # superseded ADR. The difference is a document that cannot exist legally. An ADR corrected
+        # while it was `accepted`, and superseded afterwards, still carries the corrections it was
+        # entitled to make: the section is append-only, so removing them would destroy the
+        # evidence it exists to keep, and the supersession cannot be skipped. Regression 3b hit
+        # exactly that, renamed the heading as a declared workaround, and still could not clear
+        # three true-but-unsourced claims in the same file — so `review-close` forced a hard gate
+        # to end the engagement.
+        #
+        # The act is what is checked now: on a superseded ADR, no correction may be dated at or
+        # after the supersession, which is the moment the document was last written.
         body_status = ""
         for raw in doc.body.split("\n")[:20]:
             if raw.strip().lower().startswith("- **status:**"):
                 body_status = raw.split("**", 2)[-1].strip(": ").strip().lower()
                 break
-        if doc.fields.get("status") == "superseded" or body_status == "superseded":
-            self.report.error(doc.path, line, "adr.correction.superseded",
-                              "a superseded ADR carries corrections",
-                              hint="it records what was believed then; it is not the document a "
-                                   "reader acts on, so there is nothing in it to repair")
+        superseded = doc.fields.get("status") == "superseded" or body_status == "superseded"
+        stamp = str(doc.fields.get("updated") or "")
+        if superseded and stamp:
+            for cells, row_line in doc.corrections:
+                when = cells[0].strip() if cells else ""
+                if when and when >= stamp:
+                    self.report.error(
+                        doc.path, row_line, "adr.correction.superseded",
+                        f"a correction dated {when} on an ADR superseded at {stamp}",
+                        hint="a superseded ADR records what was believed then; it keeps the "
+                             "corrections it made while it was current, and takes no new ones "
+                             "(doc-header.md §4b)")
         last = max(doc.sections, key=lambda name: doc.sections[name]["line"])
         if last != "## Corrections":
             self.report.error(doc.path, line, "adr.correction.order",
@@ -1387,10 +1403,21 @@ class Validator:
                 if any(os.sep.join(parts[:n]) in ignored for n in range(1, len(parts) + 1)):
                     continue
                 try:
-                    with open(path, "r", encoding="utf-8") as handle:
-                        text = handle.read()
+                    text, undecodable = read_text(path)
                 except OSError:
                     continue
+                if undecodable:
+                    # H-016: a gate that raises is worse than a gate that fails. Both validators
+                    # walk every `*.md` in the workspace, and one file that is not UTF-8 used to
+                    # crash them with an uncaught UnicodeDecodeError — a traceback where a finding
+                    # belongs. A warning, not an error: a project may legitimately hold bytes that
+                    # are not text, and stopping its run over one is not proportionate.
+                    self.report.warn(path, 0, "doc.not-utf-8",
+                                     "this file is not valid UTF-8; undecodable bytes were "
+                                     "replaced before it was read",
+                                     hint="the workspace record is text; if the file is "
+                                          "deliberately not text, it does not belong under a "
+                                          ".md name")
                 # problems_in() masks code spans and fenced blocks, so a *quoted* marker is not
                 # read as a citation (F-037).
                 for line, problem in self.citations.problems_in(text):

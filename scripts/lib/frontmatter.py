@@ -14,6 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import miniyaml  # noqa: E402
 
+from textio import read_text  # noqa: E402
+
 __all__ = ["FrontmatterError", "split", "load_file", "render"]
 
 
@@ -54,8 +56,10 @@ def split(text: str, name: str = "<string>"):
 
 
 def load_file(path):
-    with open(path, "r", encoding="utf-8") as handle:
-        return split(handle.read(), name=str(path))
+    # H-016: decode with replacement rather than raising. A workspace file that is not UTF-8 is a
+    # finding for whoever is walking the tree, never an uncaught traceback out of a gate.
+    text, _ = read_text(path)
+    return split(text, name=str(path))
 
 
 def render(fields: dict, body: str) -> str:

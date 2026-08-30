@@ -70,6 +70,8 @@ from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
                     paragraphs)
 from report import Report  # noqa: E402
 from scope import diff_scope, working_tree_scope  # noqa: E402
+import frontmatter  # noqa: E402
+from textio import read_text  # noqa: E402
 from workspace import resolve_root  # noqa: E402
 
 class ClaimLinter:
@@ -93,6 +95,8 @@ class ClaimLinter:
         self.citations = CitationResolver(self.root)
         self._ignored = None
         self._window = None
+        self.undecodable = set()
+        self.superseded = set()
 
     # ---- workspace facts -------------------------------------------------------------
 
@@ -148,8 +152,7 @@ class ClaimLinter:
         if self.only:
             found = []
             for path in self.only:
-                with open(path, "r", encoding="utf-8") as handle:
-                    found.append((os.path.relpath(path, self.root), handle.read()))
+                found.append((os.path.relpath(path, self.root), read_text(path)[0]))
             return found
         docs_dir = os.path.join(self.root, "docs")
         if not os.path.isdir(docs_dir):
@@ -167,8 +170,7 @@ class ClaimLinter:
                 relative = os.path.relpath(path, self.root)
                 if selected is not None and relative not in selected:
                     continue
-                with open(path, "r", encoding="utf-8") as handle:
-                    found.append((relative, handle.read()))
+                found.append((relative, read_text(path)[0]))
         return found
 
     def all_markdown(self):
@@ -186,14 +188,24 @@ class ClaimLinter:
                 if self.ignored(path):
                     continue
                 relative = os.path.relpath(path, self.root)
-                with open(path, "r", encoding="utf-8") as handle:
-                    found.append((relative, handle.read()))
+                text, undecodable = read_text(path)
+                if undecodable:
+                    self.undecodable.add(relative)
+                found.append((relative, text))
         return found
 
     # ---- rule 1: a citation resolves --------------------------------------------------
 
     def check_citations(self) -> None:
         for relative, text in self.all_markdown():
+            if relative in self.undecodable:
+                # H-016. Reported, not raised, and not silently skipped either: a document this
+                # gate could not read properly is a fact the record should carry.
+                self.report.warn(os.path.join(self.root, relative), 0, "doc.not-utf-8",
+                                 "this file is not valid UTF-8; undecodable bytes were replaced "
+                                 "before it was read",
+                                 hint="the workspace record is text; if the file is deliberately "
+                                      "not text, it does not belong under a .md name")
             for line, problem in self.citations.problems_in(text):
                 self.report.error(os.path.join(self.root, relative), line,
                                   "claim.citation.unresolved", problem,
@@ -204,6 +216,23 @@ class ClaimLinter:
 
     def check_absolutes(self) -> None:
         for relative, text in self.documents():
+            # F-069. Rule 2 exists so that a confident sentence a reader will **act on** points at
+            # something. A document at `status: superseded` is by construction not one anybody
+            # acts on — `superseded-by` names what replaced it, and `doc.superseded-by` makes that
+            # pointer mandatory — and it is append-only history like a change log. It is also the
+            # one document with no legal way to gain a citation: §4b will not let a superseded ADR
+            # be corrected. Regression 3b ended with a forced hard gate over three such sentences,
+            # every one of them read against its source and found true.
+            #
+            # Exempt, and *said* rather than skipped quietly: a gate that examines less than the
+            # reader thinks is the whole of F-033.
+            try:
+                fields, _, _ = frontmatter.split(text, name=relative)
+            except Exception:
+                fields = {}
+            if (fields or {}).get("status") == "superseded":
+                self.superseded.add(relative)
+                continue
             for start, block in paragraphs(text):
                 if not is_prose(block):
                     continue
@@ -273,6 +302,12 @@ class ClaimLinter:
         if looked:
             self.check_absolutes()
         self.report.note(f"checked {self.scope_note()}")
+        if self.superseded:
+            self.report.note(
+                f"rule 2 skipped {len(self.superseded)} superseded document(s) — "
+                f"{', '.join(sorted(self.superseded))}; a superseded document is not one a "
+                f"reader acts on, and doc-header.md §4b gives it no way to gain a citation. "
+                f"Rule 1 still read them")
         return self.report.emit()
 
 

@@ -13,6 +13,8 @@ import os
 import re
 import subprocess
 
+from textio import read_text  # noqa: E402
+
 __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
            "looks_like_code", "paragraphs", "is_prose", "mask_code", "masked_lines"]
 
@@ -118,6 +120,38 @@ def is_prose(block: list) -> bool:
 
 
 
+def split_sources(body: str):
+    """The separate sources inside one `[src: ...]` marker.
+
+    Several are separated by `;` (`doc-header.md` §4a) — but a `run:` citation carries a whole
+    command, and a command may contain a semicolon of its own. F-070: a reviewer wrote
+    `[src: run: python3 -c "import sys; print(...)" → …]`, got two `claim.citation.unresolved`
+    errors, and replaced the command citation with a weaker `[src: <path>]` rather than leave an
+    unresolvable pointer standing. The tool was nudging the author away from the citation form
+    that carries the most evidence, which is the opposite of the point.
+
+    So a `run:` part runs to the end of the marker. That is a real limit and it is the honest one:
+    a `run:` citation cannot be followed by a second source inside the same marker, and it does
+    not need to be — write a second marker.
+    """
+    parts, current = [], []
+    tokens = body.split(";")
+    while tokens:
+        token = tokens.pop(0)
+        current.append(token)
+        joined = ";".join(current)
+        stripped = joined.strip().strip("`")
+        if stripped.lower().startswith("src:"):
+            stripped = stripped[4:].strip()
+        if stripped.lower().startswith("run:") and tokens:
+            # Swallow the rest of the marker: the command owns every remaining semicolon.
+            current.extend(tokens)
+            tokens = []
+        parts.append(";".join(current))
+        current = []
+    return parts or [body]
+
+
 class CitationResolver:
     """Resolves `[src: ...]` citations against one workspace."""
 
@@ -133,8 +167,7 @@ class CitationResolver:
         for name in sorted(os.listdir(base)):
             path = os.path.join(base, name, "item.md")
             if os.path.isfile(path):
-                with open(path, "r", encoding="utf-8") as handle:
-                    found[name] = handle.read()
+                found[name] = read_text(path)[0]
         return found
 
     def git(self, args: list):
@@ -231,7 +264,7 @@ class CitationResolver:
         found = []
         for index, line in enumerate(masked_lines(text), start=1):
             for match in CITATION_RE.finditer(line):
-                for part in match.group("body").split(";"):
+                for part in split_sources(match.group("body")):
                     problem = self.resolve(part)
                     if problem:
                         found.append((index, problem))
