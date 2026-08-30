@@ -30,9 +30,10 @@ import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
-                       duplicate_sections,
-                       Workspace, id_kind, resolve_root, split_sections)
+                       Workspace, id_kind, resolve_root)
+from record import duplicate_headings, sections as split_sections  # noqa: E402
 
+ITEM_ID_IN_TEXT_RE = re.compile(r"\b(?:EP-\d{3}|WI-\d{4}|BUG-\d{4})\b")
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
 ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "arose-from", "depends-on",
                         "blocks", "relates-to"]
@@ -558,7 +559,7 @@ class Validator:
                               "arose-from names the item itself")
 
     def check_item_body(self, path, item, expected_type) -> None:
-        for heading, line in duplicate_sections(item.body, item.body_line):
+        for heading, line in duplicate_headings(item.body, item.body_line):
             self.report.error(path, line, "item.section.duplicate",
                               f"section {heading!r} appears more than once",
                               hint="every reader keys on the heading, so only one of them is "
@@ -755,10 +756,17 @@ class Validator:
                                       f"entry is missing the '**{label}:**' bullet",
                                       hint="a declared gate that is silently omitted is the "
                                            "failure this format exists to prevent")
-            if entry.bullets.get("Item") and entry.bullets["Item"].strip() != item.identifier:
-                self.report.error(path, entry.line, "journal.item",
-                                  f"entry names item {entry.bullets['Item']!r} but is filed "
-                                  f"under {item.identifier}")
+            named = entry.bullets.get("Item", "")
+            if named.strip():
+                # The rule is "the entry names this item", so the ID is read out of the bullet
+                # rather than the whole bullet being required to *be* the ID. A real entry
+                # writes `**Item:** EP-001` and then a parenthetical saying which sibling the
+                # same execution created (F-074).
+                found_id = ITEM_ID_IN_TEXT_RE.search(named)
+                if not found_id or found_id.group(0) != item.identifier:
+                    self.report.error(path, entry.line, "journal.item",
+                                      f"entry names item {named!r} but is filed "
+                                      f"under {item.identifier}")
 
         self.check_journal_against_history(item, path)
 
@@ -1117,7 +1125,7 @@ class Validator:
     def check_docs(self) -> None:
         for doc in self.workspace.docs:
             path = doc.path
-            for heading, line in duplicate_sections(doc.body, doc.body_line):
+            for heading, line in duplicate_headings(doc.body, doc.body_line):
                 self.report.error(path, line, "doc.section.duplicate",
                                   f"section {heading!r} appears more than once",
                                   hint="only one of them is ever read (F-056)")

@@ -56,13 +56,13 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
-from claims import CITATION_RE, paragraphs  # noqa: E402
+from claims import CITATION_RE  # noqa: E402
+from record import blocks, paragraphs  # noqa: E402
 from report import Report  # noqa: E402
 from scope import diff_scope, git, working_tree_scope  # noqa: E402
 from workspace import Workspace, resolve_root  # noqa: E402
 
 SECTION = "## Cross-answer check"
-CHECKED_AGAINST_RE = re.compile(r"^\s*checked against\s*:(?P<rest>.*)$", re.IGNORECASE)
 ANSWER_ID_RE = re.compile(r"\b(EP-\d{3}|WI-\d{4}|BUG-\d{4})/(Q-\d{3})\b")
 REQUEST_ID_RE = re.compile(r"\b(R-\d{3})\b")
 NONE_RE = re.compile(r"\bnone\b", re.IGNORECASE)
@@ -204,28 +204,23 @@ class AnswerLinter:
     def check_one_section(self, identifier, question, section, escalated) -> None:
         text = section["text"]
         line = section["line"]
-        # F-073, second half: the list wraps. Regression 4b filed a check naming nine answers
-        # across four lines; only the first line was read, so six of the nine were never resolved
-        # and never verdict-checked — a gate quietly examining a third of what it was given. The
-        # declaration continues until a blank line or a bullet.
-        declared = None
-        collecting = False
-        for raw in text.split("\n"):
-            if collecting:
-                if not raw.strip() or raw.lstrip().startswith(("-", "*")):
-                    break
-                declared += " " + raw.strip()
-                continue
-            match = CHECKED_AGAINST_RE.match(raw)
-            if match:
-                declared = match.group("rest")
-                collecting = True
-        if declared is None:
+        # The section's structure is read once, by `scripts/lib/record.py`. F-073 was this
+        # function deciding for itself where a bullet ends and how far a declaration runs, and
+        # getting both wrong: a closing sentence swallowed into the last verdict, and a
+        # `Checked against:` list of nine answers read down to the three on its first line.
+        section_blocks = blocks(text, line + 1)
+        declaration = None
+        for block in section_blocks:
+            if block.label and block.label.strip().lower() == "checked against":
+                declaration = block
+                break
+        if declaration is None:
             self.report.error(question.path, line, "answer.cross-check.malformed",
                               f"{identifier}'s cross-answer check has no `Checked against:` line",
                               hint="`Checked against: WI-0002/Q-001; WI-0002/Q-002`, or "
                                    "`Checked against: none — <why>`")
             return
+        declared = declaration.body
         named = [f"{a}/{b}" for a, b in ANSWER_ID_RE.findall(declared)]
         named += REQUEST_ID_RE.findall(declared)
         if not named:
@@ -250,7 +245,7 @@ class AnswerLinter:
                     f"answer in this workspace",
                     hint="a cross-answer check that cites nothing is the appearance of a check")
                 continue
-            verdict = self.verdict_for(text, named_id)
+            verdict = self.verdict_for(section_blocks, named_id)
             if verdict is None:
                 self.report.error(
                     question.path, line, "answer.cross-check.no-verdict",
@@ -267,45 +262,35 @@ class AnswerLinter:
                          "wins; deciding it here is the move ADR-0008 §3 refuses")
 
     @staticmethod
-    def verdict_for(text: str, named_id: str):
+    def verdict_for(section_blocks: list, named_id: str):
         """The verdict recorded against one answer, read from its whole bullet.
 
         Scoped to the bullet rather than to the line: a verdict with its reason attached wraps,
         and one entry stays one entry however the author broke the line. A rule that fires on
         where a paragraph happened to wrap is a rule that teaches people to fight the linter.
 
-        F-073, first half: a bullet ends at the next bullet **or at a blank line, or at prose that
-        is not indented under it**. Reading only to the next bullet swallowed the closing sentence
-        of the section into the last entry — and regression 4b's `answer-questions` hit it with
-        the sentence this skill's own examples end on, *"No verdict is `conflicts`, so no question
-        is filed"*, which turned a `compatible` verdict into a declared conflict and failed the
-        gate on correct work.
+        Where a bullet ends is `record.blocks()`'s answer, not this function's — F-073, first
+        half, was this function answering it. Reading only to the next bullet swallowed the
+        closing sentence of the section into the last entry, and regression 4b's
+        `answer-questions` hit it with the sentence this skill's own examples end on, *"No
+        verdict is `conflicts`, so no question is filed"*, which turned a `compatible` verdict
+        into a declared conflict and failed the gate on correct work.
         """
-        bullet, collecting = [], False
-        for raw in text.split("\n"):
-            starts_bullet = raw.lstrip().startswith(("-", "*"))
-            if starts_bullet:
-                if collecting:
-                    break
-                collecting = named_id in raw
-                if collecting:
-                    bullet.append(raw)
-                continue
-            if collecting:
-                if not raw.strip() or raw == raw.lstrip():
-                    break        # a blank line, or prose that is not a continuation of the bullet
-                bullet.append(raw)
-        if not collecting and not bullet:
-            # Not written as a bullet at all — fall back to the line, which is what the earlier
-            # rule did and is still right for `Checked against: X — compatible, different subject.`
-            for raw in text.split("\n"):
-                if named_id in raw:
-                    bullet = [raw]
-                    break
-        joined = "\n".join(bullet).lower()
-        for verdict in VERDICTS:
-            if verdict in joined:
-                return verdict
+        def read(block):
+            joined = block.joined.lower()
+            for verdict in VERDICTS:
+                if verdict in joined:
+                    return verdict
+            return None
+
+        for block in section_blocks:
+            if block.kind == "bullet" and named_id in block.lines[0]:
+                return read(block)
+        # Not written as a bullet at all — fall back to the block that names it, which is still
+        # right for `Checked against: X — compatible, different subject.`
+        for block in section_blocks:
+            if named_id in block.text:
+                return read(block)
         return None
 
     # ---- rule 3 ------------------------------------------------------------------------

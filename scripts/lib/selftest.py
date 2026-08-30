@@ -434,13 +434,13 @@ def run_escaping(results: Results) -> None:
 
     # A reason containing a union type used to split its history row into extra cells.
     row = r"| 2026-01-01T00:00:00Z | draft | ready | refine | \u2014 | accepts str \| None |"
-    cells = workspace_lib.split_row(row)
+    cells = record_lib.split_row(row)
     results.check("escape/row-cell-count", len(cells), 6)
     results.check("escape/row-reason", cells[5], "accepts str | None")
     results.check("escape/row-plain",
-                  workspace_lib.split_row("| a | b | c |"), ["a", "b", "c"])
+                  record_lib.split_row("| a | b | c |"), ["a", "b", "c"])
     results.check("escape/row-backslash",
-                  workspace_lib.split_row(r"| a | back\\slash |"), ["a", r"back\slash"])
+                  record_lib.split_row(r"| a | back\\slash |"), ["a", r"back\slash"])
 
     # A citation inside code is a quotation. Masking preserves line numbers.
     masked = claims_lib.mask_code("one `[src: bogus]` two")

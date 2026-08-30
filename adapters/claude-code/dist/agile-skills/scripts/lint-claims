@@ -66,8 +66,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
 from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
-                    CitationResolver, is_prose, looks_like_code, masked_lines,
-                    paragraphs)
+                    CitationResolver, looks_like_code, masked_lines)
+from record import is_prose, paragraphs  # noqa: E402
 from report import Report  # noqa: E402
 from scope import diff_scope, working_tree_scope  # noqa: E402
 import frontmatter  # noqa: E402

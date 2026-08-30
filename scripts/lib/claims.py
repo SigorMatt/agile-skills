@@ -13,14 +13,14 @@ import os
 import re
 import subprocess
 
+from record import FENCE_RE  # noqa: E402
 from textio import read_text  # noqa: E402
 
 __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
-           "looks_like_code", "paragraphs", "is_prose", "mask_code", "masked_lines"]
+           "looks_like_code", "mask_code", "masked_lines"]
 
 CITATION_RE = re.compile(r"\[src:\s*(?P<body>[^\]]+)\]")
 CODE_SPAN_RE = re.compile(r"(`+)(?:(?!\1).)*?\1", re.DOTALL)
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 # The words that turn a description into a claim nothing can hedge.
 ABSOLUTES = [
@@ -84,40 +84,6 @@ def looks_like_code(token: str) -> bool:
     if "." in token and " " not in token:
         return True
     return False
-
-
-def paragraphs(text: str):
-    """(start-line, [lines]) for each prose paragraph, skipping fenced code."""
-    lines = text.split("\n")
-    found = []
-    buffer, start, fenced = [], 0, False
-    for index, line in enumerate(lines, start=1):
-        if FENCE_RE.match(line):
-            fenced = not fenced
-            continue
-        if fenced:
-            continue
-        if not line.strip():
-            if buffer:
-                found.append((start, buffer))
-            buffer, start = [], 0
-            continue
-        if not buffer:
-            start = index
-        buffer.append(line)
-    if buffer:
-        found.append((start, buffer))
-    return found
-
-
-def is_prose(block: list) -> bool:
-    """Headings, tables and list-only blocks are structure; claims live in sentences."""
-    text = "\n".join(block)
-    if all(line.lstrip().startswith(("#", "|", ">")) for line in block):
-        return False
-    return bool(text.strip())
-
-
 
 
 def split_sources(body: str):
