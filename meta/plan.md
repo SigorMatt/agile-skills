@@ -448,4 +448,4 @@ then the two tests that judge it. Cluster 3 yields if the budget runs short.
 - [x] **META-141** — the live test: recall-4c's workspace to scratch, `next` dispatches retro
       post-ending through the rendered skills, the report files, the engagement archives.
 - [x] **META-142** — findings pass over both tests; F-074+/H-018+; statuses current.
-- [ ] **META-143** — `meta/FINAL-REPORT-4.md`.
+- [x] **META-143** — `meta/FINAL-REPORT-4.md`.

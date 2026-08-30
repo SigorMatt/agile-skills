@@ -4231,3 +4231,41 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 - **Artifacts:** `meta/findings/FINDINGS.md` (F-075..F-078 and the F-061 addendum),
   `scripts/lib/{claims,selftest}.py`, `meta/evidence/retro-calibration/` (+ the 0.2.0 report and
   its journal entry, and a README pointing at the four things worth reading).
+
+## 2026-08-30 — META-143 — the final report, and the ROADMAP stamp
+
+- **Unit:** META-143
+- **Inputs read:** every unit's journal entry from META-132 on; the four banked reports;
+  `meta/findings/FINDINGS.md` F-074..F-079 and H-017..H-019; `meta/ROADMAP.md` §3;
+  `meta/FINAL-REPORT-3.md` §6 for the shape a report of this kind takes here.
+- **Decisions:**
+  - **The report leads with what was built and ends with what is not claimed.** Three sentences
+    in §8 say plainly what this session does not establish: that the retro finds most of what is
+    in a record (one of five on its first honest reading), that the classification is reliable
+    (four correct calls is a sign, not a result), and that the reports are all sound (nineteen of
+    twenty-eight proposals were not individually verified).
+  - **The re-run's number is stated three times and disclaimed three times.** In §4.2, in the
+    ROADMAP stamp, and in the evidence README. A number produced after reading the miss is not a
+    measurement, and the way to stop it becoming one in a later reading is to make the
+    qualification travel with it wherever it is written.
+  - **F-076 is the finding the session hands forward, and it is deferred on purpose.** It turns
+    the *document-as-deliverable* class from two findings into a question with two answers that
+    cannot both be right: either §5 holds and `implement`'s claims gate does not belong on it, or
+    §5 does not hold and the gate is right to be there. The ROADMAP stamp says so.
+  - **The recommended next step is not a feature.** Run the retro inside a live harness iteration,
+    where the product source and the commit history exist — the two inputs no banked copy can
+    supply. Then the owner's triage of thirty-seven proposals, which is a reading session. A real
+    recall number needs a held-out engagement and this session cannot supply one.
+  - **F-079 was found and fixed while the report was being written**, from the re-run's own
+    honesty: it declared a stray scratch file in the gate's bullet rather than tidying it away.
+    The procedure never named `--body-file -`, so the skill whose hard gate counts every file it
+    writes was the one skill not told how to journal without writing one. `retro` 0.2.1.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green, **30 steps**; `harness/tests/test_harness.py` 74 tests;
+  `scripts/lib/selftest.py` 252 cases; `fixtures/broken-workspace` 82 codes, unchanged.
+- **Artifacts:** `meta/FINAL-REPORT-4.md`, `meta/ROADMAP.md` (§3 stamp),
+  `meta/findings/FINDINGS.md` (F-079 and F-075's addendum),
+  `methodology/skills/retro/*` (0.2.1), re-rendered dist.
+
+**Phase V ends here.** The retro skill is built, contracted, gated, dispatched and read. Its
+recall is a reading, not a number, and the report says which.
