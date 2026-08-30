@@ -3689,3 +3689,57 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   wrapped verdict, WI-0003/Q-002's options-only escalation, WI-0004/Q-001's naming context,
   README), re-rendered dist. `harness/runs/iteration-3b-mdtab.1/` is the two-turn run that was
   archived; the live 3b starts from an empty project.
+
+---
+
+## 2026-08-30 — META-129 (part one) — 3b read, banked, and its findings fixed before 4b ran
+
+- **Unit:** META-129
+- **Inputs read:** `harness/runs/iteration-3b-mdtab/SIM-LOG.md` in full; the mdtab-3b project's
+  `tracker/items/EP-001/{questions/Q-001,Q-005,Q-006}.md`, `artifacts/review.md`, `journal.md`;
+  `WI-0001/journal.md` and `artifacts/impl-report.md`;
+  `docs/architecture/adr/ADR-0005-…md`; the four gates run over the finished workspace.
+- **Decisions:**
+  - **3b passes, and the evidence is the stakeholder's own sentence**, not my reading of the
+    trail: *"they put both of my sentences in front of me, told me one of them had been written
+    down as a decision in my name, and refused to choose between them for me."* The reserved
+    reconciliation the probe had held since iteration 3 was elicited at `EP-001/Q-005`. Banked
+    under `meta/harness/evidence/iteration-3b/`.
+  - **F-064's fix earned itself.** `intake` filed the elicitation at turn 2 and got back the three
+    things the stakeholder cared about most — including *"no trailing whitespace"* and *"no
+    maximum column width"*, the two organic wants that in iteration 3 reached nobody until the
+    closing note. They became epic-level measures rather than a regret.
+  - **Three defects found, and fixed before 4b rather than after.** This is a judgement call and
+    it is worth stating: the mission says the regressions are the gate and that nothing is fixed
+    silently, not that findings must wait. **F-069** is a defect I introduced this session in
+    §4b's own fix, it forced a hard gate in 3b, and it would have skewed 4b's acceptance condition
+    — an ending that signs with zero new findings — into a lottery. Leaving it open while claiming
+    a proven kernel would have been dishonest. 4b was two turns in, so stopping cost nothing.
+  - **F-069 needed both halves.** The act-not-state rule alone leaves the three claims
+    unrepairable; the rule-2 exemption alone leaves the document permanently invalid. Reverting
+    either half fails `./scripts/check`, which is how I know both are load-bearing.
+  - **The exemption is announced.** `lint-claims` prints how many superseded documents rule 2
+    skipped and why. An exemption nobody is told about is F-033's failure wearing a different hat,
+    and this session has now written that sentence three times in three places.
+  - **F-072 was found by hand and should not have been.** `textio.py` (H-016's fix) went into
+    `scripts/lib/` and not into `LIB_TO_SHIP`, and `./scripts/check` stayed green while every
+    consumer install would have died on `ImportError` — `frontmatter.py` imports it, and
+    `frontmatter.py` is under everything. The render step compares a copy against its source, so
+    it can see divergence and never omission. The new step runs every shipped script under
+    `runpy` with only the shipped `lib/` on the path; removing `textio.py` again fails it. It is
+    not a full install-check and the finding says so.
+  - **F-026 was not as fixed as it said.** The new step's first failure was `workspace-init
+    --help` reading `--help` as a directory name — one entry point the F-026 sweep missed.
+    Addendum written, one-line fix made.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — 24 steps. `fixtures/broken-workspace` still 79 codes with
+  the ADR cases rebuilt around the act rule. Four reverting mutations run: both halves of F-069,
+  and the `LIB_TO_SHIP` omission, each fails the step written for it.
+- **Artifacts:** `meta/harness/evidence/iteration-3b/` (+ README), `meta/findings/FINDINGS.md`
+  (F-069, F-070, F-072, H-016, the positive record, the F-063 and F-026 addenda, the coverage
+  note), `spec/doc-header.md` §4a and §4b (revision 4), `scripts/lib/textio.py`,
+  `scripts/lib/claims.py` (`split_sources`), `scripts/lint-claims`, `scripts/validate-workspace`,
+  `scripts/workspace-init`, `scripts/check` (`check_superseded_adr`, `check_shipped_scripts`),
+  `examples/toy-project` ADR-0010, `fixtures/broken-workspace` (ADR-0002 rebuilt, ADR-0003 added),
+  `adapters/claude-code/render.py`, re-rendered dist.
+- **In flight:** 4b relaunched 2026-08-30T01:26Z from a wiped project against the repaired kernel.
