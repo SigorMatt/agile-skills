@@ -173,7 +173,7 @@ A new adapter is conformant when every box can be ticked with evidence:
 - [ ] **A2** The renderer contains no per-skill special cases; behaviour varies only by declared
       contract fields.
 - [ ] **A3** Rendering is byte-deterministic; a re-render of unchanged sources produces no diff.
-- [ ] **A4** All eight skills render, and each is explicitly invocable in the target runtime.
+- [ ] **A4** All nine skills render, and each is explicitly invocable in the target runtime.
 - [ ] **A5** `when_to_use` reaches whatever the runtime matches on, or the adapter documents that
       relevance-based triggering is unavailable.
 - [ ] **A6** Skills with `human_interaction` of `none` or `via-questions` cannot ask the human,

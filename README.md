@@ -65,6 +65,12 @@ Eight skills over a status graph:
 - Answers must land in artifacts — the plan, the criteria, an ADR — not in chat. A question
   marked answered whose consequences changed no file is the most damaging thing this design can
   produce, so a gate checks for it.
+- **`retro`** runs once after the engagement ends, and it is the only skill that reads the
+  record rather than the work. It writes two things and touches nothing else: an
+  engagement-local retrospective, every observation cited to the file and line it came from, and
+  a set of candidate toolkit findings marked `PROPOSED` for a human to send upstream. The
+  stakeholder is not waiting on it — their engagement ended at sign-off. It is the team studying
+  itself, and it is how a consumer's real run becomes feedback on the method.
 
 The workspace it creates inside your project:
 
@@ -102,7 +108,7 @@ The difference is not features; it is what the process *is*.
 | Process is | instructions, templates and checklists the agent is asked to follow | a status graph, a transition program, hooks that deny bypass writes, gates that exit non-zero |
 | The human's seat | throughout, by design | at intake, at refinement, at every escalation, and at epic sign-off |
 | What you get at the end | planning documents | a record a stranger can reconstruct the run from — journals, history, question provenance, cited claims |
-| Breadth | 34+ workflows across the lifecycle | 8 skills, one flow, deliberately narrow |
+| Breadth | 34+ workflows across the lifecycle | 9 skills, one flow, deliberately narrow |
 
 Concretely, "enforcement as a program" means: an item cannot reach `done` while a gate is
 failing, because the only sanctioned way to change a status is a script that checks the transition
@@ -115,7 +121,7 @@ that is discipline; it is software, and it behaves the same on the hundredth run
 - You want to stay in the loop, shape the work as it goes, and have expert-shaped agents help you
   think — **use BMAD-METHOD.** It is more mature, far broader, and built for that.
 - You want to hand work over, walk away, and be able to audit exactly what happened and on what
-  basis — **this.** The narrowness is the point: eight skills, hardened by running them.
+  basis — **this.** The narrowness is the point: nine skills, hardened by running them.
 
 They are converging: their roadmap carries "Dev Loop Automation", which is our territory. Our bet
 is that autonomy is only worth having if it is trustworthy by construction, and that the way to
@@ -131,7 +137,7 @@ contains no code or content derived from it.*
 
 | Path | What it is |
 |------|-----------|
-| [`methodology/`](methodology/) | The runtime-neutral method: 8 skills as `skill.yaml` + `process.md`, and `pipeline.yaml`. No runtime, vendor or product is named here, and a linter enforces that. |
+| [`methodology/`](methodology/) | The runtime-neutral method: 9 skills as `skill.yaml` + `process.md`, and `pipeline.yaml`. No runtime, vendor or product is named here, and a linter enforces that. |
 | [`spec/`](spec/) | The schemas: IDs and statuses, item, journal and history, questions, doc headers, Definition of Ready and Done, the skill contract, the workspace layout. |
 | [`adapters/`](adapters/README.md) | The adapter contract, and [`claude-code/`](adapters/claude-code/README.md): a renderer, an installer, gate wiring, and an honest table of what is hard-enforced versus convention. |
 | [`scripts/`](scripts/) | Standard-library Python only. Validator, board generator, gate runner, gated transition, workspace and item scaffolding, and `check` — the repository's own gate. |
@@ -163,8 +169,9 @@ agent given nothing but the tracker, the docs and the git log.
 
 - **Not a coding agent.** It is the process around one. The `implement` skill assumes something
   competent is writing the code; the value here is what happens before and after.
-- **Not sprint ceremonies.** No planning poker, no estimates, no retrospectives yet. v1 proves
-  the flow end to end; depth comes after.
+- **Not sprint ceremonies.** No planning poker, no estimates, no velocity. There *is* a
+  retrospective, but it is a reading of the record rather than a meeting: `retro` runs after the
+  engagement ends and reports what the trail shows. Depth on the rest comes after.
 - **Not multi-item parallelism.** `next` dispatches one action at a time, on purpose: two skills
   running before state is written leaves a workspace nobody can reconstruct.
 - **Not a guarantee of quality.** It guarantees that the checks were run and the reasoning was

@@ -68,8 +68,8 @@ the expected answer at this point, not a failure — exit 1 means a workspace th
 wrong, and exit 0 means a clean one.
 
 **In a NEW session — the discovery check.** Start a fresh agent session in the project and ask
-what skills are available. You should see the eight: `intake`, `refine`, `plan`, `implement`,
-`verify`, `review-close`, `answer-questions`, `next`.
+what skills are available. You should see the nine: `intake`, `refine`, `plan`, `implement`,
+`verify`, `review-close`, `answer-questions`, `retro`, `next`.
 
 Before the workspace exists it will tell you so, which is the correct answer.
 

@@ -76,7 +76,10 @@ then run `/next` and do whatever it dispatches. Repeat.
 
 - `next` reports that a question addressed to **human** is open — stop and surface it;
 - `next` reports that nothing is runnable — stop and report why;
-- every item is `done` and the epic is closed — stop and report what was delivered;
+- every item is `done` and the epic is **closed** — not merely ended: after the ending, `next`
+  dispatches `retro` once, which reads the engagement's own trail and files
+  `artifacts/retro.md`. You are not waiting on me for that and neither am I. Stop after it, and
+  report what was delivered plus anything the retrospective proposes;
 - the workspace fails validation and you cannot fix it within the skill you are running — stop
   and show me the validator output.
 
