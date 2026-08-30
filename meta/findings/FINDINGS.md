@@ -2125,3 +2125,130 @@ make the pattern tolerate backticks; the honest fix is to make the step report h
 sha-shaped tokens it *skipped*, so a citation that falls outside the pattern is loud rather than
 absent. Neither is done here.
 
+---
+
+## F-069 — a superseded ADR that was legitimately corrected has no valid state
+- Severity: correctness of enforcement, high — F-067's shape one layer in, and it forced a hard
+  gate in regression 3b
+- Component: spec/doc-header.md §4b, scripts/validate-workspace (`adr.correction.superseded`),
+  scripts/lint-claims
+- Symptom: §4b (this session's F-067 fix) says a standing ADR may be repaired in place through an
+  append-only `## Corrections` section, and that *"an ADR at `status: superseded` is **not**
+  corrected"*. Both rules are right. Together they describe a document that cannot exist legally:
+  an ADR corrected while it was `accepted`, and superseded afterwards, still carries the
+  corrections it was entitled to make — the section is append-only, so deleting them would destroy
+  the evidence it exists to keep — and `validate-workspace` then reports
+  `adr.correction.superseded` for ever. 3b's team hit it, renamed the heading to
+  `## Corrections — closed on supersession` with a paragraph saying plainly that the rename is a
+  workaround, and then could not clear three `claim.unsourced` errors in the same document because
+  the repair route §4b provides is shut for it. `review-close` ended the engagement with
+  `transition --force`, stamping `[gates forced]` into the history reason.
+- Diagnosis, in the reviewer's own words: *"`adr.correction.superseded` tests the **state** — an
+  ADR whose status is superseded and which has a `## Corrections` section — where §4b states a
+  rule about the **act**: do not correct a superseded ADR."* And the three unsourced sentences are
+  worse than incidental: two of them are bookkeeping the pipeline itself wrote *at* supersession,
+  so §4b's justification for the prohibition (*"it records what was believed then"*) does not
+  describe them at all.
+- Evidence: meta/harness/evidence/iteration-3b/ — `docs/architecture/adr/ADR-0005-…md` (the
+  closed-corrections heading and its change-log row 4), `tracker/items/EP-001/artifacts/review.md`
+  finding 1 and its accepted-gaps table, `tracker/items/EP-001/journal.md` (the forced gate),
+  `tracker/items/EP-001/history.md` (`[gates forced]`).
+- Direction: the rule must test the act, not the state. Two moves, and the first is not enough on
+  its own: (1) `adr.correction.superseded` fires only on a correction entry **dated after** the
+  supersession, so a legitimately corrected ADR stays valid when it is superseded; (2) §4b gains
+  the case it does not cover — an ADR that becomes superseded keeps its corrections, and a claim
+  in a superseded ADR that is true-but-unsourced is either exempt from rule 2 (a superseded
+  document is not one a reader acts on) or repairable by provenance alone. Decide which in the
+  same change; leaving it as an accepted gap is what F-067 was filed to end.
+- Status: open — filed from regression 3b, not fixed there
+
+## F-070 — a `run:` citation is split on a semicolon inside its own command
+- Severity: UX, low — but it teaches a worker to weaken a citation
+- Component: scripts/lib/claims.py (`CitationResolver`)
+- Symptom: several sources may be separated by `;` inside one `[src: …]` marker
+  (`spec/doc-header.md` §4a), and the splitter applies that rule to the *whole* marker — including
+  the inside of a `run:` citation, whose command may legitimately contain a semicolon.
+  3b's reviewer wrote `[src: run: python3 -c "import sys; print(...)" → …]`, got two
+  `claim.citation.unresolved` errors, and replaced the command citation with a weaker
+  `[src: mdtab.py]` rather than leave an unresolvable pointer standing.
+- Consequence: the citation form that carries the most evidence — a command with its recorded
+  outcome — is the one the splitter is most likely to break, so the tool nudges toward the
+  weakest form that resolves.
+- Evidence: meta/harness/evidence/iteration-3b/tracker/items/EP-001/journal.md — *"my first
+  `## Corrections` entry cited `run: python3 -c "import sys; print(...)"`; `lint-claims` split it
+  on the embedded `;` and reported two `claim.citation.unresolved` errors."*
+- Direction: do not split inside a `run:` part — it extends to the marker's end, or to a `;` that
+  is not inside quotes. Whichever is chosen, the error message for an unresolvable `run:` citation
+  should say what it could not parse rather than reporting a missing file.
+- Status: open — filed from regression 3b
+
+## H-016 — the validators crash on a `*.md` file that is not UTF-8
+- Severity: toolkit robustness — an uncaught traceback where a finding belongs
+- Component: scripts/lib (file reading, shared by validate-workspace and lint-claims)
+- Symptom: 3b's project needed a fixture that is deliberately not valid UTF-8 (the tool under test
+  measures display width). Every `*.md` file in the workspace is read by `validate-workspace` and
+  by `lint-claims` rule 1, both of which decode as UTF-8 without an error handler, so both crashed
+  with an uncaught `UnicodeDecodeError` — a traceback rather than a finding, and a gate that
+  cannot run rather than one that fails. The team worked around it by naming the fixture
+  `not_utf8.markdown`, and recorded the defect rather than filing a bug, correctly: no *item*
+  delivered the pipeline's scripts, so there is nothing for a `bug` item to be filed against.
+- Evidence: meta/harness/evidence/iteration-3b/tracker/items/WI-0001/journal.md and
+  `artifacts/impl-report.md` (*"a defect in the toolkit, not in this item"*).
+- Direction: read with `errors="replace"` — the driver's own `read()` already does — and report an
+  undecodable document as a finding with its own code. A gate that raises is worse than a gate
+  that fails: the run stops with a traceback and the record says nothing.
+- Note: filed as H-### rather than F-### only because it was found by the harness; it is a defect
+  in the toolkit's scripts, not in the harness.
+- Status: open — filed from regression 3b
+
+---
+
+### Positive record (2026-08-30, regression 3b) — what the fixes bought, in the stakeholder's words
+**F-062, the whole point of the run.** The planted contradiction fired both halves — part one at
+`WI-0002/Q-001`, part two as the sign-off condition on `EP-001/Q-004` — and this time
+`answer-questions` filed `EP-001/Q-005`, which quotes both statements verbatim and by ID, names
+which one had been written into the design record *as a decision in the stakeholder's name*
+(`ADR-0005` decision 3), offers their two sentences as the two options and no third of its own,
+and says: *"We are not going to pick between two of your own sentences in a document of ours —
+that is the one move this process forbids us."* The reserved reconciliation the probe had held
+since iteration 3 was elicited in one line. The stakeholder: *"That is the first time in this
+engagement I have been shown something I had actually got wrong, and it took me one line to fix."*
+
+**F-064.** The `kind: elicitation` question was filed by `intake` at turn 2 (`EP-001/Q-001`) and
+answered with three requirements — non-table content byte for byte, a malformed table left alone,
+no trailing whitespace and no maximum column width. Two of those are precisely the organic wants
+that in iteration 3 existed in persona all engagement and reached nobody until the closing note.
+The closing note this time: *"The three things I said mattered most are all written into the epic
+as measurable statements in something close to my own words."*
+
+**F-066 and F-067, used in anger.** The epic-scope claims audit found a `claim.unsourced` in
+`ADR-0001` that no item's diff could ever have seen, and the reviewer said so in terms: *"this is
+exactly the empty-window failure F-066 records, and `--context epic` is what caught it."* It was
+read against the code, found **true**, and repaired under §4b as a `provenance` correction rather
+than recorded as an accepted gap. At the ending, seven were found and four repaired the same way.
+The three that remain are F-069.
+
+**H-011, H-012, H-014.** Visible in the run's first two lines and its last: the driver named its
+own console log before anything else was printed, derived its first turn from the workspace
+(*"the project has no IDEA.md, so the engagement has not been opened"*), and stopped `epic-done`
+at turn 25 of 30 having given the closing turn.
+
+### Addendum to F-063 (2026-08-30, regression 3b) — the rule held, and the complaint moved
+`validate-workspace` reports no `question.recommendation.*` finding anywhere in 3b's record, so
+the presentation rule held mechanically. The stakeholder's residual complaint is a different one
+and it points both ways in the same log: at the ending, *"about half of them told me their
+recommendation before I had said anything, which I would rather they stopped doing"*; at
+`EP-001/Q-005`, where the escalation deliberately offered `Recommendation: none — this is yours to
+settle`, *"the question said twice that it would not offer me a recommendation — I would have
+taken one here."* They want the team's view on a technical trade-off and not on which of their own
+sentences they meant. That is a distinction the contract can make and currently does not: a
+question that puts two of the human's own statements to them should say why it is not
+recommending, and an ordinary design question should not apologise for recommending. No new
+finding; the next `refine`/`question.md` pass should carry the distinction.
+
+### Coverage note (2026-08-30, regression 3b)
+`P2 — no override seed, no blocked seed` held again: no DoR override, no `blocked` item, no bug
+filed in the whole engagement. Endings scoreboard is unchanged — E1 (tidy twice, mdtab, mdtab-3b),
+E3 (1e); E2 and E4 remain fixture-only. The three dead paths stay covered by earlier runs; 3b adds
+nothing to that column and was not meant to.
+
