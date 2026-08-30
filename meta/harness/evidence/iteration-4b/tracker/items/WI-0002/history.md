@@ -1,0 +1,16 @@
+# History — WI-0002
+
+| when | from | to | actor | resume-to | reason |
+|------|------|----|-------|-----------|--------|
+| 2026-08-30T01:30:02Z | — | draft | intake | — | created from EP-001 intake: the daily review session is the second observable slice |
+| 2026-08-30T02:25:39Z | draft | awaiting-answer | refine | draft | two blocking questions filed to the stakeholder: Q-001 (does a sitting cap how many cards it presents) and Q-002 (is a card added today due in today's sitting); DoR R6 and R8 fail until both are answered |
+| 2026-08-30T02:32:20Z | awaiting-answer | draft | answer-questions | — | Q-001 and Q-002 answered by the stakeholder and propagated into item.md (AC11, AC12), refinement-qa.md, ADR-0002 v2 and vision.md v3; resumed to the recorded resume-to |
+| 2026-08-30T02:35:52Z | draft | ready | refine | — | Definition of Ready passed criterion by criterion; both stakeholder answers recorded, AC5/AC6 made decidable, AC13 added for the overdue card R10 left uncovered |
+| 2026-08-30T02:42:05Z | ready | planned | plan | — | plan.md written with all thirteen criteria mapped; ADR-0006 records what a sitting stores against a card; overview bumped to v2 |
+| 2026-08-30T02:44:51Z | planned | in-progress | implement | — | branch wi/WI-0002 created from main; executing plan.md's six steps for the review sitting |
+| 2026-08-30T02:53:11Z | in-progress | verifying | implement | — | recall review built on wi/WI-0002 in seven commits; all thirteen criteria have a test proved by mutation, all hard gates pass on the branch head, impl-report.md written |
+| 2026-08-30T03:00:03Z | verifying | in-review | verify | — | all thirteen acceptance criteria independently demonstrated against branch head b51c502 and ticked; negative and boundary cases triggered; fourteen-mutation sensitivity sweep; no defects and no bug items filed |
+| 2026-08-30T03:04:49Z | in-review | in-progress | review-close | — | rejected on D12: docs/process/using-recall.md claims a reviewed card's answer carries forward into the schedule, cited to ADR-0006 which does not say it and contradicted by record_answer leaving rung untouched (finding F1); F2 stranded doc-comment in cli.py accepted and recorded in Notes; all thirteen criteria hold, trial merge clean, nothing merged |
+| 2026-08-30T03:11:59Z | in-progress | verifying | implement | — | review-close's F1 fixed: docs/process/using-recall.md v4 replaces the false carry-forward claim with what record_answer does; F2's comment moved onto the prompts; no behaviour changed, suite green at head, all hard gates pass |
+| 2026-08-30T03:19:47Z | verifying | in-review | verify | — | all thirteen criteria re-demonstrated independently against branch head c50694d, not carried over, because AC3/AC5/AC6 are decided by reading the document this send-back changed; sixteen-mutation sensitivity sweep; observation O1 on the corrected paragraph raised to review-close; no defects, no bug items |
+| 2026-08-30T03:26:56Z | in-review | done | review-close | — | Definition of Done passes D1-D12; whole diff read hunk by hunk against the plan and the ADRs; D12 audit run from the citations over 21 claims in three documents, all supported; merge result green in a detached trial worktree; three findings accepted and written into Notes, F1 as an instruction to WI-0003 |

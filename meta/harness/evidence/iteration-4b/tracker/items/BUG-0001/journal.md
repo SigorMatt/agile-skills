@@ -1,0 +1,391 @@
+# Journal — BUG-0001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-08-30T02:08:35Z — verify v0.2.0 — qa-engineer
+
+- **Item:** BUG-0001
+- **Trigger:** created by `verify` while verifying WI-0001; filed at `ready` because a bug with reproduction steps already satisfies the bug Definition of Ready (`pipeline.yaml`, the `null → ready` row for `verify`)
+- **Inputs read:**
+  - `tracker/items/WI-0001/item.md` — all nine criteria, read to decide whether any of them covers this behaviour. None does; the reasoning is in `## Summary`
+  - `docs/architecture/adr/ADR-0004` §5 and `ADR-0001` §5 — what the project already says a refusal looks like, which is what `## Expected behaviour` is derived from
+  - `docs/architecture/overview.md` — the rule that `store.py` never prints and `cli.py` owns everything a person sees, which is what `## Notes` uses to say where the fix belongs
+  - `recall/cli.py` at `7c552ef` — the two `except store.DeckUnreadable` clauses, and the absence of any other handler
+- **Decisions:**
+  - **A bug, not a send-back of WI-0001.** `verify`'s rule is mechanical: does an acceptance criterion of the item under verification say the behaviour should be different? AC8 is the only candidate and its own text scopes it to a deck the tool "cannot read as a deck — it is truncated, malformed, or not the format the tool writes", which is about the file's contents. All six content cases were exercised during verification and all six refuse cleanly. An unwritable directory is a *write* failure, and a directory at the deck path is not a content problem at all. No criterion covers either, so it is a bug.
+  - **`found-in: WI-0001`**, because WI-0001 is the item that delivered `cli.py` and its exception handling. This is provenance, not bookkeeping — the behaviour is answerable to one item, so `arose-from` is not the right field here.
+  - **One bug with two reproductions, not two bugs.** They share one root cause at one boundary: `cmd_add` and `cmd_list` catch `DeckUnreadable` and not `OSError`. One fix closes both, and a regression test for either alone would not demonstrate the fix, because the two go through different call paths (`save`'s and `load`'s). Splitting them would produce two items that can only be closed together.
+  - **`priority: medium`.** Nothing is lost in either case — no deck is truncated, overwritten or replaced — so the stakeholder's stated failure condition is not in play. What is lost is usability at the moment a person most needs to be told what to do, which is real but is not the epic's `high` bar.
+  - **Five acceptance criteria rather than the skeleton's two.** The skeleton offers "the steps produce the expected behaviour" and "a regression test covers this case". AC3 was added because "nothing was written" is the half of the existing AC8 contract that matters most and would otherwise go unstated; AC5 was added because the fix widens an exception handler and the obvious way to get it wrong is to swallow `DeckUnreadable` along with `OSError`, silently undoing WI-0001 AC8.
+  - **One thing deliberately left out of this bug.** A question side containing a newline makes `recall list` print one card across two lines. No criterion forbids it and nothing depends on it; filing it here would be inventing a requirement while fixing a different one. It is recorded as an observation in WI-0001's verification report instead.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/new-item --next-id bug` → 0 (`BUG-0001`)
+  - `python3 .claude/agile-skills/scripts/new-item --id BUG-0001 --type bug --title ... --epic EP-001 --priority medium --status ready --actor verify --found-in WI-0001` → 0
+  - the two reproductions, run by hand against `bin/recall` with `HOME` in a scratch directory; both outputs are quoted verbatim in `## Actual behaviour`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 1, reporting `item.title.length` at 87 characters against a limit of 80; the title was shortened to 74 and the change applied to `item.md`, `history.md` and `journal.md` together
+- **Gates:** none. This entry records the creation of an item, not an execution against one — `verify`'s own gates are recorded on WI-0001, which is the item this execution was dispatched on.
+- **Artifacts:**
+  - `tracker/items/BUG-0001/item.md` — summary with the classification reasoning, two reproductions, expected and actual behaviour with verbatim output, five acceptance criteria, and a note on where the fix belongs
+  - `tracker/items/BUG-0001/history.md` — the creation row, written by `scripts/new-item`
+- **Status:** `—` → `ready` (at creation)
+- **Result:** BUG-0001 is filed at `ready` against WI-0001's delivered behaviour: any filesystem error on the deck file other than a content problem escapes as a Python traceback. It does not block WI-0001, which meets all nine of its own criteria. Noted for whoever maintains the toolkit: `scripts/new-item` accepted an 87-character title and created the item; `validate-workspace` rejected it afterwards, so the title had to be corrected in three files by hand. Checking the length at creation would be cheaper than unpicking it.
+
+## 2026-08-30T02:13:52Z — review-close v0.6.0 — reviewer
+
+- **Item:** BUG-0001
+- **Trigger:** reviewing WI-0001 at `in-review`; reading the diff turned up a third reproduction of this bug's root cause. No status change — BUG-0001 stays at `ready`
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` as `verify` filed it, and its journal entry recording why it is a bug rather than a send-back
+  - `recall/store.py` `load` — the `except (FileNotFoundError, NotADirectoryError): return Deck()` clause
+  - `docs/architecture/adr/ADR-0004` §6 — "absent is not the same as unreadable"
+  - `tracker/items/WI-0001/item.md` AC5, AC6, AC8 — checked for whether any of them covers this
+- **Decisions:**
+  - **Amended this bug rather than filing BUG-0002.** A file sitting where the deck's *directory* should be makes `recall list` report an empty deck at exit 0, and the following `recall add` raise `FileExistsError`. It is the same root cause as A and B — the `OSError` family is unhandled at the `cli.py` boundary — so a separate item would be closed by the same fix and would have to be verified against the same code. `verify`'s own rule against merging unrelated defects cuts the other way here: these are not unrelated.
+  - **Not a send-back of WI-0001.** Same test as before. AC8 needs the deck file to exist, and here it does not. AC5 describes an absent file with an absent parent; the parent is present and is the wrong kind of thing. AC6 arguably *is* satisfied — there are no cards and the tool says so. No criterion of WI-0001 says this should behave differently.
+  - **Recorded as the reproduction to look at first, and given its own acceptance criterion.** A and B are loud: a traceback is ugly but unmistakable. C is quiet, and quiet is what `ADR-0004` §6 exists to prevent — the person is told they have no cards when their deck may be sitting elsewhere untouched. A fix that only stops the traceback in `add` would leave C's real failure in place, so AC3 states it separately rather than letting it hide inside "all three reproductions".
+  - **The renumbering was mechanical.** The former AC3 and AC4 became AC4 and AC5, and the former AC5 became AC6, so that C's criterion sits with A's and B's. Nothing was removed and no wording of the existing criteria changed.
+- **Questions raised:** none
+- **Commands:**
+  - `mkdir -p "$H/.local/share"; printf 'not a directory' > "$H/.local/share/recall"; HOME="$H" recall list` → **0**, printing `The deck is empty. ...`
+  - `HOME="$H" recall add --question q --answer a` → 1, `FileExistsError: [Errno 17] File exists: '.../.local/share/recall'`
+  - `cat "$H/.local/share/recall"` → `not a directory` — the file in the way is unchanged, so nothing was destroyed
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → 0
+- **Gates:** none. This entry records an amendment to an item's body, not an execution against it; `review-close`'s own gates are recorded on WI-0001, the item this execution was dispatched on.
+- **Artifacts:**
+  - `tracker/items/BUG-0001/item.md` — reproduction C added to `## Steps to reproduce` and `## Actual behaviour`, the summary rewritten from two reproductions to three with the reason C differs, a new AC3 for C, the remaining criteria renumbered, and a note that `store.load` must stop treating `NotADirectoryError` as absence
+- **Status:** `ready` → `ready` (unchanged — this execution amended the body, not the status)
+- **Result:** BUG-0001 now carries three reproductions of one root cause. The new one is the only one that fails silently, and it is the reason this bug is worth more than tidy error messages: `store.load` classes `NotADirectoryError` as absence, which is exactly the distinction `ADR-0004` §6 draws and the only place the code blurs it. Still `ready`, still `found-in: WI-0001`, still not blocking WI-0001's close.
+
+## 2026-08-30T05:09:18Z — plan v0.4.0 — architect
+
+- **Item:** BUG-0001
+- **Trigger:** status `ready`, dispatched by `next` as the only runnable candidate — EP-001 is at `open` (owner null, `engagement-state` → active), and WI-0001 to WI-0004 are all `done`
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the three reproductions and the six acceptance criteria
+  - `tracker/items/BUG-0001/history.md` — one row; filed at `ready` by `verify` against WI-0001
+  - `tracker/items/BUG-0001/artifacts/` — empty; this bug has no `refinement-qa.md`, because a bug with reproduction steps is filed straight at `ready`, so there is no recorded Q&A behind its criteria
+  - `docs/architecture/overview.md` v7 — the three-layer rule this design has to work inside
+  - `docs/architecture/adr/ADR-0001` §5 (exit codes carry the outcome, the reason on stderr) and `ADR-0004` §4, §5, §6 (atomic writes; refuse-do-not-repair; absent is not unreadable)
+  - `docs/process/using-recall.md` v7 — "What happens if that file gets damaged", the paragraph step 10 extends
+  - `tracker/project.yaml` — trunk `main`, and the test and lint commands, both already real
+  - `recall/store.py`, `recall/cli.py`, `recall/deck.py`, `bin/recall` — the code the change touches and what it depends on
+  - `tests/support.py`, `tests/test_storage.py` — the subprocess harness, `tree`, `digest`, and where WI-0001 AC8 is currently tested
+- **Decisions:**
+  - **`store` classifies the refusal, `cli` reports it** — `ADR-0010` §1–§3, chosen over `cli` catching `OSError` itself. **Documented then decided:** the item's `## Notes` routed this question here explicitly, and the overview's layering rule plus AC1's "not the temporary file" settle it — only `store` knows a write goes through a temporary file, and only `store` already owns which errors mean "no deck yet"
+  - **A three-member exception family** — `DeckError` base, `DeckUnreadable` unchanged beneath it, new `DeckInaccessible` (`ADR-0010` §1). **Decided:** reusing `DeckUnreadable` would make AC6's "existing messages" and the write side's "could not be written" impossible to keep apart
+  - **`load` treats `FileNotFoundError` alone as absence** (`ADR-0010` §4). **Documented:** `ADR-0004` §6 names a missing file and a missing parent directory, and `NotADirectoryError` is neither — so this implements §6 rather than superseding it, and it is what makes reproduction C's `list` stop reporting an empty deck
+  - **`detail` names the obstructing path when there is one** (`ADR-0010` §3). **Documented:** AC3 requires the message to name the path that is in the way, which for reproduction C is `~/.local/share/recall`, not the deck file
+  - **Exit code `3` covers a refused read and a refused write; no fourth code** (`ADR-0010` §5). **Decided:** no criterion asks a caller to tell them apart, and an exit code is an observable commitment easier not to make than to withdraw
+  - **`_report_unreadable` is not modified** (plan steps 6, 9). **Documented:** it is what makes AC6 true by construction rather than by retesting
+  - **Five assumptions, each with its reversal cost** — the two message wordings, the `strerror` fallback, the root guard on reproduction A, a sitting's behaviour on a refused save, and the six content-case substrings. **Assumed:** all five are one function or one test away from being reversed, and none changes a file format or a command-line surface
+- **Cross-answer check:** none — this execution recorded no new human answer and relied on none. The stakeholder statements the design rests on (`EP-001/Q-001`'s *"don't lose my progress"*) reach it through `ADR-0004`, already consumed and already checked; `lint-answers --uncommitted` was run and reports 0 errors over all 9 consumed answers
+- **Questions raised:** none — every decision was answerable from `ADR-0001`, `ADR-0004`, the overview and the code, or was a reversible assumption. Nothing here is irreversible or turns on intent no document records
+- **Commands:**
+  - `python3 -m compileall -q recall tests` → exit 0
+  - `python3 -m unittest discover -s tests -t . -q` → `Ran 55 tests in 8.519s`, `OK`
+  - `python3 -c "…"` probing reproduction C in a scratch `HOME` → `load: NotADirectoryError 20 …/deck.json 'Not a directory'`; `mkdir: FileExistsError 17 …/share/recall 'File exists'`; `lexists parent: True isdir parent: False` — the facts steps 2 and 3 are specified against
+  - `id -u` → `1000` — the check behind ## Assumptions 3
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0
+  - `python3 .claude/agile-skills/scripts/lint-answers --uncommitted` → exit 0
+  - `python3 .claude/agile-skills/scripts/lint-claims --uncommitted` → exit 1, then exit 0 after repair
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0, board already current
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` → 0 errors, 0 warnings over 6 items and 13 documents)
+  - `every-criterion-is-addressed` → **pass** (plan.md `## Acceptance criteria mapping` has one row per criterion, AC1 to AC6, each naming the steps that satisfy it and the named test or record that demonstrates it — no criterion is demonstrated by the word "tests")
+  - `project-commands-resolved` → **pass** (`tracker/project.yaml` already names both, and both were run this execution: lint exit 0, test `Ran 55 tests … OK`. Neither is a command that exits zero without checking anything)
+  - `decisions-recorded` → **pass** (plan.md `## Decisions and ADRs` maps six decisions to `ADR-0010` §1–§5 and to this plan's steps, and the five remaining choices to `## Assumptions` 1–5, each stating what reversing it costs)
+  - `cross-answer-consistency` → **pass** (`lint-answers --uncommitted` → 0 errors; no document this execution wrote reconciles two stakeholder answers, and no such contradiction was found)
+  - `claims-are-sourced` → **pass** (`lint-claims --uncommitted` → 0 errors. It first reported `claim.unsourced` at `ADR-0010:78` on *"keeps its present meaning exactly"*; the sentence was true against `recall/store.py`, so the citation was added in place before the ADR was ever committed — a first-version fix, not a `## Corrections` case)
+  - `plan-is-executable-without-you` → **pass** (advisory; read back cold. The four interfaces `store` and `cli` gain are fixed in `## Approach` with their signatures and return types, and each of the twelve steps names the files it touches and what is true afterwards. The one place a developer must still choose is the two message sentences, which `## Assumptions` 1 explicitly hands them along with what the tests assert)
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/plan.md` — new
+  - `docs/architecture/adr/ADR-0010-a-refused-deck-file.md` — new, version 1
+  - `docs/architecture/overview.md` — version 7 → 8, the `store.py` bullet
+  - commit of the above, per `conventions.commit-subject`
+- **Status:** `ready` → `planned`
+- **Result:** BUG-0001 is planned in twelve steps: `store.py` gains a `DeckError` family, an obstruction finder and a refusal classifier, and stops reading `NotADirectoryError` as an absent deck; `cli.py` widens its four read handlers, wraps its three saves, and gains a write-side report, while `_report_unreadable` stays untouched so the six content messages survive by construction. `ADR-0010` records why the wrapping belongs in `store` and why no fourth exit code was minted. All six hard gates pass and the suite is green at 55 tests before any of it is written.
+
+## 2026-08-30T05:10:05Z — implement v0.3.0 — developer
+
+- **Item:** BUG-0001
+- **Trigger:** status `planned`, dispatched by `next` as the only runnable candidate. No branch existed, so this is a fresh start rather than a resumption
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the three reproductions and the six criteria
+  - `tracker/items/BUG-0001/artifacts/plan.md` — twelve steps, the four interfaces `## Approach` fixes, five assumptions
+  - `tracker/items/BUG-0001/history.md` — two rows, `ready` then `planned`; no send-back, so there is no `verify-report.md` or `review.md` to work from
+  - `tracker/items/BUG-0001/questions/` — empty; no question has ever been filed on this item
+  - `docs/architecture/adr/ADR-0010` — the decision this plan executes; `ADR-0004` §4–§6 and `ADR-0001` §5 as its constraints
+  - `docs/architecture/overview.md` v8 — the layering rule the change works inside
+  - `tracker/project.yaml` — branch prefix `wi/`, commit subject convention, and both commands
+  - `recall/store.py`, `recall/cli.py`, `tests/support.py`, `tests/test_storage.py` — the code the twelve steps touch
+- **Decisions:** none yet — this entry opens the execution. The plan's latitude is `## Assumptions` 1 (the two message wordings) and 2 (the `strerror` fallback), and both will be decided and recorded in the closing entry
+- **Cross-answer check:** none — nothing has been edited yet
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0001 main` → exit 0, branched from `ec112a4`
+- **Gates:**
+  - `tests-pass` → **not run yet** (nothing is built)
+  - `lint-clean` → **not run yet**
+  - `workspace-valid` → **not run yet**
+  - `every-criterion-has-a-test` → **not run yet**
+  - `commits-reference-the-item` → **not run yet** (no commit on the branch)
+  - `no-unplanned-scope` → **not run yet**
+  - `cross-answer-consistency` → **not run yet**
+  - `claims-are-sourced` → **not run yet**
+- **Artifacts:**
+  - branch `wi/BUG-0001`, branched from `main` at `ec112a4`
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of BUG-0001 has started on `wi/BUG-0001`. Nothing is built yet; the twelve steps in `plan.md` are next, in order, each with its test.
+
+## 2026-08-30T05:18:15Z — implement v0.3.0 — developer
+
+- **Item:** BUG-0001
+- **Trigger:** status `in-progress` on `wi/BUG-0001`, continuing this turn's own opening entry — the twelve steps in `plan.md`, in order
+- **Inputs read:**
+  - `tracker/items/BUG-0001/artifacts/plan.md` — the twelve steps and the four interfaces `## Approach` fixes
+  - `tracker/items/BUG-0001/item.md` — the six criteria and the three reproductions, re-read against each test
+  - `docs/architecture/adr/ADR-0010` §1–§6; `ADR-0004` §4–§6; `ADR-0001` §5
+  - `recall/store.py`, `recall/cli.py`, `recall/deck.py`, `bin/recall`
+  - `tests/support.py`, `tests/test_storage.py`, `tests/test_delete.py` — the harness, and where WI-0001 AC8 is tested today
+  - `docs/process/using-recall.md` v7 and `docs/architecture/overview.md` v8, before editing either
+- **Decisions:**
+  - **The two message sentences** (`plan.md` ## Assumptions 1). Read: `recall: cannot write the deck file <path> -- <detail>. Nothing has been written and the deck file is exactly as it was before this attempt. Put that right, then run recall again.` "before this attempt" rather than a flat "nothing has been written", because a sitting saves after every graded card and earlier cards may already be on disk — a flat claim would be false there (WI-0002 AC9)
+  - **`_refusal`'s fragments** (## Assumptions 2): the obstruction branch reads `<path> is not a directory, and the deck's directory has to be one`; the deck-is-a-directory branch reads `it is a directory, not a file`; everything else is `exc.strerror` lower-cased, which gave reproduction A `permission denied`
+  - **Two tests beyond the plan's step 8**, covering the write sites in `cmd_review` and `cmd_delete`. Reproduction A reaches only `cmd_add`, and reproduction C's `add` is now stopped at the *load* — so removing those two handlers left the suite green. Found by running mutation M4 before the tests existed. Recorded as deviation 2
+  - **Not decided, and not needed:** nothing in the twelve steps required a decision the plan does not make, so no question was filed
+- **Cross-answer check:** none — no sentence carrying `[src: <ITEM>/Q-nnn]` was edited by this execution. `using-recall.md` v8 adds a section citing `BUG-0001` AC1, AC2, AC3, `ADR-0004` and `ADR-0010`, and `overview.md` v9 restates its own plan-time clause citing `ADR-0010` and `recall/store.py`; neither touches a claim sourced to a stakeholder answer. `lint-answers --changed-since main` → 0 errors over all 9 consumed answers
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/BUG-0001 main` → exit 0
+  - `python3 -m compileall -q recall tests` → exit 0 (branch head `b1cbc9f`)
+  - `python3 -m unittest discover -s tests -t . -q` → `Ran 61 tests in 9.450s`, `OK` (branch head)
+  - three reproductions by hand under a scratch `HOME` → `add` exit 3 with `cannot write … permission denied`; `list` exit 3 with `it is a directory, not a file`; `list`, `add`, `review` and `delete` all exit 3 naming `<home>/.local/share/recall`
+  - four mutation runs for AC5, each restored afterwards → M1: 2 failures; M2: 1; M3: 1; M4: 3. The suite was green again after each restore
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0001 wi/BUG-0001` → exit 0, all 3 commits name the item
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0
+  - `python3 .claude/agile-skills/scripts/lint-answers --changed-since main` → exit 0
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 61 tests`, `OK`, run on branch head `b1cbc9f` after the last commit)
+  - `lint-clean` → **pass** (`compileall -q recall tests` → exit 0, same head)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings over 6 items and 13 documents)
+  - `every-criterion-has-a-test` → **pass** (impl-report.md's evidence table names a test function for AC1, AC2, AC3, AC4 and AC6, and the four-row mutation table for AC5. `test_unwritable_deck_directory_is_refused`, `test_directory_at_the_deck_path_is_refused`, `test_file_where_the_deck_directory_belongs_is_refused`, `test_the_six_content_faults_refuse_with_their_existing_messages`, and the two `RefusedWriteOnAnExistingDeckTests`. No criterion rests on reading the code)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` → exit 0, 3 commits on `main..wi/BUG-0001`)
+  - `no-unplanned-scope` → **pass** (advisory; every hunk traces to one of the twelve steps. The three that do not trace *literally* are declared as deviations 1 to 3 in impl-report.md: overview.md became a v9 restatement because `plan` had already written v8, two tests cover step 7's other two write sites, and `_report_unreadable`'s returned constant was renamed by step 7)
+  - `cross-answer-consistency` → **pass** (`lint-answers --changed-since main` → 0 errors)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main` → 0 errors over the 2 changed documents)
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — new
+  - `recall/store.py`, `recall/cli.py` — the fix
+  - `tests/test_deck_file_errors.py` — new, 6 tests over 3 classes
+  - `docs/process/using-recall.md` v7 → v8; `docs/architecture/overview.md` v8 → v9
+  - branch `wi/BUG-0001`, commits `f81bbd3`, `3494c0f`, `b1cbc9f` (`main..wi/BUG-0001`, head `b1cbc9f`)
+- **Status:** `in-progress` → `verifying`
+- **Result:** All three of BUG-0001's reproductions now refuse with a message a person can act on and a non-zero exit, and reproduction C's `recall list` no longer reports an empty deck. `store` classifies, `cli` reports, and `_report_unreadable` is untouched so the six malformed-deck messages are exactly what they were. 61 tests pass on the branch head and all seven hard gates are green; two coverage gaps and the untestable write-failure paths are declared in `## What I did not do`.
+
+## 2026-08-30T05:25:13Z — verify v0.2.0 — qa-engineer
+
+- **Item:** BUG-0001
+- **Trigger:** status `verifying` on `wi/BUG-0001`, dispatched by `next` as the only runnable candidate
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the six criteria and the three reproductions, read **first**, before the implementation report
+  - `tracker/items/BUG-0001/history.md` — four rows; no send-back before this one, so there was no earlier verification to reconcile with
+  - `tracker/items/BUG-0001/artifacts/plan.md` — read for step 6's diff-against-the-plan and for what `_obstruction` and `_refusal` were specified to do
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — read after the criteria, and cited as evidence nowhere
+  - `docs/architecture/adr/ADR-0010` — its `## Consequences` is one of the three places the defect contradicts
+  - `docs/architecture/adr/ADR-0004` §5, §6 — the absence rule the narrowing had to preserve
+  - the branch head verified: **`20bfbb3dcf653cfc2a884dbb768694189d219957`**, and `main` at `ec112a4` in a detached worktree, for AC6's before/after comparison
+  - `recall/store.py` and `recall/cli.py` as they stand on that commit, and `git diff main -- recall`
+- **Decisions:**
+  - **AC6 was decided by comparison, not by substring.** The criterion says the six content cases keep *"their existing messages"*, and the only thing that settles "existing" is the code before the change — so `main` was checked out in a detached worktree and all twelve invocations (six decks × `add` and `list`) were run against both binaries with the same `HOME` and `diff`ed. `0` differ. A substring assertion would have been evidence about the test, not about the message
+  - **D1 is a send-back, not a bug item, and the rule is genuinely unclear here.** `verify`'s classification test — *"does an acceptance criterion of this item say the behaviour should be different?"* — answers no, because no criterion covers a directory at mode `0o000`. But a bug item requires `found-in` naming the item that delivered the behaviour, and `store._refusal` was delivered by **this** item, on this branch, three commits ago. The defect is a failure against this item's own recorded design (`plan.md` step 2, `ADR-0010` `## Consequences`, and the function's own docstring all say the classifier does not raise), so the item is not finished and the send-back is the mechanism. Recorded in the report as a gap in the classification rule
+  - **No checkbox was ticked, although all six criteria passed.** Every verdict is against `20bfbb3`, and `_refusal` — the function that must change — is on the evidence path of AC1, AC2 and AC3. Ticking now would assert a state the fix supersedes; they are ticked when the fix is verified
+  - **N3, the broken symlink, was observed and not filed.** `recall list` reports an empty deck at exit 0 when a dangling symlink is where the deck's directory belongs — the shape of reproduction C. Not filed because `ADR-0004` §6 makes *"a missing parent directory"* an empty deck and a dangling symlink's target is exactly that, and because the behaviour is identical before and after this item. It is a question about §6's wording, not about code, and it is recorded in the report for whoever refines a criterion there
+  - **No criterion was judged ambiguous**, so no question was filed
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t . -q` at `20bfbb3` → `Ran 61 tests in 9.435s`, `OK`, exit 0
+  - `python3 -m compileall -q recall tests` → exit 0
+  - AC1: `chmod 500` on the deck's directory, then `HOME=$H recall add …` → exit 3, `cannot write the deck file …/deck.json -- permission denied …`; `grep -c '\.tmp'` and `grep -c Traceback` over both streams → `0` and `0`
+  - AC2: `mkdir -p $H/.local/share/recall/deck.json`, `HOME=$H recall list` → exit 3, `it is a directory, not a file`
+  - AC3: a regular file at `$H/.local/share/recall`, then `list` and `add` → exit 3 each, both naming `$H/.local/share/recall is not a directory`; `grep -c "deck is empty"` over `list`'s stdout → `0`
+  - AC4: `find … -printf` + `sha256sum` snapshots before and after each of A, B and C → `diff` reports `SAME` three times
+  - AC5: four mutations, each applied alone and restored → M1: 2 failures; M2: 1; M3: 3; M4: 3. Suite green after each restore
+  - AC6: `git worktree add --detach /tmp/recall-main main` (`ec112a4`), then 12 paired invocations → `0` differ, exit `3→3` every time; deck `sha256` unchanged after each
+  - N1: no deck at all → `list` 0, `review` 0, `delete` 2, `find $H -mindepth 1 | wc -l` → `0`, then `add` 0 and the card lists
+  - N2: `chmod 000` on `deck.json` → exit 3, no traceback
+  - N3: dangling symlink at the deck's directory → `list` exit 0 `The deck is empty…`, `add` exit 3
+  - N4: symlink to a real directory → `add` 0, `list` shows the card
+  - N5: reproduction B against `review` and `delete` → exit 3 each
+  - **N6: `chmod 000` on the deck's directory → `list` and `add` both print a double traceback and exit 1.** The send-back
+  - isolating N6: `_obstruction(parent)` → `None`; `os.path.lexists(deck)` → `False`; `os.path.isdir(deck)` → `False`; `Path.is_dir(deck)` → `RAISES PermissionError`; `pathlib._IGNORED_ERRNOS` → `(2, 20, 9, 40)`, which excludes `EACCES`
+  - the same condition on `main` at `ec112a4` → also a traceback at exit 1, so D1 is not a regression
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 61 tests`, `OK`, run here on `20bfbb3`)
+  - `lint-clean` → **pass** (`compileall -q recall tests` → exit 0, same commit)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (each of the six rows in `verify-report.md` names a command run in this execution and quotes its actual output. AC5's mutations and AC6's before/after worktree comparison were constructed here, not repeated from `impl-report.md`; the report is cited as evidence nowhere, and where it disagrees — its M3 row says 1 failure where this run measures 3 — the measurement here stands)
+  - `negative-cases-exercised` → **pass** (seven cases beyond the criteria, N1 to N7, listed with results in the report. N6 is the send-back and N7 checks that a cancelled deletion under an unwritable directory still exits 0 and writes nothing)
+  - `a-criterion-about-criteria-is-read` → **skipped** (no criterion on this item takes other criteria as its subject. AC6 names a class of behaviour that WI-0001 AC8 covers rather than that criterion, and it was decided by running all six cases against the pre-change binary. No non-intersection arises, so there is nothing to waive)
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/verify-report.md` — new, `Verified-commit: 20bfbb3dcf653cfc2a884dbb768694189d219957`
+  - no bug item filed; no checkbox ticked in `item.md`
+- **Status:** `verifying` → `in-progress`
+- **Result:** All six criteria pass at `20bfbb3` — reproduction A, B and C each refuse with a message that names what a person has to act on, nothing is written in any of the three, the six content messages are byte-identical to the code before the change, and every reproduction's test dies under at least one mutation. The item goes back anyway: with the deck's **directory** at mode `0o000`, `store._refusal`'s `Path.is_dir()` re-raises `PermissionError` and the person gets a double traceback at exit 1 — the failure this item exists to remove, from code this item wrote, and contradicting `plan.md`, `ADR-0010` and the function's own docstring.
+
+## 2026-08-30T05:33:46Z — implement v0.3.0 — developer
+
+- **Item:** BUG-0001
+- **Trigger:** `in-progress` — `next` dispatched `implement` after `verify` sent the item back from `verifying` for D1. Second execution of this skill on this item; the branch `wi/BUG-0001` already carried the twelve steps.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the six criteria, unchanged and unedited by this execution
+  - `tracker/items/BUG-0001/history.md` — the send-back row and its reason
+  - `tracker/items/BUG-0001/artifacts/verify-report.md` — read first, as the procedure requires: D1's reproduction, the errno measurement, and the suggested substitute
+  - `tracker/items/BUG-0001/artifacts/plan.md` — step 3, which the defect contradicts
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — what the first execution built and measured
+  - `docs/architecture/adr/ADR-0010-a-refused-deck-file.md` — §3 and `## Consequences`
+  - `docs/architecture/overview.md`, `docs/process/using-recall.md` — the claims about this behaviour
+  - `recall/store.py`, `recall/cli.py`, `tests/test_deck_file_errors.py`, `tests/support.py`
+  - `tracker/project.yaml` — the test, lint and branch conventions
+  - `tracker/items/BUG-0001/questions/` — empty; no question has ever been filed on this item
+- **Reconciliation (resumed branch):** `wi/BUG-0001` was at `0853240`, clean, six commits ahead of `main`. All twelve plan steps were already done and are unchanged by this execution; nothing was redone. The defect is in step 3's code alone, and the work here is one line of it plus tests and one documentation sentence.
+- **Decisions:**
+  - **Took verification's suggested substitute rather than an alternative.** `os.path.isdir(str(path))` for `path.is_dir()`. Considered and rejected: wrapping the branch in `try/except OSError`, which hides a class of error rather than asking a question that cannot fail, and adds a handler inside a function whose contract is that it needs none; and dropping the branch, which would lose reproduction B's message. `os.path` is what `_obstruction` already uses for exactly this reason, so the module now answers filesystem questions one way.
+  - **Two regression tests, in a class of their own, not folded into `RefusedDeckFileTests`.** Mode `000` is not one of BUG-0001's three reproductions and no numbered criterion names it; a separate class with a docstring saying where it came from keeps that visible rather than implying a fourth criterion.
+  - **Did not edit any acceptance criterion, and did not add one.** Whether the criteria should gain a clause for mode `000` is not this skill's call. The tests assert the item's own recorded design instead, and the report says so.
+  - **Did not touch `ADR-0010`.** Its `## Consequences` already states that the classifier returns rather than raises; the code was wrong, not the decision. Re-litigating the plan is not this skill's latitude.
+  - **Re-ran everything at the head rather than carrying evidence forward.** Verification's verdicts were measured at `20bfbb3` and the fix supersedes that commit for AC1–AC3, so all four reproductions, all five mutations and every gate were run again at `5bf6141`.
+  - **Repaired one documentation sentence and left the other document alone.** `using-recall.md`'s list of file-system refusals did not include a folder that cannot be read, which was the one case where its "every subcommand … exits non-zero" claim was false. `overview.md`'s description of the classifier and the three load outcomes is still exact, so it is untouched.
+- **Cross-answer check:** none. The one sentence edited in `docs/` — the file-system refusal list in `using-recall.md` — cites `BUG-0001 AC1`, `BUG-0001 AC2` and `ADR-0010`, not a `[src: <ITEM>/Q-nnn]` stakeholder answer. No claim sourced to a human answer was rewritten, and `lint-answers --changed-since main` passes over the two changed documents.
+- **Questions raised:** none.
+- **Commands:**
+  - `HOME=$H recall list` with the deck's directory at mode `000`, before the fix → exit 1, double traceback ending in `PermissionError` inside `_refusal`; D1 reproduced independently
+  - `python3 -m unittest discover -s tests -t . -q` → exit 0, `Ran 63 tests`, `OK`
+  - `python3 -m compileall -q recall tests` → exit 0
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0001 wi/BUG-0001` → exit 0, all 7 commits name the item
+  - `python3 .claude/agile-skills/scripts/lint-answers --changed-since main` → exit 0, 0 errors
+  - `python3 .claude/agile-skills/scripts/lint-claims --changed-since main` → exit 0, 0 errors
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - five mutation runs at `5bf6141`, each applied alone and restored from a copy: M1 → 4 failures, M2 → 1, M3 → 3, M4 → 3, M5 → 2 and no others; suite green after each restore
+  - the four reproductions A, B, C and D1 re-run against `bin/recall`, each with `find` + `sha256sum` before and after → exits `3` throughout, `diff` empty in every case, `Traceback` absent from all six streams
+  - `id -u` → `1000`, so no mode-dependent test skipped
+- **Gates:**
+  - `tests-pass` → **pass** (`Ran 63 tests`, `OK`, at branch head `5bf6141`)
+  - `lint-clean` → **pass** (`compileall` exit 0 at the head)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings)
+  - `every-criterion-has-a-test` → **pass** (AC1–AC4 and AC6 each name a test function in `impl-report.md`; AC5 is the five-mutation table. The send-back's own behaviour is `UnreadableDeckDirectoryTests` plus mutation M5)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0)
+  - `no-unplanned-scope` → **pass**, advisory (three hunks: `_refusal`'s branch and two docstrings in `store.py`; one test class; one sentence and a change-log row in `using-recall.md`. Each traces to D1 or to D12)
+  - `cross-answer-consistency` → **pass** (`lint-answers --changed-since main`, 0 errors, over the 2 changed documents)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main`, 0 errors)
+- **Artifacts:**
+  - `recall/store.py` — `_refusal`'s middle branch, and its docstring plus `_obstruction`'s stated in the same words
+  - `tests/test_deck_file_errors.py` — `UnreadableDeckDirectoryTests`, two tests
+  - `docs/process/using-recall.md` — v9, one sentence and a change-log row
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — rewritten evidence, all of it measured at `5bf6141`
+  - commits `5bf6141` and `dc3602e` on `wi/BUG-0001`; the item's range is `ec112a4..dc3602e`, seven commits
+- **Status:** `in-progress` → `verifying`
+- **Result:** The classifier no longer fails while classifying: a deck directory at mode `000` now gets the same message, exit code and untouched deck as the item's three reproductions do, and reinstating the one line fails exactly the two new tests. Every gate passes at the branch head, and every criterion's evidence was re-measured there rather than carried over from the commit the send-back superseded.
+
+## 2026-08-30T05:39:14Z — verify v0.2.0 — qa-engineer
+
+- **Item:** BUG-0001
+- **Trigger:** `verifying` — `next` dispatched `verify` after `implement`'s second execution fixed D1 and moved the item back. Second verification of this item.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md` — the six criteria, read before the implementation report; they are the only standard applied here
+  - `tracker/items/BUG-0001/history.md` — five rows, including the send-back this verification re-tests
+  - `tracker/items/BUG-0001/artifacts/plan.md` — the twelve steps, for the diff read
+  - `tracker/items/BUG-0001/artifacts/impl-report.md` — the claims, checked rather than trusted; cited as evidence nowhere in the report
+  - `tracker/items/WI-0001/item.md` — AC8's sentence, which AC6's subject is
+  - `docs/architecture/adr/ADR-0010-a-refused-deck-file.md`, `docs/process/using-recall.md`
+  - the code at `bb74d04a720fc298257e4bfbc7219da4ab724d05`, in a detached worktree at `/tmp/verify-head`; `main` at `ec112a4` in a second worktree, for AC6's comparison
+  - `tracker/project.yaml` — the test and lint commands
+- **Decisions:**
+  - **All six criteria ticked**, each from a command run here. AC1–AC4 by driving `bin/recall` from the verified worktree with `find` + `sha256sum` snapshots either side; AC5 by five mutations run independently of the implementer's; AC6 by running all twelve malformed-deck invocations against a worktree of `main` as well as the head and comparing byte-for-byte.
+  - **AC6 treated as a criterion about criteria.** It names `WI-0001` AC8, so AC8's sentence was read against the new behaviour and given its own verdict — still true, because the changed token widens a caught type to its superclass and no `raise DeckUnreadable` or message is in the diff. The tests are recorded as evidence for that verdict, not as its definition.
+  - **Non-intersection stated and waived by name.** Nothing executable exercises `WI-0001` AC8's condition and this execution's changed line together: `_refusal` is reachable only from an `except OSError` handler, and a content fault is diagnosed after a *successful* read. No covering case is written because the two conditions are mutually exclusive at the one `read_bytes` call. Waived by name in the report.
+  - **No defect filed and no send-back.** D1's own reproduction (N1) now produces a message on all four subcommands, and none of the eight boundary conditions probed produces a traceback.
+  - **Two observations recorded, neither filed.** O1, the dangling symlink at exit 0, is unchanged by this item and defensible under `ADR-0004` §6 — a question about that ADR's wording, not a code defect; it is repeated from the superseded report so it does not vanish with it. O2, the test module's docstring now enumerating three cases where there are four, fails no criterion and is a comment rather than a claim under `docs/` — left for `review-close` to weigh under D12 rather than sent back for.
+  - **Superseded the previous report rather than appending to it.** Its verdicts were measured at `20bfbb3`, which the fix supersedes for AC1–AC3; keeping both sets of numbers in one file would leave a reader guessing which commit each row belongs to. The first verification's existence, its D1 and its unfiled observation are all carried forward in the new text.
+- **Questions raised:** none.
+- **Commands:**
+  - `git worktree add --detach /tmp/verify-head HEAD` → exit 0, `bb74d04a720fc298257e4bfbc7219da4ab724d05`
+  - `python3 -m unittest discover -s tests -t . -q` in that worktree → exit 0, `Ran 63 tests in 9.549s`, `OK`
+  - `python3 -m compileall -q recall tests` in that worktree → exit 0
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - reproduction A: `chmod 500` on the deck's directory, `recall add` → exit 3, `cannot write the deck file …/deck.json -- permission denied. …`; `grep -c '\.tmp'` → 0, `grep -c Traceback` → 0, snapshot `diff` empty
+  - reproduction B: a directory at the deck's path, `recall list` → exit 3, `-- it is a directory, not a file`; snapshot `diff` empty
+  - reproduction C: a file where the deck's directory belongs, `recall list` then `recall add` → exit 3 and 3, both naming `…/.local/share/recall`; `grep -c "deck is empty"` on `list`'s stdout → 0; snapshot `diff` empty
+  - D1's condition: `chmod 000` on the deck's directory, `list`, `add`, `review`, `delete` → exit 3 each, `-- permission denied`, `Traceback` absent from all four, deck bytes identical afterwards
+  - five further boundary probes (deck file at mode 000; symlink loop at the deck file; symlink loop at the deck directory; `$HOME` a regular file; deck directory at mode 300) → exits 3, 3, 3, 3 and 0/0 respectively, no traceback anywhere
+  - a dangling symlink where the deck's directory belongs → `list` exit 0 reporting an empty deck, `add` exit 3 — unchanged from `main`, recorded as O1
+  - AC6: the twelve invocations run twice, `diff -r /tmp/ac6-head /tmp/ac6-main` → no differences
+  - five mutations in the worktree, each alone and restored: M1 → 4 failures, M2 → 1, M3 → 3, M4 → 3, M5 → 2 and no others; suite `OK` and `git status --short` empty after the last restore
+  - `git diff 0853240..bb74d04` → read; every hunk traces to D1 or to the D12 repair
+  - `id -u` → 1000, so no mode-dependent test skipped
+- **Gates:**
+  - `tests-pass` → **pass** (exit 0, `Ran 63 tests`, `OK`, at `bb74d04` in the worktree)
+  - `lint-clean` → **pass** (`compileall` exit 0, same worktree)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (a command and its actual output recorded for each of AC1–AC6; `impl-report.md` cited as evidence for none of them)
+  - `negative-cases-exercised` → **pass** (all three reproductions provoked, plus eight boundary conditions in the report's table)
+  - `a-criterion-about-criteria-is-read` → **pass** (AC6: `WI-0001` AC8 named by ID, its sentence given a verdict from a read, tests as evidence, non-intersection stated in those words and waived by name)
+  - `tests-would-fail-without-the-change` → **pass**, advisory (five mutations, each naming the tests that failed)
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/verify-report.md` — rewritten; the superseded report's D1 and observation are carried into it
+  - `tracker/items/BUG-0001/item.md` — AC1–AC6 all ticked, each from a command run here
+  - no bug item filed
+- **Status:** `verifying` → `in-review`
+- **Result:** BUG-0001 passes all six criteria at `bb74d04`, and D1 — the classifier that raised while classifying — is fixed: an unreadable deck directory now gets the same message, exit code and untouched deck as the item's three reproductions, on all four subcommands. Two observations are recorded and neither is a defect against this item.
+
+## 2026-08-30T05:43:23Z — review-close v0.6.0 — reviewer
+
+- **Item:** BUG-0001
+- **Trigger:** `in-review` — `next` dispatched `review-close` after `verify` passed all six criteria at `bb74d04`.
+- **Inputs read:**
+  - `tracker/items/BUG-0001/item.md`, `history.md` (six rows), `journal.md` (all eight entries, in full), `questions/` (empty)
+  - `tracker/items/BUG-0001/artifacts/plan.md`, `impl-report.md`, `verify-report.md`
+  - the diff `ec112a4..c9a85a0` — `main..wi/BUG-0001` — hunk by hunk: `recall/store.py`, `recall/cli.py`, `tests/test_deck_file_errors.py`, `docs/architecture/overview.md`, `docs/process/using-recall.md`
+  - `docs/architecture/adr/ADR-0010-a-refused-deck-file.md` in full, and `ADR-0004` §5 and §6
+  - `tracker/items/WI-0001/item.md` AC8, which AC6's subject is
+  - `.claude/agile-skills/spec/dor-dod.md` §3, applied criterion by criterion
+- **Decisions:**
+  - **Accept.** All twelve Definition of Done criteria pass with their own evidence, recorded in `review.md`'s table. Every hunk in the diff maps to a plan step or a criterion, and nothing contradicts an ADR.
+  - **D6 judged a pass without a new ADR.** The second execution's `os.path.isdir` choice is not a design change: `ADR-0010` §3 already fixes the classifier's branches and its `## Consequences` already requires it not to raise. The change restores the recorded design. Had it altered what the classifier decides, it would have been a question rather than a review finding.
+  - **Three cosmetic findings recorded rather than sent back.** F1, the `except store.DeckError as unreadable` binding whose name is narrower than what it can hold; F2, the obstruction example in `using-recall.md` quoting one sentence where the block above it quotes a whole message; F3, the test module docstring enumerating three reproductions where the file now has four classes. None misleads about behaviour and none fails a criterion; each costs a full implement-and-verify cycle to fix. All three are in `item.md` `## Notes`, not only in `review.md`.
+  - **Five gaps accepted and written into `item.md` `## Notes`** — the dangling-symlink empty-deck report (unchanged by this item, a question about `ADR-0004` §6's wording), the untested post-`mkstemp` write failure, `_refusal`'s unexercised `strerror is None` fallback, root and concurrency, and the three cosmetic findings. A gap left only in a report is forgotten the moment the item closes.
+  - **No bug item filed.** The dangling-symlink observation is behaviour `ADR-0004` §6 permits, identical before and after this item; filing it as a defect would assert a decision the ADR has not made.
+  - **Closed before merging.** `check-commit-refs` reads `main..wi/BUG-0001`, which empties on merge, so the close must precede the merge.
+- **Cross-answer check:** none. This execution consumed no human answer: no question is filed on this item, the epic is not being ended here, and the one sentence the item changed in `docs/` cites `BUG-0001` AC1, AC2 and `ADR-0010` rather than a stakeholder answer. `lint-answers --context bug --changed-since main` checked the workspace's nine consumed answers against the two changed documents and reported 0 errors.
+- **Questions raised:** none.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/check-verify-freshness BUG-0001 wi/BUG-0001` → exit 0, `verified at bb74d04a; wi/BUG-0001 has moved to c9a85a0b but only the record changed (5 file(s) under tracker/ or docs/)`
+  - `python3 .claude/agile-skills/scripts/check-commit-refs BUG-0001 wi/BUG-0001` → exit 0, `all 9 commit(s) on main..wi/BUG-0001 name BUG-0001`
+  - `python3 .claude/agile-skills/scripts/lint-claims --context bug --changed-since main` → exit 0, scope `2 document(s) in 2 path(s) differ from main (ec112a4) under docs; citations: every markdown file in the workspace`
+  - `python3 .claude/agile-skills/scripts/lint-answers --context bug --changed-since main` → exit 0, `checked 9 consumed human answer(s)`
+  - `python3 .claude/agile-skills/scripts/check-epic-signoff BUG-0001` → exit 0, `BUG-0001 is a 'bug', not an epic — the termination gate applies to an engagement's ending only`
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0, 0 errors, 0 warnings
+  - `git rev-parse main` before the trial → `ec112a49737596438da4b5f8156341376bf1dceb`
+  - `git worktree add --detach /tmp/trial main` → exit 0; `git -C /tmp/trial merge --no-ff wi/BUG-0001` → exit 0, merge commit `68c05a9`
+  - `python3 -m unittest discover -s tests -t . -q` **in the trial worktree, on the merge result** → exit 0, `Ran 63 tests in 9.616s`, `OK`; `python3 -m compileall -q recall tests` there → exit 0
+  - `git worktree remove --force /tmp/trial`, then `git rev-parse main` → `ec112a49737596438da4b5f8156341376bf1dceb`, unchanged
+  - D12's audit: `grep -n "errno\|\.filename" recall/cli.py` → no match outside the module docstring; all four subcommands run under reproduction B → exit 3 each with the same message, which is the claim `using-recall.md` makes about "every subcommand"
+- **Gates:**
+  - `definition-of-done` → **pass** (D1–D12 recorded individually in `review.md`'s table, each with its own evidence; no single verdict stands in for the checklist)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; the head moved only under `tracker/`)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, 9 commits, run before the merge)
+  - `tests-pass-on-the-merge-result` → **pass** (`Ran 63 tests`, `OK`, inside the detached trial worktree at merge commit `68c05a9`, not on the branch)
+  - `workspace-valid` → **pass** (0 errors, 0 warnings)
+  - `record-is-reconstructible` → **pass** — answered from the tracker, `docs/` and `git log --grep BUG-0001` alone: *what was built and why* from `## Summary` and `ADR-0010`; *which skill decided what* from eight journal entries across `verify`, `review-close`, `plan`, `implement` ×3 and `verify` ×2; *what questions arose* — none were filed, and the one design question the filing report raised ("should `store` wrap `OSError`, or should `cli` catch it?") was routed to `plan` and answered in `ADR-0010` §1; *what verification found* — six criteria passing twice and one defect, D1, between them
+  - `claims-are-sourced` → **pass**, over the scope the gate printed: `2 document(s) in 2 path(s) differ from main (ec112a4) under docs; citations: every markdown file in the workspace`. That window contains both documents this item changed, so it could have found something
+  - `cross-answer-consistency` → **pass** (`lint-answers --context bug --changed-since main`, 9 answers checked, 0 errors)
+  - `epic-sign-off` → **pass, not applicable to this item** (`check-epic-signoff BUG-0001` → `BUG-0001 is a 'bug', not an epic`). The engagement's ending is a separate dispatch on EP-001
+- **Artifacts:**
+  - `tracker/items/BUG-0001/artifacts/review.md` — what was examined, D1–D12, three findings, five accepted gaps, the verdict
+  - `tracker/items/BUG-0001/item.md` — `outcome: delivered`, and five accepted gaps written into `## Notes`
+  - the merge of `wi/BUG-0001` into `main`, made after this close
+  - no bug item filed, no question filed
+- **Status:** `in-review` → `done`
+- **Result:** BUG-0001 is delivered and merged. A filesystem error on the deck file now reaches the person as a sentence naming the deck and a non-zero exit, on all four subcommands and in both directions, and nothing is written when it does. Three cosmetic findings and five gaps are accepted and recorded in the item's `## Notes` rather than left inside reports.

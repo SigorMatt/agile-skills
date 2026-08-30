@@ -1,0 +1,22 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: recall-4b
+  trunk-branch: main
+  description: "A single-person flashcard tool that stores a deck of text cards and schedules each card's next review from how well it was recalled."
+
+commands:
+  # Set by plan for WI-0001; the measurements behind them are in ADR-0003.
+  # test exits 0 on pass, 1 on failure, and 5 while no file matching test*.py exists.
+  test: "python3 -m unittest discover -s tests -t . -q"
+  # A syntax check, not a style linter: no linter is installed and a hard gate must not
+  # depend on installing one. ADR-0003 says so plainly rather than overselling it.
+  lint: "python3 -m compileall -q recall tests"
+  # No build step: bin/recall runs from a checkout (ADR-0005).
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"
