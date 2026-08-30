@@ -72,6 +72,12 @@ def detect_trunk(root: str) -> str:
 
 
 def main(argv: list) -> int:
+    # F-026 fixed this across ten entry points and this one was not among them, so `--help` was
+    # read as a directory name. Caught by the shipped-scripts check (F-072), which is the point of
+    # having one: a suite-wide promise is only kept where something checks every member.
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
     root = os.path.abspath(argv[1] if len(argv) > 1 else ".")
     if not os.path.isdir(root):
         print(f"workspace-init: {root} is not a directory", file=sys.stderr)

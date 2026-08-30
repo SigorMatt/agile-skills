@@ -1184,6 +1184,43 @@ def check_trial_merge(runner: Runner) -> None:
         return
     runner.emit("a trial merge leaves the trunk alone (F-055, 2 cases)", True)
 
+def check_shipped_scripts(runner: Runner) -> None:
+    """Every shipped script runs from the shipped tree, with only the shipped library beside it.
+
+    F-072. `render.py` ships an explicit list of library modules, and the render check only proves
+    the copy matches the source — not that the list is *complete*. Adding `scripts/lib/textio.py`
+    and forgetting to ship it left `./scripts/check` entirely green while every consumer install
+    would have died on `ImportError` at the first gate. That is the packaging break that no gate
+    over the source tree can see, and the cheapest thing that sees it is running what ships.
+
+    Each script is *imported*, not run: `runpy` with `run_name` left alone executes the module
+    body — which is where the imports are — while the `if __name__ == "__main__"` guard keeps
+    `main()` out of it. That tests exactly the thing that breaks and touches no workspace.
+    """
+    dist = os.path.join(ROOT, "adapters", "claude-code", "dist", "agile-skills", "scripts")
+    if not os.path.isdir(dist):
+        runner.skip("every shipped script imports", "there is no rendered dist yet")
+        return
+    broken = []
+    names = sorted(name for name in os.listdir(dist)
+                   if os.path.isfile(os.path.join(dist, name)) and not name.endswith((".yaml",
+                                                                                     ".pyc")))
+    program = ("import runpy, sys; sys.path.insert(0, sys.argv[2]); "
+               "runpy.run_path(sys.argv[1], run_name='imported')")
+    for name in names:
+        result = subprocess.run(
+            [sys.executable, "-c", program, os.path.join(dist, name),
+             os.path.join(dist, "lib")], capture_output=True, text=True, cwd=dist)
+        if result.returncode != 0:
+            tail = (result.stdout + result.stderr).strip().split("\n")[-3:]
+            broken.append(f"  - {name}: exit {result.returncode}\n" +
+                          "\n".join(f"      {line}" for line in tail))
+    if broken:
+        runner.emit("every shipped script imports", False, detail="\n".join(broken))
+    else:
+        runner.emit(f"every shipped script imports ({len(names)} scripts, from dist/)", True)
+
+
 def check_guard(runner: Runner) -> None:
     tests = os.path.join(ROOT, "adapters", "claude-code", "hooks", "test_guard.py")
     if not os.path.isfile(tests):
@@ -1311,6 +1348,7 @@ def main() -> int:
     check_derived_model(runner)
     check_journal_body(runner)
     check_trial_merge(runner)
+    check_shipped_scripts(runner)
     check_guard(runner)
     check_findings_citations(runner)
     check_export(runner)

@@ -47,7 +47,7 @@ SCRIPTS_TO_SHIP = [
     "engagement-state", "export",
 ]
 LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "workspace.py", "board.py",
-               "claims.py", "engagement.py", "scope.py"]
+               "claims.py", "engagement.py", "scope.py", "textio.py"]
 SPEC_TO_SHIP = [
     "README.md", "ids-and-statuses.md", "work-item.md", "journal-and-history.md",
     "question.md", "request.md", "doc-header.md", "dor-dod.md", "skill-contract.md",

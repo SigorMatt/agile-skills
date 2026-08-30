@@ -2266,3 +2266,32 @@ filed in the whole engagement. Endings scoreboard is unchanged — E1 (tidy twic
 E3 (1e); E2 and E4 remain fixture-only. The three dead paths stay covered by earlier runs; 3b adds
 nothing to that column and was not meant to.
 
+## F-072 — nothing proved that what ships is complete
+- Severity: packaging, high — invisible to every gate over the source tree
+- Component: adapters/claude-code/render.py (`LIB_TO_SHIP`), scripts/check
+- Symptom: `render.py` ships an explicit list of library modules and skill files, and the render
+  step only proves the committed `dist/` **matches** what `methodology/` renders to. Nothing proved
+  the list was *sufficient*. Adding `scripts/lib/textio.py` (H-016's fix) and not adding it to
+  `LIB_TO_SHIP` left `./scripts/check` entirely green while every consumer install would have died
+  with `ImportError` at its first gate — `frontmatter.py` imports it, and `frontmatter.py` is under
+  everything.
+- Diagnosis: the same class as F-033 and F-066 in a different place. A check that compares a copy
+  against its source can only see divergence, never omission; the thing that sees omission is
+  running what ships. Caught by hand, in this session, minutes before a regression run would have
+  been provisioned from it.
+- Evidence: this session, META-129. `LIB_TO_SHIP` gained `scope.py` in META-120 by luck of the
+  same edit and `textio.py` only after the omission was noticed by eye.
+- Status: **fixed** — `./scripts/check` gains "every shipped script imports": every file in
+  `dist/agile-skills/scripts/` is executed with `runpy` under a non-`__main__` run name, with only
+  the shipped `lib/` on the path. That forces the imports and runs no `main()`. Removing
+  `textio.py` from `LIB_TO_SHIP` again fails the step, confirmed. It is not a full install-check —
+  it does not build a package or run from outside the repository — and that limit is stated here
+  rather than left to be discovered.
+
+### Addendum to F-026 (2026-08-30, META-129) — one entry point was never covered
+F-026 is `--help` broken across the script suite, recorded fixed at commit 418eb9e across "all ten
+entry points". `workspace-init` was not one of them: it read `--help` as a directory name and
+exited 1, which is how the new shipped-scripts step first failed. Fixed in the same change. The
+lesson is the finding's own: a suite-wide promise is kept only where something checks every
+member, and until F-072's step existed nothing enumerated the suite.
+
