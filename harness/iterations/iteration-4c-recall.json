@@ -1,0 +1,10 @@
+{
+  "id": "iteration-4c-recall",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 4 — recall (flashcard CLI, the boring run)",
+  "project": "recall-4c",
+  "persona": "cooperative-pm",
+  "probe": "iteration-4-recall",
+  "max-turns": 24,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}
