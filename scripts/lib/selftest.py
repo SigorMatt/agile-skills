@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
+import record as record_lib  # noqa: E402
 import report as report_lib  # noqa: E402
 import scope as scope_lib  # noqa: E402
 import workspace as workspace_lib  # noqa: E402
@@ -562,6 +563,115 @@ def run_scope(results) -> None:
         results.check("scope/degenerate is the negation of real", window.degenerate, False)
 
 
+def run_record(results) -> None:
+    """The record model — the two shapes F-069 and F-073 got wrong, and the entry reader.
+
+    Every case here is a specimen from the ledger rather than an invented one. A parser whose
+    tests are all invented passes on the shapes its author imagined.
+    """
+    # F-073, first half: a bullet ends at a blank line or at unindented prose, not only at the
+    # next bullet. The closing sentence of a section was swallowed into the last entry and
+    # failed a gate on correct work.
+    wrapped = ("- WI-0002/Q-001 — compatible, because the marker rule and the break rule\n"
+               "  do not describe the same cell\n"
+               "- WI-0003/Q-002 — compatible\n"
+               "No verdict is `conflicts`, so no question is filed.\n")
+    parsed = record_lib.blocks(wrapped, 1)
+    results.check("record/bullet-count", [b.kind for b in parsed],
+                  ["bullet", "bullet", "text"])
+    results.check("record/bullet-wraps", parsed[0].end, 2)
+    results.check("record/bullet-keeps-its-continuation",
+                  "do not describe the same cell" in parsed[0].joined, True)
+    results.check("record/closing-prose-is-not-in-the-last-bullet",
+                  "conflicts" in parsed[1].joined, False)
+    results.check("record/closing-prose-is-its-own-block", parsed[2].start, 4)
+
+    # F-073, second half: `Checked against:` naming nine answers over four lines was read as one
+    # line, so six were never resolved and the gate passed over what it had not read.
+    declaration = ("Checked against: EP-001/Q-001; EP-001/Q-002; WI-0001/Q-001;\n"
+                   "  WI-0001/Q-002; WI-0002/Q-001; WI-0002/Q-002;\n"
+                   "  WI-0003/Q-001; WI-0003/Q-002; WI-0004/Q-001\n"
+                   "- a bullet ends the declaration\n")
+    parsed = record_lib.blocks(declaration, 1)
+    results.check("record/declaration-label", parsed[0].label, "Checked against")
+    results.check("record/declaration-spans-its-wraps", parsed[0].end, 3)
+    results.check("record/declaration-names-all-nine",
+                  parsed[0].body.count("Q-0"), 9)
+    results.check("record/a-bullet-ends-a-declaration", parsed[1].kind, "bullet")
+
+    # The three label spellings the record actually uses, and the one that is not a label.
+    results.check("record/label-colon-inside-bold",
+                  record_lib.split_label("- **Status:** `draft` \u2192 `ready`"),
+                  ("Status", "`draft` \u2192 `ready`"))
+    results.check("record/label-colon-outside-bold",
+                  record_lib.split_label("**Severity**: structural"),
+                  ("Severity", "structural"))
+    results.check("record/label-plain", record_lib.split_label("Component: scripts/lint-claims"),
+                  ("Component", "scripts/lint-claims"))
+    results.check("record/a-url-is-not-a-declaration",
+                  record_lib.split_label("see http://example.com/x for the map"), (None, None))
+
+    # A fence is kept whole and never read as prose — a document under test may legitimately
+    # contain a line that looks like a bullet or a table.
+    fenced = ("Before the fence.\n\n```\n- not a bullet\n| not | a table |\n```\n\nAfter.\n")
+    kinds = [b.kind for b in record_lib.blocks(fenced, 1)]
+    results.check("record/fence-is-one-block", kinds, ["text", "fence", "text"])
+    results.check("record/paragraphs-skip-fences",
+                  [start for start, _ in record_lib.paragraphs(fenced, 1)], [1, 8])
+
+    # `paragraphs` is the coarse unit and must NOT split on a bullet: a claim and the clause
+    # qualifying it live in one paragraph however the author laid it out.
+    mixed = "A sentence that never recurses.\n- and a list item under it\n\nAnother.\n"
+    results.check("record/paragraph-keeps-a-list-with-its-sentence",
+                  [len(lines) for _, lines in record_lib.paragraphs(mixed, 1)], [2, 1])
+
+    # Entries: one shape, three records. A journal execution entry is the specimen.
+    entry_text = ("## 2026-08-16T11:47:52Z \u2014 implement v0.1.0 \u2014 developer\n"
+                  "\n"
+                  "- **Item:** WI-0007\n"
+                  "- **Decisions:**\n"
+                  "  - Sorted with a stable sort so the tie-break falls out of the\n"
+                  "    comparator rather than a second pass.\n"
+                  "- **Status:** `in-progress` \u2192 `verifying`\n"
+                  "\n"
+                  "## 2026-08-16T12:02:00Z \u2014 verify v0.1.0 \u2014 qa-engineer\n"
+                  "\n"
+                  "- **Item:** WI-0007\n")
+    found = record_lib.entries(entry_text, 1, level=2)
+    results.check("record/entries-count", len(found), 2)
+    results.check("record/entry-line", found[0].line, 1)
+    results.check("record/entry-field", found[0].value("Item"), "WI-0007")
+    results.check("record/entry-field-is-case-insensitive", found[0].value("item"), "WI-0007")
+    results.check("record/entry-missing-field", found[0].value("Gates", "absent"), "absent")
+    results.check("record/entry-does-not-run-past-the-next-heading",
+                  found[0].end < found[1].line, True)
+    # A label whose content is the bullets beneath it: reading its own line answers nothing.
+    position = [i for i, b in enumerate(found[0].blocks) if b.label == "Decisions"][0]
+    children = record_lib.subtree(found[0].blocks, position)
+    results.check("record/subtree-picks-up-the-nested-bullets", len(children), 2)
+    results.check("record/subtree-stops-at-the-next-sibling",
+                  "Status" not in " ".join(b.label or "" for b in children), True)
+
+    # F-056 at block scope: a repeated label is kept, never silently replaced.
+    twice = record_lib.labelled(record_lib.blocks("- **Note:** one\n- **Note:** two\n", 1))
+    results.check("record/a-repeated-label-is-not-silently-replaced", len(twice["Note"]), 2)
+
+    # Section and table readers agree with the workspace loader that used to own them.
+    body = "## One\n\ntext\n\n## Two\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+    found_sections = record_lib.sections(body, 1)
+    results.check("record/sections", sorted(found_sections), ["## One", "## Two"])
+    results.check("record/section-line", found_sections["## Two"]["line"], 5)
+    rows = record_lib.table_rows(found_sections["## Two"]["text"],
+                                 found_sections["## Two"]["line"])
+    results.check("record/table-rows", rows, [(["1", "2"], 9)])
+    results.check("record/duplicate-headings",
+                  [h for h, _ in record_lib.duplicate_headings("## Notes\n\n## Notes\n", 1)],
+                  ["## Notes"])
+    results.check("record/escaped-pipe-is-one-cell",
+                  record_lib.split_row("| a | str \\| None | b |"),
+                  ["a", "str | None", "b"])
+
+
 def main() -> int:
     results = Results()
     run_accept(results)
@@ -569,6 +679,7 @@ def main() -> int:
     run_dump(results)
     run_frontmatter(results)
     run_report(results)
+    run_record(results)
     run_workspace(results)
     run_root_resolution(results)
     run_escaping(results)
