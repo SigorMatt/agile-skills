@@ -4116,3 +4116,67 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
   `fixtures/retro/{EXPECTED-CODES.txt,README.md}`, re-rendered dist,
   `meta/findings/FINDINGS.md` (F-075). The live workspace itself is scratch and is not banked;
   its report and journal entry are quoted where they matter in `meta/FINAL-REPORT-4.md`.
+
+## 2026-08-30 — META-140 (part two) — the ground-truth reading, scored against the subset written first
+
+- **Unit:** META-140
+- **Inputs read:** the three banked reports and their journal entries
+  (`meta/evidence/retro-calibration/`); the ground-truth subset committed before the runs; for
+  each candidate match, the cited lines in the banked evidence and — where a proposal is about
+  the toolkit as it stands — the current `spec/`, `methodology/` and `scripts/`.
+- **Decisions:**
+  - **The mechanics held in all three runs, and I verified them rather than believing them.**
+    Each execution wrote exactly two files; a modification-time sweep across `tracker/` and
+    `docs/` afterwards shows nothing else moved. `engagement-state` reports `closed` in all
+    three. `retro-report-is-well-formed` and `scope-was-not-degenerate` passed in all three;
+    `workspace-valid` failed in all three for the absent product source and for nothing else,
+    and all three recorded it as **failed with that reason** rather than skipped or passed.
+  - **The score, against the five workspace-visible findings, is 1 full hit, 2 partial, 2 misses.**
+    Strictly — full hits only — **1 of 5, 20%**. Counting partials at half credit, **2 of 5,
+    40%**. Both numbers are stated because the first is the honest floor and the second is the
+    honest reading; neither is the one to quote alone.
+
+    | Target | Result | What the report actually did |
+    |--------|--------|------------------------------|
+    | **F-061** (it-2) | **full hit, and sharper than the filing** | P-3 finds the *mechanism* F-061 never had: option B, which `question.md` §2 obliges every sign-off to offer, promises "the engagement still closes as delivered" — and creating the follow-up item destroys the rest an ending requires. F-061 was filed with *"Direction: none required now… Revisit when the retro skill exists."* It has been revisited |
+    | **F-062** (it-3) | **partial — and a miss on the marquee case** | P-12 found that fifteen human answers were never checked against each other and asserted that two narrow an earlier one. It classified that `observation`, severity low, `Direction: none proposed`, hedged on whether the gate post-dates the run — and never reached the sentence in `vision.md` carrying `[src: WI-0002/Q-001]` that `implement` repaired rather than putting back to its author |
+    | **F-063** (it-3) | **miss** | the word "recommendation" does not appear in the report |
+    | **F-064** (it-3) | **miss in it-3** — but the class was found in **it-2**: *"The engagement asked the stakeholder eleven questions and never asked what they had not been asked"* | so the class is demonstrably findable from a record; iteration 3's reading did not go looking for it |
+    | **F-065** (it-3) | **partial** | P-4, *"a claim audit is passed by an example that could not have falsified the claim"*, is F-065's class exactly — aimed at D12 audits rather than at the criterion-about-criteria specimen the finding was drawn from |
+
+  - **The marquee case was missed, and the mission's bar says so plainly.** *"A retro that reads
+    that record and does not surface the contradiction's handling has failed the concept."* The
+    iteration-3 report surfaced the **absence of the check** and not the **handling**. I am not
+    softening that by counting P-12 as a hit.
+  - **The cause is locatable and it is in the procedure, not in the reader.** `process.md` step 5
+    says a sentence *"sourced to a human answer that a later answer overtook … is exactly the
+    shape the record is designed to make visible"* — it **names the shape and does not instruct
+    the join**. Every other reading step says what to open and what to compare; that clause says
+    what to notice. The report did read `docs/` and did read the questions, and never connected
+    a `[src: <ITEM>/Q-nnn]` in a document to the answer it cites and to the answers that came
+    after it.
+  - **Precision is the other half of the reading, and it is the strong half.** 28 proposals
+    across the three runs — 22 `toolkit-defect`, 4 `project-circumstance`, 2 `observation`. I
+    verified **nine** in depth against the current `spec/`, `methodology/` and `scripts/`:
+    it-2 P-2, P-3, P-6; it-3 P-3, P-4, P-8, P-12; live P-1, P-2. **Zero are unfounded.** Two are
+    duplicates of findings already in the ledger (it-2 P-6 rediscovers F-053, still deferred;
+    it-3 P-4 restates F-001's residual and sharpens it), which is not noise — ADR-0009 §8 says
+    the retro cannot de-duplicate against a ledger it has not read, and hands that to the
+    triager. One is a defect in the current kernel that nothing had found: **F-076**. The
+    remaining 19 are not verified individually and this entry does not claim they are.
+  - **The classification discipline worked without supervision.** Four `project-circumstance`
+    entries across three runs, every one with a counterfactual that genuinely cannot be written
+    without the project's subject — *"two flashcards may share a front side"*, an
+    exactly-on-the-boundary criterion in the product's own interface, a filesystem primitive the
+    tests cannot exercise, a stakeholder who decided something new after seeing the tool work.
+    That is the failure mode ADR-0009 §5 was designed against, not occurring, in readings that
+    had every incentive to inflate.
+  - **One behaviour exceeded the design.** The iteration-3 run **withheld two proposals** because
+    the installed toolkit already fixes them and put them in the positive record instead, keeping
+    only the unfixed residue as a proposal. ADR-0009 §8 says a retro cannot tell a duplicate;
+    this one could, against the *contracts* rather than against a ledger, because the fixes were
+    visible in the installed scripts. The ADR understated what the reader can do here.
+- **Questions raised:** none.
+- **Gates:** the three runs' own gates, recorded above and in the banked journal entries.
+- **Artifacts:** `meta/evidence/retro-calibration/` (three reports, three journal entries, a
+  README).
