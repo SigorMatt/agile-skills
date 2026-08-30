@@ -1751,7 +1751,34 @@ something had gone wrong."*
 - Direction: none required now. Candidate for later: a lightweight amendment path for
   follow-ups the stakeholder marks minor — but any such path must preserve "nothing on faith,"
   and the burden of proof is on the shortcut. Revisit when the retro skill exists.
-- Status: open (observation)
+- Status: open (observation) — **revisited 2026-08-30 by the retro skill itself**, which is what
+  this entry said to wait for. See the addendum below.
+
+### Addendum to F-061 (2026-08-30, META-140) — the mechanism this entry never had
+`retro` 0.1.0, run by a context-free subagent over `iteration-2-tidy`'s record with no access to
+this ledger, rediscovered F-061 and went past it. Where F-061 recorded a *cost* — "one small
+follow-up costs a full reopen/re-sign cycle" — the retro found the *cause*, and it is a
+contradiction inside the protocol rather than a property of the endings model:
+
+> `EP-001/Q-005`'s option B — **the option `spec/question.md` §2 requires a sign-off to offer** —
+> told the stakeholder that accepting with a named follow-up meant *"the engagement still closes
+> as delivered, and the new work is opened"*. They chose it. Half of it was not executable: an
+> engagement ends only from rest, rest requires every child terminal, and the follow-up item is
+> created at `draft`.
+
+So the second sign-off is not the price of a conditional acceptance; it is the price of the
+protocol promising an ending its own status model forbids, in the sentence it obliges every
+sign-off to print. The engagement recorded the discrepancy rather than hiding it and wrote option
+B correctly by hand in `Q-006` — *"where nothing carries it forward."*
+
+Direction, from the same source and adopted here: the option's consequence line says what
+actually happens — the epic stays `open`, the follow-up is built like any other item, and a fresh
+sign-off is due at the next rest — either in `spec/question.md`'s own description of option B or
+in whatever `review-close` uses to compose it. **The stakeholder should not learn the mechanics
+after they have chosen.** Not fixed in this session: it is a spec change to the sign-off's
+required options and belongs with the owner's triage of the retro's proposals, not with the
+session that built the reader. Evidence:
+`meta/evidence/retro-calibration/iteration-2-retro.md` P-3 and the observation above it.
 
 ## H-010 — A turn-budget stop mid-acknowledgment is terminal, and only --fresh continues it
 - Severity: harness, UX/semantics (three occurrences in one iteration)
@@ -2606,3 +2633,40 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   `scripts/lib/selftest.py` (`run_citations`), including the last line, which must resolve.
   A sweep over `examples/toy-project` and all seven fixtures before the change found **no**
   existing citation that would newly fail, so nothing was retroactively invalidated.
+
+## F-078 — the retro's document step named a shape instead of instructing the join, and missed the case it was written for
+- Severity: methodology, medium — the skill's own calibration defect, found by the test that
+  exists to find it
+- Component: methodology (retro 0.1.0, `process.md` steps 4 and 5)
+- Symptom: step 5 read *"A version with no execution behind it, or a sentence sourced to a human
+  answer that a later answer overtook, is exactly the shape the record is designed to make
+  visible."* Every other reading step in the procedure says **what to open and what to compare**;
+  that clause says **what to notice**. Run against `iteration-3-mdtab` — the record F-062 was
+  filed from — the reading found the *absence* of any cross-answer check and even asserted that
+  two of the stakeholder's answers narrow an earlier one, and never reached the sentence in
+  `docs/product/vision.md` carrying `[src: WI-0002/Q-001]` that `implement` repaired rather than
+  putting back to its author. It classified what it did find as `observation`, severity low,
+  `Direction: none proposed`.
+- Diagnosis: the join is invisible from inside any single file — the document reads correctly,
+  the citation resolves, every gate passes, and the only evidence is a *pair* of answers with an
+  edit between them. A procedure that describes such a shape rather than instructing the
+  enumeration is asking the reader to notice something no single file shows. The same gap cost
+  two more targets in the same run: nothing instructed the reader to consider the questions **as
+  a set**, so "every question carries the team's recommendation" (F-063) and "no question is
+  open-form" (F-064) — both properties of a *collection*, both countable in a minute once the set
+  is enumerated — went unremarked, while the second was found in the *other* engagement's run.
+- Evidence: `meta/evidence/retro-calibration/iteration-3-retro.md` (the first run, banked
+  unedited) against `meta/findings/FINDINGS.md` F-062, F-063, F-064; the ground-truth subset and
+  the scoring are in `meta/journal.md` under META-140, written before and after the run
+  respectively.
+- Status: **fixed** — `retro` 0.2.0. Step 4 gains a set reading with three counted questions
+  (what shape do the questions share, what was never asked, did a later answer narrow an earlier
+  one); step 5 splits into 5a (change log against executions) and **5b**, which instructs the
+  join outright: find every `[src: <ITEM>/Q-nnn]` under `docs/`, open the cited answer and every
+  answer the same person gave afterwards, and where a later one overtakes it, **say which of two
+  things the record shows** — the author was asked, or the sentence was repaired. A fourth
+  self-check question requires the count of citations followed, and a fourth "goes wrong" entry
+  names the class: *reading each file well and never reading the set*.
+  **The honest limit on this fix:** it was made after reading the miss, so the re-run recorded
+  beside it is a check that the new instruction is followable, **not** an independent measurement.
+  The first run's numbers stand as the calibration reading and are not restated.
