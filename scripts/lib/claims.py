@@ -262,8 +262,18 @@ class CitationResolver:
         A rule that forces a record to break the append-only invariant is worse than no rule.
         """
         found = []
+        # F-054: masking protects a *quoted* citation from being read as one (F-037), and it also
+        # blanked the inside of a real citation whose path was written in backticks — which is how
+        # this repository's prose writes every path. The author got "an empty citation" and went
+        # looking for a stray marker rather than a stray backtick. Masking preserves offsets, so a
+        # marker that survives in the masked line is a real one, and its body is read from the raw
+        # line where the backticks still are.
+        raw_lines = text.split("\n")
         for index, line in enumerate(masked_lines(text), start=1):
-            for match in CITATION_RE.finditer(line):
+            raw = raw_lines[index - 1] if index - 1 < len(raw_lines) else line
+            for match in CITATION_RE.finditer(raw):
+                if line[match.start():match.start() + 5] != "[src:":
+                    continue        # the whole marker sits inside a code span: a quotation
                 for part in split_sources(match.group("body")):
                     problem = self.resolve(part)
                     if problem:

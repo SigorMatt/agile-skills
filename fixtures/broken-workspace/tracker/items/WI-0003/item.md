@@ -27,3 +27,11 @@ creation-authority table is enforceable rather than advisory.
 ## Out of scope
 
 - Anything the other fixture items already cover.
+
+## Notes
+
+first
+
+## Notes
+
+second

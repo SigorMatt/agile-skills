@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.4.0
+  methodology-version: 0.4.1
   persona: architect
   human-interaction: direct
 ---
@@ -241,13 +241,21 @@ the item's whole story rather than only its code.
 
 1. Take the plan and the item, and hand them to yourself as if you had no context. At which step
    would you have to make a decision the plan does not make? That is the step to rewrite.
-2. Does every AC appear in the mapping table with a *specific* demonstration, not "tests"?
-3. For every assumption: is it genuinely reversible, and did you say what reversing it costs?
-4. Did you write code into the plan? Interfaces, signatures and contracts are yours;
+2. **Does any step instruct a downstream skill to do something its contract forbids?** Read each
+   step and ask who executes it. `implement` may not tick an acceptance criterion — that is
+   `verify`'s, per `spec/work-item.md`; `implement` and `verify` may not write to `docs/`, per
+   `doc-header.md` §5; nobody but `review-close` ends an engagement. A plan step that says
+   otherwise is an instruction the pipeline must refuse, and refusing it costs a turn and a
+   journal entry to explain. A real run had step 7 tell `implement` to tick the criteria;
+   `implement` declined and declared it and the review agreed — the enforcement held, and the
+   step should not have been written (F-048).
+3. Does every AC appear in the mapping table with a *specific* demonstration, not "tests"?
+4. For every assumption: is it genuinely reversible, and did you say what reversing it costs?
+5. Did you write code into the plan? Interfaces, signatures and contracts are yours;
    implementations are not.
-5. Is `commands.test` a command you have actually run in this project, or one you expect to
+6. Is `commands.test` a command you have actually run in this project, or one you expect to
    work?
-6. Did you create any file outside `tracker/` and `docs/`? Every one must be listed under
+7. Did you create any file outside `tracker/` and `docs/`? Every one must be listed under
    `## Scaffolding`, must contain no behaviour, and must be there because a command you declared
    could not otherwise execute. If deleting it would make an acceptance criterion fail, it is
    implementation and it is not yours to write.

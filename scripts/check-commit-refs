@@ -93,8 +93,23 @@ def main(argv: list) -> int:
             offenders.append((sha[:8], subject))
 
     if total == 0:
+        # F-035: "the branch is an ancestor of the trunk" is trivially true of a branch with no
+        # commits on it, so the opening `in-progress` transition — where no code exists yet — was
+        # told to "rewind the merge, close, then merge" about a merge that never happened. What
+        # separates the two cases is whether the branch has moved at all: a branch pointing at the
+        # same commit as the trunk has nothing on it, and a branch behind the trunk was merged.
         merged = git(["merge-base", "--is-ancestor", branch, trunk], root).returncode == 0
-        if merged:
+        head = git(["rev-parse", "--verify", "--quiet", f"{branch}^{{commit}}"], root)
+        base = git(["rev-parse", "--verify", "--quiet", f"{trunk}^{{commit}}"], root)
+        unstarted = (head is not None and base is not None
+                     and head.stdout.strip() and head.stdout.strip() == base.stdout.strip())
+        if merged and unstarted:
+            print(f"check-commit-refs: {branch} is at the same commit as {trunk}, so nothing has "
+                  f"been committed on it yet and {rev_range} is empty.", file=sys.stderr)
+            print("  This is not a merge that needs rewinding: there is nothing to inspect "
+                  "because there is nothing there. Commit the work on the branch first.",
+                  file=sys.stderr)
+        elif merged:
             print(f"check-commit-refs: {branch} is already merged into {trunk}, so "
                   f"{rev_range} is empty and this gate has nothing left to inspect.",
                   file=sys.stderr)

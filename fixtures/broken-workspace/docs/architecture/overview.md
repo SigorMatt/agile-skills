@@ -28,3 +28,7 @@ it must still fail — the code-span exemption is for quoting one, not for writi
 | version | when | by | for | what changed |
 |---------|------|----|-----|--------------|
 | 1 | 2026-08-16T09:00:00Z | plan | WI-0001 | First version |
+
+## Change log
+
+A second change log. The first one is the only one anything reads.

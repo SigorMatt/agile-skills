@@ -150,6 +150,30 @@ def split_sections(body: str, first_line: int):
     return sections
 
 
+def duplicate_sections(body: str, first_line: int = 0):
+    """(heading, line) for every level-2 heading that appears more than once.
+
+    F-056: `split_sections` keys a dict on the heading, so a second `## Notes` silently replaces
+    the first and every reader — the validator included — sees one of them. A real edit produced
+    exactly that: an item spliced against the wrong anchor grew three `## Notes` sections, the
+    workspace validated clean, and it was caught only by a human re-reading the whole file. A
+    document that reads correctly in one place and wrongly in another is the F-001 shape in
+    miniature.
+    """
+    seen, repeated = {}, []
+    line_number = first_line
+    for raw in body.split("\n"):
+        match = HEADING_RE.match(raw)
+        if match and len(match.group(1)) == 2:
+            heading = f"## {match.group(2).strip()}"
+            if heading in seen:
+                repeated.append((heading, line_number))
+            else:
+                seen[heading] = line_number
+        line_number += 1
+    return repeated
+
+
 class HistoryRow:
     __slots__ = ("when", "from_status", "to_status", "actor", "resume_to", "reason", "line")
 

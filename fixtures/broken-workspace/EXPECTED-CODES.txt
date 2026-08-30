@@ -12,8 +12,10 @@ artifact.missing
 artifact.refinement-qa.not-recorded
 board.missing
 claim.citation.unresolved
+doc.changelog.empty
 doc.changelog.order
 doc.changelog.version
+doc.section.duplicate
 epic.closed-with-active-children
 epic.outcome.overclaims
 history.actor
@@ -41,6 +43,7 @@ item.outcome.premature
 item.priority
 item.relation.dangling
 item.relation.self
+item.section.duplicate
 item.section.missing
 item.status.unknown
 item.title.period

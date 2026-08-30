@@ -336,6 +336,26 @@ class Linter:
 
     # ---- contracts -----------------------------------------------------------------
 
+    # Kebab-case tokens that appear beside the word "gate" and are not gates: statuses, file
+    # names, skills, and the vocabulary the specs use. Listing them is the cost of reading prose
+    # with a regex, and it is a smaller cost than not checking the prose at all.
+    KNOWN_NON_GATES = frozenset({
+        "awaiting-answer", "in-progress", "in-review", "delivered-partial", "resume-to",
+        "sign-off", "cross-answer", "check-epic-signoff", "check-commit-refs", "lint-claims",
+        "lint-answers", "lint-skills", "validate-workspace", "run-gate", "check-verify-freshness",
+        "engagement-state", "journal-entry", "board-gen", "new-item", "workspace-init",
+        "doc-header", "dor-dod", "ids-and-statuses", "skill-contract", "work-item",
+        "journal-and-history", "workspace-layout", "review-close", "answer-questions",
+        "max-budget-usd", "max-turns", "changed-since", "require-elicitation", "not-utf-8",
+        "no-unplanned-scope", "kind-sign-off", "item-id", "trunk-branch", "commit-subject",
+        "branch-prefix", "body-file", "journal-body-file", "verify-report", "impl-report",
+        "refinement-qa", "plan-md", "review-md",
+    })
+
+    @property
+    def known_names(self):
+        return self.KNOWN_NON_GATES
+
     def check_skill(self, name: str) -> None:
         directory = os.path.join(self.skills_dir, name)
         contract_path = os.path.join(directory, "skill.yaml")
@@ -362,6 +382,36 @@ class Linter:
         self.check_placeholders(contract_path, self.read(contract_path))
         if os.path.isfile(process_path):
             self.check_process(name, process_path, self.read(process_path))
+            self.check_gate_names(process_path, contract, self.read(process_path))
+
+    def check_gate_names(self, path: str, contract: dict, text: str) -> None:
+        """A gate the procedure names must exist in the contract (F-059).
+
+        This is the second prose-versus-contract finding in one run — F-049 was the first — and
+        the class is the same: `lint-skills` checked the contract against the schema and against
+        the pipeline, and never checked the *prose* against the contract. A procedure that tells a
+        worker to run `tests-pass` when the contract calls it `tests-green` sends them looking for
+        a gate that does not exist, and nothing failed.
+
+        One direction only, deliberately. A gate named in the procedure and absent from the
+        contract is always wrong. The reverse is not: a contract gate the prose does not name by
+        its kebab-case id is ordinary — `## Journaling` says "all four", and `run-gate --all` runs
+        them whether or not anybody wrote their names down.
+        """
+        declared = {gate.get("name") for gate in (contract.get("quality_gates") or [])
+                    if isinstance(gate, dict)}
+        for line_number, line in enumerate(text.split("\n"), start=1):
+            for quoted in re.findall(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+){1,})`", line):
+                if quoted in declared or "-" not in quoted:
+                    continue
+                if not re.search(r"\bgate\b|\bgates\b", line, re.IGNORECASE):
+                    continue
+                if quoted in self.known_names:
+                    continue
+                self.report.error(path, line_number, "process.gate.unknown",
+                                  f"the procedure names a gate {quoted!r} that "
+                                  f"{contract.get('name')!r} does not declare",
+                                  hint=f"its gates are: {', '.join(sorted(n for n in declared if n))}")
 
     def check_contract_fields(self, name: str, path: str, contract: dict) -> None:
         for field in REQUIRED_TOP_LEVEL:

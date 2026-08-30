@@ -1184,6 +1184,37 @@ def check_trial_merge(runner: Runner) -> None:
         return
     runner.emit("a trial merge leaves the trunk alone (F-055, 2 cases)", True)
 
+def check_process_gate_names(runner: Runner) -> None:
+    """A gate the procedure names must exist in the contract (F-059).
+
+    Injected rather than staged: the repository is copied, one skill's `process.md` is told to run
+    a gate its `skill.yaml` does not declare, and `lint-skills` must report `process.gate.unknown`.
+    F-049 and F-059 are the same class — prose and contract drifting apart with nothing reading
+    both — and this is the first check that reads both.
+    """
+    import shutil
+    import tempfile
+    label = "a gate named in a procedure exists in its contract (F-059)"
+    with tempfile.TemporaryDirectory() as base:
+        copy = os.path.join(base, "repo")
+        os.makedirs(copy)
+        shutil.copytree(os.path.join(ROOT, "methodology"), os.path.join(copy, "methodology"))
+        shutil.copytree(os.path.join(ROOT, "spec"), os.path.join(copy, "spec"))
+        process = os.path.join(copy, "methodology", "skills", "verify", "process.md")
+        with open(process, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        write(process, text.replace(
+            "## Self-check",
+            "Run the `tests-are-green` gate before you finish.\n\n## Self-check", 1))
+        result = subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-skills"), copy],
+                                capture_output=True, text=True, cwd=ROOT)
+        ok = (result.returncode != 0
+              and "process.gate.unknown" in codes_from(result.stdout + result.stderr))
+    runner.emit(label, ok, None if ok else result,
+                detail="" if ok else "  a procedure may name a gate that does not exist, and "
+                                     "nothing reads the prose against the contract")
+
+
 def check_shipped_scripts(runner: Runner) -> None:
     """Every shipped script runs from the shipped tree, with only the shipped library beside it.
 
@@ -1348,6 +1379,7 @@ def main() -> int:
     check_derived_model(runner)
     check_journal_body(runner)
     check_trial_merge(runner)
+    check_process_gate_names(runner)
     check_shipped_scripts(runner)
     check_guard(runner)
     check_findings_citations(runner)

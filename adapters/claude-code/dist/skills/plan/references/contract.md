@@ -1,4 +1,4 @@
-# Contract — plan v0.4.0
+# Contract — plan v0.4.1
 
 Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -56,6 +56,7 @@ Every gate below appears in the journal entry for every execution — including 
 
 ## Exit criteria — all must be true before transitioning
 
+- [ ] No plan step instructs a downstream skill to do something its own contract forbids (F-048).
 - [ ] No ADR or document this execution wrote settles a contradiction between two of the stakeholder's own recorded answers; where one exists, a question quoting both by ID was filed instead (ADR-0008).
 - [ ] plan.md exists with numbered steps, each naming the files it touches and the observable result.
 - [ ] Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.

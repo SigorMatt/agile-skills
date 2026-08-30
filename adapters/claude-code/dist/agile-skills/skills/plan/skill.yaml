@@ -1,5 +1,5 @@
 name: plan
-version: 0.4.0
+version: 0.4.1
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -107,6 +107,7 @@ escalation:
   impasse: If the item cannot be designed without a decision nobody can make, set it to blocked and record the options and what each would cost.
 
 exit_criteria:
+  - No plan step instructs a downstream skill to do something its own contract forbids (F-048).
   - No ADR or document this execution wrote settles a contradiction between two of the stakeholder's own recorded answers; where one exists, a question quoting both by ID was filed instead (ADR-0008).
   - plan.md exists with numbered steps, each naming the files it touches and the observable result.
   - Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.

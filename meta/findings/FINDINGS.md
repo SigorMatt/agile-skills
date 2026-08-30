@@ -1065,7 +1065,9 @@ is not a ledger.
 - Evidence: evidence/iteration-1d/run/007-worker.status.md
 - Direction: distinguish "empty because nothing is committed yet" from "empty because it was
   merged" — the branch head equalling the trunk head separates them.
-- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128) as
+- Status: **fixed** — a branch pointing at the same commit as the trunk has nothing on it; a
+  branch behind the trunk was merged. The two now get different messages, and the fresh-branch
+  one says plainly that there is nothing to rewind
   small and self-contained: the branch head equalling the trunk head separates "nothing is
   committed yet" from "already merged", and the message follows from that
 
@@ -1277,7 +1279,11 @@ Definition of Ready R9's split — that neither filing had noticed.
 - Direction: `plan`'s self-check gains "no step instructs another skill to do something its
   contract forbids". Worth recording that the system behaved correctly here: the instruction was
   refused, the refusal was declared, and the review agreed — all three positions are in the record.
-- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128): one
+- Status: **fixed** — `plan` 0.4.1: self-check question 2 is *"does any step instruct a
+  downstream skill to do something its contract forbids?"*, naming the three that recur (ticking
+  a criterion, writing to `docs/`, ending an engagement), with a matching exit criterion. Kept as
+  prose deliberately: reading intent out of a plan step is not something a program does, and the
+  run this came from is evidence the enforcement below it holds either way
   self-check line in `plan`'s procedure, and the run it came from is the evidence that the
   enforcement below it held
 
@@ -1524,7 +1530,12 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: strip surrounding backticks from a citation part before resolving it — writing a
   path in backticks is what all of this repository's prose does — or, if it must be rejected, say
   *why* rather than reporting it as unresolvable.
-- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128): strip
+- Status: **fixed** — the real mechanism was the code-span *mask* (F-037's protection against a
+  quoted citation), which blanked the inside of a real marker whose path was in backticks — the
+  way all of this repository's prose writes a path — and reported `an empty citation`. Masking
+  preserves offsets, so a marker that survives in the masked line is a real one and its body is
+  read from the raw line. All four shapes are covered: a backticked path resolves, a genuinely
+  broken one still reports, a wholly quoted citation is still skipped, and a mixed list works
   surrounding backticks from a citation part before resolving it, and keep a distinct message
   for anything still unresolvable
 
@@ -1570,7 +1581,10 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Evidence: meta/harness/evidence/iteration-1e/run/011-worker.status.md
 - Direction: a required section appearing twice is an error. Cheap to check, and the failure it
   prevents is a document that reads correctly in one place and wrongly in another.
-- Status: open — **accepted for this session** (META-131). Triaged 2026-08-30 (META-128):
+- Status: **fixed** — `duplicate_sections()` in `scripts/lib/workspace.py`, reported as
+  `item.section.duplicate` and `doc.section.duplicate`. The broken fixture's second
+  `## Change log` also produces `doc.changelog.empty`, which is the harm made visible: the
+  duplicate is what hides the real one
   cheap, and the failure it prevents is a document that reads correctly in one place and
   wrongly in another — which is F-001's shape in miniature
 
@@ -1619,7 +1633,13 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Direction: confirm the instance, then fix the class rather than the instance — this is the
   second prose-versus-contract finding in one run (with F-049). Have `lint-skills` check that
   every gate named in `process.md` exists in `skill.yaml` and the reverse.
-- Status: open
+- Status: **fixed** as the class, not the instance, as the finding asked. `lint-skills` gains
+  `process.gate.unknown`: a kebab-case name written in backticks beside the word "gate" in a
+  `process.md` must be a gate that `skill.yaml` declares. One direction only — a contract gate
+  the prose does not name by id is ordinary, since `## Journaling` says "all four" and
+  `run-gate --all` runs them regardless. The cost of reading prose with a regex is a list of
+  known non-gates, kept in the script and stated as a cost. Proven by injection in
+  `./scripts/check`
 
 ## F-060 — the pipeline cannot tell a stakeholder it is waiting on something they owe
 - Severity: methodology gap

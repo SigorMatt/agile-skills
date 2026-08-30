@@ -30,6 +30,7 @@ import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
+                       duplicate_sections,
                        Workspace, id_kind, resolve_root, split_sections)
 
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
@@ -557,6 +558,13 @@ class Validator:
                               "arose-from names the item itself")
 
     def check_item_body(self, path, item, expected_type) -> None:
+        for heading, line in duplicate_sections(item.body, item.body_line):
+            self.report.error(path, line, "item.section.duplicate",
+                              f"section {heading!r} appears more than once",
+                              hint="every reader keys on the heading, so only one of them is "
+                                   "seen; an item that reads correctly in one place and wrongly "
+                                   "in another is worse than one that is obviously broken "
+                                   "(F-056)")
         for section in BODY_SECTIONS[expected_type]:
             if section not in item.sections:
                 level = self.report.error if section != "## Out of scope" else self.report.warn
@@ -1109,6 +1117,10 @@ class Validator:
     def check_docs(self) -> None:
         for doc in self.workspace.docs:
             path = doc.path
+            for heading, line in duplicate_sections(doc.body, doc.body_line):
+                self.report.error(path, line, "doc.section.duplicate",
+                                  f"section {heading!r} appears more than once",
+                                  hint="only one of them is ever read (F-056)")
             self.check_fields(path, doc.fields, DOC_FIELDS_REQUIRED, DOC_FIELDS_OPTIONAL, "doc")
             version = doc.fields.get("version")
             if not isinstance(version, int) or isinstance(version, bool) or version < 1:
