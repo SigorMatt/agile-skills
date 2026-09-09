@@ -4342,3 +4342,60 @@ recall is a reading, not a number, and the report says which.
 - **Gates:** `./scripts/check` green — `check: all steps passed`. Docs-only unit; no spec, skill,
   script, fixture or findings-status edit, per the unit's scope.
 - **Artifacts:** `meta/adr/ADR-0010-document-as-deliverable.md`.
+
+## 2026-09-10 — META-146 — the two specs carry ADR-0010: three claim kinds, and D7 against a set
+
+- **Unit:** META-146
+- **Inputs read:** `meta/adr/ADR-0010-document-as-deliverable.md` in full (699 lines), which is
+  the authority for every line below; `spec/doc-header.md` and `spec/dor-dod.md` in full;
+  `scripts/check`, `scripts/lint-skills`, `scripts/lint-claims` and
+  `methodology/skills/review-close/process.md` §9a, to find where a spec rule is read by a gate.
+- **Decisions:**
+  - **`doc-header.md` §5's final paragraph is replaced by ADR-0010 §3.4's rule, verbatim as a
+    block quote**, with the created-by/updated-by table left alone and the prose saying that the
+    table is the ordinary path and the rule decides the cases it does not list. `verify`'s half
+    is now written as **derived** — it judges against criteria it did not write, so repairing the
+    document it judges is circular in the strongest sense — and `implement`'s half is written as
+    the weakening it is, bounded three ways, with the bound that is a script's (a diff under
+    `docs/` against the plan's set) separated from the two that are not (F-076, F-057).
+  - **`doc-header.md` §4a gains the other two claim kinds** — the three-row table keyed on *what
+    would falsify the sentence*, the definition of a **checked** claim, the **audit row** and its
+    two new sections. A quantified claim's row carries the set, the enumeration method **with its
+    output**, the members by name and a verdict per member; opening what the claim cites does not
+    discharge it; an unenumerable family is weakened rather than recorded as checked (F-095).
+  - **The K8 delimiter is `## Engagement state`, one section per document.** ADR-0010 §4.3 fixes
+    everything about that section except its literal marker — rule 1 says only "a delimited
+    section … marked", and obligations 6–8 are `[auto]` only if a script can find it. The heading
+    is chosen to sit beside `## Change log` and `## Corrections`, which is the convention this
+    spec already uses for a section a script reads. Named here as the one concretisation this
+    unit made rather than copied.
+  - **D7 becomes a confirmation against the invalidation set**, scoped to what the change touched
+    **or its plan named**, with the set's five columns and the two lists beside it written into
+    the spec, and its closing question — "did this change falsify a document the set does not
+    name?" — kept as the part no script decides (F-087).
+  - **D12 and DE6 gain the enumeration and lose K8; DE4 gains the ending's restatement of every
+    delimited section, after the sign-off answer** (F-095, F-093). **D13 is new**: the plan's
+    `binding-adrs` list is complete, `review-close`'s to ask; each ADR's conformance verdict is
+    `verify`'s and lands in META-147 (F-092).
+  - **Markers copied from ADR-0010's enforcement table, not improved on.** D7, D12, DE4 and DE6
+    are `[skill] + [auto]`; **D13 is `[skill]`** — obligation 17 has no mechanical half and
+    marking it `[auto]` would be the F-001 failure this ledger exists for. Both specs say in one
+    sentence that the new mechanical halves are new with this revision and that a workspace whose
+    scripts predate it has only the read.
+  - **§4a's scoping sentence was widened as a seventh, consistency-forced edit**: it said the
+    absolute-claim rule is checked against "what an execution touched — the same scoping D7 and
+    D12 apply", and D7's scope changed in this same unit. It now reads "touched, or what its plan
+    named". Left unchanged it would have contradicted D7 on the page.
+- **Questions raised:** none. Two things ADR-0010 states that no spec rule here can carry: §3.3
+  item 7 (a false sentence found after the engagement is closed has no owner) is a gap, not a
+  rule, and is written in the ADR rather than in a criterion; and enforcement obligation 10
+  (whether a K8 sentence was *written as* one, inside the section) is stated in §4a as the thing
+  no gate sees, because a criterion for it would be unsatisfiable in the F-050 sense.
+- **Gates:** `./scripts/check` **red on one step, knowingly**: `FAIL rendered output is
+  current` — *"the committed dist/ is not what methodology/ renders to: differs:
+  agile-skills/spec/doc-header.md, differs: agile-skills/spec/dor-dod.md — run
+  adapters/claude-code/render.py and commit the result"*. The rendered adapter is a verbatim copy
+  of `spec/`, and `adapters/` is META-147's, whose gate is "rendered dist current". Every other
+  step passes, including `lint-skills`, the must-fail fixtures and the claims-window cases. No
+  check was deleted or loosened to make room.
+- **Artifacts:** `spec/doc-header.md` (revision 5), `spec/dor-dod.md` (revision 7).

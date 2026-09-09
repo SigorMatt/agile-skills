@@ -254,8 +254,10 @@ Several sources are separated by `;` inside one marker. `scripts/lint-claims` en
 rules and is a hard gate on `plan`, `implement` and `review-close`; `scripts/validate-workspace`
 enforces the resolution rule over the whole workspace, at any time.
 
-The absolute-claim rule is checked against **what an execution touched**, not against the whole
-tree — the same scoping `dor-dod.md` applies to D7 and D12. A record written before this
+The absolute-claim rule is checked against **what an execution touched, or what its plan named**
+— its branch diff plus the invalidation set and deliverable documents its plan declared
+(`dor-dod.md` D7) — and not against the whole tree. That is the same scoping `dor-dod.md` applies
+to D7 and D12. A record written before this
 convention existed is not retroactively invalid; the next execution that edits a document is the
 one that must source what it writes.
 
@@ -269,6 +271,91 @@ still reads them: a citation that does not resolve is a broken pointer whatever 
 status, and `lint-claims` prints how many documents rule 2 skipped and why rather than passing
 over them in silence.
 
+### Three claim kinds, three obligations
+
+The citation is the obligation of **one** kind of claim, and it is discharged perfectly by
+sentences that are false. What a sentence owes follows from **what would falsify it, and who
+would be in a position to witness the falsification**, and in this pipeline that question has
+exactly three answers (derived in ADR-0010 §4):
+
+| Kind | The falsifier is… | So the obligation is… |
+|------|-------------------|-----------------------|
+| **cited fact** | a change to a **named** thing the sentence points at | *point at it* — the citation above, and it resolves |
+| **quantified claim** | a change to, or the existence of, an **unnamed member** of the family the sentence quantifies over | *enumerate the family* |
+| **engagement-state statement** | the **engagement's own act**, not any code change | *own it at the ending* |
+
+A claim of **any** of the three kinds may additionally be sourced to a human-answered question.
+That overlay is governed elsewhere and is unchanged by the kinds: it removes the "correct it"
+move and substitutes "file the question", for every actor and every kind (`question.md` §2).
+
+This is what makes a claim **checked**: a named execution recorded, in an **audit row**, *what
+would have falsified the sentence and where that was looked for* — discharging the obligation of
+its kind — so that a later reader can repeat the look without re-deriving what the sentence is
+about. "I read it and it is true" is not a check; it records the verdict and destroys the method.
+
+An **audit row** is one row per claim checked, in the artifact where that audit is recorded —
+`artifacts/review.md`'s `## What I examined` at an item close or an ending,
+`artifacts/verify-report.md` where `verify` audits. It names the sentence and carries the
+evidence the sentence's kind owes.
+
+### Quantified claims carry their enumeration
+
+A claim over a family — *every adapter …*, *all three tiers …*, *no caller …*, *the only path …*
+— is syntactically one of the absolutes rule 1 already detects, and semantically a different
+object: **a citation cannot name the thing that falsifies it.** The citation names the general
+case; the falsifier is a member the sentence does not name.
+
+- The audit row for a quantified claim records (a) **the set** the quantifier ranges over,
+  (b) **how the set was enumerated** — the command, glob or grep, with its output, so the
+  enumeration is repeatable and its completeness is inspectable, (c) **the members**, by name,
+  and (d) **the verdict per member**, or an explicit statement that the members were
+  spot-checked and which ones.
+- **Opening what the claim cites does not discharge a quantified claim.** "I opened the fixture"
+  and "I enumerated the members" are different entries, and the row has room for both. The
+  failure this exists for: the same universal was audited **true** three times, honestly, from
+  the family's shared fixture, and was false in the one member nobody opened (F-095).
+- Where a family genuinely cannot be enumerated, the legal move is to **weaken the sentence**
+  until it is a cited fact — never to record the enumeration as done. A universal nobody can
+  enumerate is a universal nobody can check.
+
+`scripts/lint-claims` decides the **shape**: a sentence carrying a quantifier over a named set
+has an enumeration entry in its audit row. Whether the enumeration is **complete** is a read, and
+the row is what makes that read attributable rather than a verdict.
+
+### Engagement-state sentences live in a delimited section
+
+A sentence asserting the state of the **engagement** rather than the state of the product — "the
+stakeholder has not yet been asked to accept this", "this is the only remaining gap", "three of
+four work items are delivered" — is neither a record nor a deliverable. No code change makes it
+true or false; the pipeline's own ending does. No item can own one, because the thing it
+describes outlives every item, and by the time it is false every item is closed (F-093).
+
+1. Every engagement-state sentence lives inside a **delimited section**: exactly one
+   `## Engagement state` section per document, holding that document's engagement-state
+   sentences and nothing else. One section per document, marked, so the set of them in a
+   workspace is enumerable by a script rather than by a reading.
+2. `intake` writes the initial one. Between then and the ending, **no execution writes one.** An
+   execution whose change would falsify one records that entry in its plan's invalidation set
+   with the disposition `owned-by-ending` (`dor-dod.md` D7) and moves on.
+3. At the ending, and **after** the sign-off question is answered — the answer is itself part of
+   the engagement's state — `review-close` restates **every** `## Engagement state` section in
+   the workspace, from the ending it is recording. Not the ones it noticed: all of them. The job
+   is bounded precisely because of rule 1.
+4. **No item-level audit is charged with one.** `dor-dod.md` D7 and D12 exclude them and DE4
+   owns them. An item asked to repair an engagement-state sentence has been handed a defect it
+   is structurally unable to fix.
+
+Three of those are mechanical — that the sections exist, that nothing but `intake` and an ending
+wrote inside one, that the ending restated each. Whether a restated sentence is **true** is a
+person's read of the ending and always will be. And one thing no gate sees at all: whether a
+sentence that *is* an engagement-state sentence was written **into** the section rather than
+loose in the body. Everything mechanical above rests on that, and F-093's own sentence was
+written loose.
+
+These mechanical halves are new with revision 5. They are `scripts/lint-claims`' and
+`scripts/validate-workspace`'s to decide; a workspace whose scripts predate this revision has
+only the read.
+
 ---
 
 ## 5. Which skill writes what
@@ -281,10 +368,45 @@ over them in silence.
 | `architecture/adr/*` | `plan` or `answer-questions` | the **decision**: superseded only (§4). The **document**: `## Corrections`, append-only, for provenance and errata (§4b) |
 | `process/ways-of-working.md` | `plan` | `review-close`, `answer-questions` |
 
-`implement` and `verify` do **not** write to `docs/`. If either concludes that a document is
-wrong, that is a question (`question.md`), and `answer-questions` makes the edit. Otherwise the
-authoritative record would be updated by the same execution that is trying to satisfy it, and
-the check would be circular.
+The table is the ordinary path. The rule underneath it, which decides the cases the table does
+not list, is this (derived in ADR-0010 §3):
+
+> `verify` does not write to `docs/`. `implement` writes to `docs/` only within the invalidation
+> set and deliverable set its plan declared (`dor-dod.md` D7), never a sentence that is the
+> standard its own work is judged against, and never a claim sourced to a human answer.
+
+**`verify`'s half is derived, not asserted.** `verify` judges a change against criteria it did
+not write. An execution that may also repair the document it is judging has made the judgement
+circular — more so than for `implement`, which at least has a plan telling it what to write. So
+`verify` writes no document, ever: if it concludes a document is wrong, that is a question
+(`question.md`), and `answer-questions` makes the edit. `retro` writes no document either, for
+the neighbouring reason — a retrospective that edits the record it is reading has changed the run
+it observed.
+
+**`implement`'s half is what changed, and it is a real weakening of a real rule.** The
+circularity objection was never "`implement` writes prose"; it is that *the execution trying to
+satisfy a requirement must not be the one that rewrites the requirement*. That objection is about
+a document's **record** half — a statement about what happened or was decided, which later work
+can only add to — and it says nothing about its **deliverable** half, a statement about the
+product as it now is, which the next change can make false and which an item can be asked to
+produce. The two are properties of sentences, not of files, and one file holds both. `implement`
+is the only actor whose ordinary work falsifies a deliverable sentence, and forbidding it to
+repair one left that repair with no owner: an item whose acceptance criterion is *about* a
+document had no skill the pipeline dispatches that was allowed to deliver it (F-057), and
+`implement`'s claims gate examined a window that was empty by construction on every execution
+(F-076).
+
+So `implement` may write a deliverable sentence, bounded three ways, and every bound is checkable:
+
+- the write is inside the **invalidation set** or the **deliverable documents** its plan declared
+  (`dor-dod.md` D7) — a diff under `docs/` against that set is decidable by a script;
+- it is never a sentence that is the standard its own work is judged against — that standard is
+  the item's acceptance criteria, not the document it delivers;
+- a claim sourced to a human answer is not `implement`'s to rewrite, whatever the set says. It
+  files the question, exactly as `review-close` must (`question.md` §2).
+
+The same directory-as-proxy error appears in the freshness comparison, which exempts `docs/`
+wholesale and so excludes the delivered thing on an item whose deliverable is a document (F-058).
 
 ---
 
@@ -296,3 +418,4 @@ the check would be circular.
 | 2 | 2026-08-22 | §4a added: absolute claims about named code carry a resolvable `[src: ...]` citation (F-001). |
 | 3 | 2026-08-29 | §4b added: a standing ADR is repaired in place through an append-only `## Corrections` section — `provenance` or `erratum`, never a change to what the code must do. §5's ADR row says which half is superseded-only (F-067). |
 | 4 | 2026-08-30 | §4b: a superseded ADR takes no **new** correction and keeps the ones it made — the rule is about the act, not the state, and as a state rule it described a document that could not exist. §4a: rule 2 does not read a superseded document, which has no legal way to gain a citation (F-069). |
+| 5 | 2026-09-10 | §5's absolute — "`implement` and `verify` do **not** write to `docs/`" — is replaced by a rule scoped to the record half: `verify` writes no document (now **derived**, not asserted), `implement` writes only inside the invalidation set and deliverable documents its plan declared (F-076, F-057; the freshness gate's `docs/` exemption is the same directory-as-proxy error, F-058). §4a: the citation is one obligation of three — a **quantified** claim is discharged by member enumeration recorded in the audit row, never by opening what it cites (F-095), and **engagement-state** sentences live in a delimited `## Engagement state` section owned by the ending (F-093). Derived in ADR-0010. |
