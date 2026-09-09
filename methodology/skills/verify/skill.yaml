@@ -1,5 +1,5 @@
 name: verify
-version: 0.3.0
+version: 0.4.0
 persona: qa-engineer
 purpose: Independently decide whether an item meets its acceptance criteria, with evidence, and file bugs for what is wrong.
 
@@ -96,13 +96,15 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: adr-conformance-is-decided
-    description: Every ADR the plan names as binding carries a verdict in the verification report - conforms, violates or not-engaged.
-    manual_check: For each ID in the plan's binding-adrs list, read that ADR's Decision section and record one row in verify-report.md. A conforms verdict quotes the clause it conforms to and names the file and line in this change that satisfies it. A not-engaged verdict says why the change does not touch the decision's subject. A violates verdict is a send-back to in-progress. A row for an ID the plan does not name, or an ID with no row, fails this gate.
+    description: Every ADR the plan names as binding carries a verdict in the verification report - conforms, violates or not-engaged - and a conforms verdict quotes a clause and names a file and line. Whether the verdict is right is a read, and a verdict for an ADR the plan does not name is recorded as a warning, because finding one the plan missed is the honest move and evidence that binding-adrs was incomplete.
+    command: "scripts/lint-documents --rule adr-conformance-is-decided --item {{item.id}}"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: invalidation-set-is-disposed
-    description: Every entry in the plan's invalidation set carries a disposition, and the ones claiming a document is still true are true.
-    manual_check: Read the set. Every entry has a disposition. For each entry disposed verified-still-true, open the sentence and decide it against the branch head, recording what you read. For each disposed to-update, confirm the document was updated with a version bump and a change-log row. An entry that is wrong is a send-back or a question; repairing it yourself is forbidden - this skill writes no document.
+    description: Every entry in the plan's invalidation set carries a disposition and has a row in verify-report.md's Invalidation set section. Whether a verified-still-true entry is TRUE is this skill's read, recorded in that row; the gate decides only that the entry was disposed and reopened.
+    command: "scripts/lint-documents --rule invalidation-set-is-disposed --item {{item.id}}"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: tests-would-fail-without-the-change

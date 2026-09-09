@@ -1,4 +1,4 @@
-# Contract — plan v0.5.0
+# Contract — plan v0.6.0
 
 Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -47,7 +47,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `project-commands-resolved` | hard | tracker/project.yaml has a real command for test and lint, or an ADR records why the project has none. A command that does not exist, or one that exits zero without checking anything, fails this gate. | stay |
 | `decisions-recorded` | hard | List the choices this plan makes. For each, point to an ADR, or to an entry under Assumptions stating what would be needed to reverse it. | stay |
 | `plan-is-executable-without-you` | advisory | Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make. | stay |
-| `documents-at-risk-are-enumerated` | hard | plan.md carries an invalidation set with a row per document at risk - document, what (the sentence or section, located precisely enough to reopen), kind (cited-fact, quantified or engagement-state), why, and a disposition left open for implement. It carries deliverable-documents, naming every document an acceptance criterion is about, and binding-adrs, naming by ID every ADR this change is constrained by. Each of the three says none where none applies; an absent section is not an empty one. | stay |
+| `documents-at-risk-are-enumerated` | hard | run `.claude/agile-skills/scripts/lint-documents --rule documents-at-risk-are-enumerated --item {{item.id}}`, expect exit-zero | stay |
 | `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --uncommitted`, expect exit-zero | stay |
 | `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --uncommitted`, expect exit-zero | stay |
 

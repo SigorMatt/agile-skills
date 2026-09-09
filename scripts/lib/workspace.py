@@ -24,8 +24,9 @@ from record import (JOURNAL_HEADING_RE, blocks, entries,  # noqa: E402
 
 __all__ = [
     "Workspace", "Item", "Question", "HistoryRow", "JournalEntry", "Doc", "PlanDocuments",
-    "TIMESTAMP_RE", "ID_PATTERNS", "id_kind", "find_workspace_root", "resolve_root",
-    "plan_documents", "WORKSPACE_MARKER",
+    "PlanRow", "TIMESTAMP_RE", "ID_PATTERNS", "id_kind", "find_workspace_root", "resolve_root",
+    "plan_documents", "WORKSPACE_MARKER", "INVALIDATION_SECTION", "DELIVERABLE_SECTION",
+    "BINDING_SECTION",
 ]
 
 # The *structures* — sections, blocks, tables, entries — live in `record.py`, which is the one
@@ -410,6 +411,45 @@ _NONE_RE = re.compile(r"^\W*none\b", re.IGNORECASE)
 
 INVALIDATION_SECTION = "## Invalidation set"
 DELIVERABLE_SECTION = "## Deliverable documents"
+BINDING_SECTION = "## Binding ADRs"
+_ADR_ID_RE = re.compile(r"\bADR-(\d{4})\b")
+
+
+class PlanRow:
+    """One row of the invalidation set, kept whole.
+
+    The five cells are `document | what | kind | why | disposition` (ADR-0010 §5.1). They are
+    carried rather than digested because two different gates ask two different questions of the
+    same row — `plan` asks whether `kind` is one of three words, `implement` and `verify` ask
+    whether `disposition` is one of four — and a reader that kept only the paths would send each
+    of them off to parse the table again.
+    """
+
+    __slots__ = ("cells", "line", "document", "is_none")
+
+    def __init__(self, cells, line, document, is_none) -> None:
+        self.cells = list(cells)
+        self.line = line
+        self.document = document
+        self.is_none = is_none
+
+    def cell(self, index: int) -> str:
+        return self.cells[index].strip() if index < len(self.cells) else ""
+
+    @property
+    def what(self) -> str:
+        return self.cell(1)
+
+    @property
+    def kind(self) -> str:
+        return self.cell(2)
+
+    @property
+    def disposition(self) -> str:
+        return self.cell(4)
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return f"PlanRow({self.document!r}, line={self.line}, kind={self.kind!r})"
 
 
 class PlanDocuments:
@@ -424,7 +464,8 @@ class PlanDocuments:
     own voice; `declared_empty` says the plan *answered* `none` rather than saying nothing.
     """
 
-    __slots__ = ("item", "path", "invalidation", "deliverable", "errors", "declared_empty")
+    __slots__ = ("item", "path", "invalidation", "deliverable", "errors", "declared_empty",
+                 "rows", "binding_adrs", "binding_unreadable", "present")
 
     def __init__(self, item, path) -> None:
         self.item = item
@@ -433,6 +474,14 @@ class PlanDocuments:
         self.deliverable = []           # [(relative-path, line)]
         self.errors = []                # [(line, code, message)]
         self.declared_empty = set()     # section headings answered `none`
+        # Read for the gates that judge the row rather than the path. Nothing here adds to
+        # `errors`: `lint-claims` and `check-verify-freshness` were reading this object before
+        # `## Binding ADRs` existed, and a new required section here would narrow their windows
+        # for a reason that has nothing to do with either of them.
+        self.rows = []                  # [PlanRow] - the invalidation table, whole
+        self.binding_adrs = []          # [(ADR-nnnn, line)]
+        self.binding_unreadable = []    # [(line, text)] - a line naming neither an ID nor `none`
+        self.present = set()            # the section headings the plan actually has
 
     @property
     def documents(self) -> list:
@@ -502,6 +551,10 @@ def plan_documents(root: str, item_id: str) -> PlanDocuments:
     # anyway would still parse.
     parts = split_sections(text, 1)
 
+    for heading in (INVALIDATION_SECTION, DELIVERABLE_SECTION, BINDING_SECTION):
+        if heading in parts:
+            found.present.add(heading)
+
     section = parts.get(INVALIDATION_SECTION)
     if section is None:
         found.errors.append((0, "plan.section.missing",
@@ -517,6 +570,10 @@ def plan_documents(root: str, item_id: str) -> PlanDocuments:
                                      f"disposition |"))
                 continue
             rows.append((cells[0], row_line))
+            match = _DOCUMENT_RE.search(cells[0])
+            found.rows.append(PlanRow(cells, row_line,
+                                      match.group(0) if match else "",
+                                      bool(_NONE_RE.match(cells[0].strip()))))
         found.invalidation = _named_documents(section["text"], section["line"],
                                               INVALIDATION_SECTION, found, rows)
 
@@ -531,4 +588,20 @@ def plan_documents(root: str, item_id: str) -> PlanDocuments:
                   if block.kind in ("bullet", "text")]
         found.deliverable = _named_documents(section["text"], section["line"],
                                              DELIVERABLE_SECTION, found, listed)
+
+    section = parts.get(BINDING_SECTION)
+    if section is not None:
+        for block in blocks(section["text"], section["line"]):
+            if block.kind not in ("bullet", "text"):
+                continue
+            text = block.joined.strip()
+            if not text:
+                continue
+            named = _ADR_ID_RE.findall(text)
+            if named:
+                found.binding_adrs.extend((f"ADR-{number}", block.start) for number in named)
+            elif _NONE_RE.match(text):
+                found.declared_empty.add(BINDING_SECTION)
+            else:
+                found.binding_unreadable.append((block.start, text))
     return found

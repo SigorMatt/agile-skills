@@ -4,7 +4,7 @@ description: "Independently decide whether an item meets its acceptance criteria
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: verify
-  methodology-version: 0.3.0
+  methodology-version: 0.4.0
   persona: qa-engineer
   human-interaction: via-questions
 ---

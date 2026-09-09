@@ -1,4 +1,4 @@
-# Contract — review-close v0.7.0
+# Contract — review-close v0.8.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -46,7 +46,7 @@ Every gate below appears in the journal entry for every execution — including 
 | gate | enforcement | how it is checked | on failure |
 |------|-------------|-------------------|------------|
 | `definition-of-done` | hard | Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here. | stay |
-| `engagement-state-is-restated` | hard | At an ending only. List every document under docs/ carrying an Engagement state section - the set is enumerable because the convention is one such section per document. Restate each one from the ending you are recording, all of them and not the ones you noticed, and only after the sign-off question has been answered, because that answer is itself part of the engagement's state. Record the list and each restatement in review.md. At an item close this gate is not applicable and is journaled as such, never as passed. | stay |
+| `engagement-state-is-restated` | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-restated --item {{item.id}} --context {{item.type}}`, expect exit-zero | stay |
 | `verification-postdates-the-code` | hard | run `.claude/agile-skills/scripts/check-verify-freshness {{item.id}} {{item.branch}}`, expect exit-zero | verifying |
 | `commits-reference-the-item` | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
 | `tests-pass-on-the-merge-result` | hard | run `{{commands.test}}`, expect exit-zero | stay |

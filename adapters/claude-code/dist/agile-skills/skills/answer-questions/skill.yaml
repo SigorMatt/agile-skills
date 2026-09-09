@@ -1,5 +1,5 @@
 name: answer-questions
-version: 0.5.0
+version: 0.6.0
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
@@ -87,13 +87,15 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: propagated-claims-carry-their-obligation
-    description: Every claim this execution wrote into a document carries what its kind owes - a citation that resolves, and for a claim over a family, the enumeration of that family.
-    manual_check: For each sentence you wrote into docs/, name its kind. A cited fact - an absolute about something named as code - carries a citation that resolves. A quantified claim - every, all, no, the only - carries, in the Consequences entry that records this write, the set it ranges over, how the set was enumerated with the command or glob and its output, the members by name, and a verdict per member; opening what the sentence cites does not discharge it, which is how the same universal was audited true three times and was false in the one member nobody opened (spec/doc-header.md section 4a). Where the family cannot be enumerated, weaken the sentence until it is a cited fact rather than recording the enumeration as done.
+    description: A quantified claim this execution wrote into a document - every, all, no, the only - carries an enumeration entry in the question's Consequences, written as Enumeration with Set, Enumerated by, Members and Verdict beneath it. Opening what the sentence cites does not discharge it. The citation half of this obligation belongs to the claims and workspace checks and is not re-decided here; a universal phrased without one of the quantifier words is caught by nothing.
+    command: "scripts/lint-documents --rule propagated-claims-carry-their-obligation --item {{item.id}} --uncommitted"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: engagement-state-is-left-to-the-ending
-    description: No Engagement state section was written or amended, including where a human's answer made one of its sentences false.
-    manual_check: List every Engagement state section in a document this execution touched. None may be written, amended or tidied here - those sentences are the ending's, restated wholesale by review-close after the sign-off answer arrives (spec/doc-header.md section 4a). Where an answer you propagated made one false, that is recorded and not repaired - the question's Consequences names the document and its section and says the ending owns it, and where the item has a plan, the row goes into the invalidation set with the disposition owned-by-ending. An answer whose only unrecorded consequence is a stale engagement-state sentence is complete.
+    description: The Engagement state section of every document this execution touched is byte-identical to the one it started from, opening a new one included. Those sentences are the ending's. Where an answer you propagated made one false, record it - the question's Consequences names the document and its section, and where the item has a plan the row goes into the invalidation set disposed owned-by-ending - and leave it.
+    command: "scripts/lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: cross-answer-consistency

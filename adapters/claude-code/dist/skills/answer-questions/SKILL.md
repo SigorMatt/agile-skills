@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question - or deferred it - and the reply must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.5.0
+  methodology-version: 0.6.0
   persona: architect
   human-interaction: direct
 ---
@@ -224,6 +224,26 @@ information.
    claim, naming the sentence and carrying what its kind owes. That is what makes the claim
    **checked** rather than asserted — a later reader can repeat the look without re-deriving what
    the sentence is about.
+
+   A quantified claim's four parts are written as labels **nested under the file's own entry**,
+   so that the entry can be found by the reader who needs it and by the gate that checks it is
+   there. The `propagated-claims-carry-their-obligation` gate looks for exactly this shape:
+
+   ```markdown
+   ## Consequences
+
+   - `docs/architecture/overview.md` — the rendering sentence added
+     - **Enumeration:** "every adapter writes through `render_all()`"
+       - **Set:** the adapters under `adapters/`
+       - **Enumerated by:** `ls -d adapters/*/` → `one/`, `two/`
+       - **Members:** `one`, `two`
+       - **Verdict:** both call `render_all()`; true of each
+   ```
+
+   The labels are the mechanical half and they are all it is: a script can see that you recorded
+   a set, a method, the members and a verdict per member, and it cannot see whether the
+   enumeration was **complete**. That half is a read, and the labels are what make it a read
+   somebody can repeat rather than a verdict somebody has to trust.
 
    **Opening what a quantified claim cites does not discharge it.** The citation names the
    general case and the falsifier is the member the sentence does not name; the same universal was

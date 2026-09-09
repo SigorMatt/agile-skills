@@ -1,5 +1,5 @@
 name: implement
-version: 0.4.0
+version: 0.5.0
 persona: developer
 purpose: Execute the recorded plan on a branch, with tests, and report which evidence satisfies each acceptance criterion.
 
@@ -109,8 +109,9 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: document-writes-are-declared
-    description: Every document this execution wrote was one its plan named, and every entry of the plan's invalidation set is closed.
-    manual_check: List every path under docs/ in the branch diff. Each must appear in the plan's invalidation set or in deliverable-documents; a document you had to change that appears in neither is added to the set as a new entry before you write it, never written silently. Then read the set - every entry carries a disposition of to-update, verified-still-true, owned-by-ending or question-filed:<ITEM>/Q-###, and no entry disposed owned-by-ending was edited. An engagement-state section is not yours at any disposition.
+    description: Every path under docs/ in this branch's diff is one the plan named, every entry of the invalidation set is closed with a disposition, and no entry disposed owned-by-ending had its Engagement state section edited. A document you had to change that the plan names nowhere is added to the set as an entry before you write it, never written silently.
+    command: "scripts/lint-documents --rule document-writes-are-declared --item {{item.id}} --changed-since {{trunk}}"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
 

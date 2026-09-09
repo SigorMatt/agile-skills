@@ -26,6 +26,20 @@ Steps, in order:
                                                unmarked pass; an absent plan section is an error;
                                                and `check-verify-freshness` stops exempting a
                                                document the item was asked to deliver
+  6c. the document obligations               — the eight `[auto]` obligations of ADR-0010's
+                                               enforcement table, which stood in six contracts as
+                                               `manual_check`: five decidable from a tree alone
+                                               over fixtures/document-obligations (wrong/, whose
+                                               emitted codes must equal EXPECTED-CODES.txt
+                                               exactly; right/, over which every rule must be
+                                               silent), and the three that read a diff by
+                                               execution in a throwaway repository — a document
+                                               written that the plan names nowhere, a write
+                                               inside a delimited `## Engagement state` region,
+                                               and a quantified sentence propagated with no
+                                               enumeration in its audit row. Obligation 10 is
+                                               NOT covered and cannot be: see
+                                               scripts/lint-documents' docstring
   7. the legal repair for a standing ADR     — fixtures/adr-correction: the reduced iteration-4
                                                ADR reproduces its three true-but-unsourced
                                                absolutes, and the same ADR repaired through
@@ -869,6 +883,270 @@ def check_document_window(runner: Runner) -> None:
     else:
         runner.emit(label, True)
 
+
+# ---- the document obligations (META-148b, ADR-0010's enforcement table) --------------------
+
+# The five rules a workspace alone can decide, and the item each is aimed at in the must-fail
+# tree. Kept as data so the fixture's README, `EXPECTED-CODES.txt` and this list can be read
+# against each other by a person in one sitting.
+# The third element is whether this invocation must report SOMETHING. `WI-0002`'s plan is the
+# control: it is well formed, and its still-open disposition is legal at `planned` and illegal
+# only afterwards. A control that starts emitting a code is caught by the set comparison; a
+# control asserted to emit one would be a rule that fails compliant work.
+DOCUMENT_RULES = [
+    ("documents-at-risk-are-enumerated", ["--item", "WI-0001"], True),
+    ("documents-at-risk-are-enumerated", ["--item", "WI-0002"], False),
+    ("documents-at-risk-are-enumerated", ["--item", "WI-0003"], True),
+    ("documents-at-risk-are-enumerated", ["--item", "WI-0004"], True),
+    ("invalidation-set-is-disposed", ["--item", "WI-0001"], True),
+    ("invalidation-set-is-disposed", ["--item", "WI-0002"], True),
+    ("adr-conformance-is-decided", ["--item", "WI-0001"], True),
+    ("adr-conformance-is-decided", ["--item", "WI-0002"], True),
+    ("engagement-state-is-restated", ["--item", "EP-001", "--context", "epic"], True),
+    ("engagement-state-is-restated", ["--item", "EP-002", "--context", "epic"], True),
+    ("engagement-state-is-delimited", ["--document", "docs/process/ways-of-working.md"], True),
+]
+
+DOCUMENT_RULES_CLEAN = [
+    ("documents-at-risk-are-enumerated", ["--item", "WI-0001"]),
+    ("invalidation-set-is-disposed", ["--item", "WI-0001"]),
+    ("adr-conformance-is-decided", ["--item", "WI-0001"]),
+    ("engagement-state-is-restated", ["--item", "EP-001", "--context", "epic"]),
+    ("engagement-state-is-restated", ["--item", "WI-0001", "--context", "work-item"]),
+    ("engagement-state-is-delimited", ["--document", "docs/product/vision.md"]),
+]
+
+
+def _lint_documents(root: str, rule: str, extra: list):
+    return subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-documents"),
+                           "--root", root, "--rule", rule, *extra],
+                          capture_output=True, text=True, cwd=ROOT)
+
+
+def check_document_obligations(runner: Runner) -> None:
+    """The eight obligations ADR-0010 marks `[auto]`, over a tree that is wrong on purpose.
+
+    They stood in six contracts as `manual_check` — an instruction where a gate was claimed, and
+    an instruction is the thing this repository exists to distrust (F-001). Codes are compared as
+    an exact set against `EXPECTED-CODES.txt`, so a rule that stops firing fails the build and so
+    does a rule that starts firing somewhere new.
+    """
+    fixture = os.path.join(ROOT, "fixtures", "document-obligations")
+    expected_path = os.path.join(fixture, "EXPECTED-CODES.txt")
+    if not os.path.isfile(expected_path):
+        runner.skip("the document obligations (must-fail fixture)",
+                    f"{expected_path} does not exist")
+        return
+    with open(expected_path, "r", encoding="utf-8") as handle:
+        expected = {line.strip() for line in handle if line.strip()}
+    found, failed = set(), []
+    for rule, extra, must_report in DOCUMENT_RULES:
+        result = _lint_documents(os.path.join(fixture, "wrong"), rule, extra)
+        codes = codes_from(result.stdout + result.stderr)
+        found |= codes
+        # A rule whose only finding is a warning still exits 0; what must never happen is a rule
+        # reporting nothing at all over a tree built to break it.
+        if must_report and not codes:
+            failed.append(f"  - {rule} {' '.join(extra)} reported nothing over the broken tree")
+        if not must_report and codes:
+            failed.append(f"  - {rule} {' '.join(extra)} is the control and reported "
+                          f"{sorted(codes)}")
+    missing = sorted(expected - found)
+    extra_codes = sorted(found - expected)
+    detail = list(failed)
+    if missing:
+        detail.append("rules that stopped firing (in EXPECTED-CODES.txt, not emitted):")
+        detail += [f"  - {code}" for code in missing]
+    if extra_codes:
+        detail.append("codes emitted that EXPECTED-CODES.txt does not list:")
+        detail += [f"  + {code}" for code in extra_codes]
+    if detail:
+        detail.append("if this change is intended, update EXPECTED-CODES.txt in the same commit "
+                      "and say why")
+        runner.emit("the document obligations (must-fail fixture)", False,
+                    detail="\n".join(detail))
+    else:
+        runner.emit(f"the document obligations (must-fail fixture, {len(expected)} codes)", True)
+
+    # A rule nobody can satisfy is not a rule (F-050). The same shapes, correct, must be silent.
+    noisy = []
+    for rule, extra in DOCUMENT_RULES_CLEAN:
+        result = _lint_documents(os.path.join(fixture, "right"), rule, extra)
+        if result.returncode != 0 or codes_from(result.stdout + result.stderr):
+            noisy.append(f"  - {rule} {' '.join(extra)}: exit {result.returncode}")
+            noisy += [f"      {line}" for line in
+                      (result.stdout + result.stderr).strip().split("\n")[-6:]]
+    runner.emit(f"the document obligations pass compliant work ({len(DOCUMENT_RULES_CLEAN)} rules)",
+                not noisy, detail="\n".join(noisy))
+    check_document_obligations_by_execution(runner)
+
+
+def check_document_obligations_by_execution(runner: Runner) -> None:
+    """The three obligations that read a diff, both ways, in a throwaway repository.
+
+    A diff is not a tree, so these cannot be a fixture directory — the same reason `lint-answers`
+    rule 3 and the claims window are built here rather than under `fixtures/`.
+
+    Obligation 19 (`implement` wrote only inside the set its plan declared), obligation 7 (only
+    `intake` and an ending wrote inside a delimited `## Engagement state` region) and obligation 3
+    (a quantified sentence propagated into a document has an enumeration entry in the audit row).
+    The must-pass half of each is the load-bearing one: an execution that edited a declared
+    document, one that edited a document *around* its engagement-state section, and one whose
+    enumeration is complete must all be silent, or the gate is a blocked pipeline.
+    """
+    import shutil
+    import tempfile
+    label = "the document obligations by execution (F-087, F-093, F-095, 8 cases)"
+    if shutil.which("git") is None:
+        runner.skip(label, "git is not on PATH")
+        return
+    plan = ("# Plan — WI-0001\n\n## Invalidation set\n\n" + PLAN_TABLE_HEADER
+            + "| `docs/product/vision.md` | the sentence naming `store.py` | cited-fact "
+              "| the path changes | to-update |\n\n## Deliverable documents\n\n- none\n\n"
+              "## Binding ADRs\n\n- none\n")
+    vision = ("# Vision\n\nFor the person who keeps the record.\n\n## Engagement state\n\n"
+              "The stakeholder has not yet been asked to accept this engagement.\n\n"
+              "## What it does\n\nIt reads a directory and names `store.py` as the store.\n")
+    consequences = ("---\nid: Q-001\nstatus: answered\naddressed-to: human\n"
+                    "answered-by: human\n---\n\n## Answer\n\nYes — the one function.\n\n"
+                    "## Consequences\n\n"
+                    "- `docs/architecture/overview.md` — the rendering sentence added\n")
+    enumeration = ("  - **Enumeration:** \"every adapter writes through `render_all()`\"\n"
+                   "    - **Set:** the adapters under `adapters/`\n"
+                   "    - **Enumerated by:** `ls -d adapters/*/` \u2192 `one/`, `two/`\n"
+                   "    - **Members:** `one`, `two`\n"
+                   "    - **Verdict:** both call `render_all()`; true of each\n")
+    quantified = ("\nEvery adapter writes through `render_all()`, and no caller reaches the "
+                  "writer directly.\n")
+    cases = []
+    with tempfile.TemporaryDirectory() as base:
+        repo = os.path.join(base, "repo")
+        artifacts = os.path.join(repo, "tracker", "items", "WI-0001", "artifacts")
+        questions = os.path.join(repo, "tracker", "items", "WI-0001", "questions")
+        os.makedirs(os.path.join(repo, "docs", "product"))
+        os.makedirs(os.path.join(repo, "docs", "architecture"))
+        os.makedirs(artifacts)
+        os.makedirs(questions)
+        write(os.path.join(repo, "tracker", "project.yaml"),
+              "project:\n  name: t\n  trunk-branch: main\n")
+        write(os.path.join(repo, "code.py"), "x = 1\n")
+        write(os.path.join(repo, "docs", "product", "vision.md"), vision)
+        write(os.path.join(repo, "docs", "architecture", "overview.md"),
+              "# Overview\n\nOne loader, one writer.\n")
+        write(os.path.join(artifacts, "plan.md"), plan)
+        write(os.path.join(questions, "Q-001.md"), consequences)
+
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+
+        git("init", "-q", "--initial-branch=main")
+        git("config", "user.email", "check@example.invalid")
+        git("config", "user.name", "check")
+        git("add", "-A")
+        git("commit", "-qm", "base")
+
+        def branch(name):
+            git("checkout", "-q", "main")
+            git("branch", "-q", "-D", name)
+            git("checkout", "-q", "-b", name)
+
+        def commit():
+            git("add", "-A")
+            git("commit", "-qm", "work")
+
+        def run(rule, *extra):
+            return _lint_documents(repo, rule, ["--changed-since", "main", *extra])
+
+        # ---- obligation 19: a document written that the plan does not name -----------------
+        branch("wi/undeclared")
+        write(os.path.join(repo, "docs", "architecture", "overview.md"),
+              "# Overview\n\nOne loader, one writer, and a new paragraph.\n")
+        commit()
+        found = run("document-writes-are-declared", "--item", "WI-0001")
+        cases.append(("a document written on the branch that the plan names nowhere is refused",
+                      found.returncode != 0
+                      and "document.write.undeclared" in codes_from(found.stdout + found.stderr),
+                      found))
+
+        # And the direction that must stay open: the declared document, edited.
+        branch("wi/declared")
+        write(os.path.join(repo, "docs", "product", "vision.md"),
+              vision.replace("It reads a directory", "It reads one directory"))
+        commit()
+        clean = run("document-writes-are-declared", "--item", "WI-0001")
+        cases.append(("editing the document the plan declared is not a finding",
+                      clean.returncode == 0
+                      and not codes_from(clean.stdout + clean.stderr), clean))
+
+        # ---- obligation 7: the delimited region ------------------------------------------
+        cases.append(("editing a document around its Engagement state section is not a finding",
+                      run("engagement-state-is-left-to-the-ending").returncode == 0,
+                      run("engagement-state-is-left-to-the-ending")))
+        branch("wi/k8")
+        write(os.path.join(repo, "docs", "product", "vision.md"),
+              vision.replace("has not yet been asked to accept this engagement",
+                             "has accepted this engagement"))
+        commit()
+        written = run("engagement-state-is-left-to-the-ending")
+        cases.append(("writing inside a delimited Engagement state section is refused (F-093)",
+                      written.returncode != 0
+                      and "document.engagement-state.written" in codes_from(written.stdout
+                                                                            + written.stderr),
+                      written))
+
+        # The same edit, made by an execution holding an `owned-by-ending` entry, is refused by
+        # `implement`'s gate too — the disposition is permission to record it, never to fix it.
+        owned = _lint_documents(
+            repo, "document-writes-are-declared",
+            ["--changed-since", "main", "--item", "WI-0001"])
+        write(os.path.join(artifacts, "plan.md"),
+              plan.replace("| cited-fact | the path changes | to-update |",
+                           "| engagement-state | the ending falsifies it | owned-by-ending |"))
+        commit()
+        owned = _lint_documents(repo, "document-writes-are-declared",
+                                ["--changed-since", "main", "--item", "WI-0001"])
+        cases.append(("an entry disposed owned-by-ending may be recorded and not edited",
+                      owned.returncode != 0
+                      and "document.engagement-state.written" in codes_from(owned.stdout
+                                                                            + owned.stderr),
+                      owned))
+
+        # ---- obligation 3: the enumeration a quantified claim owes ------------------------
+        branch("wi/quantified")
+        write(os.path.join(repo, "docs", "architecture", "overview.md"),
+              "# Overview\n\nOne loader, one writer.\n" + quantified)
+        commit()
+        bare = run("propagated-claims-carry-their-obligation", "--item", "WI-0001")
+        cases.append(("a quantified sentence propagated with no enumeration is refused (F-095)",
+                      bare.returncode != 0
+                      and "document.enumeration.missing" in codes_from(bare.stdout
+                                                                       + bare.stderr), bare))
+        write(os.path.join(questions, "Q-001.md"),
+              consequences + "".join(enumeration.split("\n")[:3]) + "\n")
+        commit()
+        partial = run("propagated-claims-carry-their-obligation", "--item", "WI-0001")
+        cases.append(("an enumeration missing its members and its verdict is refused",
+                      partial.returncode != 0
+                      and "document.enumeration.incomplete" in codes_from(partial.stdout
+                                                                          + partial.stderr),
+                      partial))
+        write(os.path.join(questions, "Q-001.md"), consequences + enumeration)
+        commit()
+        complete = run("propagated-claims-carry-their-obligation", "--item", "WI-0001")
+        cases.append(("a complete enumeration discharges the claim",
+                      complete.returncode == 0
+                      and not codes_from(complete.stdout + complete.stderr), complete))
+
+    failed = [(name, result) for name, ok, result in cases if not ok]
+    if failed:
+        detail = []
+        for name, result in failed:
+            detail.append(f"  - {name}: exit {result.returncode}")
+            detail += [f"      {line}" for line in
+                       (result.stdout + result.stderr).strip().split("\n")[-8:]]
+        runner.emit(label, False, detail="\n".join(detail))
+    else:
+        runner.emit(label, True)
 
 def check_adr_correction(runner: Runner) -> None:
     """F-067's instance, both ways: the defect exists, and the legal repair clears it.
@@ -1728,6 +2006,7 @@ def main() -> int:
     check_example(runner)
     check_claims(runner)
     check_document_window(runner)
+    check_document_obligations(runner)
     check_cross_answers(runner)
     check_retro(runner)
     check_retro_is_additive(runner)

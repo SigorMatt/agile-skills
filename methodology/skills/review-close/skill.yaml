@@ -1,5 +1,5 @@
 name: review-close
-version: 0.7.0
+version: 0.8.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -83,8 +83,9 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: engagement-state-is-restated
-    description: At an ending, every Engagement state section in the workspace has been restated from the ending being recorded, after the sign-off answer arrived.
-    manual_check: At an ending only. List every document under docs/ carrying an Engagement state section - the set is enumerable because the convention is one such section per document. Restate each one from the ending you are recording, all of them and not the ones you noticed, and only after the sign-off question has been answered, because that answer is itself part of the engagement's state. Record the list and each restatement in review.md. At an item close this gate is not applicable and is journaled as such, never as passed.
+    description: At an ending, every Engagement state section in the document set is named in review.md's Sections restated at the ending. At an item close the command reports NOT APPLICABLE, which is journaled in those words and never as passed. Whether a restatement is true, and whether it was written after the sign-off answer arrived, are reads this gate does not make.
+    command: "scripts/lint-documents --rule engagement-state-is-restated --item {{item.id}} --context {{item.type}}"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: verification-postdates-the-code

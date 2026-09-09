@@ -3,7 +3,7 @@ name: intake
 description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: The orchestrator routed an open stakeholder request under tracker/requests/; A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.4.0
+  methodology-version: 0.5.0
   persona: product-analyst
   human-interaction: direct
 ---

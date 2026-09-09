@@ -1,5 +1,5 @@
 name: intake
-version: 0.4.0
+version: 0.5.0
 persona: product-analyst
 purpose: Turn a raw idea from a human into an epic and a first set of work items in the tracker.
 
@@ -81,8 +81,9 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: engagement-state-is-delimited
-    description: Every sentence this execution wrote about the state of the engagement sits inside the vision's Engagement state section, and nothing else does.
-    manual_check: Read back what you wrote into docs/product/vision.md. A sentence asserting the state of the engagement rather than the state of the product - the stakeholder has not yet been asked to accept this, nothing else is open, three of four items are delivered - belongs in exactly one Engagement state section and nowhere else in the body. Every other sentence in that section is moved out of it. This is the one obligation in the convention no script can see - everything mechanical about those sentences rests on this execution having put them in the section, and the sentence that produced the rule was written loose in the body (spec/doc-header.md section 4a). Where the document already has such a section, you write nothing into it - that engagement is in flight and the section is the ending's.
+    description: The vision carries exactly one Engagement state section and it says something. SHAPE ONLY - the command cannot see whether a sentence that IS an engagement-state sentence was written into the section rather than left loose in the body, which is the one obligation in this convention no script can see and the one everything else rests on. It prints what it cannot see on every run; putting the sentences in the section is this execution's own act, and the exit criterion is where that obligation lives.
+    command: "scripts/lint-documents --rule engagement-state-is-delimited --document docs/product/vision.md"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: items-are-separable

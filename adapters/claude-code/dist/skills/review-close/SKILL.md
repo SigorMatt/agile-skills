@@ -4,7 +4,7 @@ description: "Review the change and its record against the Definition of Done, t
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.7.0
+  methodology-version: 0.8.0
   persona: reviewer
   human-interaction: via-questions
 ---

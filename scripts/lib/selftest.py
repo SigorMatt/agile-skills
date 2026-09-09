@@ -21,6 +21,7 @@ import miniyaml  # noqa: E402
 import claims as claims_lib  # noqa: E402
 import record as record_lib  # noqa: E402
 import report as report_lib  # noqa: E402
+import documents as documents_lib  # noqa: E402
 import scope as scope_lib  # noqa: E402
 import workspace as workspace_lib  # noqa: E402
 from miniyaml import YamlError  # noqa: E402
@@ -791,10 +792,100 @@ def run_plan_documents(results) -> None:
         results.check("plan/a row naming no path is reported",
                       [code for _, code, _ in found.errors], ["plan.document.unreadable"])
 
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| `docs/product/vision.md` | the K8 sentence | engagement-state | the "
+                      "ending falsifies it | owned-by-ending |\n\n"
+                      "## Deliverable documents\n\n- none\n\n"
+                      "## Binding ADRs\n\n- ADR-0004 — the ordering clause\n")
+        results.check("plan/the row is kept whole, not reduced to its path",
+                      [(row.document, row.kind, row.disposition) for row in found.rows],
+                      [("docs/product/vision.md", "engagement-state", "owned-by-ending")])
+        results.check("plan/binding ADRs are read by ID",
+                      ([identifier for identifier, _ in found.binding_adrs], found.errors),
+                      (["ADR-0004"], []))
+
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| none | nothing | cited-fact | code only | verified-still-true |\n\n"
+                      "## Deliverable documents\n\n- none\n\n"
+                      "## Binding ADRs\n\n- the usual ones\n")
+        results.check("plan/a binding list naming nothing resolvable is reported, not dropped",
+                      (found.binding_unreadable and found.binding_unreadable[0][1],
+                       found.errors),
+                      ("- the usual ones", []))
+
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| none | nothing | cited-fact | code only | verified-still-true |\n\n"
+                      "## Deliverable documents\n\n- none\n")
+        results.check("plan/an absent binding section is absent, and is not an error HERE",
+                      (workspace_lib.BINDING_SECTION in found.present, found.errors),
+                      (False, []))
+
         os.remove(plan)
         results.check("plan/no plan at all",
                       [code for _, code, _ in workspace_lib.plan_documents(
                           root, "WI-0001").errors], ["plan.missing"])
+
+
+def run_documents(results) -> None:
+    """The document model the eight obligation gates stand on (ADR-0010, META-148b).
+
+    Three things are worth pinning here rather than only in `scripts/check`, because each is a
+    place where a plausible reading is the wrong one:
+
+      * a **quantifier** is a subset of the absolutes, so `never` and `cannot` — cited facts,
+        whose obligation is the citation — must not be dragged into demanding an enumeration;
+      * a document's `## Engagement state` section is **counted**, not looked up, because a
+        dictionary keyed on the heading shows a reader whichever came first (F-056);
+      * "what this execution wrote" is the paragraphs that are **new**, not every paragraph of a
+        changed document — charging an execution with prose it inherited is a defect with no
+        legal repair.
+    """
+    quantified = documents_lib.quantified_paragraphs(
+        "# D\n\nEvery adapter writes through `render_all()`.\n\n"
+        "`store.py` never recurses, and it cannot.\n\n"
+        "All of the writers call `write_row()`.\n")
+    results.check("documents/a quantifier over named code is quantified",
+                  [text.split(" ")[0] for _, text, _, _ in quantified], ["Every", "All"])
+    results.check("documents/an absolute that is not a quantifier is left to the citation rule",
+                  any("never" in text for _, text, _, _ in quantified), False)
+    results.check("documents/a quantifier with nothing named as code is not one",
+                  documents_lib.quantified_paragraphs("Every reader agrees.\n"), [])
+
+    body = ("# D\n\nProse.\n\n## Engagement state\n\nNobody has been asked.\n\n"
+            "## Elsewhere\n\nMore.\n")
+    text, line, count = documents_lib.engagement_state_text(body)
+    results.check("documents/the delimited section is read whole",
+                  (text.strip(), count), ("Nobody has been asked.", 1))
+    _, _, twice = documents_lib.engagement_state_text(body + "\n## Engagement state\n\nAnd.\n")
+    results.check("documents/a second section is counted, not shadowed (F-056)", twice, 2)
+    results.check("documents/a document with no section says so",
+                  documents_lib.engagement_state_text("# D\n\nProse.\n")[0], None)
+
+    fresh = documents_lib.new_paragraphs("# D\n\nOld sentence.\n",
+                                         "# D\n\nOld sentence.\n\nNew sentence.\n")
+    results.check("documents/only the new paragraph is this execution's",
+                  [text for _, text in fresh], ["New sentence."])
+    results.check("documents/a document that did not exist is all new",
+                  [text for _, text in documents_lib.new_paragraphs(None, "# D\n\nOne.\n")],
+                  ["# D", "One."])
+
+    entry = ("- `docs/architecture/overview.md` — the sentence added\n"
+             "  - **Enumeration:** the universal about the adapters\n"
+             "    - **Set:** the adapters under `adapters/`\n"
+             "    - **Enumerated by:** `ls -d adapters/*/`\n"
+             "    - **Members:** `one`, `two`\n"
+             "    - **Verdict:** true of each\n")
+    found = documents_lib.enumerations_in("q.md", entry, 1)
+    results.check("documents/a complete enumeration hangs under the document it is about",
+                  [(item.document, item.complete) for item in found],
+                  [("docs/architecture/overview.md", True)])
+    partial = documents_lib.enumerations_in("q.md", "\n".join(entry.split("\n")[:4]) + "\n", 1)
+    results.check("documents/an enumeration missing its parts says which",
+                  [item.missing for item in partial], [["members", "verdict"]])
+    results.check("documents/an enumeration under nothing names no document",
+                  [item.document for item in
+                   documents_lib.enumerations_in("q.md", "- **Enumeration:** loose\n", 1)], [""])
+
 
 
 def main() -> int:
@@ -811,6 +902,7 @@ def main() -> int:
     run_escaping(results)
     run_scope(results)
     run_plan_documents(results)
+    run_documents(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

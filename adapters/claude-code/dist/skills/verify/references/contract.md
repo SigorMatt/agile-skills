@@ -1,4 +1,4 @@
-# Contract — verify v0.3.0
+# Contract — verify v0.4.0
 
 Rendered from `methodology/skills/verify/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -46,8 +46,8 @@ Every gate below appears in the journal entry for every execution — including 
 | `every-criterion-independently-checked` | hard | For each AC, record the command this skill ran and its actual output. Citing the implementation report as evidence fails this gate. | stay |
 | `negative-cases-exercised` | hard | For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened. | stay |
 | `a-criterion-about-criteria-is-read` | hard | For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065). | stay |
-| `adr-conformance-is-decided` | hard | For each ID in the plan's binding-adrs list, read that ADR's Decision section and record one row in verify-report.md. A conforms verdict quotes the clause it conforms to and names the file and line in this change that satisfies it. A not-engaged verdict says why the change does not touch the decision's subject. A violates verdict is a send-back to in-progress. A row for an ID the plan does not name, or an ID with no row, fails this gate. | stay |
-| `invalidation-set-is-disposed` | hard | Read the set. Every entry has a disposition. For each entry disposed verified-still-true, open the sentence and decide it against the branch head, recording what you read. For each disposed to-update, confirm the document was updated with a version bump and a change-log row. An entry that is wrong is a send-back or a question; repairing it yourself is forbidden - this skill writes no document. | stay |
+| `adr-conformance-is-decided` | hard | run `.claude/agile-skills/scripts/lint-documents --rule adr-conformance-is-decided --item {{item.id}}`, expect exit-zero | stay |
+| `invalidation-set-is-disposed` | hard | run `.claude/agile-skills/scripts/lint-documents --rule invalidation-set-is-disposed --item {{item.id}}`, expect exit-zero | stay |
 | `tests-would-fail-without-the-change` | advisory | For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed. | stay |
 
 ## Escalation

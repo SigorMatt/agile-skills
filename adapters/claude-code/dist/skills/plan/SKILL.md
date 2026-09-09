@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.5.0
+  methodology-version: 0.6.0
   persona: architect
   human-interaction: direct
 ---

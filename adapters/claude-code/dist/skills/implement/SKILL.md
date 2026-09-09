@@ -4,7 +4,7 @@ description: "Execute the recorded plan on a branch, with tests, and report whic
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: implement
-  methodology-version: 0.4.0
+  methodology-version: 0.5.0
   persona: developer
   human-interaction: via-questions
 ---

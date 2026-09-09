@@ -318,9 +318,23 @@ case; the falsifier is a member the sentence does not name.
   until it is a cited fact — never to record the enumeration as done. A universal nobody can
   enumerate is a universal nobody can check.
 
-`scripts/lint-claims` decides the **shape**: a sentence carrying a quantifier over a named set
-has an enumeration entry in its audit row. Whether the enumeration is **complete** is a read, and
-the row is what makes that read attributable rather than a verdict.
+The four parts are written as labels, nested under the audit row's own entry, so that the entry
+can be found by the reader who needs it and by the script that checks it is there:
+
+```markdown
+- `docs/architecture/overview.md` — the rendering sentence added
+  - **Enumeration:** "every adapter writes through `render_all()`"
+    - **Set:** the adapters under `adapters/`
+    - **Enumerated by:** `ls -d adapters/*/` → `one/`, `two/`
+    - **Members:** `one`, `two`
+    - **Verdict:** both call `render_all()`; true of each
+```
+
+`scripts/lint-documents` decides the **shape**: a sentence carrying a quantifier over a named set
+has an enumeration entry, with those four labels, in its audit row. Whether the enumeration is
+**complete** is a read, and the row is what makes that read attributable rather than a verdict.
+Without the labels nothing mechanical can tell *"I opened the fixture"* from *"I enumerated the
+members"*, and telling those two apart is the whole of the failure this rule exists for.
 
 ### Engagement-state sentences live in a delimited section
 
@@ -352,9 +366,8 @@ sentence that *is* an engagement-state sentence was written **into** the section
 loose in the body. Everything mechanical above rests on that, and F-093's own sentence was
 written loose.
 
-These mechanical halves are new with revision 5. They are `scripts/lint-claims`' and
-`scripts/validate-workspace`'s to decide; a workspace whose scripts predate this revision has
-only the read.
+These mechanical halves are `scripts/lint-documents`' to decide (revision 6); a workspace whose
+scripts predate it has only the read.
 
 ---
 
@@ -419,3 +432,4 @@ wholesale and so excludes the delivered thing on an item whose deliverable is a 
 | 3 | 2026-08-29 | §4b added: a standing ADR is repaired in place through an append-only `## Corrections` section — `provenance` or `erratum`, never a change to what the code must do. §5's ADR row says which half is superseded-only (F-067). |
 | 4 | 2026-08-30 | §4b: a superseded ADR takes no **new** correction and keeps the ones it made — the rule is about the act, not the state, and as a state rule it described a document that could not exist. §4a: rule 2 does not read a superseded document, which has no legal way to gain a citation (F-069). |
 | 5 | 2026-09-10 | §5's absolute — "`implement` and `verify` do **not** write to `docs/`" — is replaced by a rule scoped to the record half: `verify` writes no document (now **derived**, not asserted), `implement` writes only inside the invalidation set and deliverable documents its plan declared (F-076, F-057; the freshness gate's `docs/` exemption is the same directory-as-proxy error, F-058). §4a: the citation is one obligation of three — a **quantified** claim is discharged by member enumeration recorded in the audit row, never by opening what it cites (F-095), and **engagement-state** sentences live in a delimited `## Engagement state` section owned by the ending (F-093). Derived in ADR-0010. |
+| 6 | 2026-09-10 | §4a: the four parts of a quantified claim's enumeration are written as labelled entries — `Enumeration:` carrying `Set:`, `Enumerated by:`, `Members:` and `Verdict:` — because a shape check needs the parts to be findable, and without a label nothing mechanical distinguishes opening what a claim cites from enumerating what it quantifies over. `scripts/lint-documents` decides that shape and the eight obligations of ADR-0010's enforcement table that had no implementation. |

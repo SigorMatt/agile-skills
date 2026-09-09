@@ -1,0 +1,625 @@
+#!/usr/bin/env python3
+"""Gate: the document obligations ADR-0010 derived, decided by a script instead of by an instruction.
+
+Usage:
+  scripts/lint-documents --rule <name> [--root .] [--item <ID>] [--document <path>]
+                         [--changed-since <git-ref>] [--uncommitted] [--context <item-type>]
+
+One rule per invocation, and **the rule's name is the gate's name** in the contract that runs it.
+That is deliberate: F-059 is a procedure naming a gate its contract does not declare, and a
+command whose argument is the gate's own name cannot drift from it silently.
+
+  --rule documents-at-risk-are-enumerated        (plan)              ADR-0010 obligation 11
+        The plan carries all three sections; the invalidation table has its five columns; `kind`
+        is one of cited-fact / quantified / engagement-state and `disposition` is one of the four
+        or still open; `binding-adrs` names IDs or says `none`. An absent section is an error and
+        an empty set is one row saying `none` — the two are different answers and a reader that
+        collapses them hands every consumer a narrower scope than the item has.
+
+  --rule document-writes-are-declared            (implement)         obligations 13 + 19
+        Every path under `docs/` in this branch's diff is one the plan named, in its invalidation
+        set or its deliverable documents; every entry of the set is closed with a disposition; and
+        no entry disposed `owned-by-ending` had its `## Engagement state` section edited.
+
+  --rule invalidation-set-is-disposed            (verify)            obligation 13
+        Every entry carries a disposition, and `verify-report.md`'s `## Invalidation set` has a
+        row for every document the set names. Whether a `verified-still-true` entry is **true** is
+        `verify`'s read and stays one (obligation 14).
+
+  --rule adr-conformance-is-decided              (verify)            obligation 15
+        One verdict per ID in the plan's `## Binding ADRs`, each `conforms`, `violates` or
+        `not-engaged`, and a `conforms` verdict quotes a clause and names a file and line.
+        Whether the verdict is **right** is a read (obligation 16).
+
+  --rule engagement-state-is-restated            (review-close)      obligations 6-8
+        At an ending, every `## Engagement state` section in the document set is named in
+        `review.md`'s `## Sections restated at the ending`. At an item close the rule is **not
+        applicable** and says so in those words — never "passed".
+
+  --rule engagement-state-is-delimited           (intake)            obligation 6
+        The *shape* of the sections that exist: one per document, not empty, and present in the
+        document `--document` names. **This is not obligation 10.** See below.
+
+  --rule engagement-state-is-left-to-the-ending  (answer-questions)  obligation 7
+        A diff over the marked region: the `## Engagement state` section of a document this
+        execution touched is byte-identical to the one at the base. Creating one counts as
+        writing one. The same test `lint-answers --changed-since` performs for sourced claims.
+
+  --rule propagated-claims-carry-their-obligation (answer-questions) obligation 3
+        A **quantified** sentence this execution wrote into a document has an enumeration entry
+        in the audit row — the question's `## Consequences` — carrying `Set:`, `Enumerated by:`,
+        `Members:` and `Verdict:`. Opening what the sentence cites does not discharge it (F-095).
+        The **citation** half of that gate's obligation is `lint-claims` rule 2's and
+        `validate-workspace`'s; it is not re-decided here, because one rule in two places is two
+        rules that will disagree.
+
+**The line this gate does not cross.** ADR-0010's obligation 10 — whether a sentence that *is* an
+engagement-state claim was written **into** a `## Engagement state` section rather than left loose
+in the prose — has no mechanical half at all, and the whole K8 mechanism rests on it. Deciding it
+would mean deciding which sentences are engagement-state claims, which is a read. So
+`engagement-state-is-delimited` checks the shape of the sections that exist and **nothing about
+the sentences that are not in one**; a document with no such section and six such sentences in its
+body passes this gate. Every run says so in its own output. Under-claiming is the correct failure
+mode here: this project's thesis is that instruction-shaped gates do not hold (F-001), and a gate
+that overstates its reach is worse than one that does not exist.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import documents as doc  # noqa: E402
+from documents import (ADR_ID_RE, ADR_VERDICTS, DISPOSITIONS, ENGAGEMENT_SECTION,  # noqa: E402
+                       KINDS, OPEN_DISPOSITION_RE, QUESTION_DISPOSITION_RE)
+from record import sections as split_sections  # noqa: E402
+from report import Report  # noqa: E402
+from scope import diff_scope, working_tree_scope  # noqa: E402
+from textio import read_text  # noqa: E402
+from workspace import (BINDING_SECTION, DELIVERABLE_SECTION,  # noqa: E402
+                       INVALIDATION_SECTION, id_kind, plan_documents, resolve_root)
+
+RULES = (
+    "documents-at-risk-are-enumerated",
+    "document-writes-are-declared",
+    "invalidation-set-is-disposed",
+    "adr-conformance-is-decided",
+    "engagement-state-is-restated",
+    "engagement-state-is-delimited",
+    "engagement-state-is-left-to-the-ending",
+    "propagated-claims-carry-their-obligation",
+)
+
+NEEDS_ITEM = ("documents-at-risk-are-enumerated", "document-writes-are-declared",
+              "invalidation-set-is-disposed", "adr-conformance-is-decided",
+              "engagement-state-is-restated", "propagated-claims-carry-their-obligation")
+NEEDS_WINDOW = ("document-writes-are-declared", "engagement-state-is-left-to-the-ending",
+                "propagated-claims-carry-their-obligation")
+
+# What "a file and a line" looks like in the last column of a conformance row. Deliberately
+# permissive about the path and strict about the line: the point of the column is that a reader
+# can go and look, and a path with no line is a gesture at a file.
+FILE_LINE_RE = re.compile(r"[\w.\-/]+\.[A-Za-z0-9]+[:# ]\s*L?\d+")
+QUOTED_RE = re.compile(r"[\"“‘']([^\"”’']{6,})[\"”’']|`([^`]{6,})`")
+
+# The section of the answering artifact a quantified claim's enumeration is recorded in.
+CONSEQUENCES = "## Consequences"
+RESTATED_SECTION = "## Sections restated at the ending"
+
+
+def legal_disposition(value: str) -> bool:
+    text = value.strip()
+    return text in DISPOSITIONS or bool(QUESTION_DISPOSITION_RE.match(text))
+
+
+class DocumentLinter:
+    def __init__(self, root, rule, item="", document="", changed_since=None,
+                 uncommitted=False, context="") -> None:
+        self.root = os.path.abspath(root)
+        self.rule = rule
+        self.report = Report("lint-documents", self.root)
+        self.item = (item or "").strip()
+        self.document = (document or "").strip()
+        self.changed_since = changed_since
+        self.uncommitted = uncommitted
+        self.context = (context or "").strip()
+        self._plan = None
+        self._window = None
+
+    # ---- shared reading ---------------------------------------------------------------
+
+    def plan(self):
+        if self._plan is None:
+            self._plan = plan_documents(self.root, self.item)
+        return self._plan
+
+    def plan_path(self):
+        return self.plan().path
+
+    def window(self):
+        """The diff this rule stands on, classified by `scripts/lib/scope.py`.
+
+        Restricted to `docs/` because that is where every rule using one looks, and "the tree is
+        clean" has to mean "clean where this gate looks" (F-066).
+        """
+        if self._window is None:
+            if self.uncommitted:
+                self._window = working_tree_scope(self.root, ["docs"])
+            else:
+                self._window = diff_scope(self.root, self.changed_since, ["docs"])
+        return self._window
+
+    def base(self) -> str:
+        return "HEAD" if self.uncommitted else (self.changed_since or "HEAD")
+
+    def changed_documents(self):
+        """(relative-path, before-text-or-None, after-text) for each document in the window."""
+        found = []
+        for relative in self.window().paths:
+            normalised = relative.replace(os.sep, "/")
+            if not normalised.startswith("docs/") or not normalised.endswith(".md"):
+                continue
+            path = os.path.join(self.root, relative)
+            after = read_text(path)[0] if os.path.isfile(path) else ""
+            found.append((normalised, doc.show(self.root, self.base(), normalised), after))
+        return found
+
+    def refuse_blind_window(self) -> bool:
+        """A window that could not have seen anything fails rather than passing over it (F-066)."""
+        window = self.window()
+        if not window.degenerate:
+            self.report.note(f"window: {window.detail}")
+            return False
+        self.report.error(os.path.join(self.root, "docs"), 0, "document.scope.degenerate",
+                          f"{window.detail}, so this rule examined nothing and could not have "
+                          f"examined anything", hint=window.hint)
+        return True
+
+    def report_plan_errors(self) -> None:
+        """The plan's own shape, reported in this gate's voice.
+
+        Parsed by `scripts/lib/workspace.py` and judged here — the same split `lint-claims` uses,
+        so a malformed row is described identically by both and the codes differ only in prefix.
+        """
+        for line, code, message in self.plan().errors:
+            self.report.error(self.plan_path(), line, f"document.{code}", message,
+                              hint="the three sections of the plan are what every later gate "
+                                   "reads (ADR-0010 §5.1); an absent section is not an empty one")
+
+    def invalidation_rows(self):
+        return [row for row in self.plan().rows if not row.is_none]
+
+    def check_dispositions(self, closed: bool) -> None:
+        """Every row's `disposition` cell, against the alphabet the *stage* allows.
+
+        `closed=False` is `plan`, which leaves the cell open for `implement` to close.
+        `closed=True` is every stage after the change is made, where an open cell is an entry
+        nobody disposed.
+        """
+        for row in self.invalidation_rows():
+            value = row.disposition
+            if OPEN_DISPOSITION_RE.match(value.strip()):
+                if closed:
+                    self.report.error(
+                        self.plan_path(), row.line, "document.disposition.open",
+                        f"{row.document or 'a row'} in the invalidation set is still open",
+                        hint="close it with to-update, verified-still-true, owned-by-ending or "
+                             "question-filed:<ITEM>/Q-### — an undisposed entry is a document "
+                             "the change may have falsified and nobody accounted for")
+                continue
+            if not legal_disposition(value):
+                self.report.error(
+                    self.plan_path(), row.line, "document.disposition.unknown",
+                    f"disposition {value!r} is not one of "
+                    f"{', '.join(DISPOSITIONS)} or question-filed:<ITEM>/Q-###",
+                    hint="a disposition outside the enum is a sentence, and the consumers of "
+                         "this set branch on the word (ADR-0010 §5.1)")
+
+    def engagement_section_changed(self, relative, before, after):
+        """Did this execution write inside the document's delimited region?"""
+        old = doc.engagement_state_text(before, relative)[0] if before is not None else None
+        new = doc.engagement_state_text(after, relative)[0]
+        if old is None and new is None:
+            return False
+        if old is None or new is None:
+            return True
+        return old.strip() != new.strip()
+
+    # ---- the eight rules ---------------------------------------------------------------
+
+    def rule_documents_at_risk_are_enumerated(self) -> None:
+        self.report_plan_errors()
+        plan = self.plan()
+        for row in self.invalidation_rows():
+            if row.kind not in KINDS:
+                self.report.error(
+                    self.plan_path(), row.line, "document.kind.unknown",
+                    f"kind {row.kind!r} is not one of {', '.join(KINDS)}",
+                    hint="the kind decides what the claim owes — a citation, an enumeration, or "
+                         "the ending (spec/doc-header.md §4a)")
+        self.check_dispositions(closed=False)
+        if BINDING_SECTION not in plan.present:
+            self.report.error(
+                self.plan_path(), 0, "document.binding-adrs.missing",
+                f"{BINDING_SECTION} is absent from {self.item}'s plan",
+                hint="name by ID every ADR this change is constrained by, or say `none`; "
+                     "verify decides conformance against this list and review-close checks it "
+                     "for completeness (spec/dor-dod.md D13)")
+        elif (not plan.binding_adrs and not plan.binding_unreadable
+              and BINDING_SECTION not in plan.declared_empty):
+            self.report.error(
+                self.plan_path(), 0, "document.binding-adrs.empty",
+                f"{BINDING_SECTION} names no ADR and does not say `none`",
+                hint="a section that answers nothing is not an answer")
+        for line, text in plan.binding_unreadable:
+            self.report.error(
+                self.plan_path(), line, "document.binding-adrs.unreadable",
+                f"{BINDING_SECTION}: {text[:60]!r} names neither an ADR ID nor `none`",
+                hint="write `ADR-0004 — <the clause that binds this change>`")
+        self.report.note(
+            f"read {self.item}'s plan: {len(self.invalidation_rows())} invalidation row(s), "
+            f"{len(plan.deliverable)} deliverable document(s), "
+            f"{len(plan.binding_adrs)} binding ADR(s)")
+
+    def rule_document_writes_are_declared(self) -> None:
+        self.report_plan_errors()
+        blind = self.refuse_blind_window()
+        self.check_dispositions(closed=True)
+        declared = {path.replace(os.sep, "/") for path in self.plan().documents}
+        if not blind:
+            written = 0
+            for relative, before, after in self.changed_documents():
+                written += 1
+                if relative not in declared:
+                    self.report.error(
+                        os.path.join(self.root, relative), 0, "document.write.undeclared",
+                        f"{relative} was written on this branch and {self.item}'s plan names it "
+                        f"in neither {INVALIDATION_SECTION} nor {DELIVERABLE_SECTION}",
+                        hint="a document you had to change is added to the invalidation set as "
+                             "an entry before you write it, never written silently — the set is "
+                             "simultaneously this skill's obligation and its licence "
+                             "(ADR-0010 §3, L4)")
+            self.report.note(f"{written} document(s) written under docs/ on this branch; "
+                             f"{len(declared)} named by the plan")
+        owned = {row.document for row in self.invalidation_rows()
+                 if row.disposition.strip() == "owned-by-ending"}
+        for relative, before, after in ([] if blind else self.changed_documents()):
+            if relative in owned or os.path.basename(relative) in owned:
+                if self.engagement_section_changed(relative, before, after):
+                    self.report.error(
+                        os.path.join(self.root, relative), 0,
+                        "document.engagement-state.written",
+                        f"{relative} is disposed owned-by-ending and its {ENGAGEMENT_SECTION} "
+                        f"section was edited on this branch",
+                        hint="an entry the ending owns is recorded and left alone; the ending "
+                             "restates every section it finds, so nothing is lost by leaving it "
+                             "(spec/doc-header.md §4a)")
+
+    def rule_invalidation_set_is_disposed(self) -> None:
+        self.report_plan_errors()
+        self.check_dispositions(closed=True)
+        rows = doc.artifact_rows(self.root, self.item, "verify-report.md", INVALIDATION_SECTION)
+        path = os.path.join(self.root, "tracker", "items", self.item, "artifacts",
+                            "verify-report.md")
+        if rows is None:
+            self.report.error(
+                path, 0, "document.verify.section.missing",
+                f"{self.item}'s verify-report.md has no {INVALIDATION_SECTION} section",
+                hint="one row per entry — the document, its disposition, and what you reopened "
+                     "and found (methodology/skills/verify/process.md)")
+            return
+        covered = "\n".join(" ".join(cells) for cells, _ in rows)
+        for row in self.invalidation_rows():
+            if row.document and row.document not in covered:
+                self.report.error(
+                    path, 0, "document.verify.row.missing",
+                    f"{row.document} is in {self.item}'s invalidation set and has no row in "
+                    f"verify-report.md's {INVALIDATION_SECTION}",
+                    hint="verify checks that every entry has a disposition and reads the ones "
+                         "claiming a document is still true; an entry with no row was not read")
+        self.report.note(f"{len(self.invalidation_rows())} invalidation entr(y/ies) against "
+                         f"{len(rows)} row(s) in the verification report")
+
+    def rule_adr_conformance_is_decided(self) -> None:
+        plan = self.plan()
+        if BINDING_SECTION not in plan.present:
+            self.report.error(
+                self.plan_path(), 0, "document.binding-adrs.missing",
+                f"{BINDING_SECTION} is absent from {self.item}'s plan, so there is no list to "
+                f"decide conformance against",
+                hint="the plan names the ADRs this change is constrained by (ADR-0010 §6/F-092)")
+        rows = doc.artifact_rows(self.root, self.item, "verify-report.md", "## ADR conformance")
+        path = os.path.join(self.root, "tracker", "items", self.item, "artifacts",
+                            "verify-report.md")
+        if rows is None:
+            self.report.error(
+                path, 0, "document.adr.section.missing",
+                f"{self.item}'s verify-report.md has no `## ADR conformance` section",
+                hint="one row per ID in the plan's binding ADR list: the verdict, the clause "
+                     "quoted from that ADR's Decision, and the file and line that satisfies it")
+            return
+        planned = {identifier for identifier, _ in plan.binding_adrs}
+        decided = set()
+        for cells, line in rows:
+            joined = " ".join(cells)
+            named = ADR_ID_RE.findall(cells[0] if cells else "") or ADR_ID_RE.findall(joined)
+            verdict = ""
+            for candidate in ADR_VERDICTS:
+                if re.search(r"(?<![\w-])" + re.escape(candidate) + r"(?![\w-])", joined, re.I):
+                    verdict = candidate
+                    break
+            if not named:
+                self.report.error(path, line, "document.adr.row.unreadable",
+                                  f"a conformance row naming no ADR: {joined[:70]!r}")
+                continue
+            for identifier in named:
+                decided.add(identifier)
+                if identifier not in planned:
+                    # Recording an ADR the plan missed is the honest move and the process asks
+                    # for it; it is also evidence that `binding-adrs` was incomplete, which is
+                    # D13's read. Reported as a warning so it reaches review-close without
+                    # making the honest move a failing gate.
+                    self.report.warn(
+                        path, line, "document.adr.row.unplanned",
+                        f"{identifier} has a conformance verdict and {self.item}'s plan does "
+                        f"not name it as binding",
+                        hint="record it here, and expect review-close's D13 to read the plan's "
+                             "list as incomplete (spec/dor-dod.md D13)")
+            if not verdict:
+                self.report.error(
+                    path, line, "document.adr.verdict.unknown",
+                    f"{', '.join(named)}'s row records no verdict; expected one of "
+                    f"{', '.join(ADR_VERDICTS)}",
+                    hint="a row without one of the three words is a note, not a verdict")
+                continue
+            if verdict == "conforms":
+                clause = cells[2] if len(cells) > 2 else ""
+                where = cells[3] if len(cells) > 3 else ""
+                if not QUOTED_RE.search(clause) or not FILE_LINE_RE.search(where):
+                    self.report.error(
+                        path, line, "document.adr.verdict.unsupported",
+                        f"{', '.join(named)} is recorded as conforming without both a quoted "
+                        f"clause and a file and line",
+                        hint="quote the clause from that ADR's Decision section and name the "
+                             "file and line in this change that satisfies it; a bare `conforms` "
+                             "is the verdict without the method (ADR-0010 §4.0)")
+        for identifier in sorted(planned - decided):
+            self.report.error(
+                path, 0, "document.adr.verdict.missing",
+                f"{identifier} is named binding by {self.item}'s plan and has no row in "
+                f"`## ADR conformance`",
+                hint="conforms, violates or not-engaged — the same ADR was broken twice, four "
+                     "items apart, because nothing asked (ADR-0010 §6/F-092)")
+        self.report.note(f"{len(planned)} binding ADR(s), {len(rows)} conformance row(s)")
+
+    def rule_engagement_state_is_restated(self) -> None:
+        if self.context in ("work-item", "bug"):
+            self.report.note(
+                "NOT APPLICABLE — an item close is not an ending, and the sections are the "
+                "ending's. Journal this gate as not applicable, never as passed "
+                "(spec/doc-header.md §4a)")
+            return
+        sections = doc.engagement_sections(self.root)
+        for section in sections:
+            if section.count > 1:
+                self.report.error(
+                    os.path.join(self.root, section.path), section.line,
+                    "document.engagement-state.duplicated",
+                    f"{section.path} has {section.count} {ENGAGEMENT_SECTION} sections",
+                    hint="one per document is what makes the set enumerable; a reader looking "
+                         "one up sees whichever came first (F-056)")
+        text, line = doc.artifact_section(self.root, self.item, "review.md", RESTATED_SECTION)
+        path = os.path.join(self.root, "tracker", "items", self.item, "artifacts", "review.md")
+        if text is None:
+            self.report.error(
+                path, 0, "document.review.section.missing",
+                f"{self.item}'s review.md has no `{RESTATED_SECTION}` section",
+                hint="list every document carrying an Engagement state section and restate each "
+                     "one from the ending you are recording, after the sign-off answer arrived")
+            return
+        for section in sections:
+            if section.path not in text and os.path.basename(section.path) not in text:
+                self.report.error(
+                    os.path.join(self.root, section.path), section.line,
+                    "document.engagement-state.not-restated",
+                    f"{section.path} has an {ENGAGEMENT_SECTION} section and {RESTATED_SECTION} "
+                    f"does not name it",
+                    hint="restate all of them, not the ones you noticed were wrong; a section "
+                         "read and found still true is restated as still true and listed "
+                         "(ADR-0010 §4.3 rule 3)")
+        self.report.note(
+            f"{len(sections)} {ENGAGEMENT_SECTION} section(s) in the document set. "
+            f"Whether a restated sentence is TRUE is a read and is not decided here; nor is "
+            f"whether the restatement was written after the sign-off answer arrived")
+
+    def rule_engagement_state_is_delimited(self) -> None:
+        seen = 0
+        for relative, text in doc.documents_under(self.root):
+            section, line, count = doc.engagement_state_text(text, relative)
+            if count > 1:
+                self.report.error(
+                    os.path.join(self.root, relative), line,
+                    "document.engagement-state.duplicated",
+                    f"{relative} has {count} {ENGAGEMENT_SECTION} sections",
+                    hint="exactly one per document, holding that document's engagement-state "
+                         "sentences and nothing else (spec/doc-header.md §4a)")
+            if section is None:
+                continue
+            seen += 1
+            if not section.strip():
+                self.report.error(
+                    os.path.join(self.root, relative), line,
+                    "document.engagement-state.empty",
+                    f"{relative}'s {ENGAGEMENT_SECTION} section says nothing",
+                    hint="an empty delimited section reads as an answer and is not one; either "
+                         "state the engagement's state or do not open the section")
+        if self.document:
+            path = os.path.join(self.root, self.document)
+            if not os.path.isfile(path):
+                self.report.error(path, 0, "document.missing",
+                                  f"{self.document} does not exist")
+            else:
+                _, _, count = doc.engagement_state_text(read_text(path)[0], self.document)
+                if count == 0:
+                    self.report.error(
+                        path, 0, "document.engagement-state.absent",
+                        f"{self.document} carries no {ENGAGEMENT_SECTION} section",
+                        hint="this is the one execution that opens it; between here and the "
+                             "ending nobody may write one (spec/doc-header.md §4a)")
+        self.report.note(
+            f"{seen} {ENGAGEMENT_SECTION} section(s), checked for SHAPE only. This rule cannot "
+            f"see whether an engagement-state sentence was left loose in a document's body "
+            f"instead of being written into the section — that is ADR-0010's obligation 10, it "
+            f"has no mechanical half, everything above rests on it, and the sentence that "
+            f"produced the rule was itself written loose (F-093)")
+
+    def rule_engagement_state_is_left_to_the_ending(self) -> None:
+        if self.refuse_blind_window():
+            return
+        examined = 0
+        for relative, before, after in self.changed_documents():
+            examined += 1
+            if not self.engagement_section_changed(relative, before, after):
+                continue
+            self.report.error(
+                os.path.join(self.root, relative), 0, "document.engagement-state.written",
+                f"{relative}'s {ENGAGEMENT_SECTION} section differs from the one at "
+                f"{self.base()}",
+                hint="those sentences are the ending's, restated wholesale by review-close "
+                     "after the sign-off answer arrives. Where your change made one false, "
+                     "record it — the question's Consequences names the document and its "
+                     "section, and the plan's invalidation set carries the row disposed "
+                     "owned-by-ending — and leave it (spec/doc-header.md §4a)")
+        self.report.note(f"{examined} document(s) in the window, compared region by region "
+                         f"against {self.base()}")
+
+    def rule_propagated_claims_carry_their_obligation(self) -> None:
+        if self.refuse_blind_window():
+            return
+        found = self.audit_enumerations()
+        examined, flagged = 0, 0
+        for relative, before, after in self.changed_documents():
+            fresh = {text for _, text in doc.new_paragraphs(before, after, relative)}
+            for line, text, quantifier, token in doc.quantified_paragraphs(after, relative):
+                if text not in fresh:
+                    continue        # inherited prose: this execution did not write it
+                examined += 1
+                entries = [entry for entry in found
+                           if entry.document and (entry.document == relative
+                                                  or relative.endswith(entry.document))]
+                complete = [entry for entry in entries if entry.complete]
+                if complete:
+                    continue
+                flagged += 1
+                if entries:
+                    absent = sorted({part for entry in entries for part in entry.missing})
+                    self.report.error(
+                        os.path.join(self.root, relative), line,
+                        "document.enumeration.incomplete",
+                        f"a quantified claim ({quantifier!r} over {token!r}) whose enumeration "
+                        f"entry records no {', '.join(absent)}",
+                        hint="the audit row records the set, how it was enumerated with the "
+                             "command's output, the members by name and a verdict per member "
+                             "(spec/doc-header.md §4a)")
+                else:
+                    self.report.error(
+                        os.path.join(self.root, relative), line,
+                        "document.enumeration.missing",
+                        f"a quantified claim ({quantifier!r} over {token!r}) written by this "
+                        f"execution with no enumeration entry for {relative} in any "
+                        f"{CONSEQUENCES} section of {self.item}",
+                        hint="opening what the claim cites does not discharge it — the citation "
+                             "names the general case and the falsifier is the member the "
+                             "sentence does not name (F-095). Where the family cannot be "
+                             "enumerated, weaken the sentence until it is a cited fact")
+        self.report.note(
+            f"{examined} quantified sentence(s) newly written into docs/, against "
+            f"{len(found)} enumeration entr(y/ies) in {self.item}'s questions; {flagged} "
+            f"unanswered. A universal phrased without one of the quantifier words is caught by "
+            f"nothing here (ADR-0010 obligation 5)")
+
+    def audit_enumerations(self):
+        """Every enumeration entry in the `## Consequences` sections of this item's questions."""
+        found = []
+        base = os.path.join(self.root, "tracker", "items", self.item, "questions")
+        if not os.path.isdir(base):
+            return found
+        for name in sorted(os.listdir(base)):
+            if not name.endswith(".md"):
+                continue
+            path = os.path.join(base, name)
+            text = read_text(path)[0]
+            body, first = doc.document_body(text, name)
+            section = split_sections(body, first).get(CONSEQUENCES)
+            if section is None:
+                continue
+            found.extend(doc.enumerations_in(path, section["text"], section["line"]))
+        return found
+
+    # ---- driver ------------------------------------------------------------------------
+
+    def run(self) -> int:
+        getattr(self, "rule_" + self.rule.replace("-", "_"))()
+        self.report.note(f"rule {self.rule}")
+        return self.report.emit()
+
+
+def main(argv: list) -> int:
+    options, flags = {}, set()
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("--help", "-h"):
+            print(__doc__.strip())
+            return 0
+        if token in ("--uncommitted", "--quiet"):
+            flags.add(token[2:])
+            index += 1
+            continue
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"lint-documents: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        print(f"lint-documents: unexpected argument {token!r}", file=sys.stderr)
+        return 2
+
+    rule = options.get("rule", "")
+    if rule not in RULES:
+        print(f"lint-documents: --rule must be one of {', '.join(RULES)}", file=sys.stderr)
+        return 2
+    item = options.get("item", "")
+    if rule in NEEDS_ITEM:
+        if not item:
+            print(f"lint-documents: --rule {rule} needs --item <ID>", file=sys.stderr)
+            return 2
+        if id_kind(item) is None:
+            print(f"lint-documents: --item takes an item ID, not {item!r}", file=sys.stderr)
+            return 2
+    # F-033's rule, applied to arguments: a gate that cannot look must say so rather than
+    # looking at nothing and exiting 0. A window rule with no window is exactly that.
+    if rule in NEEDS_WINDOW and not (options.get("changed-since") or "uncommitted" in flags):
+        print(f"lint-documents: --rule {rule} needs --changed-since <ref> or --uncommitted; "
+              f"without one it would examine nothing and report a pass", file=sys.stderr)
+        return 2
+    context = options.get("context", "")
+    if context and context not in ("work-item", "bug", "epic"):
+        print(f"lint-documents: --context must be work-item, bug or epic, not {context!r}",
+              file=sys.stderr)
+        return 2
+    root = resolve_root(options.get("root"), tool="lint-documents")
+    return DocumentLinter(root, rule, item=item, document=options.get("document", ""),
+                          changed_since=options.get("changed-since"),
+                          uncommitted="uncommitted" in flags, context=context).run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

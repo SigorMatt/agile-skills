@@ -1,5 +1,5 @@
 name: plan
-version: 0.5.0
+version: 0.6.0
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -95,8 +95,9 @@ quality_gates:
     enforcement: advisory
     on_failure: stay
   - name: documents-at-risk-are-enumerated
-    description: The plan names the documents this change can falsify, the documents it is asked to produce, and the ADRs that constrain it.
-    manual_check: plan.md carries an invalidation set with a row per document at risk - document, what (the sentence or section, located precisely enough to reopen), kind (cited-fact, quantified or engagement-state), why, and a disposition left open for implement. It carries deliverable-documents, naming every document an acceptance criterion is about, and binding-adrs, naming by ID every ADR this change is constrained by. Each of the three says none where none applies; an absent section is not an empty one.
+    description: The plan names the documents this change can falsify, the documents it is asked to produce, and the ADRs that constrain it - all three sections present, the invalidation table well formed, and kind and disposition inside their enums. Whether the set is complete is nobody's to decide mechanically and stays an exit criterion.
+    command: "scripts/lint-documents --rule documents-at-risk-are-enumerated --item {{item.id}}"
+    expect: exit-zero
     enforcement: hard
     on_failure: stay
   - name: cross-answer-consistency

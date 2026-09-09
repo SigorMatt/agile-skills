@@ -1,4 +1,4 @@
-# Contract — answer-questions v0.5.0
+# Contract — answer-questions v0.6.0
 
 Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -46,8 +46,8 @@ Every gate below appears in the journal entry for every execution — including 
 | `answer-is-propagated` | hard | For each question answered, open each file named in its Consequences section and confirm the change is there. A Consequences section naming no file fails this gate. | stay |
 | `answered-from-the-record` | hard | For each answer, cite the document, ADR, or Q&A entry it follows from - or state explicitly that the record was silent and record the new decision as an ADR. | stay |
 | `escalation-is-justified` | hard | For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition. | stay |
-| `propagated-claims-carry-their-obligation` | hard | For each sentence you wrote into docs/, name its kind. A cited fact - an absolute about something named as code - carries a citation that resolves. A quantified claim - every, all, no, the only - carries, in the Consequences entry that records this write, the set it ranges over, how the set was enumerated with the command or glob and its output, the members by name, and a verdict per member; opening what the sentence cites does not discharge it, which is how the same universal was audited true three times and was false in the one member nobody opened (spec/doc-header.md section 4a). Where the family cannot be enumerated, weaken the sentence until it is a cited fact rather than recording the enumeration as done. | stay |
-| `engagement-state-is-left-to-the-ending` | hard | List every Engagement state section in a document this execution touched. None may be written, amended or tidied here - those sentences are the ending's, restated wholesale by review-close after the sign-off answer arrives (spec/doc-header.md section 4a). Where an answer you propagated made one false, that is recorded and not repaired - the question's Consequences names the document and its section and says the ending owns it, and where the item has a plan, the row goes into the invalidation set with the disposition owned-by-ending. An answer whose only unrecorded consequence is a stale engagement-state sentence is complete. | stay |
+| `propagated-claims-carry-their-obligation` | hard | run `.claude/agile-skills/scripts/lint-documents --rule propagated-claims-carry-their-obligation --item {{item.id}} --uncommitted`, expect exit-zero | stay |
+| `engagement-state-is-left-to-the-ending` | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted`, expect exit-zero | stay |
 | `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `item-resumed-correctly` | hard | Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match. | stay |

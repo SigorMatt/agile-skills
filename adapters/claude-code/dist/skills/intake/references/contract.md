@@ -1,4 +1,4 @@
-# Contract — intake v0.4.0
+# Contract — intake v0.5.0
 
 Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -43,7 +43,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `epic-has-success-measures` | hard | Read the epic's Success measures section; each entry must be something a person could check, not a restatement of the goal. | stay |
 | `an-open-question-was-asked` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}} --require-elicitation`, expect exit-zero | stay |
-| `engagement-state-is-delimited` | hard | Read back what you wrote into docs/product/vision.md. A sentence asserting the state of the engagement rather than the state of the product - the stakeholder has not yet been asked to accept this, nothing else is open, three of four items are delivered - belongs in exactly one Engagement state section and nowhere else in the body. Every other sentence in that section is moved out of it. This is the one obligation in the convention no script can see - everything mechanical about those sentences rests on this execution having put them in the section, and the sentence that produced the rule was written loose in the body (spec/doc-header.md section 4a). Where the document already has such a section, you write nothing into it - that engagement is in flight and the section is the ending's. | stay |
+| `engagement-state-is-delimited` | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-delimited --document docs/product/vision.md`, expect exit-zero | stay |
 | `items-are-separable` | advisory | For each item, state the order it could be built in and what it depends on; an item that cannot be described this way is really part of another. | stay |
 | `no-solution-in-the-problem` | advisory | Read each title and story back; if it names a technology or a data structure the human did not, remove it and record what was removed. | stay |
 

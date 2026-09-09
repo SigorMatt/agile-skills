@@ -4647,3 +4647,107 @@ recall is a reading, not a number, and the report says which.
 - **Artifacts:** `scripts/lib/scope.py`, `scripts/lib/workspace.py`, `scripts/lib/selftest.py`,
   `scripts/lint-claims`, `scripts/check-verify-freshness`, `scripts/check`,
   `adapters/claude-code/dist/**`.
+
+## 2026-09-10 — META-148b — the enforcement half, part 2: the eight obligations become commands
+
+- **Unit:** META-148b
+- **Inputs read:** `meta/adr/ADR-0010-document-as-deliverable.md` §3 (the authority-and-obligation
+  table), §4 (the claim taxonomy), §4.3 (K8 and its four rules), §5.1 (the invalidation set's
+  columns) and the **Enforcement boundary** table in full, which is where the obligation numbers
+  used below come from; `spec/doc-header.md` §4a (the three kinds, the audit row, the enumeration,
+  the `## Engagement state` convention) and `spec/dor-dod.md` D7 / D12 / D13 / DE4 / DE6;
+  `scripts/lib/record.py`, `scripts/lib/claims.py`, `scripts/lib/scope.py`,
+  `scripts/lib/workspace.py`'s `PlanDocuments`; `scripts/lint-claims` and `scripts/lint-answers`
+  as the two shapes to follow; `fixtures/crossed-answers/` and its `EXPECTED-CODES.txt` as the
+  fixture pattern; the six contracts and their `process.md` procedures.
+- **Decisions:**
+  - **Seven of the eight are now `command:` gates, and the eighth is too — all eight.** No
+    obligation turned out to be undecidable as ADR-0010 assumed. What each command decides is
+    narrower than what the `manual_check` text said, in every case, and the narrowing is stated in
+    the gate's own `description` rather than left for a reader to discover: the reading half moved
+    to `exit_criteria`, where each of the six contracts already carried it.
+  - **One implementation, one gate script, one flag per obligation.** `scripts/lib/documents.py`
+    reads (the invalidation row whole, the delimited section, a quantified sentence, an
+    enumeration entry); `scripts/lint-documents --rule <name>` judges and reports. **The rule name
+    IS the gate name** in the contract that runs it — F-059 is a procedure naming a gate its
+    contract does not declare, and a command whose argument is the gate's own name cannot drift
+    from it silently.
+  - **The plan table is parsed in `workspace.py` and judged in `lint-documents`.** `PlanDocuments`
+    gained `rows` (the five cells kept whole), `binding_adrs`, `binding_unreadable` and `present`.
+    All of it is **additive and adds no error**: `lint-claims` and `check-verify-freshness` were
+    reading this object before `## Binding ADRs` existed, and making it required *there* would
+    have narrowed their windows for a reason that has nothing to do with either of them. An absent
+    `## Binding ADRs` is `documents-at-risk-are-enumerated`'s error, not the reader's.
+  - **`kind` and `disposition` are read against different alphabets at different stages.** `plan`
+    fills four columns and leaves the disposition **open** for `implement`, so an open marker is a
+    legal answer at `planned` and an unclosed entry at `verifying`. `documents-at-risk-are-
+    enumerated` allows it; `document-writes-are-declared` and `invalidation-set-is-disposed`
+    refuse it. Collapsing the two would demand, at the stage that writes the row, the answer only
+    the next stage can give.
+  - **"What this execution wrote" is the paragraphs that are NEW.** Reading every paragraph of a
+    changed document would charge an execution with prose it inherited — CHECKPOINT's edge (a), a
+    defect with no legal repair. So `new_paragraphs()` is `lint-answers` rule 3's survival
+    comparison run the other way round, and only a paragraph absent from the base is this
+    execution's.
+  - **A quantified claim is a SUBSET of the absolutes.** `never`, `cannot`, `always`,
+    `guaranteed` are cited facts whose obligation is the citation; demanding an enumeration for
+    those would be demanding the wrong evidence, loudly, on sentences that already carry the right
+    evidence. `QUANTIFIER_RE` is `every|all|no|none|only|each` and nothing else.
+  - **The enumeration entry needed a form, and the form is labels** — `Enumeration:` carrying
+    `Set:`, `Enumerated by:`, `Members:`, `Verdict:`, nested under the document's own
+    `## Consequences` bullet, associated by **nesting** so one enumeration cannot discharge a
+    claim written into a different document. This is ADR-0008 §4's `Checked against:` move, which
+    ADR-0010 §4.2 names as the model: without a label nothing mechanical distinguishes *"I opened
+    the fixture"* from *"I enumerated the members"*, and telling those two apart is the whole of
+    F-095. Written into `spec/doc-header.md` §4a (revision 6) and
+    `methodology/skills/answer-questions/process.md` step 5a, because a gate enforcing a form the
+    spec does not name is an instruction-shaped surprise.
+  - **`engagement-state-is-restated` at an item close prints `NOT APPLICABLE`, not a pass.** The
+    command takes `--context {{item.type}}`; at `work-item` or `bug` it exits 0 saying *"an item
+    close is not an ending"*, in the words `scope.py` established for a state that must never be
+    spelled like a pass.
+  - **A conformance verdict for an ADR the plan does not name is a WARNING, not an error.**
+    `verify`'s `skill.yaml` said such a row *"fails this gate"* and its `process.md` asked for it —
+    *"one row per ID in the plan's binding ADR list, **and any ADR you found engaged that the list
+    does not name**"*. They contradicted. The procedure is right: refusing the honest move would
+    make finding an ADR the plan missed illegal, which is F-050's shape. The row is recorded as
+    `document.adr.row.unplanned`, a warning, because it is evidence that `binding-adrs` was
+    incomplete — and completeness is D13, `review-close`'s read, not this gate's refusal. The
+    contract's sentence was corrected in the same change.
+  - **Obligation 10 is NOT claimed, and the gate says so on every run.**
+    `engagement-state-is-delimited` checks the *shape* of the sections that exist — one per
+    document, not empty, present where `--document` points. It cannot check that every
+    engagement-state sentence in a document is inside one, because that requires knowing which
+    sentences are engagement-state claims. So every run of it prints what it cannot see, the
+    module docstring says it, the gate `description` says it, and the fixture holds a document
+    (`wrong/docs/process/ways-of-working.md`) with exactly such a loose sentence that **no rule
+    fires on** — the absence is the point. Under-claiming is the correct failure mode here: a gate
+    that overstates its reach is worse than one that does not exist (F-001).
+- **Questions raised:** none blocking. One contradiction found and fixed in place (the
+  `adr-conformance-is-decided` row above). One limit inherited and restated rather than solved:
+  ADR-0010's obligation 5 — a universal phrased without one of the quantifier words is caught by
+  nothing, here or anywhere else — and `propagated-claims-carry-their-obligation` prints that on
+  every run rather than leaving its reach to be assumed.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **34 steps**.
+  `fixtures/broken-workspace` still emits **82 codes**, unchanged. The library self-test went
+  273 → **290 cases** (`run_documents` for the quantifier/section/new-paragraph/enumeration
+  readers, and four more `run_plan_documents` cases for the rows and the binding list).
+  `fixtures/document-obligations/wrong/` emits **19 codes**, compared as an exact set.
+  **Non-vacuity, twice.** (1) With `scripts/lint-documents` and `scripts/lib/documents.py` moved
+  aside and the three new steps left in place, all three failed: ten of the eleven must-fail
+  invocations reported *"reported nothing over the broken tree"*, all **19** codes were listed as
+  *"rules that stopped firing"*, and every must-pass and by-execution case failed with
+  `exit 2 … can't open file '…/scripts/lint-documents': [Errno 2] No such file or directory`.
+  (2) Stronger, because (1) only proves the file is needed: with the script present and **every
+  `rule_*` body replaced by `return`**, the must-fail step failed identically — the same ten
+  invocations reporting nothing and the same 19 codes stopped firing — so the assertions are
+  sensitive to the rules and not to the script's existence.
+- **Contract bumps (all minor, all the same shape — a gate changed from `manual_check` to
+  `command`):** `plan` 0.5.0→0.6.0, `implement` 0.4.0→0.5.0, `verify` 0.3.0→0.4.0 (two gates),
+  `review-close` 0.7.0→0.8.0, `intake` 0.4.0→0.5.0, `answer-questions` 0.5.0→0.6.0 (two gates).
+  `pipeline.yaml` untouched: nothing about when an item may move changed.
+- **Artifacts:** `scripts/lib/documents.py` (new), `scripts/lint-documents` (new),
+  `scripts/lib/workspace.py`, `scripts/lib/selftest.py`, `scripts/check`,
+  `fixtures/document-obligations/**` (new), the six `skill.yaml` contracts,
+  `methodology/skills/answer-questions/process.md`, `spec/doc-header.md`,
+  `adapters/claude-code/render.py`, `adapters/claude-code/dist/**`.

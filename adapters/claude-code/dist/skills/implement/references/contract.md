@@ -1,4 +1,4 @@
-# Contract — implement v0.4.0
+# Contract — implement v0.5.0
 
 Rendered from `methodology/skills/implement/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -48,7 +48,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `no-unplanned-scope` | advisory | Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed. | stay |
 | `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --changed-since {{trunk}}`, expect exit-zero | stay |
 | `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}`, expect exit-zero | stay |
-| `document-writes-are-declared` | hard | List every path under docs/ in the branch diff. Each must appear in the plan's invalidation set or in deliverable-documents; a document you had to change that appears in neither is added to the set as a new entry before you write it, never written silently. Then read the set - every entry carries a disposition of to-update, verified-still-true, owned-by-ending or question-filed:<ITEM>/Q-###, and no entry disposed owned-by-ending was edited. An engagement-state section is not yours at any disposition. | stay |
+| `document-writes-are-declared` | hard | run `.claude/agile-skills/scripts/lint-documents --rule document-writes-are-declared --item {{item.id}} --changed-since {{trunk}}`, expect exit-zero | stay |
 
 ## Escalation
 
