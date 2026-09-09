@@ -3,178 +3,128 @@
 ## Session: builder five (`meta/BUILDER-5-PROMPT.md`). Phase VI, in flight.
 
 Execution model (binding, from the mission): every unit is executed by a **dedicated
-sub-agent**. The orchestrator session holds only the mission, `meta/plan.md`, this file, and
-each unit's verdict. Per unit: checkpoint the intent → dispatch with scope, files to read,
-definition of done, and the obligation to commit AND push → verify cheaply (git log for the
-sha, `./scripts/check` or the unit's fixture) → advance this file.
+sub-agent**. The orchestrator holds only the mission, `meta/plan.md`, this file, and each unit's
+verdict. Per unit: checkpoint the intent → dispatch with scope, files to read, definition of
+done, and the obligation to commit AND push → verify cheaply (git log for the sha,
+`./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 94606f5 — 34 steps. Cluster 1 complete; cluster 2 derived.
+## The gate is GREEN at 877ee85 — 34 steps, 82 codes, selftest 290, 49 findings citations
 
 ## Current unit
 
-**META-151** — the E4 mechanism, part 1: the model on paper.
+**META-151b** — the E4 mechanism, part 2: **the programs**.
 
-ADR-0011 §7 *"The changes this obliges, named"* lists them file by file. This unit takes the
-spec and `pipeline.yaml` half; META-151b takes the programs.
+The paper model is in (ADR-0011 at 94606f5; specs and `pipeline.yaml` at 877ee85). This unit
+builds what reads and writes it. ADR-0011 §7 lists the files; `spec/workspace-layout.md` §1.4
+now fixes the log format.
 
-- `spec/ids-and-statuses.md` §3.5's E4 row and `meta/adr/ADR-0006-termination-model.md` §1's
-  E4 row — **amended**: E4 gains a **second route**, silence, alongside withdrawal. ADR-0006 is
-  a standing ADR: repair it the legal way (`spec/doc-header.md` §4b, `## Corrections`), do not
-  rewrite its decision.
-- §3.4's `done → open` row: condition widened to §3.4's own prose (*a child item filed after
-  closure*), so a **returning** stakeholder's request has a legal way back in.
-- `spec/question.md` §2/§3 — the new `status: abandoned`, with an **empty** `## Answer`. Forced:
-  leaving questions open deadlocks `next` step 3 for ever, and `answered`/`deferred` both assert
-  a reply arrived.
-- `spec/dor-dod.md` — DE7/DE8's E4 form is **asked, not answered**; DE4's trigger becomes *after
-  the ending is determined* (this amends ADR-0010 §4.3 — say so).
-- `spec/workspace-layout.md` — `tracker/waiting/<EP-ID>.md`, the append-only halt log.
-- `methodology/pipeline.yaml` — the `termination.silence` block
-  (`threshold_rounds`, default **3**), and **two new transition rows**, both F-050's shape found
-  by derivation rather than by a run: `awaiting-answer → blocked` (`review-close`,
-  work-item/bug — `awaiting-answer` is not suspendable, so the generic impasse row cannot reach
-  it) and `awaiting-answer → done` (`review-close`, epic, gated).
+- the **waiting-log writer** — appends exactly one row per halt to `tracker/waiting/<EP-ID>.md`;
+  `workspace-init` creates `tracker/waiting/`.
+- `scripts/lib/engagement.py` / `scripts/engagement-state` — report the silence count;
+  **the reader never writes**.
+- `scripts/check-epic-signoff` — the E4 verdict.
+- `scripts/validate-workspace` — the waiting log's shape, and `status: abandoned` questions.
+- `methodology/skills/next/` — step 3's branch and a `silence-is-recorded` gate.
+- `methodology/skills/review-close/` — step 10: the E4 declaration and the ending statement.
+- re-render; version bumps.
 
-- Done when: all of the above land, revisions rows appended, `./scripts/check` green,
-  journalled, committed AND pushed.
-- Next units: **META-151b** (the programs), **META-152** (`fixtures/abandoned-engagement/`),
-  **META-153** (harness, separate commit).
+**Prove by execution that all three consumers read `threshold_rounds` from `pipeline.yaml`** —
+`next`, `engagement-state`, `check-epic-signoff`. Two of them disagreeing is F-045's mechanism,
+so a test that changes the value and observes all three move is the point, not a formality.
 
-## A finding ADR-0011 surfaced and correctly declined to file — the next findings pass owes it
+### The count, restated so no program has to re-derive it
 
-`next` step 3 halts on **any** open human-addressed question, while `spec/question.md` §2 says an
-elicitation *"must not stop the loop"*. Both cannot hold; today the first wins. Consequence: an
-unanswered elicitation halts the workspace and — because rest requires no open question anywhere
-— makes **every** ending unreachable, **E1 included**. ADR-0011 §6 records it with both
-citations. It is adjacent to **F-097** (cluster 5, META-162) and must be filed with an F-number
-by whichever unit gets there first. Do not lose it.
+`inbound` is the first **8 lowercase hex** of SHA-256 over a canonical rendering: one line per
+`addressed-to: human` question in the engagement **whatever its status**, ascending by
+`<ITEM>/<Q-ID>` — `<ITEM>/<Q-ID> <status> <answered-at or -> <sha256 of the ## Answer body,
+first 8 hex>` — then one line per file in `tracker/requests/`, ascending, `<filename> <status>`.
+**Count = the number of trailing rows sharing the last row's `inbound`.** Absent file = zero.
+No stored counter. `next` appends **before** reading state.
+
+### Flagged by META-151 for a decision in this unit
+
+`pipeline.yaml`'s rule-obligation registry keys a validator status rule to a **single**
+`(from, to, actor)` triple. ADR-0011's obligation 5 (`epic.closed-with-active-children`) is
+satisfied by **many** moves, so META-151 registered **nothing** rather than put a false statement
+in a load-bearing registry — and flagged that the new `awaiting-answer → blocked` row is exactly
+the move that made that rule unsatisfiable for a child suspended at `awaiting-answer`, F-050's
+shape. **Decide here:** either grow the registry's shape to admit a set of triples, or record why
+the obligation stays unregistered. Do not register a false triple to make a table look complete.
+
+- Done when: the programs land, the threshold's single source is proved by execution,
+  `./scripts/check` green, journalled, committed AND pushed.
+- Next units: **META-152** (`fixtures/abandoned-engagement/`, the E4 rows end to end),
+  **META-153** (harness — **separate commit**).
+
+## Owed to the next findings pass — do not lose these
+
+1. **The elicitation deadlock.** `next` step 3 halts on **any** open human-addressed question,
+   while `spec/question.md` §2 says an elicitation *"must not stop the loop"*. Both cannot hold;
+   today the first wins, so an unanswered elicitation makes **every** ending unreachable, **E1
+   included**. Recorded in ADR-0011 §6 with both citations, deliberately unfiled by META-150 and
+   META-151. Adjacent to **F-097** (cluster 5, META-162). Needs an F-number.
+2. **The registry's one-triple shape** (above), if META-151b leaves it unregistered.
 
 ## Done this session
 
-
-
-
-
-
-- **META-144** — Phase VI laid out in `meta/plan.md` (2c4b0b7, 0deafc0).
-- **META-145** — `meta/adr/ADR-0010-document-as-deliverable.md`, 699 lines (**3701069**).
-  Binding decisions: `doc-header.md` §5 **does not hold**, the claims gate **stays on
-  `implement`** (F-076); record-vs-deliverable is a property of **sentences**, not files; **K8**,
-  the engagement-state statement, is a third claim kind **owned by the ending** (F-093); the
-  **invalidation set** is a `plan` output consumed by `implement`, `verify`, `review-close`,
-  `check-verify-freshness` and the claims window (F-087); a **quantified** claim discharges only
-  by member enumeration in the audit row (F-095); **`verify`** decides ADR conformance per ID,
-  `review-close` checks only that `binding-adrs` is complete (F-092). Residual gap, named and
-  unsolved: a false sentence found **after** the engagement closes has no owner.
-- **META-146** — the two spec files carry it (**c1fbde8**). §5's absolute removed; §4a gains the
-  three-kind claim table, the definition of a *checked* claim, the audit row, the enumeration
-  obligation and the `## Engagement state` convention. `dor-dod.md`: D7 confirms against the
-  set, D12/DE6 gain enumeration and exclude K8, DE4 gains the ending's restatement, **D13** is
-  new (`binding-adrs` completeness, `[skill]` — no mechanical half exists yet).
-- **META-147** — four contracts + `pipeline.yaml` + dist (**5e6434d**), gate green.
-  Bumps: `plan` 0.4.1→0.5.0, `implement` 0.3.0→0.4.0, `verify` 0.2.0→0.3.0, `review-close`
-  0.6.0→0.7.0, `pipeline.yaml` 0.6.0→0.7.0 — all minor.
-  **Where the new outputs live** (META-148 writes fixtures against these): three new sections of
-  `tracker/items/<ID>/artifacts/plan.md` — `## Invalidation set`
-  (`| document | what | kind | why | disposition |`; kind ∈ `cited-fact`|`quantified`|
-  `engagement-state`; disposition ∈ `to-update`|`verified-still-true`|`owned-by-ending`|
-  `question-filed:<ITEM>/Q-###`; an empty set is one row saying `none`, an absent section is not
-  an empty one), `## Deliverable documents`, `## Binding ADRs`. Consumers: `impl-report.md`
-  gains `## Documents`; `verify-report.md` gains `## ADR conformance` and `## Invalidation set`;
-  `review.md` gains `## Invalidation set confirmation` and `## Sections restated at the ending`
-  — deliberately NOT `## Engagement state`, because that literal is the delimiter a script
-  enumerates and an item artifact carrying one would plant a K8 section inside a record.
-- **META-147b** — `intake` 0.3.0→0.4.0 and `answer-questions` 0.4.0→0.5.0 carry ADR-0010's rows
-  L1 and L7 (**9adff0e**); `pipeline.yaml` untouched, because the rows change what a skill writes
-  inside a document, not when an item may move. Two decisions kept: `intake` gets **no**
-  `lint-claims` gate (at intake there is usually no code to cite, so that window would be empty
-  by construction on nearly every execution — F-076's exact shape), the obligation is an exit
-  criterion instead; and when a human's answer falsifies a K8 sentence, `answer-questions`
-  **records it and leaves it** — the question's `## Consequences` names the document, the
-  section and the sentence, and the plan's invalidation set gets the row disposed
-  `owned-by-ending`. Nothing is lost, because `review-close` restates every section it finds.
-  A seam it closed on its own initiative and flagged: an `answer-questions` execution
-  propagating into `docs/` mid-flight puts paths there that `implement` never wrote, so
-  `answer-questions` records those rows itself, disposed `to-update`. **Accepted as it stands.**
-- **META-148** — the window (**5ae1539**), 31 steps green, 82 codes unchanged, selftest 252→273.
-  `scope.py` now has **four** states, and the third is the one F-076 needed: *real and
-  non-empty* → examine; *real and empty* → pass, saying the window **was searched**;
-  ***out-of-scope-by-construction*** → **pass with a mark** (exit 0, a `claim.scope.by-construction`
-  warning, and the scope line `NOTHING COULD HAVE BEEN IN SCOPE`) — exit 0 deliberately, because
-  an item with no documents is ordinary work and a gate that fails on ordinary work is one
-  somebody switches off; the honesty lives in the wording; *degenerate* → fail (F-066,
-  unchanged). `constrained(window, permitted, reason)` is the only way into the third state and
-  it takes the permission knowledge from the caller — **no diff can distinguish "nobody wrote a
-  document" from "nobody was allowed to"**. `--plan-documents <ITEM>` widens the rule-2 window to
-  the diff + invalidation set + deliverable documents; `check-verify-freshness` subtracts the
-  deliverable documents from its `docs/` exemption (F-058). The new step was **proved
-  non-vacuous**: stashed against the old scripts, five of its eight cases failed, each reporting
-  `0 document(s) in 0 path(s)` — the empty window F-076 is about.
-- **META-148b** — `scripts/lib/documents.py` + `scripts/lint-documents --rule <name>` decide
-  **all eight** `[auto]` obligations (**a843114**); 34 steps, 82 codes unchanged, selftest 290.
-  Every gate flipped from `manual_check` to a real command, and **each command decides less than
-  the manual_check text it replaced** — the narrowing is written into each gate's own
-  `description`. Bumps: `plan` 0.6.0, `implement` 0.5.0, `verify` 0.4.0, `review-close` 0.8.0,
-  `intake` 0.5.0, `answer-questions` 0.6.0; `doc-header.md` revision 6 (the enumeration's
-  labelled form — obligation 3 needed a *findable* form to be a shape check at all, so it was
-  written into the spec rather than left as an unwritten form a gate enforced).
-  **Non-vacuity proved twice**: with the script moved aside, and again with the script present
-  but every `rule_*` body replaced by `return` — the second is the one that proves the
-  assertions are sensitive to the rules and not merely to the file existing.
-  **A contradiction between two META-147 outputs, found and corrected here**: `verify/skill.yaml`
-  said a conformance row for an ADR the plan does not name *fails* the gate, while
-  `verify/process.md` asks for exactly such a row. Refusing it would make the honest move
-  illegal (F-050's shape). The procedure's version was implemented; the row is
-  `document.adr.row.unplanned`, a **warning**, being evidence that `binding-adrs` was incomplete
-  — which is D13, `review-close`'s read.
-- **META-149** — cluster 1's ledger (**f474027**), append-only proved mechanically (358
-  insertions, **0 deletions**), citations 43 → **49 cited**, every new sha verified with
-  `git log -1` before being written (F-024's discipline).
-  **Fixed, each with its resolving citation:** F-076, F-087, F-092, F-093, F-095, F-057, F-058
-  — and F-057/F-058's statuses say **in those words** that the deferral's gate was met, because
-  a deferral whose gate is met and not noticed is how a backlog rots.
-  **F-053 is NOT fixed**: ADR-0010 consumed its class as the lifecycle-state input (the
-  two-state-machines constraint) without resolving it; `transition` still has no `--outcome`, so
-  `review-close` still exits non-zero on a successful transition. It stays in *half-written
-  record* with F-036/F-043/F-051.
-  **META-148 and META-148b filed contradictory reports about the `owned-by-ending` edge, and
-  META-148 was right** — established **by execution** in a throwaway repo, not by reading: two
-  hard gates on `implement` are jointly unsatisfiable there, with no legal repair but `--force`.
-  META-148b's rebuttal was true of a different rule on a different skill (`lint-documents`'
-  new-paragraphs scoping), while `lint-claims` rule 2 walks **every** prose paragraph in the
-  window. Filed as **F-100**. Also filed: **F-101** (a deliverable document outside `docs/` is
-  inside the window and outside the rule — F-052/F-066's shape reintroduced, proved by
-  execution), **F-102** (obligation 10, open and *known, derived and accepted*), **F-103** (a
-  universal carried by a bare plural is recognised by nothing — with a correction that
-  ADR-0010's own illustration of it is wrong, because `each` IS in `QUANTIFIER_RE`).
-- **META-150** — `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`, 627 lines
-  (**94606f5**). **The threshold is a *silent round***: one orchestrator execution that ended at
-  *waiting on the human* and observed **no inbound change** since the previous such execution.
-  Inbound = only what a stakeholder can change. Default **3**, in `pipeline.yaml` as
-  `termination.silence.threshold_rounds`, read by all three consumers (`next`,
-  `engagement-state`, `check-epic-signoff`) — because two of them disagreeing is F-045's
-  mechanism. Resets on **any** inbound change including a partial answer and a deferral (it
-  measures presence, not compliance — F-028: a deferral is a reply); never resets on anything we
-  write. Rejected: **wall-clock** measures how long the pipeline was switched off, so it is wrong
-  in **both** directions; **turns** are the harness's unit and importing one puts the harness
-  inside the contract it exists to grade (ADR-0005). The count is **derived** from an append-only
-  log `tracker/waiting/<EP-ID>.md` — the trailing run of equal inbound digests (ADR-0003's
-  no-counter argument) — the halt is recorded **before** the state is read, and **the reader
-  never writes**, because `engagement-state` is consulted by the gate and by `review-close` and a
-  counting reader would advance the clock by being asked.
-  **`review-close` declares E4**; the ending statement is **a document, not a question** (there
-  is nobody to address) — `## Ending statement` in `review.md`, mirrored in the epic's
-  `## Notes`. Children classify from status alone: delivered / dropped earlier / blocked earlier
-  / **orphaned, in flight** / **orphaned, never started**; orphans move to `blocked` with reason
-  prefix `orphaned by E4:` and take **no `outcome` at all**, because the validator makes outcome
-  present *iff* `done`. **E3 vs E4 in one test: did the stakeholder's own words arrive?** The
-  `done`/`blocked` asymmetry is justified, not amended — `blocked` means *a human must act*,
-  which at E4 is a standing instruction to wait for nobody, and `done` on an epic is the one
-  state in this pipeline that reopens, so the ending most likely to be wrong is the only
-  undoable one. **F-060 is not a dependency**: abandonment is only ever declared against an open
-  ask, and F-060's case is the opposite one.
+- **META-144** Phase VI planned (2c4b0b7, 0deafc0).
+- **CLUSTER 1 — document-as-deliverable — COMPLETE.** Full detail is in the ADR, the journal and
+  the ledger; the shas are the record.
+  - **META-145** `meta/adr/ADR-0010-document-as-deliverable.md`, 699 lines (**3701069**).
+    `doc-header.md` §5 does not hold, the claims gate **stays on `implement`** (F-076);
+    record-vs-deliverable is a property of **sentences**, not files; **K8** engagement-state
+    statements are **owned by the ending** (F-093); the **invalidation set** is a `plan` output
+    (F-087); quantified claims discharge only by member enumeration in the audit row (F-095);
+    `verify` decides ADR conformance, `review-close` checks the list is complete (F-092).
+  - **META-146** the two spec files carry it (**c1fbde8**); D13 new, marked `[skill]` honestly.
+  - **META-147** four contracts + `pipeline.yaml` + dist (**5e6434d**). **META-147b** `intake`
+    and `answer-questions` (**9adff0e**) — `intake` gets **no** `lint-claims` gate, because that
+    window would be empty by construction, F-076's shape in a new place.
+  - **META-148** the window (**5ae1539**): `scope.py`'s fourth state
+    *out-of-scope-by-construction* passes **with a mark**; `constrained()` takes the permission
+    knowledge from the caller, because **no diff can distinguish "nobody wrote a document" from
+    "nobody was allowed to"**. Proved non-vacuous: 5 of 8 cases failed against the old scripts.
+  - **META-148b** all eight `[auto]` obligations become real commands via
+    `scripts/lib/documents.py` + `lint-documents` (**a843114**); each decides **less** than the
+    `manual_check` it replaced, and says so. **Obligation 10 is not claimed** — a fixture holds a
+    loose K8 sentence no rule fires on, deliberately. Non-vacuity proved **twice**, the second
+    time with every rule body stubbed to `return`.
+  - **META-148c ABSORBED, not skipped** — its cases already run as by-execution steps from the
+    two units before it; re-authoring would put one assertion in two places.
+  - **META-149** the ledger (**f474027**), append-only proved mechanically (358 insertions, **0
+    deletions**), citations 43 → 49. Fixed: F-076, F-087, F-092, F-093, F-095, F-057, F-058 —
+    the last two saying **in those words** that their deferral's gate was met. **F-053 NOT
+    fixed**, consumed as input only. **META-148 and META-148b had filed contradictory reports;
+    META-148 was right**, established **by execution** — two hard gates on `implement` jointly
+    unsatisfiable, no legal repair but `--force`. Filed **F-100**; also **F-101** (a deliverable
+    document outside `docs/`), **F-102** (obligation 10, *known, derived and accepted*),
+    **F-103** (a bare-plural universal — with a correction that ADR-0010's own illustration of
+    it is wrong).
+- **CLUSTER 2 — E4 — in progress.**
+  - **META-150** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`, 627 lines
+    (**94606f5**). The threshold is a **silent round**, default **3**, in `pipeline.yaml`.
+    Rejected: **wall-clock** (measures how long the pipeline was switched off — wrong in **both**
+    directions) and **turns** (the harness's unit; importing it puts the harness inside the
+    contract it grades, ADR-0005). The count is **derived** from an append-only log, the halt is
+    recorded **before** state is read, and **the reader never writes**. Resets on a partial
+    answer and on a deferral (presence, not compliance — F-028). `review-close` declares E4; the
+    ending statement is **a document, not a question**, because there is nobody to address.
+    Orphans go to `blocked` with **no `outcome` at all**. **E3 vs E4 in one test: did the
+    stakeholder's own words arrive?** F-060 is **not** a dependency.
+  - **META-151** the model on paper (**877ee85**), gate green. **ADR-0006 was repaired by a
+    header pointer — `**Amended by:** ADR-0011` — and no `## Corrections` entry**, argued four
+    ways: neither correction kind fits (nothing in §1 is false or unsourced); §4b's own boundary
+    (*"if a reader would have to change any code…, it is a new decision"*) rules it out, and
+    stretching that condition **in the file its own ledger watches** would be this repo failing
+    F-067; a correction entry is structurally illegal there anyway (no change log, no
+    frontmatter); house precedent is forward declaration. **Three absolutes had to be amended
+    rather than deleted** — each was true of four endings and false once E4-by-silence exists.
+    *Ending while never having asked is still illegal*: E4 permits an ask with an **empty**
+    `## Answer`, never a missing ask. A near-miss caught by the library crosscheck: three new
+    `pipeline.yaml` scalars carried `: ` inside a plain scalar — `miniyaml` accepted them,
+    **PyYAML did not**.
 
 ## Standing instructions (still in force)
 
