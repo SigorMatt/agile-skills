@@ -24,6 +24,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 import board as board_lib  # noqa: E402
+import engagement as engagement_lib  # noqa: E402
 from claims import CITATION_RE, CitationResolver  # noqa: E402
 from textio import read_text  # noqa: E402
 import frontmatter  # noqa: E402
@@ -54,13 +55,21 @@ REQUEST_FIELDS_OPTIONAL = ["about", "handled-at", "handled-by"]
 REQUEST_STATUS = {"open", "accepted", "declined"}
 REQUEST_ID_RE = re.compile(r"^R-\d{3}$")
 ADDRESSED_TO = {"architect", "human"}
-QUESTION_STATUS = {"open", "answered", "deferred"}
+QUESTION_STATUS = {"open", "answered", "deferred", "abandoned"}
 
 # The rules below require an item to be at one of a fixed set of statuses. Each one's
 # scope is declared in pipeline.yaml under `rule_obligations` and checked against the
 # transition table by lint-skills, so that a rule can never be enforced against an item
 # type no legal move could satisfy it for (F-050).
-STATUS_RULE_CODES = ("question.deferred.not-blocked", "question.blocking.not-suspended")
+STATUS_RULE_CODES = ("question.deferred.not-blocked", "question.blocking.not-suspended",
+                    "epic.closed-with-active-children")
+
+# tracker/waiting/<EP-ID>.md (spec/workspace-layout.md §1.4). The log is append-only and written
+# only by scripts/record-halt, so what the validator checks is that nothing has been hand-edited
+# into a shape the count cannot be derived from.
+WAITING_FILE_RE = re.compile(r"^EP-\d{3}\.md$")
+DIGEST_RE = re.compile(r"^[0-9a-f]{8}$")
+SURFACED_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})/Q-\d{3}$")
 
 DOC_FIELDS_REQUIRED = ["title", "version", "status", "updated", "updated-by", "updated-for"]
 DOC_FIELDS_OPTIONAL = ["supersedes", "superseded-by"]
@@ -907,6 +916,47 @@ class Validator:
                                            "moment it exists, empty until answered "
                                            "(spec/question.md §2)")
 
+            # `abandoned` is the pipeline's only vocabulary for absence, and its whole content
+            # is what is NOT there: no reply, so no answer text, no answering time and no
+            # author. Writing anything into `## Answer` — a summary, a note that nobody replied,
+            # a reconstruction of what they would probably have said — is the exact fiction the
+            # status exists to prevent. The emptiness is the evidence (spec/question.md §2,
+            # ADR-0011 §2.3).
+            if status == "abandoned":
+                if question.fields.get("addressed-to") != "human":
+                    self.report.error(
+                        path, 0, "question.abandoned.addressed",
+                        f"the question is 'abandoned' but addressed to "
+                        f"{question.fields.get('addressed-to')!r}",
+                        hint="silence is a fact about the stakeholder; a question addressed to "
+                             "the architect is answered by a skill, and its going unanswered is "
+                             "not an abandonment (spec/question.md §3 rule 8)")
+                answer = question.sections.get("## Answer", {}).get("text", "")
+                if "\n".join(line for line in answer.split("\n")
+                             if not line.strip().startswith("<!--")).strip():
+                    self.report.error(
+                        path, question.body_line, "question.abandoned.answer",
+                        "## Answer is not empty on an abandoned question",
+                        hint="nothing arrived, so the emptiness is the record of what happened "
+                             "(spec/question.md §2)")
+                consequences = question.sections.get("## Consequences", {}).get("text", "")
+                if not consequences.strip():
+                    self.report.error(
+                        path, question.body_line, "question.abandoned.consequences",
+                        "## Consequences is empty on an abandoned question",
+                        hint="it says what the pipeline did instead — the ending it was closed "
+                             "under with the round count and the threshold, the epic whose "
+                             "ending closed it, and the item's own class "
+                             "(spec/ids-and-statuses.md §3.5a)")
+                for field in ("answered-at", "answered-by"):
+                    if question.fields.get(field):
+                        self.report.error(
+                            path, 0, "question.abandoned.reply-field",
+                            f"an abandoned question records {field}",
+                            hint="no reply arrived, so there is no time at which it did and no "
+                                 "author to name; the closing act is recorded by the epic's "
+                                 "ending (spec/question.md §2)")
+
             if status in ("answered", "deferred") and kind != "elicitation":
                 for field in ("answered-at", "answered-by"):
                     if not question.fields.get(field):
@@ -1020,8 +1070,16 @@ class Validator:
             # ones that did not deliver are named". So an active child still refuses closure —
             # and an epic that closes over an undelivered child may not call itself delivered.
             if epic.status == "done":
+                # The scope is the registry's, not this rule's: `epic.closed-with-active-children`
+                # demands a terminal status of every child, and it is enforceable only for the
+                # item types review-close may actually move there from wherever they are. That
+                # obligation is the one this registry grew a shape for — many moves satisfy it,
+                # not one — and dropping it fails the build rather than silently widening the
+                # rule (F-050, ADR-0011 §5).
+                scoped = self.obligation_types("epic.closed-with-active-children")
                 active = [child.identifier for child in children
-                          if child.status not in TERMINAL_CHILD_STATUSES]
+                          if child.type in scoped
+                          and child.status not in TERMINAL_CHILD_STATUSES]
                 if active:
                     self.report.error(epic.path, 0, "epic.closed-with-active-children",
                                       f"the epic is done but {', '.join(sorted(active))} "
@@ -1370,6 +1428,96 @@ class Validator:
                         self.report.error(path, 0, "request.handled.field",
                                           f"a request that is {status!r} must record {field}")
 
+    def check_waiting_logs(self) -> None:
+        """The halt log an ending is derived from (spec/workspace-layout.md §1.4).
+
+        `tracker/waiting/<EP-ID>.md` is append-only, written by `scripts/record-halt` and by
+        nothing else, and it is the **only** evidence E4 by silence has. So the rules here are
+        about the file still being a thing the count can be derived from: rows that parse, a
+        digest that is a digest, a `surfaced` column that names questions, and timestamps that do
+        not run backwards. The count itself is not checked, because the count is not stored — it
+        is the trailing run of equal digests, computed on every read.
+
+        The `round` column is written for a human reader and no program reads it for the count.
+        It is checked all the same: a column nobody verifies is a column that quietly starts
+        lying, and here it would lie about how long someone has been silent.
+        """
+        directory = os.path.join(self.workspace.tracker, "waiting")
+        if not os.path.isdir(directory):
+            return
+        for name in sorted(os.listdir(directory)):
+            path = os.path.join(directory, name)
+            if not name.endswith(".md") or not os.path.isfile(path):
+                continue
+            if not WAITING_FILE_RE.match(name):
+                self.report.error(path, 0, "waiting.filename",
+                                  f"filename {name!r} must be <EP-ID>.md",
+                                  hint="one log per engagement, named for its epic "
+                                       "(spec/workspace-layout.md §1.4)")
+                continue
+            epic_id = name[:-3]
+            epic = self.workspace.items.get(epic_id)
+            if epic is None or epic.type != "epic":
+                self.report.error(path, 0, "waiting.epic.dangling",
+                                  f"{epic_id} is not an epic in this workspace")
+            with open(path, "r", encoding="utf-8") as handle:
+                text = handle.read()
+            if not text.startswith(f"# Waiting log \u2014 {epic_id}\n"):
+                self.report.error(path, 1, "waiting.preamble",
+                                  f"the file does not open with '# Waiting log \u2014 "
+                                  f"{epic_id}'",
+                                  hint="the preamble is written once, when the file is created; "
+                                       "every later write appends exactly one table row and "
+                                       "nothing else (spec/workspace-layout.md §1.4)")
+            rows = engagement_lib.parse_waiting_log(text, 0)
+            if not rows:
+                self.report.error(path, 0, "waiting.rows.none",
+                                  "the log exists and records no halt",
+                                  hint="the file is created by the first halt against this "
+                                       "epic, with that halt's row; an empty one is a file "
+                                       "somebody made by hand")
+            previous = None
+            for index, row in enumerate(rows):
+                if not row.round.isdigit() or int(row.round) < 1:
+                    self.report.error(path, row.line, "waiting.round",
+                                      f"round is {row.round!r}; expected a positive integer")
+                else:
+                    expected = 1 if previous is None or previous.inbound != row.inbound \
+                        else int(previous.round) + 1 if previous.round.isdigit() else None
+                    if expected is not None and int(row.round) != expected:
+                        self.report.error(
+                            path, row.line, "waiting.round.inconsistent",
+                            f"round is {row.round} where the digests give {expected}",
+                            hint="the column is 1 whenever inbound differs from the row above "
+                                 "and one more than the row above otherwise. No program reads "
+                                 "it for the count — which is why a wrong value here is a "
+                                 "sentence about the stakeholder that nothing else contradicts")
+                self.check_timestamp(path, row.line, "waiting.observed", row.observed,
+                                     "observed")
+                if previous is not None and row.observed < previous.observed:
+                    self.report.error(path, row.line, "waiting.observed.order",
+                                      f"observed {row.observed} is before the row above "
+                                      f"({previous.observed})",
+                                      hint="the log is append-only and time runs forwards in it")
+                if not DIGEST_RE.match(row.inbound):
+                    self.report.error(path, row.line, "waiting.inbound",
+                                      f"inbound is {row.inbound!r}; expected 8 lowercase hex "
+                                      f"characters",
+                                      hint="it is the digest of the inbound state, and the "
+                                           "count is the trailing run of equal digests "
+                                           "(spec/workspace-layout.md §1.4)")
+                if not row.surfaced:
+                    self.report.error(path, row.line, "waiting.surfaced.empty",
+                                      "surfaced is empty",
+                                      hint="a halt requires an open ask, so a row with nothing "
+                                           "surfaced records a halt that could not have "
+                                           "happened (spec/ids-and-statuses.md §3.5a)")
+                for reference in row.surfaced:
+                    if not SURFACED_RE.match(reference):
+                        self.report.error(path, row.line, "waiting.surfaced",
+                                          f"surfaced entry {reference!r} is not <ITEM>/<Q-ID>")
+                previous = row
+
     def apply_pending_move(self) -> None:
         """Downgrade findings a pending transition resolves, and say that it happened."""
         if not self.resolving:
@@ -1479,6 +1627,7 @@ class Validator:
         self.check_docs()
         self.check_board()
         self.check_requests()
+        self.check_waiting_logs()
         self.check_claim_citations()
         self.apply_pending_move()
         self.report.note(f"checked {len(self.workspace.items)} item(s), "

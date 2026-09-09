@@ -1,4 +1,4 @@
-# Contract — review-close v0.8.0
+# Contract — review-close v0.9.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -22,8 +22,9 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 | `tracker/items/{{item.id}}/history.md` | yes | a gap in the chain means a status changed outside a skill |
 | `the diff of {{item.branch}} against {{trunk}}` | yes | the review judges the change, not the description of it |
 | `docs/architecture/adr/` | no | the change must not silently contradict a recorded decision, and D13 asks whether the plan's binding-adrs named every ADR this change engages |
-| `every Engagement state section in docs/` | no | at an ending they are all restated, from the ending being recorded, after the sign-off answer arrives |
-| `scripts/engagement-state {{item.id}}` | no | on an epic, whether the engagement is at rest - the same function the termination gate reads, so the two cannot disagree |
+| `every Engagement state section in docs/` | no | at an ending they are all restated, from the ending being recorded, once the ending is determined - at E4 by silence there is no answer to wait for |
+| `scripts/engagement-state {{item.id}}` | no | on an epic, whether the engagement is at rest or abandoned - the same function the termination gate reads, so the two cannot disagree |
+| `tracker/waiting/{{item.id}}.md` | no | at E4 by silence, the halts the ending statement reports - how many rounds, what was surfaced on each, and the first round's timestamp. Read only; a reader that recorded would advance the clock by consulting it |
 
 ## Outputs
 
@@ -35,6 +36,8 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 | `docs/ - a correction inside this item's invalidation set at an item close, and at an ending every Engagement state section, restated` | file | conditional |
 | `tracker/items/EP-###/item.md` | file | conditional |
 | `tracker/items/EP-###/questions/Q-###.md` | file | conditional |
+| `tracker/items/*/questions/Q-###.md - at E4 by silence, every question still open in the engagement closed as abandoned with an EMPTY Answer` | file | conditional |
+| `tracker/items/*/item.md - at E4 by silence, every orphan moved to blocked with no outcome at all` | file | conditional |
 | `tracker/items/BUG-####/` | file | conditional |
 | `tracker/items/{{item.id}}/journal.md` | append | always |
 | `tracker/items/{{item.id}}/history.md` | append | always |
@@ -69,10 +72,11 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] Any true-but-unsourced claim found in a standing ADR was repaired through its append-only Corrections section rather than left as an accepted gap (doc-header.md section 4b).
 - [ ] D7 was confirmed against the plan's invalidation set, not rediscovered - every entry carries a disposition, every entry disposed to-update was updated with a version bump and a change-log row, and the answer to did this change falsify a document the set does not name is recorded with what was read to reach it.
 - [ ] The plan's binding-adrs list is complete - the change engages no ADR the list does not name, and each listed ADR already carries verify's conformance verdict (spec/dor-dod.md D13).
-- [ ] At an ending, every Engagement state section in the workspace was restated after the sign-off answer arrived; at an item close, none was touched (spec/doc-header.md section 4a).
+- [ ] At an ending, every Engagement state section in the workspace was restated after the ending was determined - which at E1 to E3 is when the sign-off answer arrived and at E4 by silence is when the threshold was reached, because no answer arrives there; at an item close, none was touched (spec/doc-header.md section 4a, ADR-0010 section 4.3 as amended by ADR-0011).
 - [ ] review.md states what was examined, not only the verdict.
 - [ ] The branch is merged into the trunk and the item is done with an outcome recorded.
 - [ ] If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
+- [ ] If scripts/engagement-state reported abandoned, the ending recorded is E4 by silence - every orphan at blocked with a reason beginning "orphaned by E4:" and NO outcome, every question still open closed as abandoned with an EMPTY Answer, and the Ending statement written into review.md and mirrored in the epic's Notes.
 - [ ] An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.
 - [ ] The journal entry and the history row for this execution are written.
 

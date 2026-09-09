@@ -46,13 +46,55 @@ action.
    them: every other one — questions, answers, sign-off — begins with a skill asking (F-021,
    `spec/request.md` §1).
 
-3. **Surface questions addressed to the human.** Read every `tracker/items/*/questions/*.md`. If
-   any has `addressed-to: human` and `status: open`, print it — the item, the question ID, the
-   question text, and the options considered — and **stop the loop**. There is nothing else you
-   may legitimately do: the pipeline is waiting on a person.
+3. **Surface questions addressed to the human — and count the halt.** Read every
+   `tracker/items/*/questions/*.md`. If any has `addressed-to: human` and `status: open`, the
+   pipeline is waiting on a person. Do these four things, in this order:
 
-   Print the question in full, not a pointer to it. The human returning to this session should
-   be able to answer without opening a file.
+   **(a) Record the halt, first, before you read anything else.**
+
+   ```
+   scripts/record-halt
+   ```
+
+   This is the `silence-is-recorded` gate. It appends exactly one row — and nothing else — to
+   `tracker/waiting/<EP-ID>.md` for every epic this halt is against, carrying the moment, the
+   digest of everything the stakeholder could have changed, and the questions surfaced. A pass
+   that does not halt writes nothing and exits 0, so you may run it on every pass.
+
+   The order is not a preference. The halt is a fact about the pass being taken *now*: a pass
+   that read the count first would decide on a picture that excludes itself, and the pass that
+   declares an abandonment — a halt like any other, since the pipeline did come to the person and
+   get nothing — would go unrecorded. Recording first is also what makes the arithmetic legible:
+   on the declaring pass the count **equals** the threshold, rather than exceeding it by the one
+   row nobody wrote.
+
+   **(b) Ask for each engagement's verdict.** For every epic not already ended:
+
+   ```
+   scripts/engagement-state <EP-ID>
+   ```
+
+   **(c) If any reports `abandoned` — dispatch `review-close` on that epic and stop.** The
+   threshold has been reached: the pipeline has come to this person that many times and nothing
+   they could have changed has changed. The ending is E4 by silence and `review-close` declares
+   it. Quote the verdict line in your report.
+
+   You are not deciding that anyone is gone. The script counts, and its count comes from an
+   append-only log you wrote a row to a moment ago; the declaration is `review-close`'s. The
+   prohibition below — *never decide for yourself that an engagement is over* — covers this one
+   word for word.
+
+   **(d) Otherwise, surface every human-addressed question and stop.** Print each in full — the
+   item, the question ID, the question text, and the options considered — not a pointer to it.
+   The human returning to this session should be able to answer without opening a file. From the
+   second round, say where the count stands: *"round 2 of 3; at 3 this engagement is declared
+   abandoned and closed as dropped."* `scripts/record-halt` prints that line; pass it on. It is a
+   line in a report the person is already being shown, not a new artifact and not a new channel.
+
+   **File no reminder question.** Filing another question addressed to someone who is not reading
+   questions creates a second thing that will never be answered — and, since our own writes do
+   not reset the count, changes nothing about the outcome. It would be activity mistaken for
+   escalation.
 
 4. **Dispatch `answer-questions`.** Else, if any question has `addressed-to: architect` and
    `status: open`, dispatch `answer-questions` on the item owning the **oldest** such question
@@ -93,6 +135,10 @@ action.
    This step terminates. Both of `review-close`'s moves from `open` — to `awaiting-answer` to
    ask, and to `done` or `blocked` to record the ending — leave `open`, so the epic cannot be
    dispatched here twice for the same reason.
+
+   **Abandonment is not reached here.** It is declared at step 3, where the halt is. An
+   engagement nobody is answering never reaches rest, so a mechanism built on rest could not see
+   it at all.
 
 7. **Have an ended engagement read itself.** Else, for each epic still without a retrospective,
    run the same command again and read the verdict:
@@ -137,8 +183,13 @@ action.
 - **Never invent a status-to-skill mapping.** It comes from `pipeline.yaml`. If a status has no
   owner there and is not terminal, that is a defect in the pipeline — report it as one rather
   than picking a plausible skill.
-- **Never decide for yourself that an engagement is over, or that it is finished with.** Steps 6
-  and 7 are a script's verdicts, not yours. Reading the board and concluding "this looks
+- **Never write into an item.** The one thing you write besides the board is a row on
+  `tracker/waiting/<EP-ID>.md`, through `scripts/record-halt`, and that is a record *of* the pass
+  rather than the pass's action — the same category as regenerating the board. It carries an
+  observation and no conclusion. Do not edit that file by hand, ever: it is append-only, and the
+  count an ending rests on is derived from it.
+- **Never decide for yourself that an engagement is over, or that it is finished with.** Steps 3,
+  6 and 7 are a script's verdicts, not yours. Reading the board and concluding "this looks
   finished" is engineering judgement in the one place in the system that must have none — and
   `ended` and `closed` are different verdicts for the same reason: one of them still owes a
   retrospective.
@@ -173,14 +224,16 @@ is the first thing to read when the pipeline picked something surprising.
 
 1. Did you apply any criterion that is not in `pipeline.yaml`'s `runnable` list or
    `selection_key`?
-2. If you stopped without dispatching: did you run `scripts/engagement-state` for **every** epic,
+2. If you halted on the human: did `scripts/record-halt` run **before** you read any verdict, and
+   is its round count in your report?
+3. If you stopped without dispatching: did you run `scripts/engagement-state` for **every** epic,
    not only the ones at `open`, and is its verdict in your report? Stopping on an engagement that
    is at rest without ending it, or on one that has ended without having it read itself, are the
    two failures steps 6 and 7 exist for.
-3. Can you state, for every candidate you rejected, which key value eliminated it?
-4. Did you read the contents of any artifact for anything other than the fields you need
+4. Can you state, for every candidate you rejected, which key value eliminated it?
+5. Did you read the contents of any artifact for anything other than the fields you need
    (status, priority, dependencies, question metadata)?
-5. Did you dispatch exactly one thing, or none?
+6. Did you dispatch exactly one thing, or none?
 
 **The two ways this skill goes wrong:**
 
@@ -202,7 +255,11 @@ is the first thing to read when the pipeline picked something surprising.
   attempt repairs; you do not know what the artifacts mean.
 - **A status has no owner and is not terminal:** report it as a pipeline defect, naming the
   status and the items in it. Do not guess a skill.
-- **Every item is `awaiting-answer` on human-addressed questions:** that is step 2's outcome —
-  surface them all and stop.
+- **Every item is `awaiting-answer` on human-addressed questions:** that is step 3's outcome —
+  record the halt, ask for each verdict, and either dispatch `review-close` on an engagement the
+  script calls `abandoned` or surface them all and stop.
+- **`scripts/record-halt` fails:** report its output and stop without surfacing. A halt that is
+  shown to a person and not recorded is a round that never happened as far as any later reading
+  is concerned, and the ending an unanswered ask eventually reaches is derived from that record.
 - **The board cannot be regenerated:** report the error and stop. A stale board is a lie about
   the state, and the state is the only thing you are for.

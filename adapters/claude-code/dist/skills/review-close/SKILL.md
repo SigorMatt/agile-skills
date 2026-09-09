@@ -1,10 +1,10 @@
 ---
 name: review-close
-description: "Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons. Use when: An item sits at status in-review after verification passed; A change is ready to merge and needs a Definition of Done check first; An engagement has reached rest - every child stopped, nothing open - and the epic must be ended through the stakeholder; Someone asks to \"review\", \"close\", \"merge\", \"sign off\", or \"wrap up\" a tracked item or an epic. Part of the agile-skills pipeline (persona: reviewer)."
+description: "Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons. Use when: An item sits at status in-review after verification passed; A change is ready to merge and needs a Definition of Done check first; An engagement has reached rest - every child stopped, nothing open - and the epic must be ended through the stakeholder; scripts/engagement-state reports abandoned on an epic - the stakeholder has not answered for the threshold number of silent rounds and the ending is E4 by silence; Someone asks to \"review\", \"close\", \"merge\", \"sign off\", or \"wrap up\" a tracked item or an epic. Part of the agile-skills pipeline (persona: reviewer)."
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.8.0
+  methodology-version: 0.9.0
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -250,38 +250,39 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     reads, so you and the gate cannot disagree about whether there is anything left to do
     (`spec/ids-and-statuses.md` §3.5).
 
+    **`abandoned` means something else, and it is below**, under *the ending nobody answers*.
+    Read that branch first if the verdict is `abandoned`: an engagement nobody is answering never
+    reaches rest, so none of the at-rest procedure applies to it.
+
     **If it is at rest and no sign-off has been filed since rest was reached — ask.** File a
     `kind: sign-off` question on the **epic** (`spec/question.md` §2):
 
-    - `## Context` restates the goal in the stakeholder's own words, from the epic's `## Goal`
-      and the vision — not in the tracker's vocabulary.
+    - `## Context` restates the goal in the stakeholder's own words, from the epic's `## Goal` and
+      the vision — not in the tracker's vocabulary.
     - `## Question` **names every child item by ID**, each marked delivered or not delivered with
       one line of why, and then asks plainly whether they accept the engagement as it stands. A
       bug you filed and nobody fixed is a child, so it goes in the list. The gate checks the
       naming, because "list what was not delivered" cannot be checked and "name every child" can.
     - `## Options considered` offers the real choices: accept as complete; accept with named
-      follow-up items; do not accept, and say what is missing. Options first; the recommendation
-      last and marked as the team's preference, never above them (F-063).
+      follow-ups; do not accept, and say what is missing. Options first, the recommendation last
+      and marked as the team's preference, never above them (F-063).
     - **DE8: has anyone ever asked them an open question?** `check-epic-signoff` requires one
       `kind: elicitation` question in the engagement — the one that is not about our agenda. If
-      `intake` filed it, you have nothing to do. If nobody did, file it now, alongside the
+      `intake` filed it, you have nothing to do; if nobody did, file it now alongside the
       sign-off, non-blocking and addressed to `human`: *"What else matters to you here that we
-      never asked about?"* Asked at the ending it is close to a formality, and the record shows
-      that is when it was asked; asked at intake it changes the work. It exists because a
-      stakeholder held two real requirements through an entire engagement and mentioned them only
-      in a closing note (F-064).
+      never asked about?"* Asked at the ending it is close to a formality and the record shows
+      that is when it was asked; asked at intake it changes the work (F-064).
 
-    Then transition the **epic** to `awaiting-answer` with `resume-to: open`, and stop. You are
-    not stalling; you are at the one gate in this pipeline that belongs to a person.
+    Then transition the **epic** to `awaiting-answer` with `resume-to: open` and stop — not
+    stalling, but standing at the one gate in this pipeline that belongs to a person.
 
     **Before you record any ending, check the stakeholder's answers against each other.** The
     sign-off's own answer is a recorded human answer like any other, and the conditions people
-    attach to a sign-off are exactly where a contradiction with something they said at
-    refinement surfaces. Write the `## Cross-answer check` on it, and if it conflicts with an
-    earlier answer, quote both by ID and ask which wins rather than harmonising the documents
-    around the newer one (`meta/adr/ADR-0008-cross-answer-consistency.md`;
-    `scripts/lint-answers` is a hard gate here). One extra round trip at the ending is cheaper
-    than ending on a record the stakeholder would not recognise as theirs.
+    attach to a sign-off are exactly where a contradiction with something said at refinement
+    surfaces. Write the `## Cross-answer check` on it, and where it conflicts with an earlier
+    answer, quote both by ID and ask which wins rather than harmonising the documents around the
+    newer one (`meta/adr/ADR-0008-cross-answer-consistency.md`; `scripts/lint-answers` is a hard
+    gate here). One extra round trip is cheaper than ending on a record they would not recognise.
 
     **When the reply is in the file, restate the engagement's own sentences — first.** Some
     sentences in `docs/` are about the **engagement** rather than the product: *"the stakeholder
@@ -291,19 +292,17 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     rather than a matter of reading everything (`spec/doc-header.md` §4a), and every one of them
     is yours at this moment and at no other.
 
-    - Enumerate the sections. Every document under `docs/` that has one.
-    - Restate **all of them** from the ending you are recording — not the ones you noticed were
-      wrong. A section you read and found still true is restated as still true, and it is listed.
-    - Do it **after** the sign-off answer has arrived, never before. Their answer is itself part
-      of the engagement's state, and a restatement written before it is a statement about an
-      engagement that had not finished.
+    - Enumerate the sections: every document under `docs/` that has one.
+    - Restate **all of them** from the ending you are recording — not only the ones you noticed
+      were wrong. One you read and found still true is restated as still true, and it is listed.
+    - Do it **after** the ending is determined, never before — at E1 to E3 that is once the
+      sign-off answer has arrived, since their answer is itself part of the engagement's state.
     - Record the list, and each restatement, under `## Sections restated at the ending` in
       `review.md`.
 
-    In the run this rule comes from, the vision said the stakeholder had not yet been asked. The
+    In the run this rule comes from, the vision said the stakeholder had not yet been asked; the
     pipeline's own closing turn made that false, and the execution that noticed it recorded that
-    *"there was no send-back available that would not have been a fiction"* — because the sentence
-    belonged to no item, and no item could ever have fixed it (F-093).
+    *"there was no send-back available that would not have been a fiction"* (F-093).
 
     **If the reply is already in the file — record the ending.** Apply the epic Definition of
     Done (`spec/dor-dod.md` §4) criterion by criterion, then take exactly one of the four
@@ -318,10 +317,52 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 
     A "no" ends the engagement as legitimately as a "yes"; what is not allowed is ending while
     never having asked. Closing over an undelivered child is legal and closing over one while
-    calling the outcome `delivered` is not — the validator refuses it, and it should.
+    calling the outcome `delivered` is not — the validator refuses it, and it should. This is the
+    only moment in the pipeline where every sibling's state is already in hand, which is why
+    ending an engagement lives here.
 
-    This is the only moment in the pipeline where every sibling's state is already in hand,
-    which is why ending an engagement lives here.
+    ### The ending nobody answers — E4 by silence
+
+    **When `scripts/engagement-state <EP-ID>` reports `abandoned`**, the pipeline halted on this
+    person `termination.silence.threshold_rounds` times running and nothing they could have
+    changed changed. Read `tracker/waiting/<EP-ID>.md` — the count is the trailing run of equal
+    `inbound` digests there, and the statement below reports what is in it. You are the only
+    skill that may declare this ending, and you may declare it for no other reason. The rules are
+    `spec/ids-and-statuses.md` §3.5a; this is the order of work.
+
+    1. **Classify every child by status alone** — §3.5a's five classes, never by reading the
+       work. The orphaned-in-flight/never-started split is the only thing in the record that says
+       where the work actually stopped.
+    2. **Every orphan moves to `blocked` before the epic closes**, reason beginning
+       `orphaned by E4:`; one suspended at `awaiting-answer` moves by the row that exists for
+       exactly this (`awaiting-answer → blocked`, actor `review-close`). **An orphan takes no
+       `outcome` at all** — `outcome` is present if and only if the item is `done`, so one at
+       `blocked` is invalid and pushing the item to `done` to carry it claims the work concluded
+       when what happened is that it stopped. `blocked` keeps the work resumable, which under an
+       ending that may be wrong about a person is the right thing to be.
+    3. **Every question still `open` closes as `abandoned`** (`spec/question.md` §2): `## Answer`
+       **empty**, because the emptiness is the evidence and anything written there is the fiction
+       the status exists to prevent; `## Consequences` naming the ending, the count and
+       threshold, the epic, and the item's class; `answered-at`/`answered-by` unset. One already
+       `answered` or `deferred` is untouched; one left `open` halts the whole workspace for ever
+       at `next` step 3.
+    4. **Write `## Ending statement` in the epic's `artifacts/review.md`, mirrored in its
+       `## Notes`** — the sign-off's content as a document, nobody being there to address: the
+       goal in their own terms, **every child by ID** with its class (what the gate reads, and
+       what makes it checkable — F-046), the silence itself from the log, each success measure.
+       **File no sign-off now**: one filed and closed in a single execution, addressed to someone
+       known to be absent, is a fiction wearing the protocol's clothes, and their route back is
+       `tracker/requests/`.
+    5. **Restate every `## Engagement state` section** (DE4) — triggered *after the ending is
+       determined*, no answer being on its way — then walk the epic Definition of Done. DE7 and
+       DE8 take their E4 form, *asked, and the ask stood unanswered for the threshold*, so an
+       ending at which nobody was ever asked is still refused. The cross-answer check records
+       `none — this ending consumed no human answer`.
+    6. **Move the epic**: `open → done`, or `awaiting-answer → done` where the sign-off was filed
+       before the silence began; `outcome: dropped`; reason `E4 abandoned: 3 silent rounds,
+       threshold 3`. Whether the person is actually gone is the one thing no program and no
+       reader can decide, so record that we asked, that nothing came, and how many times — and
+       nothing whatever about why.
 
 11. **Journal and transition, in one command** (`--journal-body-file`; see Journaling).
 

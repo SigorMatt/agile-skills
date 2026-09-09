@@ -1,5 +1,5 @@
 name: review-close
-version: 0.8.0
+version: 0.9.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -7,6 +7,7 @@ when_to_use:
   - An item sits at status in-review after verification passed.
   - A change is ready to merge and needs a Definition of Done check first.
   - An engagement has reached rest - every child stopped, nothing open - and the epic must be ended through the stakeholder.
+  - scripts/engagement-state reports abandoned on an epic - the stakeholder has not answered for the threshold number of silent rounds and the ending is E4 by silence.
   - Someone asks to "review", "close", "merge", "sign off", or "wrap up" a tracked item or an epic.
 
 dispatch:
@@ -42,10 +43,13 @@ inputs:
     why: the change must not silently contradict a recorded decision, and D13 asks whether the plan's binding-adrs named every ADR this change engages
   - path: "every Engagement state section in docs/"
     required: false
-    why: at an ending they are all restated, from the ending being recorded, after the sign-off answer arrives
+    why: at an ending they are all restated, from the ending being recorded, once the ending is determined - at E4 by silence there is no answer to wait for
   - path: "scripts/engagement-state {{item.id}}"
     required: false
-    why: on an epic, whether the engagement is at rest - the same function the termination gate reads, so the two cannot disagree
+    why: on an epic, whether the engagement is at rest or abandoned - the same function the termination gate reads, so the two cannot disagree
+  - path: tracker/waiting/{{item.id}}.md
+    required: false
+    why: at E4 by silence, the halts the ending statement reports - how many rounds, what was surfaced on each, and the first round's timestamp. Read only; a reader that recorded would advance the clock by consulting it
 
 outputs:
   - path: tracker/items/{{item.id}}/artifacts/review.md
@@ -64,6 +68,12 @@ outputs:
     kind: file
     when: conditional
   - path: tracker/items/EP-###/questions/Q-###.md
+    kind: file
+    when: conditional
+  - path: "tracker/items/*/questions/Q-###.md - at E4 by silence, every question still open in the engagement closed as abandoned with an EMPTY Answer"
+    kind: file
+    when: conditional
+  - path: "tracker/items/*/item.md - at E4 by silence, every orphan moved to blocked with no outcome at all"
     kind: file
     when: conditional
   - path: tracker/items/BUG-####/
@@ -130,7 +140,7 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: epic-sign-off
-    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied - and until they have been asked, at least once, one open question that was not about our agenda.
+    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied - or, at E4 by silence, until the ask stood unanswered for the threshold and the Ending statement in review.md names every child. Ending while never having asked stays illegal in both forms.
     command: scripts/check-epic-signoff {{item.id}}
     expect: exit-zero
     enforcement: hard
@@ -147,10 +157,11 @@ exit_criteria:
   - Any true-but-unsourced claim found in a standing ADR was repaired through its append-only Corrections section rather than left as an accepted gap (doc-header.md section 4b).
   - D7 was confirmed against the plan's invalidation set, not rediscovered - every entry carries a disposition, every entry disposed to-update was updated with a version bump and a change-log row, and the answer to did this change falsify a document the set does not name is recorded with what was read to reach it.
   - The plan's binding-adrs list is complete - the change engages no ADR the list does not name, and each listed ADR already carries verify's conformance verdict (spec/dor-dod.md D13).
-  - At an ending, every Engagement state section in the workspace was restated after the sign-off answer arrived; at an item close, none was touched (spec/doc-header.md section 4a).
+  - At an ending, every Engagement state section in the workspace was restated after the ending was determined - which at E1 to E3 is when the sign-off answer arrived and at E4 by silence is when the threshold was reached, because no answer arrives there; at an item close, none was touched (spec/doc-header.md section 4a, ADR-0010 section 4.3 as amended by ADR-0011).
   - review.md states what was examined, not only the verdict.
   - The branch is merged into the trunk and the item is done with an outcome recorded.
   - If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
+  - If scripts/engagement-state reported abandoned, the ending recorded is E4 by silence - every orphan at blocked with a reason beginning "orphaned by E4:" and NO outcome, every question still open closed as abandoned with an EMPTY Answer, and the Ending statement written into review.md and mirrored in the epic's Notes.
   - An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.
   - The journal entry and the history row for this execution are written.
 

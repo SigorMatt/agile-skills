@@ -59,6 +59,10 @@ journal.timestamp.future
 journal.timestamp.outside-activity
 journal.version.impossible
 project.conventions.commit-subject
+question.abandoned.addressed
+question.abandoned.answer
+question.abandoned.consequences
+question.abandoned.reply-field
 question.answered.field
 question.blocking.not-suspended
 question.consequences.files
@@ -80,3 +84,14 @@ request.handled.section
 request.id.mismatch
 request.section.empty
 request.status
+waiting.epic.dangling
+waiting.filename
+waiting.inbound
+waiting.observed
+waiting.observed.order
+waiting.preamble
+waiting.round
+waiting.round.inconsistent
+waiting.rows.none
+waiting.surfaced
+waiting.surfaced.empty

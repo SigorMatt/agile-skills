@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""Record that the pipeline came to the stakeholder and got nothing back.
+
+Usage: scripts/record-halt [--root .] [--pipeline <path>] [EP-ID ...]
+
+`next` runs this at orchestrator step 3, **before** it reads any engagement's state, as the
+`silence-is-recorded` gate — the way `board-current` runs `scripts/board-gen`. It appends
+**exactly one row and nothing else** to `tracker/waiting/<EP-ID>.md` for every epic the halt is
+against, then prints the round count and the threshold for each (`spec/workspace-layout.md`
+§1.4, `spec/ids-and-statuses.md` §3.5a).
+
+An epic **the halt is against** is one that is not already ended — its status is not `done` or
+`blocked` — and whose engagement holds at least one question with `addressed-to: human` and
+`status: open`. That set is exactly the condition under which step 3 halts, so a pass that did
+not stop on the human records nothing and exits 0: a pass that did not halt is not a round.
+
+Why this is a script of its own, and not a mode of `engagement-state`: **the reader never
+writes**. `engagement-state`, `check-epic-signoff` and `review-close` all read the count, and if
+the program that computes it were also the program that records, each of them would advance the
+clock by consulting it. Keeping the write in a separate entry point makes that structural rather
+than a matter of which flag someone passed (ADR-0011 §1.2, and its rejected alternative).
+
+Recording before reading is the only order that works. The halt is a fact about the pass being
+taken now: a pass that read the count first would decide on a picture that excludes itself, and
+the declaring pass — a halt like any other, since the pipeline did come to the human and get
+nothing — would go unrecorded. It also makes the arithmetic legible, because on the pass that
+declares, the trailing count **equals** the threshold rather than exceeding it by the one row
+nobody wrote.
+
+This program decides nothing. It observes, and it writes the observation down; the verdict is
+`scripts/engagement-state`'s and the declaration is `review-close`'s.
+
+Exit codes: 0 the halt was recorded (or there was no halt to record), 1 the threshold is
+unreadable, 2 a usage error.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import engagement as engagement_lib  # noqa: E402
+from workspace import Workspace, resolve_root  # noqa: E402
+
+ENDED_STATUSES = ("done", "blocked")
+
+
+def halted_epics(workspace, wanted) -> list:
+    """The epics this halt is against, ascending."""
+    found = []
+    for epic in sorted(workspace.epics(), key=lambda item: item.identifier):
+        if wanted and epic.identifier not in wanted:
+            continue
+        if epic.status in ENDED_STATUSES:
+            continue
+        if not engagement_lib.surfaced_questions(workspace, epic):
+            continue
+        found.append(epic)
+    return found
+
+
+def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
+    positional, options = [], {}
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token.startswith("--"):
+            if index + 1 >= len(argv):
+                print(f"record-halt: {token} needs a value", file=sys.stderr)
+                return 2
+            options[token[2:]] = argv[index + 1]
+            index += 2
+            continue
+        positional.append(token)
+        index += 1
+
+    root = resolve_root(options.get("root"), tool="record-halt")
+    workspace = Workspace(root).load()
+
+    for identifier in positional:
+        if identifier not in workspace.items:
+            print(f"record-halt: {identifier} is not an item in {root}", file=sys.stderr)
+            return 2
+        if workspace.items[identifier].type != "epic":
+            print(f"record-halt: {identifier} is a "
+                  f"{workspace.items[identifier].type!r}; a halt is recorded against an "
+                  f"engagement, which is an epic", file=sys.stderr)
+            return 2
+
+    try:
+        threshold = engagement_lib.threshold_rounds(options.get("pipeline"))
+    except engagement_lib.SilenceConfigError as exc:
+        print(f"record-halt: {exc}", file=sys.stderr)
+        return 1
+
+    epics = halted_epics(workspace, set(positional))
+    if not epics:
+        print("record-halt: no epic is halted on the human; nothing recorded")
+        return 0
+
+    observed = engagement_lib.utc_now()
+    for epic in epics:
+        digest = engagement_lib.inbound_digest(workspace, epic)
+        surfaced = engagement_lib.surfaced_questions(workspace, epic)
+        engagement_lib.append_halt(root, epic.identifier, observed, digest, surfaced)
+        count = engagement_lib.silent_rounds(
+            engagement_lib.read_waiting_log(root, epic.identifier))
+        line = (f"record-halt: {epic.identifier} round {count} of {threshold} "
+                f"(inbound {digest}; surfaced {', '.join(surfaced)})")
+        if count >= threshold:
+            line += (f"\n  the threshold is reached: scripts/engagement-state "
+                     f"{epic.identifier} now reports 'abandoned', and review-close declares "
+                     f"E4 by silence")
+        print(line)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

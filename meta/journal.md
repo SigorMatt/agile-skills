@@ -5025,3 +5025,100 @@ recall is a reading, not a number, and the report says which.
   §1/§1.1; revision 5), `methodology/pipeline.yaml` 0.7.0 → **0.8.0**,
   `meta/adr/ADR-0006-termination-model.md` (header pointer only), `adapters/claude-code/dist/`,
   `meta/journal.md`.
+
+## 2026-09-10 — META-151b — the E4 mechanism, part 2: the programs that read and write the silence
+
+- **Unit:** META-151b
+- **Inputs read:** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` in full (§1, §2, §5,
+  §7 and the enforcement boundary are the authority for this unit); `spec/workspace-layout.md`
+  §1–§2 with §1.4 as the format of record; `spec/ids-and-statuses.md` §3.4, §3.5, §3.5a, §4;
+  `spec/question.md` §2 and §3; `spec/dor-dod.md` DE4/DE7/DE8; `methodology/pipeline.yaml` in
+  full; `scripts/lib/engagement.py`, `scripts/lib/record.py`, `scripts/lib/workspace.py`,
+  `scripts/engagement-state`, `scripts/check-epic-signoff`, `scripts/validate-workspace`,
+  `scripts/workspace-init`, `scripts/board-gen` (the gate-command precedent), `scripts/lint-skills`
+  (`check_rule_obligations`), `scripts/check` (`PIPELINE_FAULTS`, `check_obligation_binding`,
+  `check_termination`, `check_derived_model`, `check_process_gate_names`),
+  `methodology/skills/next/` and `methodology/skills/review-close/` in full, and
+  `fixtures/broken-workspace/EXPECTED-CODES.txt`. **Iteration 5's probe was not opened.**
+- **Decisions:**
+  - **The waiting-log writer is a new script, `scripts/record-halt`, not a mode of
+    `engagement-state`.** ADR-0011 §1.2 says the reader never writes, and a `--record` flag on the
+    reader would make that a matter of which flag a caller passed rather than a property of the
+    system: `check-epic-signoff` and `review-close` both read the count, so a recording reader
+    advances the clock by being consulted. Keeping the write in its own entry point makes the
+    separation structural. It follows `board-gen`'s precedent exactly — a small program the skill
+    runs as a gate command — and `next`'s new `silence-is-recorded` gate is `scripts/record-halt`
+    with no arguments. It records **only** where a halt exists, which is exactly the condition
+    under which step 3 stops, so a pass that dispatched an item writes nothing and exits 0 and the
+    gate can run on every pass. Proved by execution: the reset case runs `record-halt` after an
+    answer arrives and the count restarts at 1 without anyone resetting anything.
+  - **The registry grew a shape rather than the truth bending to it — obligation 5 is now
+    registered.** META-151 left `epic.closed-with-active-children` unregistered because the
+    registry keyed one `(from, to, actor)` triple and many moves satisfy that rule. The fix is not
+    a set of triples for its own sake: an entry may now name a **class** of move —
+    `from: any-non-terminal`, `to: terminal`, `actor: review-close` — and enumerate under
+    `satisfied_by` the concrete `(from, to)` pairs that deliver it, and `lint-skills` checks
+    **coverage**: for every declared item type, every status in the `from` class must have a
+    listed pair leaving it for the `to` class, provided by a row whose actor is the entry's actor
+    or `any`. The classes are read off the statuses table's own `terminal`/`suspendable` flags, so
+    nothing is hard-coded and the classes cannot drift from the table they describe.
+    Pinning the **actor** is what makes it bite: `awaiting-answer → blocked` existed all along for
+    `answer-questions`, and a check that ignored the actor would have called the status covered
+    while an orphan sat there with no move `review-close` could make. That is the hole ADR-0011
+    found by derivation, and it is now found by a program — `scripts/check` step 11 injects the
+    actor change and requires `obligation.unsatisfiable` back, on both item types.
+    `validate-workspace` now reads that entry for the rule's scope, so dropping it fails the build
+    (step 12's bargain, extended to a third rule).
+  - **All three consumers read `threshold_rounds` from `pipeline.yaml`, and the check moves the
+    value.** `scripts/lib/engagement.py`'s `threshold_rounds()` is the only implementation and it
+    has **no fallback**: a missing or non-positive value raises rather than defaulting, because a
+    consumer carrying its own default is a second opinion about when a stakeholder is gone.
+    `record-halt`, `engagement-state` and `check-epic-signoff` all take `--pipeline`, which is what
+    lets the new step 14b change 3 to 5 over one unchanged workspace and require each of the three
+    to change its mind. Proved non-vacuous by stubbing `threshold_rounds()` to `return 3`: all
+    three consumers were named in the failure.
+  - **`check-epic-signoff` gains a second accepting branch, not a relaxation.** The E4 path is
+    reached only when no sign-off carries a reply — a stakeholder who replied is not absent — and
+    it requires all of: the trailing run at or past the threshold; an ask that went unanswered
+    (`open` or `abandoned`, addressed to `human`), so *ending while never having asked* stays
+    illegal; no sign-off left `open`; and `## Ending statement` in the epic's `review.md` naming
+    every child by ID, which is F-046's containment check moved to the document that replaces the
+    question. DE8 accepts an elicitation that is itself `abandoned` with an empty `## Answer`, and
+    only on that path.
+  - **The validator checks the log's shape and the abandoned question's, and nothing about the
+    ending.** Eleven waiting-log codes and four `question.abandoned.*` codes. A rule tying an
+    abandoned question to its epic's ending was **considered and refused**: `review-close` closes
+    the questions before it moves the epic, and `transition` validates before the move, so the
+    rule would fail correct work — F-014's shape. ADR-0011's obligation 8 says *shape*, and shape
+    is what is checked. The `round` column is checked for consistency with the digests even though
+    no program reads it for the count: a column nobody verifies quietly starts lying, and here it
+    would lie about how long somebody has been silent.
+  - **`review-close`'s procedure had to be cut to fit, and what was cut was reference.** The
+    rendered `SKILL.md` body limit is 500 lines and the E4 branch first came in at 104. What went
+    is the material already in `spec/ids-and-statuses.md` §3.5a — the five-class table reproduced
+    verbatim, the ending statement's contents as a list — replaced by a citation; what stayed is
+    every rule a reader could get wrong: no `outcome` at all on an orphan, an **empty** `## Answer`
+    on an abandoned question, file no sign-off, and the honesty rule that the record says we asked
+    and nothing came and never says why. Four existing paragraphs elsewhere in the file were
+    tightened by a line or two each; nothing was removed.
+  - **Three spec sentences were underspecified for an implementation and were changed here, in
+    this commit, rather than decided twice.** `spec/workspace-layout.md` §1.4 now says: the request
+    lines cover `*.md` files only (a `.gitkeep` is not a request); the `## Answer` body is hashed
+    with **trailing whitespace stripped and nothing else normalised**, so an absent section and an
+    empty one hash alike; and **which epics a halt is against** — not already ended, and holding at
+    least one open human-addressed question — which nothing had said and every program needed.
+- **Questions raised:** none new. The `next` step 3 / elicitation contradiction (ADR-0011 §6)
+  remains unfiled and is still owed to the findings ledger.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **35 steps**. The must-fail
+  fixture moved **82 → 97 codes**, deliberately: 4 `question.abandoned.*` and 11 `waiting.*`, all
+  new rules and all added to `EXPECTED-CODES.txt` and the fixture README in this commit. Library
+  self-test **290 → 307** cases. `pipeline invariants refuse each injected fault` 7 → **8**.
+  `every shipped script imports` 16 → **17**. `findings citations resolve (49 cited)` unchanged.
+  `harness/`, `fixtures/abandoned-engagement/` and `meta/findings/FINDINGS.md` untouched.
+- **Artifacts:** `scripts/record-halt` (new), `scripts/lib/engagement.py`,
+  `scripts/engagement-state`, `scripts/check-epic-signoff`, `scripts/validate-workspace`,
+  `scripts/workspace-init`, `scripts/lint-skills`, `scripts/lib/selftest.py`, `scripts/check`,
+  `methodology/pipeline.yaml` 0.8.0 → **0.9.0**, `methodology/skills/next/` 0.4.0 → **0.5.0**,
+  `methodology/skills/review-close/` 0.8.0 → **0.9.0**, `spec/workspace-layout.md` (revision 6),
+  `spec/ids-and-statuses.md` (revision 7), `fixtures/broken-workspace/`,
+  `adapters/claude-code/render.py`, `adapters/claude-code/dist/`, `meta/journal.md`.

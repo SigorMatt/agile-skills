@@ -249,6 +249,20 @@ class Linter:
         * `obligation.applies_to.mismatch` — the rule claims item types the transitions do not
           permit (F-050), or the transitions permit item types the rule does not claim, which is
           how a rule silently stops applying to an item type it was written for (F-013).
+
+        **Two shapes, because two shapes of rule exist.** Most status rules name one move: be at
+        `blocked`, and here is the single `(from, to, actor)` that gets you there. One does not.
+        `epic.closed-with-active-children` requires **every child** to be terminal before the
+        epic closes, and a child can be at any of seven statuses, so no single triple is a true
+        statement about it — which is why META-151 registered nothing rather than write a false
+        one. An entry may therefore declare a **class** of move (`from: any-non-terminal`,
+        `to: terminal`) and enumerate under `satisfied_by` the concrete `(from, to)` pairs that
+        deliver it for the actor that must deliver it. The check is then **coverage**: for every
+        item type the rule applies to, every status in the `from` class must have a listed pair
+        that leaves it for the `to` class, made by a row whose actor is the entry's actor or
+        `any`. A status with no such pair is stranded — the rule demands something of an item
+        that nothing may do to it, which is F-050's shape exactly, and it is how the
+        `awaiting-answer` hole this registry now closes was found (ADR-0011 §5).
         """
         item_types = list(self.pipeline.get("item_types") or [])
         rows = self.pipeline.get("transitions") or []
@@ -280,6 +294,10 @@ class Linter:
                 self.report.error(self.pipeline_path, 0, "obligation.shape",
                                   f"{code}: an obligation must record why the rule requires "
                                   f"that status of those item types")
+
+            if entry.get("satisfied_by") is not None:
+                self.check_obligation_coverage(entry, rows, item_types, declared)
+                continue
 
             permitted = set()
             for row in rows:
@@ -315,6 +333,115 @@ class Linter:
                     hint="a rule scoped wider than the moves that satisfy it puts items in a "
                          "state no legal move repairs (F-050); one scoped narrower stops "
                          "applying to an item type it was written for (F-013)")
+
+    def statuses_in_class(self, name: str, item_type: str) -> set:
+        """The statuses a class stands for, for one item type — read, never hard-coded.
+
+        `any-non-terminal` and `terminal` come from the `terminal` flag the statuses table
+        already carries, and `any-suspendable` from `suspendable`, so the classes cannot drift
+        from the table they are about.
+        """
+        applicable = {name_: entry for name_, entry in self.statuses.items()
+                      if item_type in (entry.get("applies_to") or [])}
+        if name == "any-non-terminal":
+            return {key for key, entry in applicable.items() if entry.get("terminal") is False}
+        if name == "terminal":
+            return {key for key, entry in applicable.items() if entry.get("terminal") is True}
+        if name == "any-suspendable":
+            return {key for key, entry in applicable.items()
+                    if entry.get("suspendable") is True}
+        return {name} if name in applicable else set()
+
+    def check_obligation_coverage(self, entry, rows, item_types, declared) -> None:
+        """A rule satisfied by many moves: every status in its `from` class has a way out.
+
+        The registry keyed one `(from, to, actor)` triple until this shape existed, and a rule
+        that many moves satisfy could only be registered by writing a false triple or not
+        registered at all. Neither is acceptable in a table `validate-workspace` reads as scope,
+        so the shape grew rather than the truth bending to it.
+        """
+        code = entry["code"]
+        actor = entry.get("actor")
+        pairs = entry.get("satisfied_by")
+        if not isinstance(pairs, list) or not pairs:
+            self.report.error(self.pipeline_path, 0, "obligation.shape",
+                              f"{code}: satisfied_by must be a non-empty list of from/to pairs")
+            return
+        if not is_str(actor):
+            self.report.error(self.pipeline_path, 0, "obligation.shape",
+                              f"{code}: an obligation satisfied by several moves must name the "
+                              f"actor that has to be able to make them")
+            return
+
+        resolved = []                            # (pair, rows that provide it)
+        permitted = set()
+        for pair in pairs:
+            if not isinstance(pair, dict) or not is_str(pair.get("from")) \
+                    or not is_str(pair.get("to")):
+                self.report.error(self.pipeline_path, 0, "obligation.shape",
+                                  f"{code}: satisfied_by entry is malformed: {pair!r}")
+                return
+            matching = [row for row in rows
+                        if isinstance(row, dict)
+                        and row.get("from") == pair["from"] and row.get("to") == pair["to"]
+                        and row.get("actor") in (actor, "any")]
+            if not matching:
+                self.report.error(
+                    self.pipeline_path, 0, "obligation.unsatisfiable",
+                    f"{code} names {pair['from']} -> {pair['to']} by {actor!r}, and no "
+                    f"transition row provides it",
+                    hint="a rule that names a status an item must be at is enforceable only "
+                         "while some skill may legally move it there (ADR-0006 §2)")
+                continue
+            for row in matching:
+                permitted.update(row.get("applies_to") or item_types)
+            resolved.append((pair, matching))
+
+        if permitted and permitted != set(declared):
+            missing = sorted(set(declared) - permitted)
+            extra = sorted(permitted - set(declared))
+            detail = []
+            if missing:
+                detail.append(f"the rule applies to {', '.join(missing)} and no listed move is "
+                              f"legal for {'it' if len(missing) == 1 else 'them'}")
+            if extra:
+                detail.append(f"the listed moves are legal for {', '.join(extra)} and the rule "
+                              f"does not claim {'it' if len(extra) == 1 else 'them'}")
+            self.report.error(
+                self.pipeline_path, 0, "obligation.applies_to.mismatch",
+                f"{code}: " + "; ".join(detail),
+                hint="a rule scoped wider than the moves that satisfy it puts items in a state "
+                     "no legal move repairs (F-050); one scoped narrower stops applying to an "
+                     "item type it was written for (F-013)")
+
+        # Coverage: every status the rule can find an item at must have a way out of it.
+        for item_type in declared:
+            wanted = self.statuses_in_class(entry.get("from") or "", item_type)
+            targets = self.statuses_in_class(entry.get("to") or "", item_type)
+            if not wanted or not targets:
+                self.report.error(
+                    self.pipeline_path, 0, "obligation.shape",
+                    f"{code}: from {entry.get('from')!r} to {entry.get('to')!r} names no "
+                    f"status of a {item_type}")
+                continue
+            covered = set()
+            for pair, matching in resolved:
+                if pair["to"] not in targets:
+                    continue
+                if not any(item_type in (row.get("applies_to") or item_types)
+                           for row in matching):
+                    continue
+                covered |= self.statuses_in_class(pair["from"], item_type)
+            stranded = sorted(wanted - covered)
+            if stranded:
+                self.report.error(
+                    self.pipeline_path, 0, "obligation.unsatisfiable",
+                    f"{code} requires a {item_type} to reach {entry.get('to')}, and "
+                    f"{', '.join(stranded)} has no listed move out of it by {actor!r}",
+                    hint="the rule then demands of an item something nothing may do to it, "
+                         "which is the state F-050 was filed against — and the state an orphan "
+                         "suspended at awaiting-answer was in until E4 gave review-close a move "
+                         "(ADR-0011 §5)")
 
     def check_skill_registry(self) -> None:
         declared = list(self.pipeline.get("skills") or [])

@@ -21,22 +21,98 @@ is over is precisely how F-045 happened: the gate fired on `open -> done`, an ep
 child never got there, and the run ended with the stakeholder recording that nobody ever asked
 them. Two readings of one rule is one reading too many.
 
+**Silence, and the ending derived from it.** E4 has a second route — the stakeholder who never
+answers at all — and it is counted rather than timed (`spec/ids-and-statuses.md` §3.5a,
+`meta/adr/ADR-0011`). A **silent round** is one orchestrator halt on the human with no *inbound*
+change since the previous halt, where inbound means the two channels that are the stakeholder's:
+a reply written into a question's `## Answer`, and a file under `tracker/requests/`. The halts are
+rows in `tracker/waiting/<EP-ID>.md` (`spec/workspace-layout.md` §1.4) and the count is the
+trailing run of equal `inbound` digests — derived on every read, never stored.
+
+Three consumers read the threshold and this module is the one implementation of all of it: the
+orchestrator (through `scripts/record-halt`, which appends the row), `scripts/engagement-state`
+(which reaches the `abandoned` verdict) and `scripts/check-epic-signoff` (which accepts an ending
+because of it). Any two of them disagreeing about whether the threshold is met is F-045's
+mechanism exactly, so `threshold_rounds()` reads `methodology/pipeline.yaml` and nothing here
+carries a default of its own.
+
+**The reader never writes.** `append_halt()` is called by `scripts/record-halt` and by nothing
+else. `state()` computes the count and appends nothing — were it to record, `check-epic-signoff`
+and `review-close` would each advance the clock by consulting it.
+
 Standard library only (ADR-0002).
 """
 
 from __future__ import annotations
 
+import datetime
+import hashlib
 import os
+
+from record import table_rows
 
 TERMINAL_CHILD_STATUSES = ("done", "blocked")
 RETRO_ARTIFACT = "retro.md"
 DELIVERED_OUTCOMES = ("delivered", "duplicate")
 
+# The engagement's halt log (spec/workspace-layout.md §1.4). Deliberately outside
+# tracker/items/: `next` writes no journal and no item artifact, and this is not the place to
+# start.
+WAITING_DIR = ("tracker", "waiting")
+WAITING_COLUMNS = ("round", "observed", "inbound", "surfaced")
+WAITING_PREAMBLE = ("# Waiting log \u2014 {epic}\n"
+                    "\n"
+                    "Append-only. One row per orchestrator halt on the human. Written by "
+                    "`next`; never hand-edited.\n"
+                    "\n"
+                    "| round | observed | inbound | surfaced |\n"
+                    "|-------|----------|---------|----------|\n")
+DIGEST_CHARS = 8
+ANSWER_SECTION = "## Answer"
+
+
+class SilenceConfigError(Exception):
+    """`pipeline.yaml` does not state the threshold, so no consumer may guess one."""
+
+
+def find_pipeline(explicit=None):
+    """Resolve `pipeline.yaml`. The adapter's installer places a copy beside the scripts."""
+    if explicit:
+        return explicit
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for candidate in (os.path.join(here, "pipeline.yaml"),
+                      os.path.join(here, "..", "methodology", "pipeline.yaml")):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return None
+
+
+def threshold_rounds(pipeline_path=None) -> int:
+    """`termination.silence.threshold_rounds`, from pipeline.yaml. The single source.
+
+    There is no fallback on purpose. A consumer that carried its own default would be a second
+    opinion about when an engagement is abandoned, and two opinions is one too many (F-045).
+    """
+    path = find_pipeline(pipeline_path)
+    if not path or not os.path.isfile(path):
+        raise SilenceConfigError(
+            "cannot find pipeline.yaml, so termination.silence.threshold_rounds is unreadable")
+    import miniyaml
+    pipeline = miniyaml.load_file(path) or {}
+    silence = ((pipeline.get("termination") or {}).get("silence") or {})
+    value = silence.get("threshold_rounds")
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise SilenceConfigError(
+            f"{path}: termination.silence.threshold_rounds is {value!r}; it must be a positive "
+            f"integer, and no program may supply one for it")
+    return value
+
 
 class Engagement:
     """The state of one epic and its children, and why."""
 
-    __slots__ = ("epic", "children", "verdict", "reasons", "rest_since", "undelivered")
+    __slots__ = ("epic", "children", "verdict", "reasons", "rest_since", "undelivered",
+                 "silent_rounds", "threshold", "surfaced", "waiting_rows")
 
     def __init__(self, epic, children) -> None:
         self.epic = epic
@@ -45,10 +121,18 @@ class Engagement:
         self.reasons = []
         self.rest_since = None
         self.undelivered = []
+        self.silent_rounds = 0
+        self.threshold = None
+        self.surfaced = []
+        self.waiting_rows = []
 
     @property
     def at_rest(self) -> bool:
         return self.verdict == "at-rest"
+
+    @property
+    def abandoned(self) -> bool:
+        return self.verdict == "abandoned"
 
     def describe(self) -> str:
         lines = [f"engagement-state: {self.epic.identifier} {self.verdict}"]
@@ -72,6 +156,188 @@ def _open_requests(workspace) -> list:
         if (fields or {}).get("status") == "open":
             found.append(name[:-3])
     return found
+
+
+# ---- silence: the halt log, the inbound digest, and the count derived from them ----------
+#
+# spec/workspace-layout.md §1.4 is the format; spec/ids-and-statuses.md §3.5a is the rule. The
+# functions below are the whole of it, so that the writer and the two readers cannot hold
+# different ideas of what a round is.
+
+
+class WaitingRow:
+    """One recorded halt. `round` is written for a human reader and no program reads it."""
+
+    __slots__ = ("round", "observed", "inbound", "surfaced", "line")
+
+    def __init__(self, round_number, observed, inbound, surfaced, line) -> None:
+        self.round = round_number
+        self.observed = observed
+        self.inbound = inbound
+        self.surfaced = surfaced
+        self.line = line
+
+    def render(self) -> str:
+        return (f"| {self.round} | {self.observed} | {self.inbound} | "
+                f"{', '.join(self.surfaced)} |")
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return f"<WaitingRow {self.round} {self.observed} {self.inbound}>"
+
+
+def waiting_dir(root: str) -> str:
+    return os.path.join(root, *WAITING_DIR)
+
+
+def waiting_log_path(root: str, epic_id: str) -> str:
+    return os.path.join(waiting_dir(root), f"{epic_id}.md")
+
+
+def answer_body(question) -> str:
+    """The `## Answer` section's text, as the digest hashes it.
+
+    Trailing whitespace is stripped and nothing else is: an answer is the stakeholder's own
+    words, and a digest that normalised them would be a digest over our idea of what they said.
+    """
+    section = (question.sections or {}).get(ANSWER_SECTION) or {}
+    return (section.get("text") or "").rstrip()
+
+
+def short_digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:DIGEST_CHARS]
+
+
+def human_questions(workspace, epic) -> list:
+    """Every `addressed-to: human` question in the engagement, whatever its status.
+
+    Returned as `(<ITEM>/<Q-ID>, question)` pairs, ascending — the order the digest renders in.
+    """
+    holders = [epic] + sorted(workspace.children_of(epic.identifier),
+                              key=lambda item: item.identifier)
+    found = []
+    for holder in holders:
+        for question in holder.questions:
+            if question.fields.get("addressed-to") != "human":
+                continue
+            found.append((f"{holder.identifier}/{question.identifier}", question))
+    return sorted(found, key=lambda pair: pair[0])
+
+
+def surfaced_questions(workspace, epic) -> list:
+    """The human-addressed questions that are `open` — what a halt puts in front of a person."""
+    return [name for name, question in human_questions(workspace, epic) if question.is_open]
+
+
+def request_lines(workspace) -> list:
+    """The stakeholder's other channel, as digest lines. `.gitkeep` is not a request."""
+    directory = os.path.join(workspace.root, "tracker", "requests")
+    if not os.path.isdir(directory):
+        return []
+    import frontmatter
+    lines = []
+    for name in sorted(os.listdir(directory)):
+        if not name.endswith(".md"):
+            continue
+        try:
+            fields, _, _ = frontmatter.load_file(os.path.join(directory, name))
+        except Exception:                       # noqa: BLE001 - an unreadable request is state
+            fields = None
+        lines.append(f"{name} {(fields or {}).get('status')}")
+    return lines
+
+
+def inbound_rendering(workspace, epic) -> str:
+    """The canonical text the `inbound` digest is taken over.
+
+    Everything in it is something the **stakeholder** could have changed, and nothing else is:
+    a reply written into a `## Answer` (with its `status` and `answered-at`), and a file under
+    `tracker/requests/`. A question *we* file changes no line here, which is why our own asking
+    cannot reset the clock.
+    """
+    lines = []
+    for name, question in human_questions(workspace, epic):
+        answered_at = str(question.fields.get("answered-at") or "") or "-"
+        lines.append(f"{name} {question.fields.get('status')} {answered_at} "
+                     f"{short_digest(answer_body(question))}")
+    lines.extend(request_lines(workspace))
+    return "".join(line + "\n" for line in lines)
+
+
+def inbound_digest(workspace, epic) -> str:
+    return short_digest(inbound_rendering(workspace, epic))
+
+
+def parse_waiting_log(text: str, first_line: int = 0) -> list:
+    """The log's rows, in file order. Malformed rows are returned with what is there.
+
+    A row is `| round | observed | inbound | surfaced |`. The header and its underline are
+    skipped; `validate-workspace` is what judges the shape.
+    """
+    rows = []
+    for cells, line in table_rows(text, first_line):
+        if len(cells) < 4:
+            rows.append(WaitingRow(cells[0] if cells else "", "", "", [], line))
+            continue
+        surfaced = [token.strip() for token in cells[3].split(",") if token.strip()]
+        rows.append(WaitingRow(cells[0].strip(), cells[1].strip(), cells[2].strip(),
+                               surfaced, line))
+    return rows
+
+
+def read_waiting_log(root: str, epic_id: str) -> list:
+    path = waiting_log_path(root, epic_id)
+    if not os.path.isfile(path):
+        return []
+    with open(path, "r", encoding="utf-8") as handle:
+        return parse_waiting_log(handle.read())
+
+
+def silent_rounds(rows: list) -> int:
+    """The number of trailing rows sharing the last row's `inbound` digest.
+
+    The count, entire. An absent log is zero. There is no stored counter: a counter is a second
+    source of truth that drifts the first time a run is interrupted between the increment and
+    the act, which is the argument ADR-0003 made against a counter file (§1.2).
+    """
+    if not rows:
+        return 0
+    last = rows[-1].inbound
+    count = 0
+    for row in reversed(rows):
+        if row.inbound != last:
+            break
+        count += 1
+    return count
+
+
+def next_round_number(rows: list, digest: str) -> int:
+    """What the human-facing `round` column says on the row about to be appended."""
+    if rows and rows[-1].inbound == digest:
+        return silent_rounds(rows) + 1
+    return 1
+
+
+def append_halt(root: str, epic_id: str, observed: str, digest: str, surfaced: list):
+    """Append exactly one row, and nothing else. Called by `scripts/record-halt` alone.
+
+    The file's preamble is written once, when the file is created; every later write appends a
+    single table row. Nothing already in the file is read for the count except the digests, so a
+    hand-edited `round` cannot make an abandonment happen sooner.
+    """
+    path = waiting_log_path(root, epic_id)
+    rows = read_waiting_log(root, epic_id)
+    row = WaitingRow(next_round_number(rows, digest), observed, digest, list(surfaced), 0)
+    if not os.path.isfile(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(WAITING_PREAMBLE.format(epic=epic_id))
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(row.render() + "\n")
+    return row
+
+
+def utc_now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def rest_boundary(children) -> str:
@@ -100,12 +366,33 @@ def undelivered_children(children) -> list:
     )
 
 
-def state(workspace, epic) -> Engagement:
-    """`active` | `at-rest` | `suspended` | `ended` | `closed`, with the reasons why."""
+def state(workspace, epic, pipeline_path=None) -> Engagement:
+    """`active` | `at-rest` | `abandoned` | `suspended` | `ended` | `closed`, and why.
+
+    **This function appends nothing.** It reads the waiting log `scripts/record-halt` wrote and
+    derives the count; a reader that recorded would advance the clock every time the gate or
+    `review-close` consulted it (§1.2).
+    """
     children = sorted(workspace.children_of(epic.identifier), key=lambda i: i.identifier)
     engagement = Engagement(epic, children)
     engagement.undelivered = undelivered_children(children)
     engagement.rest_since = rest_boundary(children)
+    engagement.waiting_rows = read_waiting_log(workspace.root, epic.identifier)
+    engagement.silent_rounds = silent_rounds(engagement.waiting_rows)
+    engagement.surfaced = surfaced_questions(workspace, epic)
+    try:
+        engagement.threshold = threshold_rounds(pipeline_path)
+    except SilenceConfigError as exc:
+        engagement.threshold = None
+        engagement.reasons.append(f"the silence threshold is unreadable: {exc}")
+    reached = bool(engagement.threshold is not None and engagement.surfaced
+                   and engagement.silent_rounds >= engagement.threshold)
+    # Every verdict carries the count while it is above zero, so the clock is visible before it
+    # strikes rather than only afterwards (ADR-0011 §5).
+    if engagement.silent_rounds and not reached:
+        engagement.reasons.append(
+            f"{engagement.silent_rounds} silent round(s) recorded against a threshold of "
+            f"{engagement.threshold}")
 
     if epic.status in ("done", "blocked"):
         if epic.has_artifact(RETRO_ARTIFACT):
@@ -119,6 +406,24 @@ def state(workspace, epic) -> Engagement:
                 f"the epic is {epic.status!r}; the engagement has ended and the retrospective "
                 f"has not been written")
         return engagement
+    # E4 by silence, and it is checked before every verdict that describes a live engagement.
+    # The epic may be at `open` (the silence began before rest) or at `awaiting-answer` (it began
+    # after the sign-off was filed), and neither of those is what is true of it: what is true is
+    # that the pipeline came to a person `threshold_rounds` times and got nothing back
+    # (spec/ids-and-statuses.md §3.5a).
+    if reached:
+        engagement.verdict = "abandoned"
+        engagement.reasons.append(
+            f"{engagement.silent_rounds} silent round(s) against a threshold of "
+            f"{engagement.threshold}: the last {engagement.silent_rounds} halts on the human "
+            f"share one inbound digest ({engagement.waiting_rows[-1].inbound}), so nothing the "
+            f"stakeholder could have changed has changed")
+        engagement.reasons.append(
+            "still open and unanswered: " + ", ".join(engagement.surfaced))
+        engagement.reasons.append(
+            "the ending is E4 by silence and it is not recorded; review-close declares it")
+        return engagement
+
     if epic.status == "awaiting-answer":
         engagement.verdict = "suspended"
         engagement.reasons.append("the epic is awaiting an answer; nothing to dispatch")

@@ -3,8 +3,8 @@
 
 Usage: scripts/workspace-init [project-root]
 
-Creates tracker/ (with project.yaml, items/ and requests/) and the docs/ directories. Running it again on
-an existing workspace changes nothing and exits 0 — a skill may call it without first having to
+Creates tracker/ (with project.yaml, items/, requests/ and waiting/) and the docs/ directories.
+Running it again on an existing workspace changes nothing and exits 0 — a skill may call it without first having to
 decide whether the workspace exists.
 
 It deliberately creates **no** documents under docs/. An empty vision.md reads to a later skill
@@ -46,6 +46,9 @@ DIRECTORIES = [
     "tracker",
     "tracker/items",
     "tracker/requests",
+    # The halt log an ending is derived from (spec/workspace-layout.md §1.4). Usually empty, and
+    # deliberately beside tracker/requests/ rather than inside tracker/items/.
+    "tracker/waiting",
     "docs",
     "docs/product",
     "docs/architecture",
@@ -53,7 +56,7 @@ DIRECTORIES = [
     "docs/process",
 ]
 NEEDS_GITKEEP = {
-    "tracker/items", "tracker/requests",
+    "tracker/items", "tracker/requests", "tracker/waiting",
     "docs/product", "docs/architecture", "docs/architecture/adr", "docs/process",
 }
 

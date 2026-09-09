@@ -45,6 +45,7 @@ SCRIPTS_TO_SHIP = [
     "check-commit-refs", "check-verify-freshness", "run-gate", "transition",
     "journal-entry", "lint-claims", "lint-answers", "check-epic-signoff",
     "engagement-state", "export", "lint-retro", "lint-documents",
+    "record-halt",
 ]
 LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "record.py",
                "workspace.py", "board.py", "claims.py", "engagement.py", "scope.py",

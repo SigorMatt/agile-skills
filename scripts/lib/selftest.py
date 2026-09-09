@@ -22,6 +22,7 @@ import claims as claims_lib  # noqa: E402
 import record as record_lib  # noqa: E402
 import report as report_lib  # noqa: E402
 import documents as documents_lib  # noqa: E402
+import engagement as engagement_lib  # noqa: E402
 import scope as scope_lib  # noqa: E402
 import workspace as workspace_lib  # noqa: E402
 from miniyaml import YamlError  # noqa: E402
@@ -888,6 +889,77 @@ def run_documents(results) -> None:
 
 
 
+def run_silence(results) -> None:
+    """The halt log and the count derived from it (spec/workspace-layout.md §1.4)."""
+    log = ("# Waiting log \u2014 EP-001\n\n"
+           "Append-only. One row per orchestrator halt on the human. Written by `next`; never "
+           "hand-edited.\n\n"
+           "| round | observed | inbound | surfaced |\n"
+           "|-------|----------|---------|----------|\n"
+           "| 1 | 2026-09-10T14:02:11Z | 9f3c1a2e | WI-0001/Q-002, WI-0001/Q-003 |\n"
+           "| 1 | 2026-09-10T14:09:03Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |\n"
+           "| 2 | 2026-09-10T14:11:40Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |\n"
+           "| 3 | 2026-09-10T14:14:02Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |\n")
+    rows = engagement_lib.parse_waiting_log(log, 0)
+    results.check("silence/every row of the log is read", len(rows), 4)
+    results.check("silence/a row's surfaced column is a list of references",
+                  rows[0].surfaced, ["WI-0001/Q-002", "WI-0001/Q-003"])
+    results.check("silence/a row knows the line it is on", rows[0].line, 7)
+    # The count is the trailing run of equal digests, and nothing else. The stakeholder's one
+    # answer between rows 1 and 2 is visible as the digest change, so the two silences are not
+    # the same silence and nobody has to remember that.
+    results.check("silence/the count is the trailing run of equal digests",
+                  engagement_lib.silent_rounds(rows), 3)
+    results.check("silence/an absent log is zero rounds", engagement_lib.silent_rounds([]), 0)
+    results.check("silence/a hand-edited round number cannot make the count larger",
+                  engagement_lib.silent_rounds(
+                      engagement_lib.parse_waiting_log(
+                          log.replace("| 3 | 2026-09-10T14:14:02Z",
+                                      "| 9 | 2026-09-10T14:14:02Z"), 0)), 3)
+    results.check("silence/a digest change restarts the run",
+                  engagement_lib.silent_rounds(
+                      engagement_lib.parse_waiting_log(
+                          log + "| 1 | 2026-09-10T14:20:00Z | 00ff11aa | EP-001/Q-001 |\n", 0)),
+                  1)
+    results.check("silence/the next round number continues a run",
+                  engagement_lib.next_round_number(rows, "4b7e0d51"), 4)
+    results.check("silence/the next round number restarts on a new digest",
+                  engagement_lib.next_round_number(rows, "00ff11aa"), 1)
+    results.check("silence/the first row of an empty log is round 1",
+                  engagement_lib.next_round_number([], "00ff11aa"), 1)
+    results.check("silence/a row renders as the row it was read from",
+                  rows[3].render(),
+                  "| 3 | 2026-09-10T14:14:02Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |")
+    results.check("silence/the digest is eight lowercase hex characters",
+                  (len(engagement_lib.short_digest("anything")),
+                   engagement_lib.short_digest("anything").strip("0123456789abcdef")),
+                  (8, ""))
+    results.check("silence/an absent answer and an empty one hash alike",
+                  engagement_lib.short_digest("")
+                  == engagement_lib.short_digest("\n   \n".rstrip()), True)
+
+    class _Question:
+        def __init__(self, text):
+            self.sections = {"## Answer": {"text": text}}
+
+    results.check("silence/the answer body is hashed with trailing whitespace stripped",
+                  engagement_lib.answer_body(_Question("Yes, both cases.  \n\n")),
+                  "Yes, both cases.")
+    results.check("silence/a question with no Answer section hashes as empty",
+                  engagement_lib.answer_body(_Question("")), "")
+    # The threshold has one source and no fallback: a consumer with its own default would be a
+    # second opinion about when a stakeholder is gone (F-045).
+    try:
+        engagement_lib.threshold_rounds(os.path.join(REPO_ROOT, "does-not-exist.yaml"))
+        results.fail("silence/no consumer may supply its own threshold",
+                     "a missing pipeline.yaml returned a value instead of raising")
+    except engagement_lib.SilenceConfigError:
+        results.passed += 1
+    results.check("silence/the threshold comes from pipeline.yaml",
+                  engagement_lib.threshold_rounds(
+                      os.path.join(REPO_ROOT, "methodology", "pipeline.yaml")) >= 1, True)
+
+
 def main() -> int:
     results = Results()
     run_accept(results)
@@ -903,6 +975,7 @@ def main() -> int:
     run_scope(results)
     run_plan_documents(results)
     run_documents(results)
+    run_silence(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

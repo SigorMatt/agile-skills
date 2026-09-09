@@ -1,22 +1,35 @@
 #!/usr/bin/env python3
 """Is this engagement still running, or is it over?
 
-Usage: scripts/engagement-state <EP-ID> [--root .]
-       scripts/engagement-state --all [--root .]
+Usage: scripts/engagement-state <EP-ID> [--root .] [--pipeline <path>]
+       scripts/engagement-state --all [--root .] [--pipeline <path>]
 
 Prints one verdict per epic and the reasons behind it:
 
   active     — a child is still in flight, or a question or request is open
   at-rest    — every child has stopped, nothing is open: the engagement is over and unrecorded
+  abandoned  — the engagement is halted on a human who has not answered for
+               termination.silence.threshold_rounds consecutive rounds; its ending is E4 by
+               silence and it is not recorded
   suspended  — the epic is awaiting an answer (often the acknowledgment itself)
   ended      — the epic is `done` or `blocked`; the ending is recorded and the retrospective
                is still owed
   closed     — ended, and artifacts/retro.md exists: the engagement is fully closed
 
-`next` reads this at orchestrator steps 6 and 7 rather than judging it: it dispatches
-`review-close` on an epic that is `at-rest` and `retro` on one that is `ended`. An engagement that can no longer progress must be ended through
-the stakeholder, not left on the board — which is what a real run did, stopping with the
-stakeholder recording that the question never came (F-045, ADR-0006 §4).
+`next` reads this at orchestrator steps 3, 6 and 7 rather than judging it: it dispatches
+`review-close` on an epic that is `abandoned` or `at-rest` and `retro` on one that is `ended`. An
+engagement that can no longer progress must be ended through the stakeholder, not left on the
+board — which is what a real run did, stopping with the stakeholder recording that the question
+never came (F-045, ADR-0006 §4).
+
+**This command appends nothing.** The silent-round count is derived from the waiting log
+`scripts/record-halt` writes, and every verdict carries it while it is above zero. A reader that
+recorded would advance the clock by being asked — and both `check-epic-signoff` and
+`review-close` ask (`spec/ids-and-statuses.md` §3.5a, ADR-0011 §1.2).
+
+The silence threshold comes from `methodology/pipeline.yaml` and from nowhere else. `--pipeline`
+points at another copy of it; there is no built-in default, because a program with its own idea
+of when a stakeholder is gone is a second opinion, and two of those disagreeing is F-045.
 
 Exit codes: 0 the verdict was computed, 2 a usage error. This is a question, not a gate: it
 never fails a build, and a caller reads the verdict rather than the exit status.
@@ -59,8 +72,8 @@ def main(argv: list) -> int:
         index += 1
 
     if not positional and "all" not in flags:
-        print("engagement-state: usage: engagement-state <EP-ID> [--root .] | --all",
-              file=sys.stderr)
+        print("engagement-state: usage: engagement-state <EP-ID> [--root .] "
+              "[--pipeline <path>] | --all", file=sys.stderr)
         return 2
 
     root = resolve_root(options.get("root"), tool="engagement-state")
@@ -83,7 +96,8 @@ def main(argv: list) -> int:
         epics = [epic]
 
     for epic in epics:
-        print(engagement_lib.state(workspace, epic).describe())
+        print(engagement_lib.state(workspace, epic,
+                                   pipeline_path=options.get("pipeline")).describe())
     return 0
 
 

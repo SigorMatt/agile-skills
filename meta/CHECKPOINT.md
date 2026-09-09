@@ -10,53 +10,50 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 877ee85 — 34 steps, 82 codes, selftest 290, 49 findings citations
+## The gate is GREEN — 35 steps, 97 codes, selftest 307, 49 findings citations
 
 ## Current unit
 
-**META-151b** — the E4 mechanism, part 2: **the programs**.
+**META-152** — `fixtures/abandoned-engagement/`, the E4 rows end to end. META-151b landed the
+programs; this is the fixture that runs them over a whole engagement.
 
-The paper model is in (ADR-0011 at 94606f5; specs and `pipeline.yaml` at 877ee85). This unit
-builds what reads and writes it. ADR-0011 §7 lists the files; `spec/workspace-layout.md` §1.4
-now fixes the log format.
+- ADR-0011's `ghosting-founder` walkthrough is the worked example, and §6 names what it does
+  **not** exercise: every child there is *orphaned, never started*, so the fixture must also carry
+  an *orphaned, in flight* child (at `in-progress` with a branch, or at `in-review`), and a second
+  shape where the silence begins **after** rest — a sign-off filed, open, and ending `abandoned`
+  with an empty `## Answer`, which is the case `check-epic-signoff`'s new branch is for.
+- The programs to run it against: `scripts/record-halt`, `scripts/engagement-state`,
+  `scripts/check-epic-signoff`, `scripts/validate-workspace`.
+- The waiting log's format is `spec/workspace-layout.md` §1.4 and it is now enforced by eleven
+  `waiting.*` validator codes — write rows with `record-halt` rather than by hand where possible.
+- Next after: **META-153** (harness — **separate commit**).
 
-- the **waiting-log writer** — appends exactly one row per halt to `tracker/waiting/<EP-ID>.md`;
-  `workspace-init` creates `tracker/waiting/`.
-- `scripts/lib/engagement.py` / `scripts/engagement-state` — report the silence count;
-  **the reader never writes**.
-- `scripts/check-epic-signoff` — the E4 verdict.
-- `scripts/validate-workspace` — the waiting log's shape, and `status: abandoned` questions.
-- `methodology/skills/next/` — step 3's branch and a `silence-is-recorded` gate.
-- `methodology/skills/review-close/` — step 10: the E4 declaration and the ending statement.
-- re-render; version bumps.
+## Done in META-151b
 
-**Prove by execution that all three consumers read `threshold_rounds` from `pipeline.yaml`** —
-`next`, `engagement-state`, `check-epic-signoff`. Two of them disagreeing is F-045's mechanism,
-so a test that changes the value and observes all three move is the point, not a formality.
-
-### The count, restated so no program has to re-derive it
-
-`inbound` is the first **8 lowercase hex** of SHA-256 over a canonical rendering: one line per
-`addressed-to: human` question in the engagement **whatever its status**, ascending by
-`<ITEM>/<Q-ID>` — `<ITEM>/<Q-ID> <status> <answered-at or -> <sha256 of the ## Answer body,
-first 8 hex>` — then one line per file in `tracker/requests/`, ascending, `<filename> <status>`.
-**Count = the number of trailing rows sharing the last row's `inbound`.** Absent file = zero.
-No stored counter. `next` appends **before** reading state.
-
-### Flagged by META-151 for a decision in this unit
-
-`pipeline.yaml`'s rule-obligation registry keys a validator status rule to a **single**
-`(from, to, actor)` triple. ADR-0011's obligation 5 (`epic.closed-with-active-children`) is
-satisfied by **many** moves, so META-151 registered **nothing** rather than put a false statement
-in a load-bearing registry — and flagged that the new `awaiting-answer → blocked` row is exactly
-the move that made that rule unsatisfiable for a child suspended at `awaiting-answer`, F-050's
-shape. **Decide here:** either grow the registry's shape to admit a set of triples, or record why
-the obligation stays unregistered. Do not register a false triple to make a table look complete.
-
-- Done when: the programs land, the threshold's single source is proved by execution,
-  `./scripts/check` green, journalled, committed AND pushed.
-- Next units: **META-152** (`fixtures/abandoned-engagement/`, the E4 rows end to end),
-  **META-153** (harness — **separate commit**).
+- `scripts/record-halt` is the waiting-log writer, a **new script** rather than a mode of
+  `engagement-state`, so that "the reader never writes" is structural rather than a flag
+  discipline. `next`'s `silence-is-recorded` gate is that command with no arguments; it records
+  only where a halt exists, so it can run on every pass.
+- **The registry decision: obligation 5 is registered, and the shape grew to admit it.** An entry
+  may now name a **class** of move (`from: any-non-terminal`, `to: terminal`, `actor:`) and
+  enumerate the concrete pairs under `satisfied_by`; `lint-skills` checks **coverage** per item
+  type, with the classes read off the statuses table's own flags. Pinning the actor is what makes
+  it bite — `awaiting-answer → blocked` existed for `answer-questions` all along. Non-vacuity is
+  `scripts/check` step 11, fault 8: change that row's actor and `obligation.unsatisfiable` comes
+  back for both item types. `validate-workspace` reads the entry for the rule's scope.
+- **The threshold's single source is proved by execution** (new step 14b, 18 observations): 3 → 5
+  over one unchanged workspace, and `record-halt`, `engagement-state` and `check-epic-signoff`
+  each change their mind. Also proved there: a reader leaves the log byte-identical, and an answer
+  resets the count while our own writes do not.
+- `check-epic-signoff` gains a second **accepting branch**, not a relaxation: threshold reached,
+  an ask that stood unanswered (so *ending while never having asked* stays illegal), no sign-off
+  left `open`, and `## Ending statement` in `review.md` naming every child.
+- Three `spec/workspace-layout.md` §1.4 sentences were underspecified and were fixed **in the same
+  commit**: `*.md` only for request lines, the `## Answer` body hashed with trailing whitespace
+  stripped and nothing else normalised, and which epics a halt is against.
+- `review-close`'s procedure was cut to fit the 500-line rendered body limit; what was cut is
+  reference already in `spec/ids-and-statuses.md` §3.5a, and every rule a reader could get wrong
+  stayed.
 
 ## Owed to the next findings pass — do not lose these
 
@@ -65,7 +62,8 @@ the obligation stays unregistered. Do not register a false triple to make a tabl
    today the first wins, so an unanswered elicitation makes **every** ending unreachable, **E1
    included**. Recorded in ADR-0011 §6 with both citations, deliberately unfiled by META-150 and
    META-151. Adjacent to **F-097** (cluster 5, META-162). Needs an F-number.
-2. **The registry's one-triple shape** (above), if META-151b leaves it unregistered.
+2. ~~The registry's one-triple shape~~ — **resolved in META-151b**: the shape grew and
+   `epic.closed-with-active-children` is registered. Nothing owed.
 
 ## Done this session
 

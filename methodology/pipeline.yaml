@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.8.0
+version: 0.9.0
 
 item_types:
   - epic
@@ -364,6 +364,33 @@ rule_obligations:
     to: awaiting-answer
     actor: any
     rationale: An open blocking question suspends its item, and an epic-level question is exactly the case that must be able to suspend an epic (F-013).
+
+  # A rule that MANY moves satisfy. The two entries above each name one move; this one cannot,
+  # because it demands a status of every child whatever status the child is at. Registering a
+  # single triple for it would have been a false statement in a table validate-workspace reads
+  # as scope, so the shape grew instead: `from` and `to` name CLASSES of status, and
+  # `satisfied_by` enumerates the concrete pairs that deliver them for the actor that has to
+  # deliver them. lint-skills then checks COVERAGE - every non-terminal status of every declared
+  # item type must have a listed move out of it, made by review-close or by any skill.
+  #
+  # This is the check that would have caught the hole ADR-0011 found by derivation: an orphan
+  # suspended at awaiting-answer had no move to a terminal status available to review-close,
+  # because the only awaiting-answer -> blocked row belonged to answer-questions and needed a
+  # reply that was never coming. Delete the review-close row above and this entry strands
+  # awaiting-answer, which is F-050's shape and is proved by execution in scripts/check step 11.
+  - code: epic.closed-with-active-children
+    applies_to: [work-item, bug]
+    from: any-non-terminal
+    to: terminal
+    actor: review-close
+    satisfied_by:
+      - from: any-suspendable
+        to: blocked
+      - from: awaiting-answer
+        to: blocked
+      - from: in-review
+        to: done
+    rationale: An epic may not close over a child still in flight, so before the ending review-close must be able to bring every child to a terminal status from wherever it is - which at E4 is every orphan at once (spec/ids-and-statuses.md sections 3.5 and 3.5a, Definition of Done DE1).
 
 # The orchestrator's algorithm, in order. `next` executes exactly these steps and stops at the
 # first one that produces an action. Nothing here requires engineering judgement, by design.

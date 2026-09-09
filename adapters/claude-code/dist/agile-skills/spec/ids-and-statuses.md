@@ -359,6 +359,13 @@ Notes:
   Such a rule is enforceable only for the item types some skill may legally move there, so the
   scope is not the rule's to decide: `methodology/pipeline.yaml` carries a `rule_obligations`
   block naming, per rule, the item types it applies to and the transition that satisfies it.
+  Where **many** moves satisfy one rule — `epic.closed-with-active-children` demands a terminal
+  status of every child, whatever status the child is at — the entry names a **class** of move
+  (`from: any-non-terminal`, `to: terminal`) and enumerates under `satisfied_by` the concrete
+  pairs that deliver it for the actor that has to deliver it; the check is then **coverage**, and
+  a status with no listed move out of it is stranded. The single-triple form was kept for the
+  rules it is true of rather than stretched over this one, because a false statement in a table a
+  validator reads as scope is worse than no statement at all.
   `validate-workspace` reads that scope, and `lint-skills` checks it against this table in both
   directions — a rule scoped wider than the moves that satisfy it, and a move narrowed while the
   rule still claims the item type. The first of those had already happened when the registry was
@@ -436,3 +443,4 @@ protecting.
 | 4 | 2026-08-27 | §4: a rule elsewhere that requires an item to be at a status declares the move that satisfies it, in `pipeline.yaml`'s `rule_obligations`; the scope is checked against this table rather than remembered (F-050). |
 | 5 | 2026-08-30 | New §3.6: an ending is not the same as being closed. `engagement-state` gains the `closed` verdict, the orchestrator dispatches `retro` on `ended`, and the retrospective gates nothing (ADR-0009). |
 | 6 | 2026-09-10 | §3.5: E4 gains a **second route** — silence, not only withdrawal — and rest stops being the trigger for it. New §3.5a: the silent round, the derived count over `tracker/waiting/<EP-ID>.md`, `termination.silence.threshold_rounds`, the `abandoned` verdict, the ending statement, the child classification and the orphan's move to `blocked` with no `outcome`. §3.2: ownership answers *who is dispatched*, not *who may move it*. §4: two new rows — `awaiting-answer → blocked` (`review-close`, work-item/bug) and `awaiting-answer → done` (`review-close`, epic, gated), both F-050's shape found by derivation; the `done → open` condition widened to §3.4's own prose, *a child item filed against the epic after it closed*, so a returning stakeholder has a legal route back. Derived in ADR-0011 (F-060, F-008, H-008). |
+| 7 | 2026-09-10 | §4's registry note: an obligation that **many** moves satisfy declares a class of move and enumerates the pairs that deliver it under `satisfied_by`, checked as coverage — `epic.closed-with-active-children` is registered that way rather than left unregistered or given a false triple. §3.5a's mechanism became programs: `scripts/record-halt` appends the halt row, `engagement-state` reports `abandoned`, `check-epic-signoff` accepts the E4 ending, and `validate-workspace` checks the log's shape and `status: abandoned` questions. |

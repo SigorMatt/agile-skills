@@ -2,6 +2,7 @@
 """The termination gate: no engagement ends without the stakeholder having been asked.
 
 Usage: scripts/check-epic-signoff <ITEM-ID> [--root .] [--resolving <ITEM>:<from>-><to>]
+                                  [--pipeline <path>]
 
 Epic Definition of Done DE7 **and DE8**. On anything that is not an epic this passes and says so
 — the gate runs on every `review-close` execution and only an engagement's ending is its
@@ -44,6 +45,28 @@ not *close* on one: `open -> done` requires `status: answered`. Both moves are m
 so the gate is told the pending move through `--resolving`, which `run-gate` passes it. With no
 `--resolving` the strict rule applies, because a gate that relaxes when nobody told it anything
 is a gate that checked nothing (F-033).
+
+**E4 by silence — the ending where no reply ever arrives.** A stakeholder who simply stops
+answering reaches no ending at all under the rule above, because the rule requires a reply. So the
+gate has a second accepting branch, and it is the same criterion in its E4 form: *asked, and the
+ask stood unanswered for the threshold* (`dor-dod.md` DE7, `spec/ids-and-statuses.md` §3.5a). It
+requires all of:
+
+  * `tracker/waiting/<EP-ID>.md` shows at least `termination.silence.threshold_rounds` trailing
+    halts sharing one `inbound` digest — the count read from the same
+    `scripts/lib/engagement.py` the orchestrator and `engagement-state` read, and the threshold
+    read from `pipeline.yaml`, which is the single source all three consult;
+  * an ask that went unanswered: a question addressed to `human` that is `open` or `abandoned`.
+    **Ending while never having asked stays illegal** — E4 permits an ask with an empty
+    `## Answer`, never a missing ask;
+  * no sign-off left `open`. If one was filed it is `abandoned` with an **empty** `## Answer`,
+    which is what distinguishes E4 from E3 in the record: E3 has the stakeholder's own words
+    verbatim, E4 has the emptiness and a log of the occasions on which nothing came. Where the
+    silence began before rest there is no sign-off at all, and that is legal;
+  * `## Ending statement` in the epic's `artifacts/review.md`, naming **every child by ID** —
+    the same containment check the sign-off's `## Question` gets, for F-046's reason, because at
+    E4 there is nobody to address and the statement becomes a document rather than a question;
+  * DE8's elicitation, which at E4 may itself be `abandoned` with an empty `## Answer`.
 
 F-022: two consecutive runs closed an epic with no sign-off ever addressed to the human. The
 Definition of Done gates all held — they check the record, and the record only holds what the
@@ -98,6 +121,20 @@ def question_text(body: str) -> str:
     return "\n".join(collected)
 
 
+def section_text(body: str, heading: str) -> str:
+    """The text under a level-2 heading, up to the next one. Case-insensitive on the heading."""
+    collecting, collected = False, []
+    for line in body.split("\n"):
+        if line.startswith("## "):
+            if collecting:
+                break
+            collecting = line.strip().lower() == heading.lower()
+            continue
+        if collecting:
+            collected.append(line)
+    return "\n".join(collected)
+
+
 def main(argv: list) -> int:
     if any(token in ("--help", "-h") for token in argv[1:]):
         print(__doc__.strip())
@@ -117,7 +154,7 @@ def main(argv: list) -> int:
         index += 1
     if not positional:
         print("check-epic-signoff: usage: check-epic-signoff <ITEM-ID> [--root .] "
-              "[--resolving <ITEM>:<from>-><to>]", file=sys.stderr)
+              "[--resolving <ITEM>:<from>-><to>] [--pipeline <path>]", file=sys.stderr)
         return 2
     item_id = positional[0]
     root = resolve_root(options.get("root"), tool="check-epic-signoff")
@@ -141,7 +178,8 @@ def main(argv: list) -> int:
         pending_to = resolving.split("->", 1)[1].split("+")[0].strip()
     deferral_is_enough = pending_to == "blocked"
 
-    engagement = engagement_lib.state(workspace, item)
+    engagement = engagement_lib.state(workspace, item,
+                                      pipeline_path=options.get("pipeline"))
     expected_children = [child.identifier for child in engagement.children]
 
     directory = os.path.join(item.root, "questions")
@@ -192,7 +230,63 @@ def main(argv: list) -> int:
             continue
         accepted = relative
 
-    if accepted is None:
+    # E4 by silence. Reached only when no sign-off carries a reply, because a stakeholder who
+    # replied is not absent. What stands in the reply's place is the count — and the count is
+    # read from the same library the orchestrator and `engagement-state` read, against the
+    # threshold `pipeline.yaml` states, so that no two of the three can disagree about whether
+    # the engagement is over (F-045, spec/ids-and-statuses.md §3.5a).
+    silence = None
+    if accepted is None and engagement.threshold is not None \
+            and engagement.silent_rounds >= engagement.threshold:
+        silence_problems = []
+        # The ask. E4 permits an ask that was never answered; it never permits a missing ask.
+        asks = [name for name, question in engagement_lib.human_questions(workspace, item)
+                if question.fields.get("status") in ("open", "abandoned")]
+        if not asks:
+            silence_problems.append(
+                "no question addressed to the human is open or abandoned in this engagement — "
+                "E4 permits an ask that stood unanswered, never an ending at which nobody was "
+                "asked anything (DE7, F-022)")
+        for path, fields, body in sign_offs:
+            relative = os.path.relpath(path, root)
+            if fields.get("status") == "open":
+                silence_problems.append(
+                    f"{relative} is still 'open'; a sign-off that outlived the threshold is "
+                    f"closed as 'abandoned' with an empty '## Answer' before the ending is "
+                    f"recorded, or next step 3 halts the whole workspace on an abandoned "
+                    f"engagement's leftovers (spec/question.md §2)")
+            elif fields.get("status") == "abandoned" and answer_text(body):
+                silence_problems.append(
+                    f"{relative} is 'abandoned' and its '## Answer' is not empty. Nothing "
+                    f"arrived, so the emptiness is the evidence; writing anything there is the "
+                    f"fiction the status exists to prevent (spec/question.md §2)")
+        # The ending statement, which is a document because there is nobody to address.
+        review_path = item.artifact_path("review.md")
+        statement = ""
+        if os.path.isfile(review_path):
+            with open(review_path, "r", encoding="utf-8") as handle:
+                statement = section_text(handle.read(), "## Ending statement")
+        if not statement.strip():
+            silence_problems.append(
+                f"{os.path.relpath(review_path, root)} carries no '## Ending statement'. At E4 "
+                f"there is nobody to address, so the statement the sign-off would have carried "
+                f"becomes a document — the goal in the stakeholder's own terms, every child by "
+                f"ID with its class, the silence itself, and each success measure "
+                f"(spec/ids-and-statuses.md §3.5a)")
+        else:
+            unnamed = [child for child in expected_children if child not in statement]
+            if unnamed:
+                silence_problems.append(
+                    f"the '## Ending statement' does not name {', '.join(unnamed)}; it must "
+                    f"name every child by ID, because \"list what was not delivered\" cannot be "
+                    f"checked and \"name every child\" can (F-046)")
+        if silence_problems:
+            problems.extend(silence_problems)
+        else:
+            silence = (f"{engagement.silent_rounds} silent round(s) against a threshold of "
+                       f"{engagement.threshold}")
+
+    if accepted is None and silence is None:
         print(f"check-epic-signoff: FAIL — {item_id} has no usable sign-off:", file=sys.stderr)
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
@@ -200,15 +294,21 @@ def main(argv: list) -> int:
 
     # DE8. The elicitation may live on the epic or on any child — an open question asked at
     # refinement is worth more than one asked at the ending, so the gate does not care where it
-    # was filed, only that it exists in this engagement and got a reply.
+    # was filed, only that it exists in this engagement and got a reply. At E4 it may itself have
+    # gone unanswered: the criterion is then that it was asked and stood unanswered, never that
+    # it was skipped (dor-dod.md DE8).
     elicitations = []
     for holder in [item] + list(engagement.children):
         for question in holder.questions:
             if question.fields.get("kind") != "elicitation":
                 continue
-            if question.fields.get("status") == "open":
+            status = question.fields.get("status")
+            if status == "open":
                 continue
-            if not answer_text(question.body):
+            if status == "abandoned":
+                if silence is None or answer_text(question.body):
+                    continue
+            elif not answer_text(question.body):
                 continue
             elicitations.append(os.path.relpath(question.path, root))
     if not elicitations:
@@ -226,6 +326,13 @@ def main(argv: list) -> int:
               f"  It may be filed now, alongside the sign-off; earlier is worth more.",
               file=sys.stderr)
         return 1
+
+    if silence is not None:
+        print(f"check-epic-signoff: PASS — {item_id} ends at E4 by silence: {silence}, and the "
+              f"'## Ending statement' in artifacts/review.md names all "
+              f"{len(expected_children)} child item(s). No reply arrived and none is claimed; "
+              f"DE8 satisfied by {elicitations[0]}")
+        return 0
 
     if not sign_offs:
         print(f"check-epic-signoff: FAIL — {item_id} has no sign-off question.\n"

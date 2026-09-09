@@ -80,7 +80,7 @@ worked on. The files are created with their headers at the moment the item is cr
 | `artifacts/plan.md` | `plan` | design, steps, assumptions, ADR references, gate commands |
 | `artifacts/impl-report.md` | `implement` | what was built, AC → evidence map, deviations from the plan |
 | `artifacts/verify-report.md` | `verify` | per-AC verdict with evidence, gates run, defects found. MUST contain a line `Verified-commit: <sha>` naming the commit that was verified — a verification that does not say what it verified cannot be shown to be current, and Definition of Done D10 turns on exactly that |
-| `artifacts/review.md` | `review-close` | what was examined, DoD result per criterion, verdict |
+| `artifacts/review.md` | `review-close` | what was examined, DoD result per criterion, verdict. On an **epic** ended at E4 by silence it also carries `## Ending statement` — the statement the sign-off would have carried, as a document, because there is nobody to address (§1.4, `ids-and-statuses.md` §3.5a) |
 | `artifacts/retro.md` | `retro` | on an **epic** only, after the engagement has ended: what the record shows about how the work went, and the toolkit findings it proposes upstream. Schema in [`retro.md`](retro.md) |
 
 Fixed names, not free choice. A skill looking for the previous stage's output must find it
@@ -151,8 +151,14 @@ canonical rendering, UTF-8, each line terminated by `\n`:
 1. one line per question in the engagement with `addressed-to: human`, **whatever its status**,
    ascending by `<ITEM>/<Q-ID>`:
    `<ITEM>/<Q-ID> <status> <answered-at, or - when absent> <sha256 of the ## Answer section body, first 8 hex>`
-2. then one line per file in `tracker/requests/`, ascending by filename:
-   `<filename> <status>`
+2. then one line per `*.md` file in `tracker/requests/`, ascending by filename:
+   `<filename> <status>` — the filename with its extension. A `.gitkeep` is not a request.
+
+The `## Answer` section body is the text under that heading up to the next level-2 heading, with
+**trailing whitespace stripped and nothing else normalised**: it is the stakeholder's own words,
+and a digest taken over a tidied copy of them would be a digest over our idea of what they said.
+A section that is absent and one that is empty hash alike, which is correct — in both, nothing
+has arrived.
 
 Rendering the whole inbound state rather than a summary is what makes every reset auditable: a
 partial answer, a deferral and a new request each change the digest, and nothing we write does.
@@ -165,17 +171,28 @@ that. There is **no stored counter** — a counter is a second source of truth t
 first time a run is interrupted between the increment and the act (`ids-and-statuses.md` §1.1,
 ADR-0003), and the derivation is idempotent and self-healing in the same sense.
 
-**Who writes and who reads.** `next` appends exactly one row per halt, **before** it reads the
-engagement's state, so the declaring pass counts itself. `scripts/engagement-state`,
+**Which epics a halt is against.** One row goes to each, and an epic is one of them when it is
+**not already ended** — its status is neither `done` nor `blocked` — and its engagement holds at
+least one question with `addressed-to: human` and `status: open`. That set is exactly the
+condition under which the orchestrator stops at step 3, so a pass that did not stop on the human
+writes nothing: a pass that did not halt is not a round. A question on an item with no `epic:`
+belongs to no engagement and produces no row.
+
+**Who writes and who reads.** `next` appends exactly one row per halt, through
+`scripts/record-halt`, **before** it reads the engagement's state, so the declaring pass counts
+itself. `scripts/engagement-state`,
 `scripts/check-epic-signoff` and `review-close` read the log and **append nothing** — a counting
-reader would advance the clock by being consulted.
+reader would advance the clock by being consulted. `record-halt` is a separate program from
+`engagement-state` for exactly that reason: the write stays out of the reader structurally,
+rather than by everyone remembering not to pass a flag.
 
 ---
 
 ## 2. Initialisation
 
-`scripts/workspace-init <project-root>` creates the tree, writes `tracker/project.yaml` with
-placeholders, and creates the `docs/` directories. It is idempotent: running it on an existing
+`scripts/workspace-init <project-root>` creates the tree — including the empty `tracker/requests/`
+and `tracker/waiting/` — writes `tracker/project.yaml` with placeholders, and creates the `docs/`
+directories. It is idempotent: running it on an existing
 workspace makes no changes and exits 0.
 
 It MUST NOT create empty placeholder documents under `docs/`. An empty `vision.md` reads to a
@@ -307,3 +324,4 @@ Rules:
 | 3 | 2026-08-22 | §5: an epic-level record commit is made on the trunk, not on the item branch that happens to be checked out (F-016). |
 | 4 | 2026-08-27 | §5: `plan` may create behaviour-free scaffolding a declared gate command needs in order to execute, listed under `## Scaffolding` (F-034, ADR-0007). §1.2/§1.3: `refinement-qa.md` declares `status: agenda` or `recorded`, and Definition of Ready R8 reads that field rather than the filename (F-031). |
 | 5 | 2026-09-10 | New §1.4: `tracker/waiting/<EP-ID>.md`, the **append-only halt log** an E4-by-silence ending is derived from — one row per orchestrator halt on the human, carrying the inbound digest; the silent-round count is the **trailing run of equal digests**, derived and never stored (ADR-0003's argument); `next` writes it, and every reader appends nothing. §1/§1.1: `tracker/waiting/` added to the tree and to what must exist. Derived in ADR-0011 (F-060, H-008). |
+| 6 | 2026-09-10 | §1.4 pinned down where the programs needed it: the request lines cover `*.md` files only (a `.gitkeep` is not a request), the `## Answer` body is hashed with trailing whitespace stripped and nothing else normalised, and **which epics a halt is against** is now stated — not already ended, and holding an open human-addressed question. §2: `workspace-init` creates `tracker/waiting/`. The writer is `scripts/record-halt`, a separate program from the reader so that the write stays out of it structurally. |

@@ -1,5 +1,5 @@
 name: next
-version: 0.4.0
+version: 0.5.0
 persona: scheduler
 purpose: Pick the single next runnable action from workspace state and dispatch the skill that owns it.
 
@@ -8,6 +8,7 @@ when_to_use:
   - A skill has just finished and the pipeline should advance.
   - Work is being resumed after an interruption and nobody knows where it stopped.
   - Someone asks for the board, the current state, or what is blocking progress.
+  - The pipeline has been waiting on a person for some time and nobody has said how long.
 
 dispatch:
   on_status: []
@@ -33,12 +34,18 @@ inputs:
     why: reports where an item stopped when nothing is runnable
   - path: "scripts/engagement-state <EP-ID>"
     required: true
-    why: whether an engagement is running, over, or fully closed - the one judgement this skill is not allowed to make for itself
+    why: whether an engagement is running, over, abandoned, or fully closed - the one judgement this skill is not allowed to make for itself
+  - path: tracker/waiting/
+    required: false
+    why: the halt log the silent-round count is derived from - written by this skill through scripts/record-halt, read by nothing here
 
 outputs:
   - path: tracker/board.md
     kind: file
     when: always
+  - path: tracker/waiting/EP-###.md
+    kind: append
+    when: conditional
   - path: "a dispatch decision, reported to the caller"
     kind: status
     when: always
@@ -47,6 +54,12 @@ quality_gates:
   - name: workspace-valid
     description: The workspace satisfies the schemas before any dispatch decision is made.
     command: scripts/validate-workspace
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: silence-is-recorded
+    description: A pass that halts on the human records the halt, before it reads any engagement's state.
+    command: scripts/record-halt
     expect: exit-zero
     enforcement: hard
     on_failure: stay
@@ -81,7 +94,8 @@ exit_criteria:
   - The workspace validated, or the run stopped with the validator's output.
   - The board was regenerated.
   - Exactly one of - a question was surfaced and the loop stopped, a skill was dispatched, or the board was reported with the reason nothing is runnable.
-  - Every epic was asked scripts/engagement-state, and none of them is at-rest and undispatched, or ended and unread.
+  - Every epic was asked scripts/engagement-state, and none of them is at-rest and undispatched, abandoned and undispatched, or ended and unread.
+  - If the pass halted on the human, scripts/record-halt ran first and its round count is in the report. A halt that was surfaced without being recorded is a round nobody can count later.
   - The dispatch decision names the item, its status, and the owning skill taken from pipeline.yaml.
 
 next_status: null
