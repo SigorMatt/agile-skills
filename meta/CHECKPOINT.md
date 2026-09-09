@@ -1,46 +1,31 @@
 # CHECKPOINT
 
-## Phase V is complete. There is no next unit in this session.
+## Session: builder five (`meta/BUILDER-5-PROMPT.md`). Phase VI, in flight.
 
-Builder session four (`meta/BUILDER-4-PROMPT.md`) is done: META-132 through META-143, committed
-and pushed. `./scripts/check` is green across **30 steps**; `harness/tests/test_harness.py` is 74
-tests; `scripts/lib/selftest.py` is 252 cases; `fixtures/broken-workspace` is **82 codes,
-unchanged**, which is the record-model migration's proof.
+Execution model for this session (binding, from the mission): every unit is executed by a
+**dedicated sub-agent**. The orchestrator session holds only the mission, `meta/plan.md`, this
+file, and each unit's verdict. Per unit: checkpoint the intent → dispatch the sub-agent with
+scope, files to read, definition of done, and the obligation to commit AND push → verify
+cheaply (git log for the sha, `./scripts/check` or the unit's fixture) → advance this file.
 
-**What was built.** `retro` 0.2.1 — the ninth skill, derived first in
-`meta/adr/ADR-0009-retrospective-reading.md`, specified in `spec/retro.md`, gated by
-`scripts/lint-retro` against `fixtures/retro/`, and dispatched by `next` 0.4.0 on
-`engagement-state`'s new `ended` / `closed` distinction. Plus `scripts/lib/record.py`, the shared
-record model every lint now reads, and cluster 3's three fixes.
+Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-**What the tests said.** Ground truth: **1 full hit, 2 partial, 2 misses** of five
-workspace-visible findings, the marquee case among the misses. Precision: 28 proposals, nine
-verified in depth, **zero unfounded**. Live dispatch: `next` → `retro` → `closed`, two files
-written, verified by mtime. `meta/FINAL-REPORT-4.md` §4 and §5 carry both, with the re-run's
-better number disclaimed wherever it appears.
+## Current unit
 
-## What the owner does next
+**META-145** — `meta/adr/ADR-0010-document-as-deliverable.md`.
 
-`meta/ROADMAP.md`'s 2026-08-30 §3 stamp names three things, in order:
+- Steps: enumerate document kinds × lifecycle events; derive the authority-and-obligation
+  table and the claim taxonomy; re-check F-076, F-087, F-093, F-095, F-053-class, F-092,
+  F-057, F-058 against the derived model as fixtures; state costs and rejected alternatives.
+- Done when: the ADR exists in the ADR-0006 shape (Context → numbered derivation sections →
+  historical cases → costs → alternatives rejected), every named finding has a row in the
+  historical-cases section, `./scripts/check` still green (docs only), committed AND pushed.
+- Derivation only. No spec edits, no code, no findings-status edits — those are META-146..149.
+- Next unit: **META-146** (spec/doc-header.md + spec/dor-dod.md carry the derivation).
 
-1. **Run the retro inside a live harness iteration** — the one thing no banked record tests,
-   because a live workspace has the product source and the commit history that a banked copy
-   does not.
-2. **Triage the thirty-seven proposals** in `meta/evidence/retro-calibration/`. They are the
-   first output of the feedback engine and nobody has read them as a backlog. Its README names
-   the four worth reading first.
-3. **A held-out engagement**, if a real recall number is wanted. This session cannot supply one:
-   the procedure was changed after reading the miss.
+## Done this session
 
-**F-076 is the finding to carry forward.** It joins the *document-as-deliverable* class (F-057,
-F-058) and turns it into a question with two answers that cannot both be right — either
-`spec/doc-header.md` §5 holds and `implement`'s claims gate does not belong on it, or §5 does not
-hold and the gate is right to be there. That is an ADR-0006-shaped derivation, not a patch.
-
-Findings, of 95 filed: F-079 and H-019 are the newest. Still open or deferred: **F-076** (new,
-deferred with its gate named), F-061 (open observation, now with the mechanism the retro found),
-the *half-written record* class (F-036, F-043, F-051, F-053) and *document-as-deliverable*
-(F-057, F-058), F-008 and F-030 behind their named gates.
+- **META-144** — Phase VI laid out in `meta/plan.md` (commit 2c4b0b7).
 
 ## Standing instructions (still in force)
 
@@ -48,4 +33,5 @@ the *half-written record* class (F-036, F-043, F-051, F-053) and *document-as-de
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
   rewritten.
 - Toolkit commits and harness commits stay separate.
-- **No harness run is in flight.**
+- **No harness run is in flight.** Iteration 5 is a HELD-OUT calibration engagement: this
+  session does not run it and does not read its probe beyond provision-verification.
