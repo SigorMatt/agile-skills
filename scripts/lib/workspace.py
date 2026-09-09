@@ -19,13 +19,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
-from record import (JOURNAL_HEADING_RE, entries,  # noqa: E402
+from record import (JOURNAL_HEADING_RE, blocks, entries,  # noqa: E402
                     sections as split_sections, table_rows)
 
 __all__ = [
-    "Workspace", "Item", "Question", "HistoryRow", "JournalEntry", "Doc",
+    "Workspace", "Item", "Question", "HistoryRow", "JournalEntry", "Doc", "PlanDocuments",
     "TIMESTAMP_RE", "ID_PATTERNS", "id_kind", "find_workspace_root", "resolve_root",
-    "WORKSPACE_MARKER",
+    "plan_documents", "WORKSPACE_MARKER",
 ]
 
 # The *structures* — sections, blocks, tables, entries — live in `record.py`, which is the one
@@ -394,3 +394,141 @@ class Workspace:
         """Items in a stable order: epics first, then by ID."""
         return sorted(self.items.values(),
                       key=lambda item: (0 if item.type == "epic" else 1, item.identifier))
+
+
+# ---- the plan's document declarations (ADR-0010 §5) ---------------------------------------
+
+# A path as it appears inside a plan's prose or a table cell: backticked, bolded, or bare, with
+# or without a sentence around it. Read as "the first thing that looks like a document", because
+# the row's own column is `document` and the rest of the line is the human's locating text.
+_DOCUMENT_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_./\-]*\.md")
+# The declared-empty sentinel. `plan`'s procedure: *"An empty set is written as one row saying
+# `none`... an absent section is not an empty one."* The distinction is the whole point — a
+# section somebody forgot and a section somebody answered are different facts, and a reader that
+# collapses them is the F-066 shape one level up.
+_NONE_RE = re.compile(r"^\W*none\b", re.IGNORECASE)
+
+INVALIDATION_SECTION = "## Invalidation set"
+DELIVERABLE_SECTION = "## Deliverable documents"
+
+
+class PlanDocuments:
+    """What `tracker/items/<ID>/artifacts/plan.md` says about documents (ADR-0010 §5.1).
+
+    Three consumers read the same two sections and must read them identically: `lint-claims`
+    (which widens its window by them), `check-verify-freshness` (which subtracts the deliverable
+    ones from its `docs/` exemption), and whatever later gate checks dispositions. Parsing lives
+    here for the reason the module docstring gives — two parsers disagree eventually.
+
+    Nothing here judges. `errors` is a list of `(line, code, message)` the caller reports in its
+    own voice; `declared_empty` says the plan *answered* `none` rather than saying nothing.
+    """
+
+    __slots__ = ("item", "path", "invalidation", "deliverable", "errors", "declared_empty")
+
+    def __init__(self, item, path) -> None:
+        self.item = item
+        self.path = path
+        self.invalidation = []          # [(relative-path, line)]
+        self.deliverable = []           # [(relative-path, line)]
+        self.errors = []                # [(line, code, message)]
+        self.declared_empty = set()     # section headings answered `none`
+
+    @property
+    def documents(self) -> list:
+        """Every document the plan names, either way, de-duplicated and ordered."""
+        return sorted({path for path, _ in self.invalidation + self.deliverable})
+
+    @property
+    def readable(self) -> bool:
+        return not self.errors
+
+
+def _named_documents(text: str, line: int, heading: str, found: PlanDocuments,
+                     rows) -> list:
+    """Pull document paths out of one section, recording what could not be read."""
+    named, said_none, saw_content = [], False, False
+    for content, content_line in rows:
+        if not content.strip():
+            continue
+        saw_content = True
+        if _NONE_RE.match(content.strip()):
+            said_none = True
+            continue
+        match = _DOCUMENT_RE.search(content)
+        if match is None:
+            found.errors.append((content_line, "plan.document.unreadable",
+                                 f"{heading}: {content.strip()[:80]!r} names no document — a "
+                                 f"row a reader cannot resolve to a path is a row a gate "
+                                 f"silently drops from its scope"))
+            continue
+        named.append((match.group(0), content_line))
+    if not saw_content:
+        found.errors.append((line, "plan.section.empty",
+                             f"{heading} is present but says nothing — write `none` if nothing "
+                             f"applies; a section that answers nothing is not an answer"))
+    elif said_none and named:
+        found.errors.append((line, "plan.section.contradictory",
+                             f"{heading} says `none` and also names {len(named)} document(s)"))
+    if said_none and not named:
+        found.declared_empty.add(heading)
+    return named
+
+
+def plan_documents(root: str, item_id: str) -> PlanDocuments:
+    """Read an item plan's `## Invalidation set` and `## Deliverable documents` (ADR-0010 §5).
+
+    An **absent** section is an error and not an empty set. That is not pedantry: the two
+    sections are what tell a gate how wide its window is, so a plan that omits one gives every
+    consumer a smaller scope than the item actually has and gives it silently — which is F-066's
+    mechanism (a gate reporting a scope it did not have) moved one file upstream.
+    """
+    path = os.path.join(root, "tracker", "items", item_id, "artifacts", "plan.md")
+    found = PlanDocuments(item_id, path)
+    if not os.path.isfile(path):
+        found.errors.append((0, "plan.missing",
+                             f"{item_id} has no artifacts/plan.md, so the documents this change "
+                             f"was permitted to touch are not declared anywhere"))
+        return found
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            text = handle.read()
+    except OSError as problem:
+        found.errors.append((0, "plan.unreadable", f"{path} could not be read: {problem}"))
+        return found
+
+    # An item artifact carries no frontmatter (`spec/workspace-layout.md`), so the whole file
+    # is the body and line 1 is line 1. `sections()` reads headings, so a plan that grew one
+    # anyway would still parse.
+    parts = split_sections(text, 1)
+
+    section = parts.get(INVALIDATION_SECTION)
+    if section is None:
+        found.errors.append((0, "plan.section.missing",
+                             f"{INVALIDATION_SECTION} is absent from {item_id}'s plan; an absent "
+                             f"section is not an empty one (ADR-0010 §5.1)"))
+    else:
+        rows = []
+        for cells, row_line in table_rows(section["text"], section["line"]):
+            if len(cells) < 5:
+                found.errors.append((row_line, "plan.row.malformed",
+                                     f"{INVALIDATION_SECTION}: a row with {len(cells)} cell(s); "
+                                     f"the shape is | document | what | kind | why | "
+                                     f"disposition |"))
+                continue
+            rows.append((cells[0], row_line))
+        found.invalidation = _named_documents(section["text"], section["line"],
+                                              INVALIDATION_SECTION, found, rows)
+
+    section = parts.get(DELIVERABLE_SECTION)
+    if section is None:
+        found.errors.append((0, "plan.section.missing",
+                             f"{DELIVERABLE_SECTION} is absent from {item_id}'s plan; an absent "
+                             f"section is not an empty one (ADR-0010 §5.1)"))
+    else:
+        listed = [(block.joined, block.start)
+                  for block in blocks(section["text"], section["line"])
+                  if block.kind in ("bullet", "text")]
+        found.deliverable = _named_documents(section["text"], section["line"],
+                                             DELIVERABLE_SECTION, found, listed)
+    return found

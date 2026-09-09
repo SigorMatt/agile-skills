@@ -4555,3 +4555,95 @@ recall is a reading, not a number, and the report says which.
   same way it did in META-147, which is the check working.
 - **Artifacts:** `methodology/skills/{intake,answer-questions}/{skill.yaml,process.md}`,
   `adapters/claude-code/dist/**`.
+
+## 2026-09-10 — META-148 — the enforcement half, part 1: the window a document gate stands in
+
+- **Unit:** META-148
+- **Inputs read:** `meta/adr/ADR-0010-document-as-deliverable.md` §5 (the invalidation set, its
+  columns and its five consumers), §6's F-076, F-058, F-057 and F-092 rows, and the enforcement
+  table's obligations 18 and 20; `meta/findings/FINDINGS.md` F-076, F-058, F-066 and F-052 in full
+  — F-066 and F-052 because they are the same family (a gate reporting a scope it did not have)
+  and their fixtures are the pattern; `scripts/lib/scope.py`, `scripts/lint-claims`,
+  `scripts/lib/claims.py`, `scripts/lib/record.py`, `scripts/lib/workspace.py`,
+  `scripts/check-verify-freshness`; `scripts/check` steps 6 and 19b as the model for a step proved
+  by execution; `methodology/skills/implement/skill.yaml` (the gate naming the flag) and
+  `methodology/skills/plan/process.md` (the shape of the three new plan sections).
+- **Decisions:**
+  - **`scope.py` models four states, and the third one is a verdict of its own.** The rewrite is
+    not a patch: the old docstring's three-state model justified passing a real-but-empty window
+    with the words *"because the comparison could have found something"*, and that sentence is
+    exactly what F-076 falsifies. The four, with what each does at a gate:
+    **real and non-empty** → *examine*; **real and empty** → *pass*, and say the window was
+    searched; **out-of-scope-by-construction** → *pass with a mark*, exit 0 with its own sentence;
+    **degenerate** → *fail*. `outcome` returns `examine`/`pass`/`mark`/`fail` so no caller
+    re-derives the branch, and `sentence` returns the state's own words so no caller can spell two
+    states alike.
+  - **By construction exits 0, and that is a decision, not a softening.** F-066's rule is that a
+    gate which could not look must exit non-zero, and this state could not look — but the two
+    differ in *whose fault it is*. A degenerate window is a broken invocation and the fix is in the
+    command. A by-construction window is a correct invocation over a scope the surrounding rules
+    emptied; on an item that legitimately has no documents that is ordinary work, and a gate that
+    fails on ordinary work is a gate somebody switches off. So: a WARNING,
+    `claim.scope.by-construction`, and a scope line reading `NOTHING COULD HAVE BEEN IN SCOPE`
+    rather than a count. F-076's first direction was *"'passed over nothing' is never spelled the
+    same as 'passed'"*, and that is what is now mechanically true.
+  - **`scope.py` cannot detect the fourth state alone, and does not pretend to.** "What this
+    execution was permitted to do" is the caller's knowledge; no comparison of two commits can tell
+    *nobody wrote a document* from *nobody was allowed to write one*. So `constrained(window,
+    permitted, reason)` takes it from the caller, and a caller that supplies nothing gets the
+    honest three-state answer instead of a fourth state guessed at. The transition runs one way
+    only: a degenerate window stays a failure (permission does not repair a broken comparison) and
+    a window with paths in it stays real.
+  - **`scripts/lint-claims --plan-documents <ITEM-ID>`.** The rule-2 window becomes the branch diff
+    **plus** every document named in that item's `## Invalidation set` and `## Deliverable
+    documents`. This is the half that makes the window able to contain something: the documents a
+    change falsifies are precisely the ones its own diff does not touch (F-087), so widening is
+    what stops the state above from being the *normal* answer rather than the rare one.
+  - **The plan reader lives in `scripts/lib/workspace.py`, not in the lint.** `plan_documents()`
+    reads through `record.py`'s `sections`/`table_rows`/`blocks`, because three consumers now read
+    the same two sections — `lint-claims`, `check-verify-freshness`, and whatever later gate checks
+    dispositions — and two parsers of one record disagree eventually. It judges nothing; it returns
+    `(line, code, message)` triples the caller reports in its own voice.
+  - **An absent section is an error; `none` is an answer.** `plan.section.missing` for an absent
+    one, `plan.section.empty` for one present and silent, `plan.row.malformed` for a row without
+    the five columns, `plan.document.unreadable` for a row naming no path. All of them are ways the
+    window ends up narrower than the item without anyone noticing, which is F-052's mechanism one
+    file upstream. `declared_empty` records that the plan *answered* `none`, and only that answer
+    licenses the by-construction verdict.
+  - **A plan that could not be parsed is not a plan that named nothing.** If the reader reported
+    errors, `lint-claims` leaves the window alone rather than marking it by-construction —
+    claiming the fourth state on the strength of a parse failure would be the same overclaim
+    pointing the other way.
+  - **`check-verify-freshness`'s `docs/` exemption subtracts the deliverable documents (F-058).**
+    The gate's reasoning was right and its predicate was a proxy: `verify` and `review-close` must
+    commit their own records, so the head moves and the record must be exempt — true of a document
+    that *records* a decision, false of one that *is* the deliverable. The gate now prints the
+    scope it had in all three cases (documents subtracted / plan says `none` / plan declares no
+    such section), because a gate that exempted more than the reader thinks is the same defect in
+    the other direction. Plan-shape errors are printed and not fatal: this gate's question is D10,
+    and the plan's shape belongs to `documents-at-risk-are-enumerated` (META-148b).
+  - **No contract was touched and none needed to be.** `implement`'s gate command already reads
+    `scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}` and parses as
+    written; `review-close`'s `scripts/check-verify-freshness {{item.id}} {{item.branch}}` needs no
+    new argument, because the item ID is already there and the plan is found from it.
+- **Questions raised:** none blocking. Two things named rather than solved. (1) The widened window
+  includes entries disposed `owned-by-ending`, which `implement` may read but not write: a
+  pre-existing unsourced absolute in such a document would block `implement` with no legal repair.
+  It cannot arise while `review-close`'s `--context epic` run over the whole document set is green,
+  so it is a real edge and not a present one. (2) Rule 2 still reads only under `docs/`, so a
+  deliverable document declared outside `docs/` is in the window and not examined; the
+  `claim.plan.document-absent` warning catches the missing-file case but not this one.
+- **Gates:** `./scripts/check` green — `check: all steps passed`. `fixtures/broken-workspace`
+  still emits **82 codes**, unchanged. The library self-test went 252 → **273 cases** (the fourth
+  state's transitions in `run_scope`, and `run_plan_documents` for the two sections).
+  The new step, **`the document window (F-076, F-058, 8 cases)`**, was run against the *old*
+  scripts by stashing the three changes and leaving the step in place: **five of the eight cases
+  failed**, each of them with `exit 0` and the line
+  `lint-claims: checked absolute claims: 0 document(s) in 0 path(s) differ from main (cd75135)
+  under docs`, and `check-verify-freshness: ... only the record changed (3 file(s) under tracker/
+  or docs/), so the verification still covers the code` for the deliverable-document case. The
+  three that passed both ways are the do-not-loosen cases: a real empty window is still an unmarked
+  pass, a degenerate window is still refused, and a record document is still exempt.
+- **Artifacts:** `scripts/lib/scope.py`, `scripts/lib/workspace.py`, `scripts/lib/selftest.py`,
+  `scripts/lint-claims`, `scripts/check-verify-freshness`, `scripts/check`,
+  `adapters/claude-code/dist/**`.

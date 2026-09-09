@@ -13,6 +13,19 @@ the item to `verifying` rather than closing over it.
 
 D10 is the criterion most often waved through with "it was only a small fix". A comparison
 costs nothing and does not have an opinion about how small the fix looked.
+
+**What counts as "code" is not decided by a directory** (F-058, ADR-0010 §6). The head moves
+between `verify` and `review-close` because both are required to commit their own records, so
+this gate compares paths rather than shas and exempts the record — `tracker/` and `docs/`. That
+reasoning is right for a document that *records* what was decided and wrong for a document that
+*is* the deliverable: on an item whose delivered change is a document, the old exemption excluded
+the one thing that was delivered, and a post-verification edit to it closed silently. So the
+exemption subtracts the item's `## Deliverable documents`, as its plan declares them
+(ADR-0010 §5.1) — a delivered document changed after verification sends the item back to
+`verifying` exactly like a changed source file.
+
+The scope this gate actually had is printed on every run, including the case where the plan
+declares nothing: a gate that exempted more than the reader thinks is F-052's class.
 """
 
 from __future__ import annotations
@@ -24,7 +37,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
-from workspace import resolve_root  # noqa: E402
+from workspace import plan_documents, resolve_root  # noqa: E402
 
 VERIFIED_RE = re.compile(r"^Verified-commit:\s*([0-9a-f]{7,40})\s*$", re.MULTILINE)
 
@@ -90,8 +103,37 @@ def main(argv: list) -> int:
               f"{changed.stderr.strip()}", file=sys.stderr)
         return 1
     paths = [line for line in changed.stdout.split("\n") if line.strip()]
-    code_paths = [path for path in paths
-                  if not (path.startswith("tracker/") or path.startswith("docs/"))]
+
+    # F-058. The exemption is not "under docs/"; it is "not one of this item's deliverable
+    # documents". A document the item was asked to produce is the delivered change, and D10 is
+    # exactly the criterion that exists to catch it changing after verification.
+    declared = plan_documents(root, item_id)
+    delivered = {path for path, _ in declared.deliverable}
+    for line, code, message in declared.errors:
+        # Reported and not fatal: this gate's question is D10, not the plan's shape (that is
+        # `documents-at-risk-are-enumerated`). But a plan this gate could not read is a plan whose
+        # deliverable documents it did not subtract, and saying so is the difference between an
+        # exemption and an oversight.
+        print(f"check-verify-freshness: [{code}] {message}", file=sys.stderr)
+    if delivered:
+        print(f"check-verify-freshness: {len(delivered)} deliverable document(s) are not "
+              f"exempt as record — {', '.join(sorted(delivered))}")
+    elif declared.declared_empty:
+        print(f"check-verify-freshness: {item_id}'s plan declares no deliverable documents, so "
+              f"everything under docs/ is record here")
+    else:
+        print(f"check-verify-freshness: {item_id}'s plan declares no deliverable documents "
+              f"section, so nothing was subtracted from the docs/ exemption", file=sys.stderr)
+
+    sys.stdout.flush()
+
+    def is_record(path: str) -> bool:
+        if path in delivered:
+            return False
+        return path.startswith("tracker/") or path.startswith("docs/")
+
+    code_paths = [path for path in paths if not is_record(path)]
+    delivered_changed = [path for path in code_paths if path in delivered]
 
     if not code_paths:
         print(f"check-verify-freshness: {item_id} verified at {verified[:8]}; {branch} has "
@@ -103,7 +145,12 @@ def main(argv: list) -> int:
     newer = git(["log", "--format=%h %s", f"{verified}..{branch}", "--"] + code_paths, root)
     print(f"check-verify-freshness: {item_id} was verified at {verified} but code has changed "
           f"since; {branch} is now at {head_sha[:8]}", file=sys.stderr)
-    print("  code files changed after verification:", file=sys.stderr)
+    if delivered_changed:
+        print(f"  {len(delivered_changed)} of them are documents this item was asked to deliver, "
+              f"which are not record (F-058):", file=sys.stderr)
+        for path in delivered_changed:
+            print(f"    {path}", file=sys.stderr)
+    print("  files changed after verification:", file=sys.stderr)
     for path in code_paths[:20]:
         print(f"    {path}", file=sys.stderr)
     if newer.returncode == 0 and newer.stdout.strip():

@@ -17,6 +17,15 @@ Steps, in order:
                                                unsourced absolute, `--all` is the ending's scope,
                                                and `--changed-since main` standing on `main` is
                                                refused rather than passing over nothing (F-066)
+  6b. the document window                    — F-076 and F-058, by execution: a document the
+                                               plan's invalidation set names is inside
+                                               `lint-claims`' window even though the branch never
+                                               opened it; a window nothing could have filled exits
+                                               0 and prints NOTHING COULD HAVE BEEN IN SCOPE
+                                               rather than a pass; a real empty window stays an
+                                               unmarked pass; an absent plan section is an error;
+                                               and `check-verify-freshness` stops exempting a
+                                               document the item was asked to deliver
   7. the legal repair for a standing ADR     — fixtures/adr-correction: the reduced iteration-4
                                                ADR reproduces its three true-but-unsourced
                                                absolutes, and the same ADR repaired through
@@ -647,6 +656,215 @@ def check_claims_scope(runner: Runner) -> None:
             detail.append(f"  - {name}: exit {result.returncode}")
             detail += [f"      {line}" for line in
                        (result.stdout + result.stderr).strip().split("\n")[-6:]]
+        runner.emit(label, False, detail="\n".join(detail))
+    else:
+        runner.emit(label, True)
+
+
+PLAN_TABLE_HEADER = ("| document | what | kind | why | disposition |\n"
+                     "|----------|------|------|-----|-------------|\n")
+
+UNSOURCED_VISION = (
+    "---\ntitle: Vision\nversion: 1\nstatus: current\n"
+    "updated: 2026-09-01T09:00:00Z\nupdated-by: plan\nupdated-for: WI-0001\n---\n\n"
+    "# Vision\n\n`render_table` never touches a line outside a table.\n\n"
+    "## Change log\n\n| version | when | by | for | what changed |\n"
+    "|---------|------|----|-----|--------------|\n"
+    "| 1 | 2026-09-01T09:00:00Z | plan | WI-0001 | First version |\n")
+
+SOURCED_VISION = UNSOURCED_VISION.replace(
+    "`render_table` never touches a line outside a table.",
+    "`render_table` never touches a line outside a table [src: code.py].")
+
+
+def _plan(invalidation: str, deliverable: str) -> str:
+    return ("# Plan — WI-0001\n\n## Invalidation set\n\n"
+            + PLAN_TABLE_HEADER + invalidation + "\n## Deliverable documents\n\n"
+            + deliverable)
+
+
+def check_document_window(runner: Runner) -> None:
+    """The window a document gate stands in, by execution (F-076, F-058, ADR-0010 §5).
+
+    Two gates were looking in the wrong place and both were reporting a pass for it.
+
+    `lint-claims --changed-since {{trunk}}` on `implement` is a window over the documents the
+    branch changed, and the documents a change *falsifies* are exactly the ones its diff does not
+    touch. The window was empty on every execution in every engagement, and `scope.py`'s
+    three-state model called that an honest pass *"because the comparison could have found
+    something"* — the one sentence F-076 falsifies. Case 1 below is that fixture: the plan names a
+    document, the branch never opens it, the document carries an unsourced absolute, and before
+    this change the gate exited 0.
+
+    `check-verify-freshness` exempts everything under `docs/` from D10 because `verify` and
+    `review-close` must commit their own records. True of a document that *records* a decision;
+    false of a document that IS the deliverable (F-058). Cases 7 and 8 are that pair.
+
+    Both directions on every rule, because a rule nobody can satisfy is not a rule: an item that
+    legitimately has no documents must still pass (case 3), and a plan that names a clean document
+    must still pass (case 2).
+    """
+    import shutil
+    import tempfile
+    label = "the document window (F-076, F-058, 8 cases)"
+    linter = os.path.join(SCRIPTS, "lint-claims")
+    freshness = os.path.join(SCRIPTS, "check-verify-freshness")
+    if shutil.which("git") is None:
+        runner.skip(label, "git is not on PATH")
+        return
+    cases = []
+    with tempfile.TemporaryDirectory() as base:
+        # ---- the claims window ----------------------------------------------------------
+        repo = os.path.join(base, "claims")
+        artifacts = os.path.join(repo, "tracker", "items", "WI-0001", "artifacts")
+        os.makedirs(os.path.join(repo, "docs", "product"))
+        os.makedirs(artifacts)
+        plan_path = os.path.join(artifacts, "plan.md")
+        vision = os.path.join(repo, "docs", "product", "vision.md")
+
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+
+        write(os.path.join(repo, "code.py"), "def render_table():\n    return None\n")
+        write(vision, UNSOURCED_VISION)
+        write(os.path.join(repo, "docs", "product", "charter.md"), SOURCED_VISION)
+        write(plan_path, _plan("| `docs/product/vision.md` | the sentence about `render_table` "
+                               "| cited-fact | the change alters it | to-update |\n",
+                               "- none\n"))
+        git("init", "--initial-branch=main")
+        git("config", "user.email", "check@example.invalid")
+        git("config", "user.name", "check")
+        git("add", "-A")
+        git("commit", "-m", "base")
+        # The branch changes code and never opens a document — F-076's shape exactly.
+        git("checkout", "-q", "-b", "wi/WI-0001")
+        write(os.path.join(repo, "code.py"),
+              "def render_table():\n    return []\n")
+        git("add", "-A")
+        git("commit", "-m", "code only")
+
+        def lint(*extra):
+            return subprocess.run([sys.executable, linter, "--root", repo, *extra],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        # 1. must-fail — the plan names a falsified document the diff does not contain.
+        found = lint("--changed-since", "main", "--plan-documents", "WI-0001")
+        cases.append(("a document the plan names is in the window even though the branch never "
+                      "touched it",
+                      found.returncode != 0
+                      and "claim.unsourced" in codes_from(found.stdout + found.stderr), found))
+
+        # 2. must-pass — a plan naming a document whose absolute IS sourced. Asserted on the
+        #    scope line as well as the exit code: "exits 0" is also what the defect did, and the
+        #    thing being proved is that the widened window examined a document at all. Neither
+        #    document is in the branch diff, in this case or the one above.
+        write(plan_path, _plan("| `docs/product/charter.md` | the sentence about "
+                               "`render_table` | cited-fact | the change alters it | to-update "
+                               "|\n", "- none\n"))
+        clean = lint("--changed-since", "main", "--plan-documents", "WI-0001")
+        cases.append(("the widened window passes when the claim it reaches carries its source",
+                      clean.returncode == 0
+                      and "1 document(s) in 1 path(s) in scope" in clean.stdout, clean))
+
+        # 3. the fourth state: the plan declares nothing, so nothing could have been in scope.
+        #    Exit 0 — an item with no documents is ordinary work and a gate that fails on
+        #    ordinary work gets switched off — but never spelled as a pass.
+        write(plan_path, _plan("| none | no document is at risk | cited-fact | the change is "
+                               "confined to code.py | verified-still-true |\n", "- none\n"))
+        marked = lint("--changed-since", "main", "--plan-documents", "WI-0001")
+        output = marked.stdout + marked.stderr
+        cases.append(("an empty-by-construction window exits 0 and says so in its own words",
+                      marked.returncode == 0
+                      and "claim.scope.by-construction" in codes_from(output)
+                      and "NOTHING COULD HAVE BEEN IN SCOPE" in output, marked))
+
+        # 4. and the state it must not be confused with: a real, empty window is still a plain
+        #    pass, with no mark on it. Losing this is how the fix becomes a blocked pipeline.
+        plain = lint("--changed-since", "main")
+        cases.append(("a real window with nothing in it is still an unmarked pass",
+                      plain.returncode == 0
+                      and "claim.scope.by-construction" not in codes_from(plain.stdout
+                                                                          + plain.stderr), plain))
+
+        # 5. an absent section is not an empty one.
+        write(plan_path, "# Plan — WI-0001\n\n## Invalidation set\n\n" + PLAN_TABLE_HEADER
+              + "| none | nothing | cited-fact | code only | verified-still-true |\n")
+        absent = lint("--changed-since", "main", "--plan-documents", "WI-0001")
+        cases.append(("a plan missing ## Deliverable documents is an error, not an empty set",
+                      absent.returncode != 0
+                      and "claim.plan.section.missing" in codes_from(absent.stdout
+                                                                     + absent.stderr), absent))
+
+        # 6. a degenerate window stays a failure. Naming documents in a plan must not become a
+        #    way to make a broken comparison look answerable.
+        write(plan_path, _plan("| `docs/product/vision.md` | a sentence | cited-fact | it "
+                               "changes | to-update |\n", "- none\n"))
+        broken = lint("--changed-since", "no-such-ref", "--plan-documents", "WI-0001")
+        cases.append(("--plan-documents does not rescue a degenerate window",
+                      broken.returncode != 0
+                      and "claim.scope.degenerate" in codes_from(broken.stdout
+                                                                 + broken.stderr), broken))
+
+        # ---- the freshness exemption ----------------------------------------------------
+        fresh = os.path.join(base, "freshness")
+        fresh_artifacts = os.path.join(fresh, "tracker", "items", "WI-0002", "artifacts")
+        os.makedirs(os.path.join(fresh, "docs", "product"))
+        os.makedirs(os.path.join(fresh, "docs", "architecture"))
+        os.makedirs(fresh_artifacts)
+
+        def fgit(*args):
+            return subprocess.run(["git", *args], cwd=fresh, capture_output=True, text=True)
+
+        write(os.path.join(fresh, "code.py"), "x = 1\n")
+        write(os.path.join(fresh, "docs", "product", "vision.md"), "# Vision\n\nOne sentence.\n")
+        write(os.path.join(fresh, "docs", "architecture", "overview.md"), "# Overview\n\nOne.\n")
+        write(os.path.join(fresh_artifacts, "plan.md"),
+              ("# Plan — WI-0002\n\n## Invalidation set\n\n" + PLAN_TABLE_HEADER
+               + "| none | nothing else at risk | cited-fact | the item is about the vision "
+                 "| verified-still-true |\n\n## Deliverable documents\n\n"
+                 "- `docs/product/vision.md` — AC1 is a criterion about this document\n"))
+        fgit("init", "--initial-branch=main")
+        fgit("config", "user.email", "check@example.invalid")
+        fgit("config", "user.name", "check")
+        fgit("add", "-A")
+        fgit("commit", "-m", "base")
+        verified = fgit("rev-parse", "HEAD").stdout.strip()
+        write(os.path.join(fresh_artifacts, "verify-report.md"),
+              f"# Verify — WI-0002\n\nVerified-commit: {verified}\n")
+        fgit("add", "-A")
+        fgit("commit", "-m", "the verify record")
+
+        def stale():
+            return subprocess.run([sys.executable, freshness, "WI-0002", "main", "--root", fresh],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        # 7. must-pass — a record document changed after verification. `verify` and
+        #    `review-close` must commit their own records; that must stay exempt.
+        write(os.path.join(fresh, "docs", "architecture", "overview.md"),
+              "# Overview\n\nOne. And a record edit.\n")
+        fgit("commit", "-qam", "a record edit under docs/")
+        record_only = stale()
+        cases.append(("a record document changed after verification is still exempt",
+                      record_only.returncode == 0, record_only))
+
+        # 8. must-fail — the *delivered* document changed after verification. F-058: the old
+        #    exemption excluded the one thing the item was asked to produce.
+        write(os.path.join(fresh, "docs", "product", "vision.md"),
+              "# Vision\n\nOne sentence, edited after it was verified.\n")
+        fgit("commit", "-qam", "an edit to the delivered document")
+        delivered = stale()
+        cases.append(("a delivered document changed after verification sends the item back",
+                      delivered.returncode != 0
+                      and "docs/product/vision.md" in (delivered.stdout + delivered.stderr),
+                      delivered))
+
+    failed = [(name, result) for name, ok, result in cases if not ok]
+    if failed:
+        detail = []
+        for name, result in failed:
+            detail.append(f"  - {name}: exit {result.returncode}")
+            detail += [f"      {line}" for line in
+                       (result.stdout + result.stderr).strip().split("\n")[-8:]]
         runner.emit(label, False, detail="\n".join(detail))
     else:
         runner.emit(label, True)
@@ -1509,6 +1727,7 @@ def main() -> int:
     check_render(runner)
     check_example(runner)
     check_claims(runner)
+    check_document_window(runner)
     check_cross_answers(runner)
     check_retro(runner)
     check_retro_is_additive(runner)

@@ -562,6 +562,47 @@ def run_scope(results) -> None:
         window = scope_lib.diff_scope(repo, "main", ["docs"])
         results.check("scope/a branch ahead of the trunk is real", window.verdict, "real")
         results.check("scope/degenerate is the negation of real", window.degenerate, False)
+        results.check("scope/a window with paths is examined", window.outcome, "examine")
+
+        # The fourth state (F-076). `constrained` is the only way into it, and it must be
+        # unreachable from every window except a real and empty one — a degenerate window is a
+        # broken invocation and no amount of permission repairs it, and a window with paths in it
+        # manifestly could contain something whatever the caller believes.
+        git("checkout", "-q", "main")
+        empty = scope_lib.diff_scope(repo, "main", ["docs"])
+        results.check("scope/the window before constraining", empty.verdict, "same-commit")
+        git("checkout", "-q", "-b", "wi/WI-0002")
+        with open(os.path.join(repo, "code.py"), "w", encoding="utf-8") as handle:
+            handle.write("x = 1\n")
+        git("add", "-A")
+        git("commit", "-m", "code only")
+        real_empty = scope_lib.diff_scope(repo, "main", ["docs"])
+        results.check("scope/a code-only branch is a real, empty window",
+                      (real_empty.verdict, real_empty.paths, real_empty.outcome),
+                      ("real", [], "pass"))
+        marked = scope_lib.constrained(real_empty, [], "nothing was permitted into it")
+        results.check("scope/real and empty plus nothing permitted is by construction",
+                      marked.verdict, "by-construction")
+        results.check("scope/by construction is not degenerate", marked.degenerate, False)
+        results.check("scope/by construction is a mark, not a pass", marked.outcome, "mark")
+        results.check("scope/by construction never spells itself 'passed'",
+                      marked.sentence.startswith("NOTHING COULD HAVE BEEN IN SCOPE"), True)
+        results.check("scope/by construction carries the caller's reason",
+                      "nothing was permitted into it" in marked.hint, True)
+        results.check("scope/something permitted leaves a real window alone",
+                      scope_lib.constrained(real_empty, ["docs/a.md"], "r").verdict, "real")
+        results.check("scope/a real and empty window still says it was searched",
+                      real_empty.sentence.startswith("nothing found in a window that was "
+                                                     "searched"), True)
+        degenerate = scope_lib.diff_scope(repo, "no-such-ref", ["docs"])
+        results.check("scope/permission does not rescue a degenerate window",
+                      scope_lib.constrained(degenerate, [], "r").verdict, "unresolved-ref")
+        results.check("scope/a degenerate window is a failure", degenerate.outcome, "fail")
+        with open(os.path.join(repo, "docs", "c.md"), "w", encoding="utf-8") as handle:
+            handle.write("four\n")
+        occupied = scope_lib.diff_scope(repo, "main", ["docs"])
+        results.check("scope/a window with something in it is never by construction",
+                      scope_lib.constrained(occupied, [], "r").verdict, "real")
 
 
 def run_record(results) -> None:
@@ -694,6 +735,68 @@ def run_citations(results) -> None:
                       "does not exist" in resolver.resolve("gone.md:2"), True)
 
 
+def run_plan_documents(results) -> None:
+    """The plan's two document sections, read the way three gates will read them (ADR-0010 §5.1).
+
+    The case that matters is the third: `none` and *absent* are different answers, and a reader
+    that collapses them hands every consumer a silently narrower window — which is F-066's
+    mechanism (a gate reporting a scope it did not have) one file upstream.
+    """
+    import tempfile
+    header = "| document | what | kind | why | disposition |\n|---|---|---|---|---|\n"
+    with tempfile.TemporaryDirectory() as root:
+        artifacts = os.path.join(root, "tracker", "items", "WI-0001", "artifacts")
+        os.makedirs(artifacts)
+        plan = os.path.join(artifacts, "plan.md")
+
+        def parse(body):
+            with open(plan, "w", encoding="utf-8") as handle:
+                handle.write(body)
+            return workspace_lib.plan_documents(root, "WI-0001")
+
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| `docs/product/vision.md` | the K8 sentence | engagement-state | the "
+                      "ending falsifies it | owned-by-ending |\n\n"
+                      "## Deliverable documents\n\n- `docs/architecture/overview.md` — AC2\n")
+        results.check("plan/both sections read",
+                      found.documents,
+                      ["docs/architecture/overview.md", "docs/product/vision.md"])
+        results.check("plan/a clean plan reports nothing", found.errors, [])
+
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| none | nothing at risk | cited-fact | code only | verified-still-true "
+                      "|\n\n## Deliverable documents\n\n- none\n")
+        results.check("plan/none is an answer, not an omission",
+                      (found.documents, found.errors, sorted(found.declared_empty)),
+                      ([], [], ["## Deliverable documents", "## Invalidation set"]))
+
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| none | nothing | cited-fact | code only | verified-still-true |\n")
+        results.check("plan/an absent section is not an empty one",
+                      [code for _, code, _ in found.errors], ["plan.section.missing"])
+
+        found = parse("# Plan\n\n## Invalidation set\n\n## Deliverable documents\n\n- none\n")
+        results.check("plan/a section that answers nothing is not an answer",
+                      [code for _, code, _ in found.errors], ["plan.section.empty"])
+
+        found = parse("# Plan\n\n## Invalidation set\n\n| document | what |\n|---|---|\n"
+                      "| `docs/a.md` | something |\n\n## Deliverable documents\n\n- none\n")
+        results.check("plan/a row missing columns is reported, not dropped",
+                      [code for _, code, _ in found.errors],
+                      ["plan.row.malformed", "plan.section.empty"])
+
+        found = parse("# Plan\n\n## Invalidation set\n\n" + header +
+                      "| the overview | a sentence | cited-fact | it changes | to-update |\n\n"
+                      "## Deliverable documents\n\n- none\n")
+        results.check("plan/a row naming no path is reported",
+                      [code for _, code, _ in found.errors], ["plan.document.unreadable"])
+
+        os.remove(plan)
+        results.check("plan/no plan at all",
+                      [code for _, code, _ in workspace_lib.plan_documents(
+                          root, "WI-0001").errors], ["plan.missing"])
+
+
 def main() -> int:
     results = Results()
     run_accept(results)
@@ -707,6 +810,7 @@ def main() -> int:
     run_root_resolution(results)
     run_escaping(results)
     run_scope(results)
+    run_plan_documents(results)
     crosscheck_note = run_crosscheck(results)
 
     print(f"miniyaml self-test: {results.passed} passed, {len(results.failures)} failed")

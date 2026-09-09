@@ -3,7 +3,7 @@
 
 Usage:
   scripts/lint-claims [--root .] [--changed-since <git-ref>] [--uncommitted] [--all]
-                      [--context work-item|bug|epic] [--quiet]
+                      [--plan-documents <ITEM-ID>] [--context work-item|bug|epic] [--quiet]
 
 Two rules.
 
@@ -30,11 +30,18 @@ the Definition of Done applies to D7 and D12, so the gate is a real read of a fe
 rather than a whole-repository ritual nobody performs. `--all` forces the whole tree, and that is
 the scope an **ending** uses, because an ending is not an execution and has no diff of its own.
 
-Three outcomes, not two (F-066, `scripts/lib/scope.py`):
+Four outcomes, not two (F-066, F-076, `scripts/lib/scope.py`):
 
   * documents in the window → check them;
   * a well-formed window with nothing in it → pass, and say so: the comparison could have found
     something and did not;
+  * a window that was **out of scope by construction** — well formed, empty, and empty because
+    nothing this execution was permitted to write could ever have appeared in it →
+    `claim.scope.by-construction`, a warning, exit 0. Detected only where the caller can say what
+    was permitted, which is `--plan-documents`. F-076: `implement`'s gate was this on every
+    execution in every engagement and printed the word "passed" for it. It still exits 0, because
+    an item that legitimately has no documents must not be a blocked transition — but the run
+    says `NOTHING COULD HAVE BEEN IN SCOPE`, and that is the sentence the journal carries.
   * a **degenerate** window — the ref does not resolve, or it IS the current commit with nothing
     modified under `docs/` → `claim.scope.degenerate`, exit 1. This is the shape iteration 4
     found: at an epic ending there is no branch, `--changed-since main` compares `main` with
@@ -42,6 +49,18 @@ Three outcomes, not two (F-066, `scripts/lib/scope.py`):
     — *"It passed here, but it would have passed over anything"* — and only a voluntary `--all`
     run surfaced three real `claim.unsourced` errors. A gate that could not look must say so with
     a non-zero exit; that is F-033's rule, applied to scope.
+
+The last two differ in who is at fault. Degenerate is a broken *invocation* and the fix is to name
+a scope that can see. By construction is a correct invocation over a scope the surrounding *rules*
+emptied, and there is nothing this run can do about it except refuse to call it a pass.
+
+`--plan-documents <ITEM-ID>` widens the rule-2 window to the branch diff **plus** every document
+named in that item's plan — its `## Invalidation set` and its `## Deliverable documents`
+(ADR-0010 §5). This is what makes `implement`'s window able to contain something: the documents a
+change *falsifies* are precisely the ones its own diff does not touch (F-087), and a window over
+the diff alone looks where the change is while the damage is somewhere else. An **absent** section
+is an error, not an empty set — a plan that omits one hands every consumer a narrower scope than
+the item has, and hands it silently.
 
 `--uncommitted` scopes rule 2 to the working tree, for a skill that works on the trunk and
 commits once after its gates (`plan`). That window is never degenerate and it can be empty; an
@@ -69,14 +88,14 @@ from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
                     CitationResolver, looks_like_code, masked_lines)
 from record import is_prose, paragraphs  # noqa: E402
 from report import Report  # noqa: E402
-from scope import diff_scope, working_tree_scope  # noqa: E402
+from scope import DiffScope, constrained, diff_scope, working_tree_scope  # noqa: E402
 import frontmatter  # noqa: E402
 from textio import read_text  # noqa: E402
-from workspace import resolve_root  # noqa: E402
+from workspace import id_kind, plan_documents, resolve_root  # noqa: E402
 
 class ClaimLinter:
     def __init__(self, root: str, changed_since=None, everything=False, only=None,
-                 uncommitted=False, context="") -> None:
+                 uncommitted=False, context="", plan_item="") -> None:
         self.root = os.path.abspath(root)
         self.report = Report("lint-claims", self.root)
         self.context = (context or "").strip()
@@ -92,9 +111,11 @@ class ClaimLinter:
         self.changed_since = changed_since
         self.everything = everything
         self.only = [os.path.abspath(name) for name in (only or [])]
+        self.plan_item = (plan_item or "").strip()
         self.citations = CitationResolver(self.root)
         self._ignored = None
         self._window = None
+        self._plan = None
         self.undecodable = set()
         self.superseded = set()
 
@@ -104,20 +125,54 @@ class ClaimLinter:
         """One git runner, shared with the citation resolver so both see the same repository."""
         return self.citations.git(args)
 
+    def plan(self):
+        """What `--plan-documents` names, read once (ADR-0010 §5.1, `scripts/lib/workspace.py`)."""
+        if self._plan is None:
+            self._plan = plan_documents(self.root, self.plan_item)
+        return self._plan
+
     def window(self):
-        """The diff window rule 2 is scoped to, classified (F-066, `scripts/lib/scope.py`).
+        """The window rule 2 is scoped to, classified (F-066, F-076, `scripts/lib/scope.py`).
 
         Computed once. `--changed-since` used to answer "which documents differ" and stop there,
-        which conflates two states that need opposite verdicts: a window that is well formed and
-        empty (this execution touched no document — a pass) and a window that could not have
-        contained anything whatever the execution did (a failure).
+        which conflates three states that need different verdicts: a window that is well formed
+        and empty (this execution touched no document — a pass), a window that could not have
+        contained anything whatever the execution did (a failure), and a window nothing this
+        execution was permitted to do could have filled (a pass that must not be spelled like one).
+
+        `--plan-documents` is what tells the last two apart, and it does it by widening the window
+        first: the documents a change falsifies are the ones its diff does not touch, so the plan's
+        invalidation set and deliverable documents join the diff. If after that the window is still
+        empty *and* the plan named nothing, the emptiness was never this execution's to avoid.
         """
         if self._window is None:
             if self.uncommitted:
-                self._window = working_tree_scope(self.root, ["docs"])
+                window = working_tree_scope(self.root, ["docs"])
             else:
-                self._window = diff_scope(self.root, self.changed_since, ["docs"])
+                window = diff_scope(self.root, self.changed_since, ["docs"])
+            self._window = self.widen(window)
         return self._window
+
+    def widen(self, window):
+        """Add the plan's declared documents to the window, then re-read what emptiness means."""
+        if not self.plan_item or window.degenerate:
+            return window
+        declared = [path for path in self.plan().documents if path.endswith(".md")]
+        if declared:
+            merged = sorted(set(window.paths) | set(declared))
+            return DiffScope(window.ref, "real",
+                             f"{len(merged)} path(s) in scope — {window.detail}, plus "
+                             f"{len(declared)} document(s) named by {self.plan_item}'s plan",
+                             paths=merged, dirty=window.dirty)
+        if not self.plan().readable:
+            # The plan could not be read, so "it named nothing" is not a fact yet — and claiming
+            # by-construction on the strength of a parse failure would be the same overclaim in
+            # the other direction. The parse errors are already reported; leave the window alone.
+            return window
+        return constrained(
+            window, declared,
+            f"{self.plan_item}'s plan declares no invalidation set and no deliverable documents, "
+            f"so this execution was permitted to write no document at all")
 
     def scoped(self) -> bool:
         """Is rule 2 restricted to a window, rather than reading the whole tree?"""
@@ -257,6 +312,29 @@ class ClaimLinter:
                          "run: cmd → outcome>] — an absolute is the claim shape that has "
                          "actually gone wrong and propagated (F-001)")
 
+    def check_plan(self) -> None:
+        """The plan's two document sections are readable, and what they name is there (ADR-0010).
+
+        Reported here rather than swallowed, because every one of these is a way the *window*
+        ends up narrower than the item — and a gate reporting a scope it did not have is F-052
+        and F-066, twice over, in this same script.
+        """
+        if not self.plan_item:
+            return
+        found = self.plan()
+        for line, code, message in found.errors:
+            self.report.error(found.path, line, f"claim.{code}", message,
+                              hint="the invalidation set and the deliverable documents are what "
+                                   "tell this gate how wide its window is (ADR-0010 §5.1); an "
+                                   "absent section is not an empty one")
+        for path, line in found.invalidation + found.deliverable:
+            if not os.path.isfile(os.path.join(self.root, path)):
+                self.report.warn(found.path, line, "claim.plan.document-absent",
+                                 f"{path} is named in {self.plan_item}'s plan but does not "
+                                 f"exist, so it is in this gate's window and not in its reach",
+                                 hint="a document named and not present is either a path typo "
+                                      "or a deliverable nobody wrote")
+
     def check_scope(self) -> bool:
         """Is the scope this run was given one that could have found something? (F-066)
 
@@ -269,6 +347,16 @@ class ClaimLinter:
         if self.only or not self.scoped():
             return True
         window = self.window()
+        if window.by_construction:
+            # F-076. Not an error: an item that legitimately has no documents is ordinary, and a
+            # gate that fails on ordinary work is a gate somebody turns off. Not a pass either —
+            # it is reported, and `scope_note()` prints it in words that cannot be mistaken for
+            # one, so the journal entry the skill copies carries the state and not the verdict.
+            self.report.warn(os.path.join(self.root, "docs"), 0, "claim.scope.by-construction",
+                             f"rule 2 examined nothing, and nothing it was permitted to examine "
+                             f"could have been there: {window.reason}",
+                             hint=window.hint)
+            return True
         if not window.degenerate:
             return True
         self.report.error(os.path.join(self.root, "docs"), 0, "claim.scope.degenerate",
@@ -290,13 +378,14 @@ class ClaimLinter:
             return (f"absolute claims: every document under {os.path.join(self.root, 'docs')} "
                     f"(no scope was named); citations: every markdown file in the workspace")
         window = self.window()
-        if window.degenerate:
-            return f"absolute claims: NOTHING — {window.detail}"
+        if window.degenerate or window.by_construction:
+            return f"absolute claims: {window.sentence}"
         examined = len(self.documents())
         return (f"absolute claims: {examined} document(s) in {window.detail}; "
                 f"citations: every markdown file in the workspace")
 
     def run(self) -> int:
+        self.check_plan()
         looked = self.check_scope()
         self.check_citations()
         if looked:
@@ -361,10 +450,19 @@ def main(argv: list) -> int:
         print(f"lint-claims: --context must be work-item, bug or epic, not {context!r}",
               file=sys.stderr)
         return 2
+    plan_item = options.get("plan-documents", "")
+    # `id_kind` is the workspace's own reader; a second ID regex here would be a second
+    # parser of the same thing, which is the mistake `record.py`'s docstring is about. Checked
+    # before the path is built, so a mistyped flag is a usage error and not a missing plan.md.
+    if plan_item and id_kind(plan_item) is None:
+        print(f"lint-claims: --plan-documents takes an item ID, not {plan_item!r}",
+              file=sys.stderr)
+        return 2
     root = resolve_root(options.get("root") or (directories[0] if directories else None),
                         tool="lint-claims")
     return ClaimLinter(root, options.get("changed-since"), "all" in flags,
-                       uncommitted="uncommitted" in flags, context=context).run()
+                       uncommitted="uncommitted" in flags, context=context,
+                       plan_item=plan_item).run()
 
 
 if __name__ == "__main__":
