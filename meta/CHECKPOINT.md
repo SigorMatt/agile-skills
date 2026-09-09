@@ -10,31 +10,57 @@ sha, `./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 5e6434d
+## The gate is GREEN at 9adff0e
 
-META-146's spec change and META-147's contract change are both in, and the dist is re-rendered.
-`./scripts/check: all steps passed`.
+`./scripts/check: all steps passed`. Cluster 1's derivation, specs and six contracts are in.
+What remains of cluster 1 is the **enforcement half** — the scripts that decide the obligations
+ADR-0010 marks `[auto]` but nothing implements yet — split into three units because the
+accumulated to-do list is too large for one.
 
 ## Current unit
 
-**META-147b** — the two contracts ADR-0010 touches that META-147 did not own.
+**META-148** — the enforcement half, part 1: the **window**.
 
-META-147 flagged these rather than leaving them to be rediscovered as a finding:
+1. **`scripts/lib/scope.py` gains a fourth state**, *out-of-scope-by-construction* — distinct
+   from "a real window that is empty". Its docstring's three-state model and its justification
+   ("real and empty is a pass **because the comparison could have found something**") are
+   directly falsified by F-076 and must be rewritten, not patched around.
+2. **`scripts/lint-claims --plan-documents <ITEM-ID>`** — the flag does not exist;
+   `implement`'s `claims-are-sourced` gate already names it:
+   `scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}`.
+   Semantics the contract assumes: the rule-2 window is the branch diff **plus** every path in
+   that item's `## Invalidation set` **plus** its `## Deliverable documents`.
+   (`lint-claims`' parser already takes `--flag value`, so the form parses.)
+3. **`scripts/check-verify-freshness`** (~line 94): the `path.startswith("docs/")` exemption
+   must subtract the item's declared deliverable documents — a document that IS the deliverable
+   is not record, and treating it as record is F-058.
 
-- `methodology/skills/intake/` — ADR-0010 §3.2 row **L1**: `intake` writes the **initial**
-  `## Engagement state` section into the documents it creates. It is the only skill that writes
-  a K8 sentence outside the ending.
-- `methodology/skills/answer-questions/` — §3.2 row **L7**: the K1–K4 write, under
-  `spec/doc-header.md` §4a's obligations (a quantified claim it propagates needs its
-  enumeration; it may not write a K8 sentence, which is the ending's).
-
-- Done when: both contracts + their `process.md` carry the rows, semver bumped, `pipeline.yaml`
-  updated if a handoff changes, dist re-rendered, `./scripts/check` green, journalled,
+- Done when: all three land with fixtures **both ways** (a case that must fail and a case that
+  must pass), a new `./scripts/check` step proving it, `./scripts/check` green, journalled,
   committed AND pushed.
-- Next unit: **META-148** (the enforcement half — `scope.py`'s fourth state,
-  `check-verify-freshness`, `lint-claims --plan-documents`, and the must-fail fixtures).
+- Next units: **META-148b** (the eight `[auto]` obligations, listed below, still written as
+  `manual_check`), then **META-148c** (the historical cases as fixtures), then **META-149**
+  (findings statuses).
+
+### The eight obligations META-148b owns — currently `manual_check`, ADR-0010 marks them `[auto]`
+
+| gate | contract | ADR-0010 obligation |
+|---|---|---|
+| `documents-at-risk-are-enumerated` | `plan` | 11 |
+| `document-writes-are-declared` | `implement` | 13 + 19 |
+| `adr-conformance-is-decided` | `verify` | 15 |
+| `invalidation-set-is-disposed` | `verify` | 13 |
+| `engagement-state-is-restated` | `review-close` | 6–8 |
+| `engagement-state-is-delimited` | `intake` | 6 |
+| `engagement-state-is-left-to-the-ending` | `answer-questions` | 7 |
+| `propagated-claims-carry-their-obligation` | `answer-questions` | 3 |
+
+Obligation 10 — whether a K8 sentence was *written into* its section rather than left loose —
+has **no mechanical half at all**, and the whole K8 mechanism rests on it. It stays `[skill]`.
+Do not let a unit quietly claim it.
 
 ## Done this session
+
 
 - **META-144** — Phase VI laid out in `meta/plan.md` (2c4b0b7, 0deafc0).
 - **META-145** — `meta/adr/ADR-0010-document-as-deliverable.md`, 699 lines (**3701069**).
@@ -64,6 +90,18 @@ META-147 flagged these rather than leaving them to be rediscovered as a finding:
   `review.md` gains `## Invalidation set confirmation` and `## Sections restated at the ending`
   — deliberately NOT `## Engagement state`, because that literal is the delimiter a script
   enumerates and an item artifact carrying one would plant a K8 section inside a record.
+- **META-147b** — `intake` 0.3.0→0.4.0 and `answer-questions` 0.4.0→0.5.0 carry ADR-0010's rows
+  L1 and L7 (**9adff0e**); `pipeline.yaml` untouched, because the rows change what a skill writes
+  inside a document, not when an item may move. Two decisions kept: `intake` gets **no**
+  `lint-claims` gate (at intake there is usually no code to cite, so that window would be empty
+  by construction on nearly every execution — F-076's exact shape), the obligation is an exit
+  criterion instead; and when a human's answer falsifies a K8 sentence, `answer-questions`
+  **records it and leaves it** — the question's `## Consequences` names the document, the
+  section and the sentence, and the plan's invalidation set gets the row disposed
+  `owned-by-ending`. Nothing is lost, because `review-close` restates every section it finds.
+  A seam it closed on its own initiative and flagged: an `answer-questions` execution
+  propagating into `docs/` mid-flight puts paths there that `implement` never wrote, so
+  `answer-questions` records those rows itself, disposed `to-update`. **Accepted as it stands.**
 
 ## Standing instructions (still in force)
 

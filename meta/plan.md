@@ -485,12 +485,18 @@ Format of each line: **unit** — scope — the gate that closes it.
       `answer-questions` gains the K1–K4 write under §4a's obligations (row L7). Found and
       flagged by META-147 rather than left to be rediscovered as a finding.
       Gate: `scripts/lint-skills` clean; dist current; `./scripts/check` green.
-- [ ] **META-148** — the enforcement half: `scripts/lib/scope.py`'s fourth state
-      (*out-of-scope-by-construction*, F-076), `scripts/check-verify-freshness` subtracting
-      the deliverable documents from its `docs/` exemption (F-058), `lint-claims`' widened
-      window, and the must-fail fixtures for every rule META-146/147 changed — the historical
-      cases F-076/F-087/F-093/F-095 run as fixtures.
-      Gate: a new `./scripts/check` step, red before the fix and green after.
+- [ ] **META-148** — the enforcement half, part 1 — the window: `scripts/lib/scope.py`'s
+      fourth state (*out-of-scope-by-construction*, F-076), `scripts/lint-claims
+      --plan-documents <ITEM>` (the widened window `implement`'s contract already names), and
+      `scripts/check-verify-freshness` subtracting the deliverable documents from its `docs/`
+      exemption (F-058). Gate: fixtures both ways + a `./scripts/check` step.
+- [ ] **META-148b** — the enforcement half, part 2 — the obligations: one gate script
+      implementing the eight `[auto]` obligations that META-147/147b had to write as
+      `manual_check`, and those gates flipped from `manual_check` to `command` in the
+      contracts. Gate: must-fail fixture per obligation + a `./scripts/check` step.
+- [ ] **META-148c** — the derivation's historical cases run as fixtures: F-076, F-087, F-093,
+      F-095 each as a case that fails against the pre-ADR-0010 shape and passes against the
+      derived one. Gate: a `./scripts/check` step; red before, green after.
 - [ ] **META-149** — findings statuses settled from the derivation, with resolving citations:
       F-076, F-087, F-093, F-095, F-053, F-092, F-057, F-058.
       Gate: no stale status; `./scripts/check` step 17 green.
