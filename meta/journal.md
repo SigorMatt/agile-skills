@@ -4751,3 +4751,82 @@ recall is a reading, not a number, and the report says which.
   `fixtures/document-obligations/**` (new), the six `skill.yaml` contracts,
   `methodology/skills/answer-questions/process.md`, `spec/doc-header.md`,
   `adapters/claude-code/render.py`, `adapters/claude-code/dist/**`.
+
+## 2026-09-10 — META-149 — cluster 1's findings statuses, and the four loose ends filed
+
+- **Unit:** META-149
+- **Inputs read:** `meta/adr/ADR-0010-document-as-deliverable.md` §5, §6 (every historical case
+  re-decided against the derived model) and the **Enforcement boundary** table; the five commits
+  that implement it, each verified with `git log -1` before it was cited — **3701069** (the ADR),
+  **c1fbde8** (the two specs), **5e6434d** (four contracts), **9adff0e** (`intake` and
+  `answer-questions`), **5ae1539** (the window), **a843114** (the eight obligations);
+  `scripts/lint-claims` in full, `scripts/lib/claims.py`, `scripts/lib/documents.py`,
+  `scripts/lib/workspace.py`'s `plan_documents`, `scripts/lint-documents`; `./scripts/check`'s
+  step names; `fixtures/document-obligations/wrong/docs/process/ways-of-working.md`; and in
+  `meta/findings/FINDINGS.md` the eight cluster-1 findings plus F-036 / F-043 / F-051 for the
+  class wording.
+- **Decisions:**
+  - **Eight status updates, appended and never rewritten.** Every existing status bullet stands
+    byte-for-byte; each finding gained a second bullet below it. `git diff --stat` on the ledger
+    reports **358 insertions, 0 deletions**, which is the mechanical form of the append-only rule
+    and was checked rather than assumed. Seven are **fixed** with the commits that settle them —
+    F-076, F-087, F-092, F-093, F-095, F-057, F-058 — and each names what is left over rather than
+    claiming the class is closed: obligation 12 (the invalidation set's completeness), obligations
+    16 and 17 (a `conforms` verdict's correctness, `binding-adrs`' completeness), obligation 4
+    (an enumeration's completeness), obligations 10 and 5 (now F-102 and F-103), and ADR-0010
+    §3.3 item 7 (a false sentence found after the engagement closes still has no owner).
+  - **F-057 and F-058 say the gate was met, in those words.** They were deferred behind *"an
+    ADR-0006-shaped derivation"*; that ADR is commit 3701069 and has been in the repository for
+    four units. A deferral whose gate is met and not noticed is how a backlog rots, so the fact is
+    stated in the status line rather than left to be inferred from a fix that happens to have
+    landed.
+  - **F-053 is NOT fixed, and its status says so twice.** ADR-0010 §6/F-053 consumed its *class*
+    as the lifecycle constraint the document model had to satisfy — *a document's state and an
+    item's state are two different state machines, and neither may be derived from the other* —
+    and bound itself not to add another instance of the half-written record. None of that gives
+    `transition` an `--outcome`, so `review-close` still takes a non-zero exit on a transition
+    that succeeded, on every item it closes. It stays in the *half-written record* class with
+    F-036, F-043 and F-051, behind the same gate. Recorded so the next reader does not mistake
+    "ADR-0010 cited it" for "ADR-0010 closed it".
+  - **META-148 was right and META-148b was wrong, and it was settled by execution.** META-148
+    named an edge: `implement`'s widened window can contain an `owned-by-ending` document it may
+    read but not write. META-148b reported it *avoided by construction*, because the quantified
+    rule reads only paragraphs new in the diff. Both cannot stand. The "new paragraphs only"
+    scoping is real — `rule_propagated_claims_carry_their_obligation` skips any paragraph not in
+    `doc.new_paragraphs(before, after)` — but it belongs to `lint-documents` on
+    `answer-questions`, a **different rule on a different skill**. `lint-claims` rule 2, which is
+    the hard gate on `implement`, has no such scoping: `check_absolutes` walks every prose
+    paragraph of every document in the window. Run in a throwaway git repository against the
+    scripts at commit a843114: with the sentence unsourced,
+    `lint-claims --changed-since main --plan-documents WI-0001` exits **1** with
+    `claim.unsourced` on line 16 of a document the branch never opened; add the `[src: ...]` and
+    it exits **0**, and `lint-documents --rule document-writes-are-declared` exits **1** with
+    `document.engagement-state.written`. Two hard gates, jointly unsatisfiable, no legal repair —
+    only `--force`, which is an override recorded forever. A second run with the same absolute
+    moved **out** of the `## Engagement state` section shows the scripts permit the repair while
+    `implement`'s procedure still forbids it (*"nothing. Not a repair, not a tidy"*), which is a
+    contract-versus-procedure contradiction rather than a deadlock. Filed as **F-100**.
+  - **The out-of-`docs/` deliverable is worse than "never examined".** With `reference/api.md` as
+    the sole deliverable document, `lint-claims` prints *"absolute claims: 0 document(s) in 1
+    path(s) in scope"* and exits 0 — the widening counts the path, `documents()` walks only
+    `docs/` and never opens it, and because `declared` is non-empty the **fourth state is
+    suppressed** too. A scope line reporting a path the gate did not read is F-052 and F-066
+    exactly, in the same script, reintroduced by F-076's fix. Filed as **F-101**.
+  - **Two accepted gaps became ledger entries rather than docstrings.** Obligation 10 — whether a
+    K8 sentence was written *into* a section — has no mechanical half at all and the whole K8
+    mechanism rests on it; it is stated in the ADR, in the module docstring, in the gate
+    `description` and in every run's output, and until now in no finding. **F-102**, status *open
+    — known, derived and accepted*. Obligation 5's partial reach is **F-103**, with a correction:
+    ADR-0010's own illustration of an uncatchable universal, *"each handler validates its
+    input"*, **is** caught, because `each` is in `QUANTIFIER_RE`. The claim is sound and the
+    example is not; a bare plural (*"handlers validate their input"*) matches neither `ABSOLUTE_RE`
+    nor `QUANTIFIER_RE`, which was checked against both regexes rather than read off the lists.
+- **Questions raised:** none blocking. F-100 leaves a real choice for a later unit — rule 2 skips
+  the `## Engagement state` section of an `owned-by-ending` document, or that disposition confers
+  a narrow repair licence — and it belongs beside ADR-0010 §4.3, not in a script.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **34 steps**, including
+  *findings citations resolve*, which now verifies **49 cited** commits as ancestors of HEAD
+  (43 before this unit; six shas newly cited, all of them checked with `git log -1` first, which
+  is what F-024 exists for).
+- **Artifacts:** `meta/findings/FINDINGS.md` (append-only: eight status updates, four new
+  findings F-100..F-103), `meta/journal.md`.

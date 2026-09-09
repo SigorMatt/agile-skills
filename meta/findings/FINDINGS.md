@@ -1519,6 +1519,26 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   next builder session's first unit. Triaged 2026-08-30 (META-128). It is the most expensive of
   the four — `review-close` takes a non-zero exit on a transition that succeeded, on every item
   it closes — and that is an argument for fixing the class properly, not for fixing this one
+- Status update 2026-09-10 (META-149): **still deferred, and consumed as input.**
+  `meta/adr/ADR-0010-document-as-deliverable.md` §6/F-053 (commit 3701069) read this finding's
+  *class* as the lifecycle constraint the document model had to satisfy, and states it in one
+  sentence: **a document's state and an item's state are two different state machines, and
+  neither may be derived from the other.** A document's machine advances on a content change
+  (`version`, the change-log row, `status`); an item's advances on an execution (a history row
+  and a journal entry); the only legitimate coupling is the audit row, which names both. Two
+  things follow from it and both are now in the toolkit. First, ADR-0010 binds itself not to add
+  another instance of the half-written record: the content edit, the `version` bump and the
+  change-log row are **one act**, and so are the audit row and the disposition it closes — where
+  a later unit adds a tool for a document write, it writes all of them or it is F-053 again in
+  `docs/`. Second, F-058's diagnosis is a corollary of it — `check-verify-freshness` was deciding
+  a document's kind from its directory, which is a proxy for the *item's* machine, and got it
+  wrong for exactly the items where the two machines disagree.
+  **What ADR-0010 did not do is fix this finding.** `transition` still has no `--outcome`, and
+  `--resolving` still does not teach the validator that `item.outcome.premature` is resolved by
+  the pending move to `done`, so `review-close` still takes a non-zero exit on a transition that
+  actually succeeded, on every item it closes. It stays in the *half-written record* class with
+  F-036, F-043 and F-051, behind the same gate, and it moves when they move. Recorded here so the
+  next reader does not mistake "ADR-0010 cited it" for "ADR-0010 closed it"
 
 ## F-054 — `lint-claims` rejects a citation whose path is wrapped in backticks, with a misleading message
 - Severity: UX
@@ -1609,6 +1629,29 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   gated on an ADR that enumerates `docs/` write authority the way ADR-0006 enumerated item
   creation. Triaged 2026-08-30 (META-128). One corner of it closed this session: `doc-header.md`
   §4b gives a standing ADR a legal repair, which is the same shape of gap (F-067)
+- Status update 2026-09-10 (META-149): **the gate is met, and the finding is fixed**
+  (commits 3701069, c1fbde8, 5e6434d, 5ae1539, a843114). Said explicitly because a deferral whose
+  gate has been met and not noticed is how a backlog rots: the condition this was deferred behind
+  — *"an ADR that enumerates `docs/` write authority the way ADR-0006 enumerated item creation"* —
+  is `meta/adr/ADR-0010-document-as-deliverable.md` (commit 3701069), whose §3 is that
+  enumeration: a lifecycle-event × actor table, with its nobody-cells named out loud in §3.3.
+  The nobody-cell this finding is about is gone, and gone **by derivation rather than by
+  exception**. §3.4 replaces `doc-header.md` §5's final paragraph (commit c1fbde8): the record
+  half of §5's absolute survives in full and the deliverable half never had a justification, so
+  an item declares the document in its plan's `## Deliverable documents` and row L4 permits
+  `implement` to write it (commit 5e6434d). The worker's own two options are both in ADR-0010 §8
+  as rejected alternatives, with the reason: an exception for document-shaped items is the
+  sixth-exception move ADR-0006 names, and a dispatchable owner makes a document deliverable a
+  different *kind of work* rather than ordinary work with a different artifact.
+  The write is bounded rather than unbounded — obligation 19, `lint-documents --rule
+  document-writes-are-declared` (commit a843114), checks the branch's diff under `docs/` against
+  the plan's declared set — and the widened claims window means the document is actually read
+  (commit 5ae1539). Checked by `./scripts/check` steps *the document window (F-076, F-058,
+  8 cases)* and *the document obligations by execution (F-087, F-093, F-095, 8 cases)*.
+  **The cost is written down rather than discovered later:** ADR-0010 §7's first bullet says
+  plainly that a real protection was weakened, names the three shape checks and one contract rule
+  that now stand where one absolute stood, and says that if a later run finds `implement`
+  widening its own scope through `docs/`, that section is where it was predicted
 
 ## F-058 — `check-verify-freshness` treats `docs/` as record, even when a document is the deliverable
 - Severity: correctness, low
@@ -1622,6 +1665,19 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Status: **deferred** with the *document-as-deliverable* class (F-057), gated on the same ADR.
   Triaged 2026-08-30 (META-128): it is that finding from the gate's side and cannot be decided
   before it
+- Status update 2026-09-10 (META-149): **the gate is met, and the finding is fixed**
+  (commits 3701069, 5ae1539). The same gate as F-057's, met by the same ADR (commit 3701069), and
+  said explicitly for the same reason. ADR-0010 §6/F-058's answer: the exemption is not "under
+  `docs/`" — it is "not in this item's `deliverable-documents`". The gate's *reasoning* was always
+  right (`verify` and `review-close` must commit their own records, those commits move the head,
+  and a record-only change does not invalidate a verification of the code); its **predicate** was
+  a proxy, and the proxy fails for precisely the items F-057 is about.
+  `scripts/check-verify-freshness` now subtracts the item's deliverable documents from its `docs/`
+  exemption (commit 5ae1539), so a post-verification edit to a delivered document sends the item
+  back to `verifying` like any code change. Both directions are fixtures in `./scripts/check`'s
+  step *the document window (F-076, F-058, 8 cases)* — cases 7 and 8: a record document edited
+  after verification is still exempt, and a **deliverable** document edited after verification is
+  not
 
 ## F-059 — `verify`'s procedure and its contract disagree about its gate list
 - Severity: correctness of the contract, low
@@ -2614,6 +2670,34 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   Recorded rather than patched deliberately: rescoping a hard gate on the strength of one
   session's reading, in the session that also introduced the reader, is how a gate gets weakened
   by the thing it was meant to check.
+- Status update 2026-09-10 (META-149): **fixed** (commits 3701069, c1fbde8, 5e6434d, 5ae1539).
+  Both directions were taken, and the two-way question was answered rather than dodged.
+  **`doc-header.md` §5's absolute does not hold, and the gate stays on `implement`**
+  (`meta/adr/ADR-0010-document-as-deliverable.md` §6/F-076, commit 3701069; §3.4's rule replaces
+  §5's final paragraph in `spec/doc-header.md`, commit c1fbde8; `implement` carries the widened
+  gate, commit 5e6434d). Removing the gate instead was rejected in ADR-0010 §8, because it leaves
+  the one actor whose ordinary work falsifies documents with no document obligation at all and
+  moves the whole of D7 onto `review-close`, which is the arrangement F-087 was filed against.
+  Direction 1 — *say which it is* — is `scripts/lib/scope.py`'s **fourth state** (commit 5ae1539):
+  *out-of-scope-by-construction*, reached only through `constrained(window, permitted, reason)`,
+  which takes the permission knowledge from the caller because **no diff can distinguish "nobody
+  wrote a document" from "nobody was allowed to"**. It exits 0 — an item with no documents is
+  ordinary work, and a gate that fails on ordinary work is one somebody switches off — but emits
+  `claim.scope.by-construction` and prints `NOTHING COULD HAVE BEEN IN SCOPE`, so the journal
+  entry a skill copies carries the state and not the verdict. Direction 2 — *make the window able
+  to contain something* — is `lint-claims --plan-documents <ITEM>`, which widens rule 2's scope to
+  the branch diff **plus** the plan's `## Invalidation set` and `## Deliverable documents`, on the
+  reasoning F-087 supplies: the documents a change falsifies are exactly the ones its diff does
+  not touch.
+  **Decided by execution, not by reading.** `./scripts/check` step *the document window (F-076,
+  F-058, 8 cases)*, case 1, is this finding's own shape — the plan names a falsified document,
+  the branch never opens it, the document carries an unsourced absolute, and the gate now fails.
+  The step was proved non-vacuous against the pre-change scripts: five of its eight cases failed,
+  each reporting `0 document(s) in 0 path(s)` — the empty window this finding is about.
+  **Left over, named:** the widening brought two edges of its own, filed rather than left to be
+  rediscovered — **F-100** (a document disposed `owned-by-ending` is in `implement`'s window and
+  outside its reach) and **F-101** (a deliverable document declared outside `docs/` is in the
+  window and never examined)
 
 ## F-077 — a `path:line` citation resolves for ever, whatever is at the line
 - Severity: correctness of enforcement, low — but it is the citation form a reader trusts most
@@ -2946,6 +3030,29 @@ second occurrence shows the error is common rather than incidental.
   D7 before it hands over, so that the last gate confirms the answer instead of discovering it.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-3); accepted at owner triage 2026-08-31.
 - **Status:** open
+- Status update 2026-09-10 (META-149): **fixed** (commits 3701069, c1fbde8, 5e6434d, a843114).
+  `meta/adr/ADR-0010-document-as-deliverable.md` §5 (commit 3701069) makes the set of documents a
+  change falsifies an **output of `plan`**, on the three properties §5 derives: it is answerable
+  only by someone who knows what the change does, it is a design output rather than a check, and
+  the cost of asking it late is a full cycle — twice, in one banked engagement, with no code
+  change in either. The set is `## Invalidation set` in `tracker/items/<ID>/artifacts/plan.md`,
+  one row per entry (`| document | what | kind | why | disposition |`), with `## Deliverable
+  documents` and `## Binding ADRs` beside it because they belong to the same act (commit 5e6434d).
+  `implement` closes every entry with a disposition and **may add entries** — it is the actor that
+  discovers mid-change that a fourth document was falsified — `verify` checks the dispositions,
+  and **D7 becomes a confirmation against an enumerated set** rather than a discovery
+  (`spec/dor-dod.md`, commit c1fbde8). The falsification question is now asked at the stage that
+  designs the change and answered where the change is made, which is what this finding asked for.
+  Mechanical halves (commit a843114): `lint-documents --rule documents-at-risk-are-enumerated`
+  (obligation 11) and `--rule document-writes-are-declared` (obligations 13 + 19), both real
+  commands rather than manual checks; and the same set is `lint-claims --plan-documents`'s window,
+  so a plan that names nothing is what puts the claims gate into its fourth state (F-076).
+  Checked by `./scripts/check` steps *the document window (F-076, F-058, 8 cases)* and *the
+  document obligations by execution (F-087, F-093, F-095, 8 cases)*.
+  **Left over, named — ADR-0010's obligation 12:** nothing can decide that the set is
+  **complete**, and D7 never could either. The honest claim is narrow and ADR-0010 §7 states it:
+  the question moves from the last gate to the first stage that can act on it, and being wrong
+  about it becomes attributable to a named execution instead of being a memory
 
 ## F-088 — a claim audit is passed by an example that could not have falsified the claim
 
@@ -3079,6 +3186,31 @@ second occurrence shows the error is common rather than incidental.
   `verify` or `review-close` decide each one, the way D12's claims are decided.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-8); accepted at owner triage 2026-08-31.
 - **Status:** open
+- Status update 2026-09-10 (META-149): **fixed** (commits 3701069, c1fbde8, 5e6434d, a843114).
+  `meta/adr/ADR-0010-document-as-deliverable.md` §6/F-092 (commit 3701069) splits the obligation
+  across the two stages that can carry each half. `plan` lists `## Binding ADRs` — the ADRs its
+  steps are constrained by, by ID; it already reads `docs/architecture/adr/` for the purpose of
+  not silently re-deciding, so naming what it read is the whole addition. **`verify` decides each
+  one**: `verify-report.md`'s `## ADR conformance` carries a row per ID with a verdict of
+  `conforms`, `violates` or `not-engaged`; a `conforms` verdict **quotes the clause of that ADR's
+  `## Decision`** and names the file and line in the change that satisfies it; a `violates`
+  verdict is a send-back; `not-engaged` is legal and must say why (commit 5e6434d).
+  **`review-close` checks only that the list is complete** — one criterion asking whether the
+  change engages an ADR that `binding-adrs` does not name — which is `spec/dor-dod.md` **D13**,
+  new in commit c1fbde8. `verify` rather than `review-close` because `verify` is the stage whose
+  entire contract is judging a change against a standard it did not write, it already reads the
+  branch, and it is one stage closer to the person who could fix it; both banked violations were
+  caught by a reviewer reading the diff against the ADR, and the model moves that read one stage
+  earlier and makes it a row rather than a virtue.
+  Mechanical half: `lint-documents --rule adr-conformance-is-decided` (obligation 15, commit
+  a843114) — one verdict per planned ID, and a `conforms` row that quotes no clause is an error.
+  A verdict row for an ADR the plan does **not** name is `document.adr.row.unplanned`, a
+  **warning** and not a refusal: refusing the honest move would make reporting an ADR the plan
+  missed illegal, which is F-050's shape, and the row is evidence that `binding-adrs` was
+  incomplete — which is D13's read, not this gate's.
+  **Left over, named:** whether a `conforms` verdict is **right** is judgement (obligation 16),
+  and D13's completeness is judgement (obligation 17). Both now sit behind a row that names who
+  decided and what they read
 
 ## F-093 — a document sentence falsified by the pipeline's own closing act has no item left to carry the fix
 
@@ -3105,6 +3237,31 @@ second occurrence shows the error is common rather than incidental.
   Both corrections here were declared and defensible; neither was authorised by anything.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-9); accepted at owner triage 2026-08-31.
 - **Status:** open
+- Status update 2026-09-10 (META-149): **fixed** (commits 3701069, c1fbde8, 5e6434d, 9adff0e,
+  a843114). `meta/adr/ADR-0010-document-as-deliverable.md` §4.3 (commit 3701069) makes the
+  engagement-state statement (**K8**) a third claim kind whose sentences live inside a delimited
+  `## Engagement state` section, and the section is **owned by the ending**: `intake` writes the
+  first one, nothing writes one mid-engagement, and `review-close` restates every section in the
+  document set at the ending, **after the sign-off answer arrives** (`review-close`, commit
+  5e6434d; DE4 gains it as a criterion and D7/D12 exclude K8 explicitly, commit c1fbde8; `intake`
+  and `answer-questions` carry rows L1 and L7, commit 9adff0e). This finding's exact complaint —
+  *"both corrections were declared and defensible; neither was authorised by anything"* — is
+  answered in the only way that keeps both: the ending's correction is now **authorised**, and the
+  mid-flight one is **unnecessary**. An item that finds a K8 sentence falsified records the row
+  disposed `owned-by-ending` and leaves it; `answer-questions` does the same through the
+  question's `## Consequences`, and nothing is lost, because the ending restates every section it
+  finds.
+  Mechanical halves (commit a843114): `--rule engagement-state-is-delimited` (obligation 6),
+  `--rule engagement-state-is-left-to-the-ending` (obligation 7, a diff over the marked region —
+  creating a section counts as writing one), `--rule engagement-state-is-restated` (obligation 8,
+  which at an item close prints `NOT APPLICABLE` rather than a pass), and the `owned-by-ending`
+  half of `--rule document-writes-are-declared`. Checked by `./scripts/check` step *the document
+  obligations by execution (F-087, F-093, F-095, 8 cases)*.
+  **Left over, named twice.** ADR-0010's **obligation 10** — that a sentence which *is* an
+  engagement-state claim was written **into** a section rather than left loose in the prose — has
+  no mechanical half at all and is the foundation the other three rest on; this finding's own
+  sentence was written loose. Filed as **F-102**. And ADR-0010 §3.3 item 7 ships unsolved: a false
+  sentence found *after* the engagement is closed still has no owner
 
 ## F-094 — a criterion cited by number keeps resolving after the number has come to mean something else
 
@@ -3163,6 +3320,30 @@ second occurrence shows the error is common rather than incidental.
   place to hang it.
 - **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-2); accepted at owner triage 2026-08-31.
 - **Status:** open
+- Status update 2026-09-10 (META-149): **fixed** (commits 3701069, c1fbde8, 5e6434d, a843114).
+  `meta/adr/ADR-0010-document-as-deliverable.md` §4.2 (commit 3701069) makes a quantifier its own
+  claim kind, which is exactly this finding's direction: opening what the sentence cites does not
+  discharge it, so the audit row carries the **set**, the **enumeration method with its output**,
+  the **members** and a **verdict per member**, and a universal that cannot be enumerated is
+  weakened rather than recorded as checked. The model keeps this finding's own reading of the
+  banked case rather than contradicting it — all three item-level audits were honest and
+  *insufficient by construction*, and a model that made them look negligent would be the wrong
+  model — so what changed is the entry the audit must produce, not how well it must read.
+  `spec/doc-header.md` §4a gains the obligation (commit c1fbde8) and, at revision 6, its
+  **labelled form**: `Enumeration:` carrying `Set:`, `Enumerated by:`, `Members:` and `Verdict:`,
+  nested under the document's own bullet so one enumeration cannot discharge a claim written into
+  a different document (commit a843114). Without a label, nothing mechanical distinguishes *"I
+  opened the fixture"* from *"I enumerated the members"*, and telling those two apart is the whole
+  of this finding. D12 and DE6 gain the enumeration columns and exclude K8 (commit c1fbde8);
+  `verify` and `review-close` carry it where they audit (commit 5e6434d).
+  Mechanical half: `lint-documents --rule propagated-claims-carry-their-obligation` (obligation 3,
+  commit a843114), checked by `./scripts/check` step *the document obligations by execution
+  (F-087, F-093, F-095, 8 cases)*.
+  **Left over, named:** completeness of an enumeration is judgement (obligation 4), and obligation
+  5 — recognising a sentence **as** quantified — is only partial: both detectors are word lists,
+  so a universal carried by a bare plural rather than by a quantifier word is caught by nothing.
+  Filed as **F-103**. ADR-0010 §7 also predicts the failure mode to watch: an enumeration
+  performed as ritual would be worse than the three honest audits this finding describes
 
 ## F-096 — a criterion the environment cannot execute is ticked on a substitution, and the tick carries no mark of it
 
@@ -3283,3 +3464,180 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   (and meta/**.md generally) for F-###/H-### references and requires each to resolve to a
   ledger heading; a tombstone counts as resolving.
 - Status: open
+
+## F-100 — a document the plan hands `implement` to read is one `implement` may be forbidden to repair
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, medium — a hard gate with no legal way to pass it,
+  which is F-050's shape introduced by F-076's fix
+- **Component:** `scripts/lint-claims` (rule 2), `scripts/lib/claims.py`, `scripts/lint-documents`
+  (`--rule document-writes-are-declared`), methodology (implement), ADR-0010 §4.3 and §5.2
+- **Symptom:** F-076's fix widens `implement`'s `claims-are-sourced` window to the branch diff
+  **plus** every document the plan names, in its `## Invalidation set` and its `## Deliverable
+  documents` [src: scripts/lint-claims]. An entry disposed `owned-by-ending` is in that set, so
+  its document enters the window — and `implement`'s instruction for such an entry is
+  *"**nothing.** Not a repair, not a tidy"* [src: methodology/skills/implement/process.md]. Rule 2
+  does not read only what the diff added: `check_absolutes` walks **every prose paragraph of every
+  document in the window** [src: scripts/lib/claims.py], so a `claim.unsourced` that predates the
+  branch, in a document the branch never opened, fails a hard gate on `implement`.
+  Where the unsourced absolute sits **inside** the `## Engagement state` section, the two gates
+  are jointly unsatisfiable. Executed in a throwaway repository, on the current scripts: with the
+  sentence unsourced, `lint-claims --changed-since main --plan-documents WI-0001` exits 1 with
+  `claim.unsourced`; add the `[src: ...]` and it exits 0, and `lint-documents --rule
+  document-writes-are-declared --item WI-0001 --changed-since main` exits 1 with
+  `document.engagement-state.written` — *"disposed owned-by-ending and its ## Engagement state
+  section was edited on this branch"*. Both gates are **hard** on `implement`, so the item can
+  move only under `--force`, which is an override recorded forever, not a repair.
+  Where the absolute sits **outside** that section, the same execution shows the scripts allow the
+  repair (both gates exit 0 after it) — and `implement`'s procedure still forbids it. That half is
+  a contract-versus-procedure contradiction rather than a deadlock, and it is the same shape
+  META-148b found and corrected once already between `verify`'s two halves.
+- **Counterfactual:** any engagement in which `intake` writes an engagement-state sentence
+  containing an absolute about a named code object, and a later item's plan disposes that document
+  `owned-by-ending`. Nothing about the sentence's subject is load-bearing; that the window and the
+  write permission are computed from the same set by two rules that disagree about it is.
+- **Recurrence:** not yet observed in a run — the widening shipped in commit 5ae1539 and no
+  engagement has executed against it. Filed on the mechanism, established by execution.
+- **Direction:** the window and the reach must be derived from one reading of the set, not two.
+  Either rule 2 skips the `## Engagement state` section of a document whose only entry is disposed
+  `owned-by-ending` — the section the ending will restate anyway, and which `doc-header.md` §4b
+  already treats as a place a citation cannot legally be added — or the `owned-by-ending`
+  disposition confers a **narrow** repair licence stated in the contract, so that the honest move
+  is legal. Whichever is chosen, `implement`'s procedure and `lint-documents`' rule must say the
+  same thing, and the choice belongs beside ADR-0010 §4.3 rather than in a script.
+- **Provenance:** the edge was named by META-148's sub-agent when it shipped the widening;
+  META-148b's sub-agent reported it **avoided by construction**, on the ground that the quantified
+  rule reads only paragraphs new in the diff. META-149 established that both reports cannot stand
+  and that **META-148's is the correct one**: the "new paragraphs only" scoping is real but
+  belongs to `lint-documents --rule propagated-claims-carry-their-obligation`
+  [src: scripts/lint-documents], a different rule on a different skill; `lint-claims` rule 2, which
+  is the hard gate on `implement`, has no such scoping. Established by execution in a throwaway
+  git repository against the scripts at commit a843114, not by reading alone.
+- **Status:** open
+
+## F-101 — a deliverable document declared outside `docs/` is inside the window and outside the rule
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, medium — F-052's and F-066's class, in the same
+  script, reintroduced by the widening that fixed F-076
+- **Component:** `scripts/lint-claims` (`documents()`, `widen()`), `scripts/lib/workspace.py`
+  (`plan_documents`), ADR-0010 §5.1
+- **Symptom:** ADR-0010 §5.1 puts no directory constraint on `deliverable-documents` or on the
+  invalidation set's `document` column — the column is described only as "the path"
+  [src: meta/adr/ADR-0010-document-as-deliverable.md]. `widen()` adds every declared `.md` path to
+  the window and counts it in the scope line, but `documents()` — what rule 2 actually reads —
+  walks `os.path.join(root, "docs")` and nothing else [src: scripts/lint-claims]. A declared path
+  outside `docs/` is therefore counted, never opened, and — because `declared` is non-empty — it
+  also **suppresses the fourth state**, so an item whose only document is outside `docs/` gets a
+  plain exit 0 rather than `NOTHING COULD HAVE BEEN IN SCOPE`.
+  Executed on the current scripts, with `reference/api.md` as the sole deliverable document and an
+  unsourced absolute in it, the gate prints *"absolute claims: 0 document(s) in 1 path(s) in
+  scope"* and exits 0. That sentence is the defect stated in the gate's own output: a scope line
+  reporting a path the gate did not read is precisely what F-052 filed and what F-066 filed one
+  step further on.
+- **Counterfactual:** any consumer project whose acceptance criterion is about a document that is
+  not under `docs/` — a root `README.md`, a `reference/` tree, an `openapi.yaml`'s companion — which
+  is an ordinary shape and one nothing in the spec forbids. The `check-verify-freshness` half is
+  unaffected, because a path outside `docs/` was never inside that exemption to begin with.
+- **Recurrence:** not yet observed in a run; the widening shipped in commit 5ae1539. Filed on the
+  mechanism, established by execution.
+- **Direction:** decide it in one place and say it in the spec, not in the script. Either a
+  deliverable document **must** live under `docs/` — in which case `plan_documents` rejects a path
+  that does not, with a message saying why, and the window is honest again — or rule 2 reads a
+  declared document wherever it is, in which case `documents()` stops walking a single directory
+  and reads the window's paths. The second is closer to ADR-0010 §5.1 as written; the first is
+  cheaper and is a real constraint on a consumer, so it belongs in `spec/workspace-layout.md`
+  rather than being inferred from a `walk`. Until then the scope line overstates what was read,
+  which is the one thing this script exists not to do.
+- **Provenance:** named by META-148's sub-agent as the second of the two edges it left behind when
+  it shipped `--plan-documents`; confirmed by execution in META-149 against the scripts at commit
+  a843114.
+- **Status:** open
+
+## F-102 — nothing decides whether an engagement-state sentence was written where the mechanism can see it
+
+- **Classification:** toolkit-defect
+- **Severity:** methodology gap, medium — the load-bearing gap of ADR-0010 §4.3, accepted at
+  derivation and filed here so it is tracked rather than remembered
+- **Component:** ADR-0010 §4.3 and its enforcement table (obligation 10), `scripts/lint-documents`
+  (`--rule engagement-state-is-delimited`), methodology (intake, review-close)
+- **Symptom:** the whole K8 mechanism — obligation 6 (sentences sit inside delimited sections),
+  obligation 7 (only `intake` and the ending write inside one) and obligation 8 (the ending
+  restates every one) — is enumerable **only over the sections that exist**. Whether a sentence
+  that *is* an engagement-state claim was put into one, rather than left loose in the body, is
+  obligation 10, and ADR-0010's enforcement table records it as the single obligation in the ADR
+  with **no mechanical half at all**: deciding it would mean deciding which sentences are
+  engagement-state claims, which is a read [src: meta/adr/ADR-0010-document-as-deliverable.md].
+  A document with no `## Engagement state` section and six such sentences in its body passes every
+  gate. This is not a suspicion: `fixtures/document-obligations/wrong/docs/process/
+  ways-of-working.md` deliberately carries exactly such a sentence and **no rule fires on it**,
+  and the absence is asserted as part of that fixture's expected code set. F-093's own sentence,
+  in the banked run this all derives from, was written loose.
+- **Counterfactual:** every engagement, since obligation 10 is a precondition of the mechanism
+  rather than a case within it. If ADR-0010 §4.3 fails in a later run, the ADR predicts this is
+  where it fails.
+- **Recurrence:** the ADR names it, the module docstring names it, the gate `description` names
+  it, and every run of `engagement-state-is-delimited` prints what it cannot see. Filed so that
+  four statements of a gap in four places become one entry in the ledger.
+- **Direction:** do not try to classify sentences — that is the read the whole thesis says will
+  not hold. Reduce the surface instead. `intake` already writes the first section, so the cheapest
+  move is to make the section's **existence** mandatory in every deliverable document rather than
+  optional, so that "there is nowhere to put it" stops being an available excuse; the residue is
+  then a sentence written outside a section that exists, which is a narrower and more suspicious
+  act than one written where no section was offered. Whether that residue is worth a heuristic —
+  a body sentence naming the engagement, the stakeholder or the sign-off — should be decided
+  against a run, not in advance, and under-claiming stays the correct failure mode (F-001).
+- **Provenance:** derived and accepted in META-145 (ADR-0010 §4.3 and the enforcement boundary
+  table, commit 3701069); restated by META-148b's sub-agent when the eight `[auto]` obligations
+  became commands and this one could not (commit a843114); filed as a finding in META-149 so an
+  accepted gap is tracked rather than carried in three docstrings.
+- **Status:** **open — known, derived and accepted.** Not a defect discovered after the fact: it
+  was named in the derivation, its cost was written into ADR-0010 §7, and the mechanism shipped
+  with it. It is filed because an accepted gap that lives only in the prose of the decision that
+  accepted it is one the next reader re-discovers as news
+
+## F-103 — a universal carried by a bare plural is not recognised as a quantified claim by anything
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, low — a known partial reach, filed so the partiality is
+  in the ledger rather than only in a word list
+- **Component:** `scripts/lib/claims.py` (`ABSOLUTES` / `ABSOLUTE_RE`), `scripts/lib/documents.py`
+  (`QUANTIFIER_RE`), ADR-0010's enforcement table (obligation 5)
+- **Symptom:** both detectors that stand behind the quantified-claim obligations are **word
+  lists**. `ABSOLUTE_RE` — `lint-claims` rule 2's trigger — is seventeen words
+  (`no`, `none`, `never`, `always`, `only`, `every`, `all`, `any`, `nothing`, `cannot`, `can't`,
+  `impossible`, `guaranteed`, `guarantees`, `exactly`, `must not`, `mustn't`)
+  [src: scripts/lib/claims.py]. `QUANTIFIER_RE` — obligation 3's trigger — is six
+  (`every|all|no|none|only|each`) [src: scripts/lib/documents.py]. A sentence that is a universal
+  by grammar rather than by vocabulary carries neither: *"handlers validate their input"* and
+  *"the parser rejects malformed input"* are exactly as strong as *"every handler validates its
+  input"*, are the more natural way to write the claim, and match nothing. Executed against both
+  regexes in META-149: the quantified form matches `QUANTIFIER_RE`, and the two bare-plural forms
+  match neither regex.
+  So the enumeration obligation F-095 bought is available only to an author who happened to reach
+  for a quantifier word, and the author who did not is not merely unchecked — they are
+  **rewarded**, because the weaker-looking sentence is the one that passes.
+- **A correction to ADR-0010's own illustration, recorded here because it is a citation that does
+  not support its sentence:** the enforcement table gives *"each handler validates its input"* as
+  the example of a universal caught by nothing. `each` is in `QUANTIFIER_RE`, so that sentence
+  **is** caught by obligation 3; it is not caught by `ABSOLUTE_RE`, so the illustration is right
+  about rule 2 and wrong about the quantified rule. The claim the table makes is sound — the
+  example it makes it with is not.
+- **Counterfactual:** every engagement whose documents describe a property of a family in ordinary
+  English. This is F-095's mechanism with the detector removed rather than a new one.
+- **Recurrence:** not yet observed as a defect in a run; filed on the mechanism and on the
+  derivation that accepted it.
+- **Direction:** the gap cannot be closed by lengthening the list — the failure is grammatical,
+  not lexical — and a parser is out of proportion. Two moves that are cheap and honest: state the
+  partiality in the **spec** (`doc-header.md` §4a) so an author is told which sentence shapes the
+  gate can see, rather than leaving it to be inferred from a regex; and make the audit's own
+  question ask for the sentence's **form** — an auditor asked "is this sentence a universal?"
+  answers correctly on a bare plural where a word list cannot. The `[skill]` half of obligation 5
+  already exists for exactly this residue; what is missing is that nothing tells the author it is
+  carrying the whole weight.
+- **Provenance:** derived and accepted in META-145 (ADR-0010's enforcement boundary table,
+  obligation 5, commit 3701069); restated by META-148b's sub-agent as a limit inherited rather
+  than solved, and printed on every run of `propagated-claims-carry-their-obligation` (commit
+  a843114); filed as a finding in META-149, with the ADR's illustration corrected.
+- **Status:** **open — known, derived and accepted.** Same standing as F-102: named at derivation,
+  shipped with, filed so it is tracked
