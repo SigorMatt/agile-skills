@@ -10,63 +10,39 @@ sha, `./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at a843114 — 34 steps
+## CLUSTER 1 IS COMPLETE at f474027 — 34 steps green
 
-`./scripts/check: all steps passed`. `fixtures/broken-workspace` still **82 codes**.
-Library self-test **290** cases. Cluster 1 is complete except for its findings statuses.
-
-**META-148c was absorbed, not skipped.** Its content — the derivation's historical cases run as
-fixtures — already landed as two by-execution steps (*the document window (F-076, F-058, 8
-cases)* and *the document obligations by execution (F-087, F-093, F-095, 8 cases)*), each proved
-non-vacuous against the pre-change scripts. Re-authoring them would put one assertion in two
-places. What is left of it is F-053's class, which is a status decision and belongs below.
+`./scripts/check: all steps passed`; `findings citations resolve (49 cited)`; 82 codes
+unchanged; selftest 290. The document-as-deliverable derivation is built, specified, contracted,
+enforced, fixtured and settled in the ledger. Cluster 2 opens now.
 
 ## Current unit
 
-**META-149** — cluster 1's findings statuses, with resolving citations.
+**META-150** — `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`. Derivation only.
 
-Every status must cite what settles it — the ADR section, the spec revision, the contract
-version, the `./scripts/check` step. `meta/findings/FINDINGS.md` is **appended to, never
-rewritten**: existing finding text stays, the new status and its reasoning go below it.
+Nothing in this pipeline can currently declare a stakeholder gone. E4 (`abandoned`) is a legal
+ending in `spec/ids-and-statuses.md` §3.5 and in ADR-0006 §1, and it is **fixture-only** — the
+ROADMAP §2 stamp records E2 and E4 as never executed. Derive:
 
-Settle from the derived model:
+1. **A silence threshold** — measured in rest-time or in unanswered rounds, **stated in
+   `pipeline.yaml`** so the orchestrator and the gate cannot disagree about it (the same
+   argument `ids-and-statuses.md` §3.5 makes for `scripts/engagement-state` being a program).
+2. **The abandonment decision, owned by `review-close`** — an ending statement listing
+   delivered children and orphaned ones **by ID**, DE-style, mirroring E2/E3.
+3. Where E4 differs from E3: E3 is *the stakeholder did not accept*; E4 is *the stakeholder
+   never answered*. Both leave children not `done`. Say what distinguishes them in the record,
+   and how a reader tells them apart later.
 
-- **F-076** — `implement`'s claims gate examines an empty window by construction. Settled:
-  `doc-header.md` §5's absolute does not hold, the gate stays on `implement`, the window widened
-  (`--plan-documents`), and `scope.py` gained *out-of-scope-by-construction*.
-- **F-087** — the invalidation set is a `plan` output and the falsification question is asked
-  where the change is made.
-- **F-093** — engagement-state sections are owned by the ending.
-- **F-095** — quantified claims need member enumeration recorded in the audit row.
-- **F-092** — `verify` decides ADR conformance per ID; `review-close` checks only that
-  `binding-adrs` is complete (D13).
-- **F-057, F-058** — the two founding members of the *document-as-deliverable* class. The class
-  was deferred behind "an ADR-0006-shaped derivation"; that gate has now been met.
-- **F-053** — NOT fixed here. Its *class* was the lifecycle-state input to ADR-0010; record what
-  it contributed and what remains, and leave it in the *half-written record* class (F-036,
-  F-043, F-051) behind its named gate. Do not mark it fixed.
-
-Also file or disposition the **two edges META-148 named** and the **two reaches META-148b
-declared**, so none is rediscovered later as a fresh finding:
-
-1. `implement`'s widened window can include an `owned-by-ending` document it may read but not
-   write; a pre-existing unsourced absolute there would block it with no legal repair. META-148b
-   reports this is **avoided by construction** — the quantified rule reads only paragraphs *new*
-   in the diff — so check that claim before filing, and file only what survives it.
-2. A deliverable document declared **outside** `docs/` is in the window but never examined
-   (`lint-claims` rule 2 reads only under `docs/`).
-3. **Obligation 10 is not claimed by anything** — whether a K8 sentence was written into its
-   section rather than left loose. `fixtures/document-obligations/wrong/docs/process/
-   ways-of-working.md` holds such a sentence that no rule fires on, deliberately.
-4. Obligation 5's partial reach: a universal phrased without a quantifier word is caught by
-   nothing.
-
-- Done when: every cluster-1 finding has a current status with a resolving citation, the four
-  items above are filed or dispositioned, `./scripts/check` green (step *findings citations
-  resolve* included), journalled, committed AND pushed.
-- Next unit: **META-150** — cluster 2 opens: ADR-0011, the silence threshold and E4.
+- Done when: the ADR exists in the ADR-0006 shape, E4's row in ADR-0006 §1 and
+  `ids-and-statuses.md` §3.5 are **reconciled, not contradicted** (if the derivation changes
+  what E4 means, say so and amend explicitly), the enforcement boundary is stated per obligation,
+  `./scripts/check` green, journalled, committed AND pushed.
+- Next units: **META-151** (the mechanism: pipeline.yaml, dor-dod.md, review-close,
+  engagement-state, check-epic-signoff), **META-152** (`fixtures/abandoned-engagement/`),
+  **META-153** (harness — separate commit).
 
 ## Done this session
+
 
 
 
@@ -142,6 +118,26 @@ declared**, so none is rediscovered later as a fresh finding:
   illegal (F-050's shape). The procedure's version was implemented; the row is
   `document.adr.row.unplanned`, a **warning**, being evidence that `binding-adrs` was incomplete
   — which is D13, `review-close`'s read.
+- **META-149** — cluster 1's ledger (**f474027**), append-only proved mechanically (358
+  insertions, **0 deletions**), citations 43 → **49 cited**, every new sha verified with
+  `git log -1` before being written (F-024's discipline).
+  **Fixed, each with its resolving citation:** F-076, F-087, F-092, F-093, F-095, F-057, F-058
+  — and F-057/F-058's statuses say **in those words** that the deferral's gate was met, because
+  a deferral whose gate is met and not noticed is how a backlog rots.
+  **F-053 is NOT fixed**: ADR-0010 consumed its class as the lifecycle-state input (the
+  two-state-machines constraint) without resolving it; `transition` still has no `--outcome`, so
+  `review-close` still exits non-zero on a successful transition. It stays in *half-written
+  record* with F-036/F-043/F-051.
+  **META-148 and META-148b filed contradictory reports about the `owned-by-ending` edge, and
+  META-148 was right** — established **by execution** in a throwaway repo, not by reading: two
+  hard gates on `implement` are jointly unsatisfiable there, with no legal repair but `--force`.
+  META-148b's rebuttal was true of a different rule on a different skill (`lint-documents`'
+  new-paragraphs scoping), while `lint-claims` rule 2 walks **every** prose paragraph in the
+  window. Filed as **F-100**. Also filed: **F-101** (a deliverable document outside `docs/` is
+  inside the window and outside the rule — F-052/F-066's shape reintroduced, proved by
+  execution), **F-102** (obligation 10, open and *known, derived and accepted*), **F-103** (a
+  universal carried by a bare plural is recognised by nothing — with a correction that
+  ADR-0010's own illustration of it is wrong, because `each` IS in `QUANTIFIER_RE`).
 
 ## Standing instructions (still in force)
 
