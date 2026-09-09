@@ -10,45 +10,29 @@ sha, `./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## !! The gate is RED, knowingly, and META-147 is what closes it
+## The gate is GREEN at 5e6434d
 
-`./scripts/check` fails **one** step at c1fbde8: `rendered output is current` — META-146 changed
-`spec/doc-header.md` and `spec/dor-dod.md`, and `adapters/claude-code/dist/agile-skills/spec/`
-still holds the pre-change copies. `render.py` copies `spec/*` verbatim, so the re-render is
-mechanical. Every other step passes. A fresh session resuming here should NOT treat this as a
-regression: run `adapters/claude-code/render.py` as part of META-147.
+META-146's spec change and META-147's contract change are both in, and the dist is re-rendered.
+`./scripts/check: all steps passed`.
 
 ## Current unit
 
-**META-147** — the skill contracts carry ADR-0010, then re-render.
+**META-147b** — the two contracts ADR-0010 touches that META-147 did not own.
 
-ADR-0010's contract-level to-dos, verbatim from its own reckoning:
+META-147 flagged these rather than leaving them to be rediscovered as a finding:
 
-7. `methodology/skills/implement/skill.yaml` — the `claims-are-sourced` window becomes
-   diff **+** invalidation set **+** deliverable documents (it is `--changed-since {{trunk}}`
-   today). This is F-076's fix at the contract level; the `lint-claims` half is META-148.
-8. `methodology/skills/plan/skill.yaml` — new outputs: the **invalidation set**,
-   `deliverable-documents`, `binding-adrs`; exit criteria to match (F-087).
-9. `methodology/skills/verify/skill.yaml` — new gate: a per-ADR conformance verdict
-   (`conforms` / `violates` / `not-engaged`) per binding ADR, in `verify-report.md`; plus
-   checking the invalidation set's dispositions. `verify` writes no document — that stays,
-   now derived (F-092).
-10. `methodology/skills/review-close/skill.yaml` — the ending contract gains the K8
-    restatement, D7 becomes confirmation against the set, and D13 (`binding-adrs`
-    completeness) joins its criteria (F-093).
+- `methodology/skills/intake/` — ADR-0010 §3.2 row **L1**: `intake` writes the **initial**
+  `## Engagement state` section into the documents it creates. It is the only skill that writes
+  a K8 sentence outside the ending.
+- `methodology/skills/answer-questions/` — §3.2 row **L7**: the K1–K4 write, under
+  `spec/doc-header.md` §4a's obligations (a quantified claim it propagates needs its
+  enumeration; it may not write a K8 sentence, which is the ending's).
 
-Plus: `methodology/pipeline.yaml` where these outputs are handed between skills; semver bumps
-on every contract touched; `adapters/claude-code/render.py` re-run and the dist committed.
-
-**The K8 delimiter is `## Engagement state`, exactly one section per document.** META-146
-concretised it (the ADR named no literal shape); contracts and scripts must use that exact
-heading or change it in `spec/doc-header.md` §4a in the same commit.
-
-- Done when: the four contracts + `pipeline.yaml` carry the derivation, dist re-rendered,
-  `scripts/lint-skills` clean, **`./scripts/check` green again**, journalled, committed AND
-  pushed.
+- Done when: both contracts + their `process.md` carry the rows, semver bumped, `pipeline.yaml`
+  updated if a handoff changes, dist re-rendered, `./scripts/check` green, journalled,
+  committed AND pushed.
 - Next unit: **META-148** (the enforcement half — `scope.py`'s fourth state,
-  `check-verify-freshness`, `lint-claims`' window, and the must-fail fixtures).
+  `check-verify-freshness`, `lint-claims --plan-documents`, and the must-fail fixtures).
 
 ## Done this session
 
@@ -62,12 +46,24 @@ heading or change it in `spec/doc-header.md` §4a in the same commit.
   by member enumeration in the audit row (F-095); **`verify`** decides ADR conformance per ID,
   `review-close` checks only that `binding-adrs` is complete (F-092). Residual gap, named and
   unsolved: a false sentence found **after** the engagement closes has no owner.
-- **META-146** — the two spec files carry it (**c1fbde8**). `doc-header.md` §5's absolute
-  removed; §4a gains the three-kind claim table, the definition of a *checked* claim, the audit
-  row, the enumeration obligation and the `## Engagement state` convention. `dor-dod.md`: D7
-  becomes confirmation against the invalidation set, D12/DE6 gain enumeration and exclude K8,
-  DE4 gains the ending's restatement, **D13** is new (`binding-adrs` completeness, `[skill]`).
-  Both Revisions tables stamped 2026-09-10.
+- **META-146** — the two spec files carry it (**c1fbde8**). §5's absolute removed; §4a gains the
+  three-kind claim table, the definition of a *checked* claim, the audit row, the enumeration
+  obligation and the `## Engagement state` convention. `dor-dod.md`: D7 confirms against the
+  set, D12/DE6 gain enumeration and exclude K8, DE4 gains the ending's restatement, **D13** is
+  new (`binding-adrs` completeness, `[skill]` — no mechanical half exists yet).
+- **META-147** — four contracts + `pipeline.yaml` + dist (**5e6434d**), gate green.
+  Bumps: `plan` 0.4.1→0.5.0, `implement` 0.3.0→0.4.0, `verify` 0.2.0→0.3.0, `review-close`
+  0.6.0→0.7.0, `pipeline.yaml` 0.6.0→0.7.0 — all minor.
+  **Where the new outputs live** (META-148 writes fixtures against these): three new sections of
+  `tracker/items/<ID>/artifacts/plan.md` — `## Invalidation set`
+  (`| document | what | kind | why | disposition |`; kind ∈ `cited-fact`|`quantified`|
+  `engagement-state`; disposition ∈ `to-update`|`verified-still-true`|`owned-by-ending`|
+  `question-filed:<ITEM>/Q-###`; an empty set is one row saying `none`, an absent section is not
+  an empty one), `## Deliverable documents`, `## Binding ADRs`. Consumers: `impl-report.md`
+  gains `## Documents`; `verify-report.md` gains `## ADR conformance` and `## Invalidation set`;
+  `review.md` gains `## Invalidation set confirmation` and `## Sections restated at the ending`
+  — deliberately NOT `## Engagement state`, because that literal is the delimiter a script
+  enumerates and an item artifact carrying one would plant a K8 section inside a record.
 
 ## Standing instructions (still in force)
 

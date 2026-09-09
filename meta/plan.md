@@ -480,6 +480,11 @@ Format of each line: **unit** — scope — the gate that closes it.
       window widens, `verify` gains the per-ADR conformance verdict, `review-close` gains the
       K8 restatement and the `binding-adrs` completeness criterion; `pipeline.yaml`; re-render.
       Gate: `scripts/lint-skills` clean; rendered dist current; semver bumps recorded.
+- [ ] **META-147b** — the two contracts ADR-0010 touches that META-147 did not own:
+      `intake` gains the initial `## Engagement state` section (§3.2 row L1) and
+      `answer-questions` gains the K1–K4 write under §4a's obligations (row L7). Found and
+      flagged by META-147 rather than left to be rediscovered as a finding.
+      Gate: `scripts/lint-skills` clean; dist current; `./scripts/check` green.
 - [ ] **META-148** — the enforcement half: `scripts/lib/scope.py`'s fourth state
       (*out-of-scope-by-construction*, F-076), `scripts/check-verify-freshness` subtracting
       the deliverable documents from its `docs/` exemption (F-058), `lint-claims`' widened
