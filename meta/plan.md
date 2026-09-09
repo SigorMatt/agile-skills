@@ -475,13 +475,17 @@ Format of each line: **unit** — scope — the gate that closes it.
 - [ ] **META-146** — `spec/doc-header.md` + `spec/dor-dod.md` carry the derivation: the claim
       taxonomy's audit obligations, the falsification question, ADR-conformance as a criterion
       (F-092). Gate: `./scripts/check` green; revision rows appended.
-- [ ] **META-147** — the affected skill contracts (`plan` invalidation-set output, `implement`
-      claims window, `review-close` engagement-state ownership, `verify`/`answer-questions`
-      where the table says so) + `pipeline.yaml` + re-render.
+- [ ] **META-147** — the affected skill contracts from ADR-0010's to-do list: `plan` gains the
+      invalidation set / `deliverable-documents` / `binding-adrs` outputs, `implement`'s claims
+      window widens, `verify` gains the per-ADR conformance verdict, `review-close` gains the
+      K8 restatement and the `binding-adrs` completeness criterion; `pipeline.yaml`; re-render.
       Gate: `scripts/lint-skills` clean; rendered dist current; semver bumps recorded.
-- [ ] **META-148** — the must-fail fixtures for every rule META-146/147 changed, and the
-      historical cases run as fixtures. Gate: a new `./scripts/check` step, red before the
-      fix and green after.
+- [ ] **META-148** — the enforcement half: `scripts/lib/scope.py`'s fourth state
+      (*out-of-scope-by-construction*, F-076), `scripts/check-verify-freshness` subtracting
+      the deliverable documents from its `docs/` exemption (F-058), `lint-claims`' widened
+      window, and the must-fail fixtures for every rule META-146/147 changed — the historical
+      cases F-076/F-087/F-093/F-095 run as fixtures.
+      Gate: a new `./scripts/check` step, red before the fix and green after.
 - [ ] **META-149** — findings statuses settled from the derivation, with resolving citations:
       F-076, F-087, F-093, F-095, F-053, F-092, F-057, F-058.
       Gate: no stale status; `./scripts/check` step 17 green.
