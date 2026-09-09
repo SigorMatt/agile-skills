@@ -3,7 +3,7 @@ name: intake
 description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: The orchestrator routed an open stakeholder request under tracker/requests/; A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.3.0
+  methodology-version: 0.4.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -19,7 +19,7 @@ At a glance:
 
 - Runs on items at status: _not scheduled — invoked directly_
 - Human interaction: **direct**
-- Hard gates: `workspace-valid`, `epic-has-success-measures`, `an-open-question-was-asked`
+- Hard gates: `workspace-valid`, `epic-has-success-measures`, `an-open-question-was-asked`, `engagement-state-is-delimited`
 - On success: `draft`
 
 Gate commands, when this skill runs them, live under `.claude/agile-skills/scripts/`. Run them; do not simulate them. They find the workspace root themselves, so run them from wherever you are — never `cd` in order to run one, and never join one to another command with `&&` or `;`. **`.claude/agile-skills/scripts/transition` is a checkpoint:** issue it alone, read its exit code, and journal the move only after it has reported success (spec/skill-contract.md §2.3).
@@ -145,6 +145,36 @@ You talk to the human directly. You are the only skill besides `refine` that doe
    deliberately is not. If the file already exists and this epic changes its meaning, bump the
    version and add a change-log row rather than editing in place.
 
+   Every absolute you write about something named as code — a path, a command, an identifier —
+   carries a citation that resolves (`spec/doc-header.md` §4a). At intake there is usually
+   nothing named as code yet, and a vision that cites nothing because it asserts nothing about
+   code is the ordinary case, not a gap to fill.
+
+6a. **Write the `## Engagement state` section — you are the only skill that writes one outside
+   the ending.** Some of what a vision says is not about the product at all. *"The stakeholder
+   has not yet been asked to accept this"*, *"nothing else is open"*, *"three of four items are
+   delivered"* — these assert the state of the **engagement**. No code change makes them true or
+   false; the pipeline's own ending does, and no item can own one, because the thing it describes
+   outlives every item (`spec/doc-header.md` §4a).
+
+   So they live in one place, and you put them there:
+
+   - exactly **one** `## Engagement state` section per document, that literal heading, holding
+     that document's engagement-state sentences and nothing else. The heading is what a script
+     enumerates, so it is a delimiter and not a title you may improve on;
+   - you write the **initial** one. Between your execution and the ending, nothing writes one:
+     `implement` records the entry as `owned-by-ending` and moves on, and `review-close` restates
+     every section in the workspace at the ending, after the sign-off answer arrives;
+   - if `vision.md` **already** carries such a section, that engagement is in flight and the
+     section is the ending's. Leave it exactly as it stands, and say in the epic's journal that
+     the new epic's arrival makes it stale and that the ending will restate it. Nothing is lost by
+     leaving it: the ending restates every section it finds, not the ones it was told about.
+
+   The one thing no check can do for you is notice that a sentence *is* one of these. Everything
+   mechanical about them rests on your having written it inside the section, and the sentence that
+   produced this rule was written loose in the body of a vision, where nothing could see it
+   (F-093).
+
 7. **Fill in what you know of `tracker/project.yaml`.** Name, description, trunk branch. Leave
    `commands.*` as `null` unless the project already has them — inventing a test command that
    does not exist would make the first gate report a pass for a command nobody can run. `plan`
@@ -172,7 +202,8 @@ Write the **full** entry on the epic's `journal.md`, covering the whole intake, 
 - `**Questions raised:**` — the questions you asked the human, and any that remain unanswered.
   Record the human's answers **verbatim** here, marked as human answers. This is the only record
   of the conversation, and `refine` and `plan` will rely on it.
-- `**Gates:**` — all four, each pass/fail with evidence.
+- `**Gates:**` — all six, each pass/fail with evidence, with the vision's
+  `## Engagement state` section as the evidence for `engagement-state-is-delimited`.
 - `**Artifacts:**` — the epic, every item created, `vision.md`, `project.yaml`.
 
 Then write a **short entry on every item you created**, naming this execution and pointing at the
@@ -238,6 +269,11 @@ Before you finish, answer these honestly:
    instead of analysed — remove it and note what you removed.
 4. If the human answered "I don't know" to something, is that recorded as unknown, or did you
    quietly fill it in?
+5. Read the vision back one sentence at a time. Is any sentence about the **engagement** —
+   what has been asked, what is open, how much is delivered — sitting outside the
+   `## Engagement state` section? Move it in. A sentence about the product that ended up inside
+   the section moves out: the section is enumerated and restated wholesale at the ending, and
+   anything in it will be rewritten from an ending that knows nothing about the product.
 
 **The two ways this skill goes wrong:**
 
@@ -262,6 +298,10 @@ Before you finish, answer these honestly:
   because the next session will assume it means something.
 - **The idea conflicts with the existing vision:** do not silently overwrite the vision. Put the
   conflict to the human, and record their decision in the epic's journal.
+- **The existing vision's `## Engagement state` section is now wrong:** leave it. That section
+  belongs to the ending of the engagement that wrote it, and correcting it here would decide, on
+  no authority, that the earlier engagement is over. Record what is stale in the epic's journal
+  and let `review-close` restate it (`spec/doc-header.md` §4a).
 - **The human leaves mid-intake:** finish what is unambiguous, leave the rest as an open
   question addressed to `human` on the epic, set the epic to `awaiting-answer`, and stop. The
   orchestrator will surface it when they return.

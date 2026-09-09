@@ -181,9 +181,68 @@ information.
    the change. If you amend an acceptance criterion, journal it explicitly — criteria are frozen
    after `ready` and you are one of only two skills permitted to change one.
 
+5a. **A claim you write into a document carries the obligation of its kind.** You are one of the
+   few skills that may write `docs/product/`, `docs/architecture/overview.md`, a consumer ADR and
+   `docs/process/` — `verify` may not write one at all, and `implement` only inside the set its
+   plan declared, so an answer very often arrives here precisely because nobody else could make
+   the edit. What you write is checked the way any confident sentence is, and there are three
+   kinds of it (`spec/doc-header.md` §4a):
+
+   | kind | what it is | what you owe |
+   |------|-----------|--------------|
+   | cited fact | an absolute about something named as code — an identifier, a call, a path | a citation, written `[src: ...]`, that resolves |
+   | quantified claim | a claim over a family: *every*, *all*, *no*, *the only* | the **enumeration**: the set, how you enumerated it with the command's output, the members by name, and a verdict per member |
+   | engagement-state sentence | a sentence about the **engagement** rather than the product | nothing — step 5b, and it is not yours to write |
+
+   The `## Consequences` entry for the file you changed is where that evidence goes: one line per
+   claim, naming the sentence and carrying what its kind owes. That is what makes the claim
+   **checked** rather than asserted — a later reader can repeat the look without re-deriving what
+   the sentence is about.
+
+   **Opening what a quantified claim cites does not discharge it.** The citation names the
+   general case and the falsifier is the member the sentence does not name; the same universal was
+   audited true three times, honestly, from the family's shared fixture, and was false in the one
+   member nobody opened (F-095). If the family genuinely cannot be enumerated, weaken the sentence
+   until it is a cited fact. A universal nobody can enumerate is a universal nobody can check.
+
+5b. **You may not write an engagement-state sentence — not even when their answer made one
+   false.** A sentence asserting the state of the **engagement** — *"the stakeholder has not yet
+   been asked to accept this"*, *"nothing else is open"* — lives in a document's
+   `## Engagement state` section, and that section belongs to the ending. `intake` writes the
+   initial one; `review-close` restates every one of them at the ending, after the sign-off
+   answer arrives; nothing in between writes one (`spec/doc-header.md` §4a).
+
+   Your answers falsify these sentences more often than any other execution's, because the
+   stakeholder's reply is *itself* a fact about the engagement. When one goes false, you record it
+   and carry on:
+
+   - the question's `## Consequences` names the document and its `## Engagement state` section,
+     quotes the sentence, and says the ending owns it;
+   - where the item has a plan, the same row goes into its invalidation set with the disposition
+     `owned-by-ending`, so the item's own reviews see an entry that is disposed rather than a
+     document nobody accounted for;
+   - and nothing else. Not a repair, not a tidy, not a bug — a stale engagement-state sentence is
+     not delivered behaviour and there is nobody to ask about it.
+
+   Nothing is lost by leaving it: the ending restates **every** section it finds, not the ones it
+   was told about, so your row is a signal and not the mechanism. This is the move that was
+   missing in a real run — an execution corrected a second sentence beyond its answer's scope
+   because nobody else was going to, declared it, and was authorised by nothing (F-093).
+
 6. **If a document changed, bump its version and add a change-log row**
    (`spec/doc-header.md` §3), with `updated-by: answer-questions` and `updated-for` set to the
-   item.
+   item. The edit, the version bump and the change-log row are **one act**, not three: a document
+   left with a new sentence and an old version is a half-written record, and every later reader
+   who trusts the header is reading a version that never existed.
+
+6a. **A document you changed on an item's branch belongs in that item's invalidation set.** Mid-
+   flight, your edits land on `wi/WI-000n` beside `implement`'s, and `implement` must be able to
+   account for **every** path under `docs/` in that branch's diff against the set its plan
+   declared. A document you repaired and did not record reads, downstream, as a document somebody
+   wrote without authority. So add the row — `document`, `what`, `kind`, `why` — with the
+   disposition already closed: `to-update`, discharged by you, naming this question as the reason.
+   `review-close` then confirms D7 against a set that still names everything the branch touched
+   (`spec/dor-dod.md` D7).
 
 7. **Return the item to its recorded `resume-to` status** — once **every blocking** question on
    it is answered. If a blocking question remains, or one was escalated to the human, the item
@@ -214,7 +273,9 @@ On the item's `journal.md`:
   (ADR-0008 §4).
 - `**Questions raised:**` — questions you re-addressed to the human, or `none`.
 - `**Gates:**` — every one, with the file-by-file propagation check as evidence for
-  `answer-is-propagated` and, for each deferral, which of step 3a's two moves you took and why.
+  `answer-is-propagated`, the per-claim evidence of step 5a for
+  `propagated-claims-carry-their-obligation`, and, for each deferral, which of step 3a's two moves
+  you took and why.
 - `**Artifacts:**` — every question file, every artifact you edited with what changed, every ADR
   created, and the documents whose versions you bumped.
 
@@ -285,6 +346,14 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
    natural?
 5. Did you amend an acceptance criterion? If so, is that amendment journaled with its reason,
    and does it still describe what the human asked for rather than what the code does?
+6. For every sentence you wrote into `docs/`: does it carry what its kind owes? A universal whose
+   evidence is the one document you opened is not checked, however carefully you read that
+   document.
+7. Did you edit a `## Engagement state` section, or move a sentence into or out of one? You may
+   not. If an answer made one of those sentences false, is that recorded — in the question's
+   `## Consequences`, and in the plan's invalidation set as `owned-by-ending` where a plan exists?
+8. Is every document you changed on an item's branch named in that item's invalidation set, with
+   its disposition closed?
 
 **The two ways this skill goes wrong:**
 
@@ -298,6 +367,11 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
   is that a thing was settled which was not. The tell is that `## Consequences` names files that
   do not contain any decision. If what they said does not decide it, record the deferral and park
   the item; stopping honestly is a result.
+- **Repairing an engagement-state sentence because it is plainly wrong and you are the only one
+  looking.** It is wrong, you are here, the edit takes ten seconds, and the whole reason the rule
+  exists is that this is exactly how it happened last time: two corrections, both declared, both
+  defensible, both authorised by nothing (F-093). Record it and leave it. The ending is where that
+  sentence is true.
 - **Amending an acceptance criterion to match what was built.** The question arrives from
   `verify`, the code does something reasonable, the criterion says something slightly different,
   and the smallest edit is to the criterion. That single move turns the entire pipeline into
@@ -316,6 +390,10 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
   unblock the item — that is the guess the whole protocol exists to prevent.
 - **The question reveals a defect in delivered behaviour:** file a `bug` item. Do not fix
   behaviour inside an answer; the fix would have no plan, no criteria, and no verification.
+- **The answer makes an engagement-state sentence false:** record it and stop there — the
+  question's `## Consequences`, and the invalidation set where the item has a plan, disposed
+  `owned-by-ending`. It is not a defect in delivered behaviour, so it is not a bug; it is not a
+  decision anybody can take now, so it is not a question. It is the ending's.
 - **The question is really a disagreement with a recorded decision:** an ADR may be superseded
   only with the human's authorisation. Escalate with both readings and their consequences.
 - **You cannot determine `resume-to`:** reconstruct it from the history chain, use it, and

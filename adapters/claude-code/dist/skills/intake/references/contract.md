@@ -1,4 +1,4 @@
-# Contract — intake v0.3.0
+# Contract — intake v0.4.0
 
 Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -18,7 +18,7 @@ Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative 
 | `tracker/requests/` | no | a stakeholder request dispatched by next is this execution's input instead of a spoken idea |
 | `tracker/project.yaml` | no | an existing project's name, trunk branch and commands constrain what can be proposed |
 | `tracker/items/*/item.md` | no | existing items reveal overlap, and the highest allocated IDs |
-| `docs/product/vision.md` | no | a new epic must be coherent with an existing product vision, or explicitly revise it |
+| `docs/product/vision.md` | no | a new epic must be coherent with an existing product vision, or explicitly revise it, and a vision that already carries an Engagement state section is one whose engagement is in flight - that section is the ending's, not this execution's |
 
 ## Outputs
 
@@ -28,6 +28,7 @@ Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative 
 | `tracker/` | file | conditional |
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `docs/product/vision.md` | file | always |
+| `the Engagement state section of docs/product/vision.md, written where the document has none` | file | conditional |
 | `a commit of the workspace files this execution wrote` | commit | on-success |
 | `tracker/items/{{item.id}}/journal.md` | append | always |
 | `tracker/items/{{item.id}}/history.md` | append | always |
@@ -42,6 +43,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 | `epic-has-success-measures` | hard | Read the epic's Success measures section; each entry must be something a person could check, not a restatement of the goal. | stay |
 | `an-open-question-was-asked` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}} --require-elicitation`, expect exit-zero | stay |
+| `engagement-state-is-delimited` | hard | Read back what you wrote into docs/product/vision.md. A sentence asserting the state of the engagement rather than the state of the product - the stakeholder has not yet been asked to accept this, nothing else is open, three of four items are delivered - belongs in exactly one Engagement state section and nowhere else in the body. Every other sentence in that section is moved out of it. This is the one obligation in the convention no script can see - everything mechanical about those sentences rests on this execution having put them in the section, and the sentence that produced the rule was written loose in the body (spec/doc-header.md section 4a). Where the document already has such a section, you write nothing into it - that engagement is in flight and the section is the ending's. | stay |
 | `items-are-separable` | advisory | For each item, state the order it could be built in and what it depends on; an item that cannot be described this way is really part of another. | stay |
 | `no-solution-in-the-problem` | advisory | Read each title and story back; if it names a technology or a data structure the human did not, remove it and record what was removed. | stay |
 
@@ -57,6 +59,9 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] One kind elicitation question exists on the epic - addressed to human, non-blocking - asking what else matters to them that nobody asked about, and its answer is recorded or it is still open with the stakeholder.
 - [ ] At least one work item exists at status draft, each naming the epic.
 - [ ] docs/product/vision.md exists and states who the product is for and what it is for.
+- [ ] Every absolute claim this execution wrote about something named as code carries a citation that resolves (spec/doc-header.md section 4a).
+- [ ] docs/product/vision.md carries exactly one Engagement state section, holding the engagement-state sentences this execution wrote and nothing else - this is the only execution that writes one outside the ending, and no such sentence is left loose in the body (spec/doc-header.md section 4a).
+- [ ] A vision that already carried an Engagement state section still carries it unchanged; review-close restates every one of them at the ending.
 - [ ] Every created item has journal.md and history.md with a creation entry.
 - [ ] The board has been regenerated and shown to the human.
 

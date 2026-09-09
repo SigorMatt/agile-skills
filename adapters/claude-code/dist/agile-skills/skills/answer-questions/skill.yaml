@@ -1,5 +1,5 @@
 name: answer-questions
-version: 0.4.0
+version: 0.5.0
 persona: architect
 purpose: Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required.
 
@@ -24,7 +24,7 @@ inputs:
     why: the acceptance criteria an answer may have to amend
   - path: tracker/items/{{item.id}}/artifacts/plan.md
     required: false
-    why: most answers land here, and an answer that does not reach an artifact has not been given
+    why: most answers land here, and an answer that does not reach an artifact has not been given; it also carries the invalidation set, which is where a document this answer changes or falsifies is accounted for while the item is mid-flight
   - path: tracker/items/{{item.id}}/history.md
     required: true
     why: carries the resume-to status the item must be returned to
@@ -34,6 +34,9 @@ inputs:
   - path: docs/product/
     required: false
     why: intent recorded at intake or refinement often already answers the question
+  - path: "every document this answer must be propagated into"
+    required: false
+    why: an answer that does not reach the document the asker will re-read has not been given, and the sentence it lands in carries the obligation of its claim kind - a citation that resolves, or, for a claim over a family, the enumeration
   - path: tracker/items/*/artifacts/refinement-qa.md
     required: false
     why: the human may have already answered this during refinement
@@ -49,6 +52,9 @@ outputs:
     kind: file
     when: always
   - path: docs/architecture/adr/ADR-####-{{item.id}}.md
+    kind: file
+    when: conditional
+  - path: "the documents this answer is propagated into - docs/product/, docs/architecture/overview.md, docs/process/ - each with a version bump and a change-log row"
     kind: file
     when: conditional
   - path: tracker/items/WI-####/
@@ -78,6 +84,16 @@ quality_gates:
   - name: escalation-is-justified
     description: A question passed to the human meets one of the four escalation conditions.
     manual_check: For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition.
+    enforcement: hard
+    on_failure: stay
+  - name: propagated-claims-carry-their-obligation
+    description: Every claim this execution wrote into a document carries what its kind owes - a citation that resolves, and for a claim over a family, the enumeration of that family.
+    manual_check: For each sentence you wrote into docs/, name its kind. A cited fact - an absolute about something named as code - carries a citation that resolves. A quantified claim - every, all, no, the only - carries, in the Consequences entry that records this write, the set it ranges over, how the set was enumerated with the command or glob and its output, the members by name, and a verdict per member; opening what the sentence cites does not discharge it, which is how the same universal was audited true three times and was false in the one member nobody opened (spec/doc-header.md section 4a). Where the family cannot be enumerated, weaken the sentence until it is a cited fact rather than recording the enumeration as done.
+    enforcement: hard
+    on_failure: stay
+  - name: engagement-state-is-left-to-the-ending
+    description: No Engagement state section was written or amended, including where a human's answer made one of its sentences false.
+    manual_check: List every Engagement state section in a document this execution touched. None may be written, amended or tidied here - those sentences are the ending's, restated wholesale by review-close after the sign-off answer arrives (spec/doc-header.md section 4a). Where an answer you propagated made one false, that is recorded and not repaired - the question's Consequences names the document and its section and says the ending owns it, and where the item has a plan, the row goes into the invalidation set with the disposition owned-by-ending. An answer whose only unrecorded consequence is a stale engagement-state sentence is complete.
     enforcement: hard
     on_failure: stay
   - name: cross-answer-consistency
@@ -114,6 +130,9 @@ exit_criteria:
   - Every question this execution handled is either answered with consequences, deferred with what would unblock it recorded and the item where the deferral puts it - blocked for a work item or bug, open for an epic - or addressed to the human with the condition stated.
   - Work an answer implied and no item records exists as a work-item at draft, with arose-from naming the question.
   - Every file named in a Consequences section actually contains the change.
+  - Every claim this execution wrote into a document carries what its kind owes - a resolving citation for a cited fact, and for a quantified claim the set, the enumeration with its command's output, the members and a verdict per member (spec/doc-header.md section 4a).
+  - No Engagement state section was written or amended. Where an answer falsified one, the question's Consequences names the document and its section and records that the ending owns it, and the item's plan, where it has one, carries the entry disposed owned-by-ending.
+  - Every document this execution wrote on an item's branch is accounted for in that item's invalidation set, so the set still names every path under docs/ in the branch diff (spec/dor-dod.md D7).
   - Items whose blocking questions are all resolved are returned to their recorded resume-to status.
   - Any new decision is recorded as an ADR, cited from the question.
   - The journal entry and the history row for this execution are written.

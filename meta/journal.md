@@ -4467,3 +4467,91 @@ recall is a reading, not a number, and the report says which.
   caught both, which is the check working.
 - **Artifacts:** `methodology/skills/{plan,implement,verify,review-close}/{skill.yaml,process.md}`,
   `methodology/pipeline.yaml`, `adapters/claude-code/dist/**`.
+
+## 2026-09-10 — META-147b — `intake` and `answer-questions` carry their ADR-0010 rows
+
+- **Unit:** META-147b
+- **Inputs read:** `meta/adr/ADR-0010-document-as-deliverable.md` §1 (K1–K8), §3.2 rows **L1** and
+  **L7**, §3.3, §4.0–§4.4 and the enforcement table; `spec/doc-header.md` §4a and §5 as META-146
+  left them, and `spec/dor-dod.md` D7/D12/D13/DE4; the two contracts and their procedures;
+  `spec/skill-contract.md` §3; the diff of **5e6434d** in full, because consistency with the four
+  sibling contracts matters here more than independent judgement; `scripts/lint-skills`'s
+  gate-name cross-check (F-059) and `scripts/lint-claims`'s option parser, to avoid naming a flag
+  or a gate that does not exist.
+- **Decisions:**
+  - **`intake` writes the initial `## Engagement state` section into `docs/product/vision.md`,
+    and only where the document has none.** ADR-0010 §4.3 rule 2 gives `intake` the initial one
+    and forbids every execution between it and the ending. A *second* `intake` into a workspace
+    whose vision already carries a section is one of those in-between executions: that engagement
+    is in flight and the section is its ending's. So the contract's rule is written on the
+    document's state, not on the skill's name — write it where there is none, leave it exactly as
+    it stands where there is one, and journal what the new epic makes stale. Nothing is lost by
+    leaving it, because `review-close` restates **every** section it finds rather than the ones it
+    was told about.
+  - **One new hard gate on `intake`, `engagement-state-is-delimited`, and it is ADR-0010's
+    obligation 10** — the one obligation in the whole model with no mechanical half. Obligations 6
+    and 7 (the sections exist; only `intake` and the ending wrote inside one) are `[auto]` and
+    their scripts do not exist, so the gate is a `manual_check` and META-148 owns the other half.
+    The gate reads in both directions: an engagement-state sentence outside the section moves in,
+    and a product sentence inside it moves out — the section is restated wholesale at an ending,
+    from an ending that knows nothing about the product.
+  - **No `lint-claims` gate was added to `intake`, deliberately.** Row L1 also says `intake` owes
+    §4a's citation on every absolute, and the obvious move is `scripts/lint-claims --uncommitted`.
+    Refused: at intake there is usually no code yet, so the window would be empty by construction
+    on nearly every execution — which is F-076's exact shape, in the unit that exists to repair
+    F-076's neighbours. The obligation is carried as an exit criterion instead, and `doc-header.md`
+    §4a's sentence naming `plan`, `implement` and `review-close` as the skills that carry the
+    command stays true.
+  - **`answer-questions` may not write or amend a K8 sentence, and what it does instead is
+    *record* one.** When a human's answer falsifies an engagement-state sentence — which its
+    answers do more often than any other execution's, because the stakeholder's reply is itself a
+    fact about the engagement — the question's `## Consequences` names the document, its
+    `## Engagement state` section and the sentence, and says the ending owns it; where the item has
+    a plan, the same row goes into the invalidation set disposed `owned-by-ending`. Nothing else:
+    not a repair, not a tidy, not a bug (it is not delivered behaviour) and not a question (nobody
+    can decide it now). The row is a signal, not the mechanism — the ending's restatement is
+    complete without it. This is the move that was missing when an execution corrected a second
+    sentence beyond its answer's scope *because nobody else was going to*, declared it, and was
+    authorised by nothing (F-093).
+  - **`answer-questions` records the documents it writes on an item's branch in that item's
+    invalidation set, disposed `to-update`.** A seam META-147 opened and did not close:
+    `implement`'s `document-writes-are-declared` gate lists every path under `docs/` in the branch
+    diff and requires each to appear in the plan's set, and `review-close`'s D7 confirms against
+    the same set. An `answer-questions` execution propagating into `docs/` mid-flight puts a path
+    in that diff which `implement` never wrote and cannot account for. Recording the row — closed,
+    by the execution that made the change — keeps the set what D7 needs it to be: an enumeration of
+    everything the branch touched.
+  - **The audit row for this skill is the `## Consequences` entry of the question it answered.**
+    `doc-header.md` §4a says the row lives "in the artifact where that audit is recorded", and
+    `answer-questions` has no report artifact of its own. No new section and no new artifact were
+    invented for it: `spec/question.md` is not this unit's to change, and `## Consequences` is
+    already the place a reader looks for what an answer changed.
+  - **Two new hard gates on `answer-questions`, both `manual_check`:**
+    `propagated-claims-carry-their-obligation` (§4a's three kinds — the quantified half is
+    ADR-0010's obligation 3, `[auto]` in the model and unimplemented today) and
+    `engagement-state-is-left-to-the-ending` (obligation 7, likewise `[auto]` and unimplemented).
+    Naming a command that does not run is the F-001 failure this ledger exists for.
+  - **`answer-questions` gains the documents it already writes as declared outputs.**
+    `doc-header.md` §5's table has named it the updater of `vision.md`, `prd.md`, `overview.md` and
+    `ways-of-working.md` throughout, and its contract declared only the ADR. A skill that writes a
+    file its `outputs` does not name is a contract that cannot be read for what it touches.
+  - **`intake`'s journaling said "all four" gates over a contract that declared five.** Corrected
+    to six in the same edit that added the sixth — a stale count in the one bullet a worker uses
+    to check they ran everything.
+  - **Version bumps, both MINOR** (`skill-contract.md` §3 — a new gate, a new output, a new step;
+    no removed output, no renamed gate, no changed transition): `intake` 0.3.0 → **0.4.0**,
+    `answer-questions` 0.4.0 → **0.5.0**. `methodology/pipeline.yaml` is **unchanged**: no
+    transition, condition, provenance or rule obligation moves — the two rows change what a skill
+    writes inside a document, not when an item may move.
+- **Questions raised:** none blocking. Two things named rather than solved: ADR-0010 §3.3 item 7's
+  residual gap is untouched, and the three new gates here are `manual_check` for obligations the
+  model calls `[auto]` — META-148's list gains the K8 section shape check (obligation 6), the
+  diff-over-a-marked-region check that only `intake` and an ending wrote inside one (obligation 7),
+  and the quantified-enumeration shape check on `answer-questions`' propagated writes
+  (obligation 3).
+- **Gates:** `./scripts/check` green — `check: all steps passed`. `scripts/lint-skills`: 0 errors,
+  0 warnings over 9 contracts. Two `manual_check` strings had to lose a colon-space that
+  `miniyaml` and PyYAML parse differently — the library self-test's cross-check caught both, the
+  same way it did in META-147, which is the check working.
+- **Artifacts:** `methodology/skills/{intake,answer-questions}/{skill.yaml,process.md}`,
+  `adapters/claude-code/dist/**`.
