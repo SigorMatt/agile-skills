@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.7.0
+version: 0.8.0
 
 item_types:
   - epic
@@ -35,6 +35,25 @@ priorities:
     rank: 3
   - name: low
     rank: 4
+
+# When an engagement ends. E1-E3 and E4 by withdrawal are triggered by REST, which
+# scripts/engagement-state decides. E4 by SILENCE is triggered by the count below, and the
+# threshold lives here rather than in any one program because three consumers read it - the
+# orchestrator, engagement-state and check-epic-signoff - and any two of them disagreeing about
+# whether it is met is F-045's mechanism exactly (spec/ids-and-statuses.md section 3.5a,
+# ADR-0011 section 1.3).
+#
+# The rate at which rounds accrue is set by whoever runs the loop and NO PROGRAM CAN CHECK IT:
+# three passes in a minute are three rounds, and the mechanism cannot tell them from three passes
+# in three days. That is the honest cost of counting asks instead of time, and this file is where
+# the calibration is written down. Raise the threshold if this workspace's loop runs fast.
+termination:
+  silence:
+    threshold_rounds: 3
+    unit: One orchestrator halt on the human with no inbound change since the previous halt. Recorded as a row in tracker/waiting/EP-###.md; the count is the trailing run of equal inbound digests, never a stored counter (spec/workspace-layout.md section 1.4).
+    inbound: Only what a stakeholder can change - a reply written into a question's Answer section, and a file under tracker/requests/. Nothing a skill writes is inbound.
+    resets_on: Any inbound change - a full reply, a partial reply, a deferral, or a new request. The count measures PRESENCE rather than compliance - a slow stakeholder is never abandoned, an absent one is.
+    declared_by: review-close, and only review-close. The orchestrator reads the verdict; it decides nothing (ADR-0011 section 5).
 
 # Every status. `owner` is the single skill the orchestrator dispatches for an item in this
 # status; `null` means no skill advances it and the orchestrator reports it instead.
@@ -106,7 +125,7 @@ statuses:
     owner: null
     terminal: true
     suspendable: true
-    description: The engagement is running. Advances only through its children - except at rest, when the orchestrator dispatches review-close on the epic to end it (spec/ids-and-statuses.md section 3.5). A blocking question or an impasse may suspend it.
+    description: The engagement is running. Advances only through its children - except when scripts/engagement-state reports at-rest or abandoned, when the orchestrator dispatches review-close on the epic to end it (spec/ids-and-statuses.md sections 3.5 and 3.5a). A blocking question or an impasse may suspend it.
 
   - name: done
     applies_to: [work-item, bug, epic]
@@ -259,12 +278,20 @@ transitions:
     resume_to: required
     condition: The engagement ended at E3 - the impasse. Every child is terminal, at least one did not deliver, the stakeholder was asked and did not accept, and every Engagement state section was restated afterwards from the ending being recorded (spec/dor-dod.md DE4).
 
+  - from: awaiting-answer
+    to: done
+    actor: review-close
+    applies_to: [epic]
+    gated: true
+    resume_to: forbidden
+    condition: The engagement ended at E4 by SILENCE while the epic was suspended - the sign-off was filed and the threshold was reached before it was answered. Only answer-questions may otherwise leave awaiting-answer, and it has nothing to answer. Gated for the same reason as the other two epic endings - an epic has no downward escape (ADR-0006 section 1c).
+
   - from: done
     to: open
     actor: any
     applies_to: [epic]
     resume_to: forbidden
-    condition: A defect was filed against the epic's delivered behaviour after it closed, so the goal is no longer met. The reopening row records which item reopened it.
+    condition: A child item was filed against the epic after it closed - a defect in what it delivered, or work routed from a stakeholder request that arrived after the ending - so the goal is no longer met. This is the returning stakeholder's route back after E4 (spec/ids-and-statuses.md sections 3.4 and 3.5a). The reopening row records which item reopened it.
 
   - from: any-suspendable
     to: awaiting-answer
@@ -284,6 +311,13 @@ transitions:
     applies_to: [work-item, bug]
     resume_to: required
     condition: The answer was deferred - the stakeholder replied "not yet" and no decision can be taken without the missing thing (spec/question.md section 2).
+
+  - from: awaiting-answer
+    to: blocked
+    actor: review-close
+    applies_to: [work-item, bug]
+    resume_to: required
+    condition: E4 - an orphan suspended on a question that will never be answered, moved to blocked before the epic closes, with a history reason beginning "orphaned by E4:" and NO outcome at all. awaiting-answer is not suspendable, so the generic impasse row cannot reach it, and the deferral row above needs a reply that is not coming - F-050's shape, found by derivation rather than by a run (spec/ids-and-statuses.md section 3.5a).
 
   - from: any-suspendable
     to: blocked
@@ -343,7 +377,7 @@ orchestrator:
       description: If any request under tracker/requests/ has status open, dispatch intake on the oldest one and stop. The stakeholder speaking outranks selecting work; a request handled after the current item finishes is a request answered against a plan they already tried to change.
     - id: 3
       action: surface-human-questions
-      description: If any question with addressed-to human and status open exists, surface it with its item and stop.
+      description: If any question with addressed-to human and status open exists, the pipeline is waiting on a person. FIRST record the halt - one row on tracker/waiting/EP-###.md for each epic this halt is against - because a pass that read the count first would decide on a picture that excludes itself and the declaring pass would go unrecorded. THEN run scripts/engagement-state EP-### for each epic not already ended. If any reports abandoned, dispatch review-close on that epic and stop - the threshold was reached and the ending is E4 by silence. Otherwise surface every human-addressed question in full, with its item and the round count against the threshold, and stop. next decides nothing here - it reads a verdict, exactly as at steps 6 and 7 (spec/ids-and-statuses.md section 3.5a, ADR-0011 section 5).
     - id: 4
       action: dispatch-answer-questions
       description: Else if any question addressed to architect is open, dispatch answer-questions on the oldest such question's item.
@@ -352,7 +386,7 @@ orchestrator:
       description: Else pick the runnable item with the best selection key and dispatch its status owner.
     - id: 6
       action: end-the-engagement
-      description: Else, for each epic still at open, run scripts/engagement-state EP-###. If it reports at-rest, dispatch review-close on that epic and stop. An engagement that can no longer progress must be ended through the stakeholder, not left on the board - which is what happened in a run that stopped here with the stakeholder recording that nobody ever asked them (F-045). The step terminates because both of review-close's moves from open leave open.
+      description: Else, for each epic still at open, run scripts/engagement-state EP-###. If it reports at-rest, dispatch review-close on that epic and stop. Abandonment is not reached here - it is declared at step 3, where the halt is (spec/ids-and-statuses.md section 3.5a). An engagement that can no longer progress must be ended through the stakeholder, not left on the board - which is what happened in a run that stopped here with the stakeholder recording that nobody ever asked them (F-045). The step terminates because both of review-close's moves from open leave open.
     - id: 7
       action: retro-an-ended-engagement
       description: Else, for each epic whose scripts/engagement-state verdict is ended - the ending is recorded and the retrospective is not written - dispatch retro on that epic and stop. The stakeholder is not waiting on this; their engagement ended at sign-off. This step terminates because writing the report changes the verdict to closed (ADR-0009 section 2).
@@ -375,7 +409,8 @@ orchestrator:
   stop_conditions:
     - The workspace validator failed.
     - An open stakeholder request was routed to intake.
-    - A question addressed to the human is open.
+    - A question addressed to the human is open, the halt was recorded, and the question was surfaced.
+    - A question addressed to the human is open, the halt was recorded, and scripts/engagement-state reported abandoned, so review-close was dispatched to declare E4 by silence.
     - No item is runnable, and review-close was dispatched to end an engagement at rest.
     - No item is runnable, and retro was dispatched on an engagement that has ended.
     - No item is runnable and every engagement is closed - ended, with its retrospective written.

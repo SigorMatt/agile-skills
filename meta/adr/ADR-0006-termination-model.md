@@ -5,7 +5,22 @@
 - **Unit:** META-102
 - **Supersedes:** patch-thinking on the F-013 class. F-013's own fix (ADR-less, META-087) stands
   and is re-derived here rather than reversed.
+- **Amended by:** ADR-0011 (META-151), which extends §1's E4 row with a **second route** —
+  silence past a threshold, alongside the withdrawal this ADR wrote. What §1 says stands as
+  written and was true when written; ADR-0011 adds a way of reaching E4 that this derivation did
+  not have. Read §1's E4 row with `spec/ids-and-statuses.md` §3.5a beside it.
 - **Findings:** F-013, F-029 (+F-042), F-045, F-046. Feeds F-028.
+
+> **Why this is a pointer and not a `## Corrections` entry.** `spec/doc-header.md` §4b admits two
+> repairs to a standing ADR — a `provenance` entry, which adds a citation and leaves the
+> assertion alone, and an `erratum`, which replaces a clause that was false against the code. E4's
+> second route is neither: the withdrawal route was true when written and is true now, and a
+> reader would have to change code — `pipeline.yaml`, `engagement-state`, `check-epic-signoff`,
+> `next`, `review-close` — to satisfy the new text. §4b's own boundary line says that makes it a
+> **new decision** rather than a correction, and §4 forbids editing a standing ADR to change what
+> it decided. So the decision text below is untouched, the relationship is declared where §4
+> declares relationships between ADRs — in the header — and the derivation lives in ADR-0011,
+> which names this ADR under **Extends** and **Amends**.
 
 ## Context
 

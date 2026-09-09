@@ -17,6 +17,8 @@ item's history if the item and the code share a history.
 │   ├── board.md                  # GENERATED — never hand-edited (§4)
 │   ├── requests/                 # the stakeholder writes here, unprompted (spec/request.md)
 │   │   └── R-001.md
+│   ├── waiting/                  # APPEND-ONLY — one halt log per engagement (§1.4)
+│   │   └── EP-001.md
 │   └── items/
 │       ├── EP-001/
 │       │   ├── item.md
@@ -58,6 +60,8 @@ item's history if the item and the code share a history.
 | `tracker/project.yaml` | from workspace initialisation |
 | `tracker/items/` | from workspace initialisation |
 | `tracker/requests/` | from workspace initialisation; may be empty, and usually is |
+| `tracker/waiting/` | from workspace initialisation; may be empty, and usually is |
+| `tracker/waiting/<EP-ID>.md` | from the first orchestrator halt on the human against that epic (§1.4) |
 | `tracker/board.md` | after the first item exists |
 | `<item>/item.md`, `journal.md`, `history.md` | for every item directory, from creation |
 | `<item>/questions/`, `<item>/artifacts/` | directories may be empty, but MUST exist |
@@ -107,6 +111,64 @@ refinement did the right thing — wrote the agenda down for the next session �
 that the file it had just created would read to an automated check as R8 satisfied, and
 mitigated it with a banner nothing reads (F-031). A mechanical gate that checks the wrong thing
 is worse than a manual one, because it is trusted: nobody re-reads a criterion marked `[auto]`.
+
+### 1.4 `tracker/waiting/<EP-ID>.md` — the halt log an ending is derived from
+
+One file per engagement, named for its epic, **append-only**. It records the occasions on which
+the pipeline came to the stakeholder and got nothing, and it is the only evidence E4 by silence
+has (`ids-and-statuses.md` §3.5a). It is deliberately outside `tracker/items/`: `next` writes no
+journal and no item artifact, and this is not the place to start.
+
+The whole file:
+
+```markdown
+# Waiting log — EP-001
+
+Append-only. One row per orchestrator halt on the human. Written by `next`; never hand-edited.
+
+| round | observed | inbound | surfaced |
+|-------|----------|---------|----------|
+| 1 | 2026-09-10T14:02:11Z | 9f3c1a2e | WI-0001/Q-002, WI-0001/Q-003 |
+| 1 | 2026-09-10T14:09:03Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |
+| 2 | 2026-09-10T14:11:40Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |
+| 3 | 2026-09-10T14:14:02Z | 4b7e0d51 | WI-0001/Q-004, EP-001/Q-001 |
+```
+
+The first two lines and the blank line after them are the file's fixed preamble, written once
+when the file is created; every later write appends exactly one table row and nothing else.
+
+| Column | Rules |
+|--------|-------|
+| `round` | a positive integer, written for a human reader. It is the silent-round count **as of this row** — 1 whenever `inbound` differs from the row above, otherwise one more than the row above. **No program reads it.** A hand-edited round number cannot make an abandonment happen sooner, because the count comes from the digests |
+| `observed` | UTC ISO-8601, the moment of the halt. Non-decreasing down the file |
+| `inbound` | the inbound digest, below: 8 lowercase hex characters |
+| `surfaced` | the human-addressed questions that were `open` at this halt, as `<ITEM>/<Q-ID>`, ascending, comma-and-space separated. Never empty — a halt requires an open ask (`ids-and-statuses.md` §3.5a) |
+
+**The inbound digest.** "Inbound" is what the stakeholder could have changed, and exactly two
+channels are theirs. The digest is the first **8 lowercase hex characters** of the SHA-256 of this
+canonical rendering, UTF-8, each line terminated by `\n`:
+
+1. one line per question in the engagement with `addressed-to: human`, **whatever its status**,
+   ascending by `<ITEM>/<Q-ID>`:
+   `<ITEM>/<Q-ID> <status> <answered-at, or - when absent> <sha256 of the ## Answer section body, first 8 hex>`
+2. then one line per file in `tracker/requests/`, ascending by filename:
+   `<filename> <status>`
+
+Rendering the whole inbound state rather than a summary is what makes every reset auditable: a
+partial answer, a deferral and a new request each change the digest, and nothing we write does.
+
+**The count is the trailing run.** The silent-round count for an engagement is **the number of
+trailing rows sharing the last row's `inbound` digest**. An absent file is zero rounds. In the
+example above the count is 3: the founder's one answer between rows 1 and 2 shows up as the
+digest change, so the two silences are visibly not the same silence and nobody has to remember
+that. There is **no stored counter** — a counter is a second source of truth that drifts the
+first time a run is interrupted between the increment and the act (`ids-and-statuses.md` §1.1,
+ADR-0003), and the derivation is idempotent and self-healing in the same sense.
+
+**Who writes and who reads.** `next` appends exactly one row per halt, **before** it reads the
+engagement's state, so the declaring pass counts itself. `scripts/engagement-state`,
+`scripts/check-epic-signoff` and `review-close` read the log and **append nothing** — a counting
+reader would advance the clock by being consulted.
 
 ---
 
@@ -244,3 +306,4 @@ Rules:
 | 2 | 2026-08-22 | `tracker/requests/` added — the stakeholder-initiated channel (F-021, `spec/request.md`). |
 | 3 | 2026-08-22 | §5: an epic-level record commit is made on the trunk, not on the item branch that happens to be checked out (F-016). |
 | 4 | 2026-08-27 | §5: `plan` may create behaviour-free scaffolding a declared gate command needs in order to execute, listed under `## Scaffolding` (F-034, ADR-0007). §1.2/§1.3: `refinement-qa.md` declares `status: agenda` or `recorded`, and Definition of Ready R8 reads that field rather than the filename (F-031). |
+| 5 | 2026-09-10 | New §1.4: `tracker/waiting/<EP-ID>.md`, the **append-only halt log** an E4-by-silence ending is derived from — one row per orchestrator halt on the human, carrying the inbound digest; the silent-round count is the **trailing run of equal digests**, derived and never stored (ADR-0003's argument); `next` writes it, and every reader appends nothing. §1/§1.1: `tracker/waiting/` added to the tree and to what must exist. Derived in ADR-0011 (F-060, H-008). |

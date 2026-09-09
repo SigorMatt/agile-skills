@@ -4933,3 +4933,95 @@ recall is a reading, not a number, and the report says which.
   contract, fixture or harness file touched — those are META-151/152/153.
 - **Artifacts:** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` (627 lines),
   `meta/journal.md`.
+
+---
+
+## 2026-09-10 — META-151 — the E4 mechanism on paper: silence in four specs and the pipeline
+
+- **Unit:** META-151
+- **Inputs read:** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` in full (§7 *"The
+  changes this obliges, named"* is the authority for this unit); `meta/adr/ADR-0006` header, §1
+  and its tail; `spec/doc-header.md` §4 and §4b in full, before touching ADR-0006;
+  `spec/ids-and-statuses.md` §3.1–§3.6, §4, §5; `spec/question.md` §2 and §3;
+  `spec/dor-dod.md` §4 and the DE7 commentary; `spec/workspace-layout.md` §1–§2;
+  `methodology/pipeline.yaml` in full; `scripts/lint-skills` (`check_transitions`,
+  `check_rule_obligations`, the pipeline key list), `scripts/validate-workspace`
+  (`STATUS_RULE_CODES`, `obligation_types`, `epic.closed-with-active-children`), and
+  `scripts/check`'s `PIPELINE_FAULTS`, `check_obligation_binding` and `check_derived_model` — read
+  to be sure a new row would not collide with the literal text an injected fault edits.
+  **Iteration 5's probe was not opened.**
+- **Decisions:**
+  - **ADR-0006 takes a header pointer, not a `## Corrections` entry, and this was the unit's
+    judgement call.** `doc-header.md` §4b admits exactly two repairs to a standing ADR —
+    `provenance` (add a citation, assertion unchanged) and `erratum` (replace a clause **false
+    against the code**). E4's second route is neither: the withdrawal route was true when written
+    and is true now. And §4b's own boundary line settles it from the other side — *"if a reader
+    would have to change any code to satisfy the new text, it is a new decision"* — which is
+    precisely the case here (`pipeline.yaml`, `engagement-state`, `check-epic-signoff`, `next`,
+    `review-close`, and a new waiting-log script). A correction entry would have been this repo
+    stretching the condition §4b names as the one most likely to be stretched, in a file the
+    ledger already watches (F-067). Two further facts confirmed it: ADR-0006 has **no
+    `## Change log` and no frontmatter**, so §4b's requirement that every correction carry a
+    matching change-log row and a version bump is unsatisfiable there without inventing one; and
+    the house precedent is a forward declaration — ADR-0008 and ADR-0009 both extend ADR-0006 and
+    neither wrote back into it. What ADR-0011 does that those two did not is change what an
+    **existing** row means, so a reader arriving at ADR-0006 alone would be misled; that is the
+    fact the pointer answers, in the header slot where §4 already puts relationships between
+    ADRs. The decision text below it is untouched, and the reasoning is written into the file as a
+    blockquote so the next reader does not have to re-derive why the section is absent.
+  - **Rest stops being *the* trigger, and three absolutes had to go with it.** §3.5's *"Rest is
+    the mechanical trigger"*, §3.2's *"exactly one exception"* footnote, and §3.5's *"No engagement
+    ends, in any ending, without a blocking question … stating what was delivered"* were each true
+    of four endings and are now true of four-and-a-half. Each was amended rather than deleted: the
+    ask still has to have existed, and *ending while never having asked* is still illegal — what
+    E4 permits is an ask with an empty `## Answer`.
+  - **The waiting log's format is specified down to the digest**, because META-151b writes the
+    program and META-152 writes a fixture against it and the two must agree without conversation:
+    a fixed two-line preamble; one appended row per halt as
+    `| round | observed | inbound | surfaced |`; `round` written for a human and **read by no
+    program**; `inbound` the first 8 lowercase hex of a SHA-256 over a canonical rendering — one
+    line per human-addressed question in the engagement whatever its status, ascending by
+    `<ITEM>/<Q-ID>`, carrying status, `answered-at` and a digest of the `## Answer` body, then one
+    line per `tracker/requests/` file with its status. The count is the **trailing run of equal
+    digests**; an absent file is zero rounds. Rendering the whole inbound state rather than a
+    summary is what makes each reset auditable — the example in §1.4 carries a digest change
+    mid-file so the fixture author can see two silences that are not the same silence.
+  - **No new `rule_obligations` entry was registered, and the reason is that the registry cannot
+    honestly express the one obligation that is arguably new.** The registry keys a validator
+    *status rule* to a single `(from, to, actor)` triple, and `validate-workspace` looks up only
+    `STATUS_RULE_CODES` — `question.deferred.not-blocked` and `question.blocking.not-suspended`,
+    neither of which changes here. ADR-0011's obligation 5, *every orphan is at a terminal status
+    before the epic closes*, is `epic.closed-with-active-children`, which is satisfied by **many**
+    moves (a child at `in-progress` reaches `blocked` by the generic impasse row), so naming one
+    triple for it would put a false statement in a load-bearing registry. The new
+    `awaiting-answer → blocked` row is nevertheless exactly the move that made that rule
+    unsatisfiable for a child suspended at `awaiting-answer` — F-050's shape — which is why the row
+    exists. Registering it is not this unit's call to make wrongly; it is flagged to the
+    orchestrator.
+  - **`pipeline.yaml`'s new scalars were reworded, not quoted.** The crosscheck parses the file
+    with **PyYAML** as well as `miniyaml`, and three of the new values carried a `: ` inside a
+    plain scalar. `miniyaml` accepted them and PyYAML did not — the failure the `library
+    self-test` step exists to catch. Reworded to match the file's existing dash-clause style
+    rather than quoted, so the next author does not have to learn which values are quoted and why.
+  - **`[auto]`/`[skill]` honesty carried over verbatim.** DE7 and DE8 keep `[auto]`; DE4 keeps
+    `[skill] + [auto]`. Nothing was promoted. §3.5a states in the spec itself what ADR-0011's
+    obligations 10 and 11 say no program can decide — that the person is actually gone, and that
+    the threshold suits this workspace's cadence — rather than leaving that admission in the ADR
+    where a reader of the spec would not meet it.
+- **Questions raised:** none new. The `next` step 3 / elicitation contradiction that ADR-0011 §6
+  surfaced is untouched here, deliberately: it is a findings-ledger item and this unit had no
+  mandate to file. `spec/question.md`'s elicitation clause — *"It must not stop the loop"* — is
+  therefore still contradicted by step 3, and the amendment to step 3's protocol rule 4 in this
+  unit does not narrow or widen that contradiction.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, 34 steps, `findings citations
+  resolve (49 cited)` unchanged, `pipeline invariants refuse each injected fault (7 faults)` and
+  `a dropped rule obligation is refused` both still passing against the two new transition rows.
+  Paper only: `scripts/`, `methodology/skills/*`, `fixtures/`, `harness/` and
+  `meta/findings/FINDINGS.md` untouched. `adapters/claude-code/dist/` re-rendered, because the
+  *rendered output is current* step compares it against `methodology/` and `spec/`.
+- **Artifacts:** `spec/ids-and-statuses.md` (new §3.5a; §3.2, §3.5, §4; revision 6),
+  `spec/question.md` (`status: abandoned`; §3 rules 4 and 8; revision 9), `spec/dor-dod.md`
+  (DE4/DE7/DE8 and the new E4 commentary; revision 8), `spec/workspace-layout.md` (new §1.4;
+  §1/§1.1; revision 5), `methodology/pipeline.yaml` 0.7.0 → **0.8.0**,
+  `meta/adr/ADR-0006-termination-model.md` (header pointer only), `adapters/claude-code/dist/`,
+  `meta/journal.md`.

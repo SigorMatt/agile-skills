@@ -179,11 +179,11 @@ to `done` with a note.
 | DE1 | Every child item is at a **terminal** status (`done` or `blocked`), and every child that was not delivered is named in the termination question and in the epic's outcome | [auto] |
 | DE2 | Every child item's `outcome` is recorded; dropped items say why in their `## Notes` | [auto] |
 | DE3 | The epic's `## Success measures` are each addressed — met, or explicitly not met with the reason | [skill] |
-| DE4 | `docs/product/` reflects what was actually built, not what was proposed. And the ending has restated **every** `## Engagement state` section in the workspace — all of them, not the ones it noticed — written **after** the sign-off answer arrived, because the answer is itself part of the engagement's state (`doc-header.md` §4a) | [skill] + [auto] |
+| DE4 | `docs/product/` reflects what was actually built, not what was proposed. And the ending has restated **every** `## Engagement state` section in the workspace — all of them, not the ones it noticed — written **after the ending is determined**, because what is now true about the engagement is not settled until then (`doc-header.md` §4a) | [skill] + [auto] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
 | DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written, each quantified claim by the enumeration its audit row owes rather than by opening what it cites (`doc-header.md` §4a). Every citation in the workspace resolves. **Engagement-state sentences are out of scope**: DE4 owns them | [skill] + [auto] |
-| DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and answered — in **every** ending, not only closure | [auto] |
-| DE8 | The stakeholder was asked, at least once in this engagement, an **open** question that was not about the team's agenda — a `kind: elicitation` question (`question.md` §2) — and it was answered | [auto] |
+| DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and **answered** — in **every** ending, not only closure. At **E4 by silence** the form is *asked, and the ask stood unanswered for the threshold*: there is an ask addressed to the human, it was open across `termination.silence.threshold_rounds` silent rounds, and the waiting log shows them (`ids-and-statuses.md` §3.5a) | [auto] |
+| DE8 | The stakeholder was asked, at least once in this engagement, an **open** question that was not about the team's agenda — a `kind: elicitation` question (`question.md` §2) — and it was **answered**. At **E4 by silence** the elicitation may end `abandoned` with an empty `## Answer`; the criterion is then that it was asked and went unanswered, never that it was skipped | [auto] |
 
 ### DE1 was an entry condition for one ending out of four
 
@@ -268,6 +268,40 @@ A "no" ends the engagement just as legitimately as a "yes": the epic goes to `bl
 impasse recorded (E3), or closes with an outcome that says what was and was not delivered. The
 criterion is that the question was asked and answered, never that the answer was favourable.
 
+### DE7 and DE8 at E4 by silence: asked, not answered
+
+*Asked and answered* holds for E1, E2, E3 and E4 by withdrawal. At **E4 by silence** the second
+half cannot hold by construction: the ending exists precisely because no answer came
+(`ids-and-statuses.md` §3.5a). So for that one ending the honest form of DE7 is **asked, and the
+ask stood unanswered for the threshold** — there was a question addressed to the human, it was
+open across `termination.silence.threshold_rounds` silent rounds, and the waiting log records
+each of them. DE8's elicitation may likewise end `abandoned` with an empty `## Answer`.
+
+This is a weakening of the criterion that exists because two consecutive runs closed an epic
+without asking anyone (F-022), so it deserves the suspicion it will get. Three things bound it,
+and they are stated here rather than assumed:
+
+- **E4 is the only ending where it is relaxed.** Every other ending still requires a reply.
+- **The relaxation is decided by the pending move**, not by the skill's account of itself — the
+  same arrangement by which `--resolving` already decides the deferral branch (F-033).
+- **The gate still requires an ask to have existed and to have gone unanswered for the full
+  count.** "Nobody was asked" fails DE7 at E4 exactly as it fails it everywhere else; what E4
+  permits is an ask with an empty `## Answer`, never a missing ask.
+
+What replaces the answer in the record is not nothing: it is the `## Ending statement`, which
+says to a reader what the sign-off would have said to the stakeholder — the goal in their terms,
+every child by ID with its class, the rounds and what was surfaced on each, and each success
+measure met or not met.
+
+**DE4's trigger changes with it.** ADR-0010 §4.3 set it as *after the sign-off answer arrived*,
+because the answer is itself part of the engagement's state. At E4 no answer arrives, so a
+trigger that waits for one can never fire and DE4 would be unsatisfiable in the ending that most
+needs restating. The trigger is therefore **after the ending is determined** — which is the same
+moment in E1, E2, E3 and E4 by withdrawal, since the answer is what determines those endings, and
+is a moment that exists at E4 by silence. **This amends ADR-0010 §4.3**, and is recorded here
+rather than left for the two ADRs to disagree about quietly: ADR-0011 §2.4 is the amending
+derivation, and where the two texts differ ADR-0011's is the later and governing one.
+
 ---
 
 ## Revisions
@@ -281,3 +315,4 @@ criterion is that the question was asked and answered, never that the answer was
 | 5 | 2026-08-27 | DE1 generalised from "every child `done`" to "every child terminal, and every undelivered child named" (F-045, F-046); DE7 generalised from a completion gate to a **termination** gate, triggered by rest. Derived in ADR-0006. |
 | 6 | 2026-08-29 | A criterion whose subject is other criteria is read against their **text**, with the suite as evidence rather than as the definition, and non-intersection stated or waived by name (F-065). DE8 added: an engagement is asked at least one open question that is not about the team's agenda (F-064). |
 | 7 | 2026-09-10 | D7 becomes a **confirmation** against the invalidation set `plan` emits: every entry disposed, plus "did this change falsify a document the set does not name?", scoped to what the change touched **or its plan named** (F-087). D12 and DE6 gain the member enumeration a **quantified** claim owes and exclude **engagement-state** sentences; DE4 gains the ending's restatement of every delimited `## Engagement state` section, after the sign-off answer (F-095, F-093). D13 added: the plan's `binding-adrs` list is complete, `review-close`'s to check, each ADR's conformance verdict `verify`'s to decide (F-092). Derived in ADR-0010. |
+| 8 | 2026-09-10 | DE7 and DE8 gain their **E4 by silence** form — *asked, and the ask stood unanswered for the threshold* — the one ending where *answered* cannot hold, bounded by three named compensating controls. **DE4's trigger is amended from *after the sign-off answer arrived* to *after the ending is determined***, because at E4 no answer arrives and the old trigger could never fire; **this amends ADR-0010 §4.3**, and ADR-0011 §2.4 is the governing derivation. Derived in ADR-0011 (F-060, F-022, F-033). |

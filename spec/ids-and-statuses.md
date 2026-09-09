@@ -74,14 +74,22 @@ whose delivered behaviour it contradicts, via `found-in`.
 | Status | Meaning | Owning skill | Terminal |
 |--------|---------|--------------|----------|
 | `open` | The engagement is running: children exist and are not all finished. | none — epics advance through their children | yes* |
-| `awaiting-answer` | A blocking question about the epic's own scope, or the termination question (§3.5), is open. | `answer-questions` | no |
+| `awaiting-answer` | A blocking question about the epic's own scope, or the termination question (§3.5), is open. | `answer-questions` † | no |
 | `blocked` | The **impasse ending**: the engagement cannot proceed and the stakeholder has been told. Only a person can move it. | none — a human must act | yes |
 | `done` | The engagement ended and was closed with an `outcome`. | none | yes, but reopenable — see §3.4 |
 
+† The **owning skill** is the one the orchestrator dispatches, and for `awaiting-answer` it is
+always `answer-questions`. It is not the only skill that may move an epic out of the status: at
+E4 by silence there is nothing to answer, so `review-close` leaves `awaiting-answer` directly
+(§3.5a, and §4's row). Ownership answers *who is dispatched*; the transition table answers *who
+may move it*, and the two are different questions.
+
 \* "Terminal" here means *the orchestrator never dispatches a skill against an open epic while
-the engagement is running*. There is exactly one exception, and it is mechanical rather than a
-judgement call: when the engagement reaches **rest** (§3.5) the orchestrator dispatches
-`review-close` on the epic to end it. Otherwise an epic advances only through its children.
+the engagement is running*. There are exactly two exceptions, both mechanical rather than
+judgement calls, and both are the same verdict read from the same program: when
+`scripts/engagement-state` reports **at-rest** (§3.5) or **abandoned** (§3.5a), the orchestrator
+dispatches `review-close` on the epic to end it. Otherwise an epic advances only through its
+children.
 
 ### 3.3 Why `in-progress` exists as a distinct status
 
@@ -122,11 +130,15 @@ that, and all four are legal:
 | E1 | **delivered** | `done`, `outcome: delivered` | every child is `done` and delivered (or `duplicate`); the stakeholder accepted |
 | E2 | **delivered-partial** | `done`, `outcome: delivered-partial` | every child is terminal, at least one was not delivered; the stakeholder accepted, with or without named follow-ups |
 | E3 | **impasse** | `blocked` | every child is terminal, at least one was not delivered, and the stakeholder did not accept — or deferred the acknowledgment |
-| E4 | **abandoned** | `done`, `outcome: dropped` | the stakeholder withdrew the engagement. Children not `done` go to `blocked` first, so the record says what was in flight |
+| E4 | **abandoned** | `done`, `outcome: dropped` | the stakeholder is gone, by **either** of two routes — **withdrawal**, an act they perform (through a request, or in the answer to the termination question); or **silence**, the absence of any act (§3.5a). Children not `done` go to `blocked` first, so the record says what was in flight |
 
-**Rest** is the mechanical trigger, and it is a program — `scripts/engagement-state <EP-ID>` —
-because the orchestrator and the termination gate must not be able to disagree about whether an
-engagement is over. An engagement is at rest when all of:
+**Rest** is the mechanical trigger for E1, E2, E3 and for E4 by **withdrawal** — a withdrawal is
+an act the stakeholder performs, so it arrives as an answer or a request and brings the
+engagement to rest like any other reply. E4 by **silence** has a different trigger and §3.5a
+states it, because an engagement nobody is answering never reaches rest at all. Both triggers are
+one program — `scripts/engagement-state <EP-ID>` — because the orchestrator and the termination
+gate must not be able to disagree about whether an engagement is over. An engagement is at rest
+when all of:
 
 1. every child of the epic is at a terminal status (`done` or `blocked`);
 2. no question anywhere in the engagement — epic or child — is `open`;
@@ -137,14 +149,122 @@ epic. `review-close` then does one of two things, and both leave `open`, so the 
 it files the **termination question** (`question.md` §2, `kind: sign-off`) and suspends the epic
 to `awaiting-answer`; or, the acknowledgment already being answered, it records the ending.
 
-**No engagement ends, in any ending, without a blocking question addressed to the human stating
-what was delivered, what was not, and why.** `dor-dod.md` DE7 is that rule as a criterion and
-`scripts/check-epic-signoff` is the gate. A refusal ends the engagement just as legitimately as
-an acceptance — E3 exists so that "no" has somewhere honest to go.
+**No engagement ends, in any ending, without the stakeholder having been asked.** In E1, E2, E3
+and E4 by withdrawal that ask is a blocking question addressed to the human stating what was
+delivered, what was not, and why, and it was **answered**. At E4 by silence it is the ask that
+went unanswered for the threshold, and the ending statement states the same things to a reader
+instead (§3.5a). `dor-dod.md` DE7 is that rule as a criterion and `scripts/check-epic-signoff` is
+the gate. A refusal ends the engagement just as legitimately as an acceptance — E3 exists so that
+"no" has somewhere honest to go. What is not legal, in any ending, is ending while never having
+asked.
 
-**Only `review-close` ends an engagement.** Ending means applying the epic Definition of Done
-and reading the acknowledgment, which is already its job. An epic-level *question* may suspend
-the epic from anywhere (§4, and the F-013 note); an epic-level *ending* may not.
+**Only `review-close` ends an engagement.** Ending means applying the epic Definition of Done and
+reading the acknowledgment — or, where none arrived, recording that none did — which is already
+its job. An epic-level *question* may suspend the epic from anywhere (§4, and the F-013 note); an
+epic-level *ending* may not.
+
+### 3.5a E4's second route: silence, counted in the pipeline's own asks
+
+A stakeholder who has not answered **yet** and a stakeholder who is **gone** are the same reading
+of the workspace. They differ only across time, so the threshold is a count of occasions, not a
+property of a state.
+
+A **silent round** is one execution of the orchestrator that ended at *waiting on the human* and
+observed **no inbound change** since the previous such execution. A change is **inbound** when it
+is one the stakeholder could have made, and exactly two channels are theirs: a reply written into
+a question's `## Answer` (with its `status` and `answered-at`), and a file under
+`tracker/requests/` (`spec/request.md` §1). Nothing else in the workspace is theirs — §4's last
+note says skills change statuses and nothing else does — so nothing else counts.
+
+The round is defined against the **halt**, not against the question set: a pass that did not stop
+on the human is not a round, and a question that does not stop the loop never produces one.
+
+**The count is derived, never stored.** The orchestrator appends one row per halt to the
+engagement's append-only waiting log, `tracker/waiting/<EP-ID>.md`
+(`workspace-layout.md` §1.4). The silent-round count is **the number of trailing rows sharing the
+last row's `inbound` digest**. A counter field would be a second source of truth that drifts the
+first time a run is interrupted between the increment and the act, which is the argument ADR-0003
+made against a counter file, and it gets the same answer here.
+
+**The reader never writes.** `scripts/engagement-state` computes the count and appends nothing;
+the row is appended by `next`, once per halt. Were the reader to record, `check-epic-signoff` and
+`review-close` — both of which read the state — would each advance the clock by consulting it.
+
+**The threshold lives in `methodology/pipeline.yaml`**, as `termination.silence.threshold_rounds`,
+default **3**. It is stated there for the same reason rest is a program: three consumers read it —
+the orchestrator, `engagement-state` and `check-epic-signoff` — and any two of them disagreeing
+about whether the threshold is met is F-045's mechanism exactly.
+
+**Any** inbound change resets the count, and only an inbound change does. A full answer, a
+**partial** answer, a **deferral** and a new request all reset it, because the count measures
+**presence**, not compliance: a slow stakeholder is never abandoned, an absent one is, and *"a
+deferral is a reply, not silence"* (`question.md` §3) would be contradicted by any other reading.
+A question **we** file resets nothing, and neither does anything else a skill writes — a pipeline
+whose own asking reset the clock could never reach the threshold in any engagement that keeps
+generating questions, which is every engagement.
+
+At the threshold, `scripts/engagement-state <EP-ID>` reports the verdict **`abandoned`**: *the
+engagement is halted on a human who has not answered for `threshold_rounds` consecutive rounds;
+its ending is E4 and it is not recorded.* It sits parallel to `at-rest`, and like `at-rest` it is
+the orchestrator's cue to dispatch `review-close` on the epic — which then declares E4 and closes
+it. The orchestrator records the halt **before** it reads the verdict, so the declaring pass is
+itself counted and the trailing run **equals** the threshold rather than exceeding it by the row
+nobody wrote. `next` decides nothing here: it reads a verdict, as it already does at steps 6
+and 7.
+
+**Abandonment is only ever declared against an open ask.** A silent round requires a halt, and a
+halt requires a question addressed to `human` that is `open`. Silence where nothing was asked is
+not silence — nobody was asked anything — and ending an engagement because *we* failed to ask is
+the failure DE7 exists to prevent (F-022, F-045). Whatever channel later makes the pipeline halt
+on the human is an ask, and its halts are silent rounds.
+
+**What the declaration looks like.** There is nobody to address, so the statement the sign-off
+would have carried becomes a document: `## Ending statement` in the epic's `artifacts/review.md`,
+mirrored in the epic's `## Notes`. It restates the goal in the stakeholder's own terms, names
+**every** child of the epic by ID with its class, records the silence itself — how many rounds,
+what was surfaced on each, and the first round's timestamp — and addresses each success measure.
+Naming every child is the rule for the same reason the sign-off has it: *"list what was not
+delivered"* is not checkable and *"name every child"* is (F-046).
+
+Each child is exactly one class, decided by status alone so the classification is a program's:
+
+| Class | Which children |
+|-------|----------------|
+| **delivered** | `done` with `outcome: delivered` or `duplicate` |
+| **dropped earlier** | `done` with `outcome: dropped` |
+| **blocked earlier** | `blocked` before the declaration — its own impasse, not an orphan |
+| **orphaned, in flight** | `planned`, `in-progress`, `verifying`, `in-review`, or `awaiting-answer` from one of those |
+| **orphaned, never started** | `draft`, `ready`, or `awaiting-answer` from one of those |
+
+Every orphan moves to `blocked` before the epic closes, with a history `reason` beginning
+`orphaned by E4:` — the greppable-prefix convention `DoR overridden:` already uses. An orphan
+takes **no `outcome` at all**: `outcome` is present if and only if the item is `done`
+(`work-item.md` §1), so an orphan carrying one at `blocked` is invalid and an orphan pushed to
+`done` to carry one is a claim that its work concluded. `blocked` is also the resumable status,
+which under an ending that may be wrong is the right one.
+
+Every question still `open` in the engagement is closed as `abandoned` (`question.md` §2).
+
+**E3 and E4 are distinguishable from the record alone, and the test is one line: did the
+stakeholder's own words arrive?** E3 has them verbatim in a `## Answer`, and the epic is
+`blocked`. E4 has an empty `## Answer` — or no sign-off at all, where the silence began before
+rest — a waiting log whose trailing run reaches the threshold, a history reason beginning
+`E4 abandoned:` naming the round count and the threshold, and the epic at `done`,
+`outcome: dropped`.
+
+That asymmetry is deliberate. `blocked` means *a human must act*, which at E4 would be a standing
+instruction to wait for someone who is not coming; and `done` on an epic is the one state in this
+pipeline that reopens (§3.4), so the ending most likely to be wrong about a person is the only
+one the pipeline can undo. The returning stakeholder's route back is `tracker/requests/`, which is
+theirs to open and which reopens the epic.
+
+**What no program can decide, said here rather than implied:** whether the person is actually
+gone. Every mechanism above measures our own asking. The threshold is a bet that
+`threshold_rounds` unanswered asks mean absence, and the rate at which rounds accrue is set by
+whoever runs the loop — three passes in a minute are three rounds, and nothing can tell them from
+three passes in three days. `pipeline.yaml` is where that calibration is written down.
+
+The derivation, including the alternatives rejected, is `meta/adr/ADR-0011`.
 
 ### 3.6 An ending is not the same as being closed
 
@@ -198,11 +318,13 @@ all three. **Gated** rows are the ones a skill's hard gates refuse — see the n
 | *any suspendable* | `awaiting-answer` | any skill | all | | that skill filed a blocking question |
 | `awaiting-answer` | *the status it came from* | `answer-questions` | all | | the blocking question is answered and its consequences are propagated |
 | `awaiting-answer` | `blocked` | `answer-questions` | work-item, bug | | the answer was **deferred**: the stakeholder said "later" and no decision can be taken without it (`question.md` §2) |
+| `awaiting-answer` | `blocked` | `review-close` | work-item, bug | | E4 (§3.5a): an orphan suspended on a question that will never be answered. `awaiting-answer` is not suspendable, so the generic impasse row cannot reach it, and the deferral row above needs a reply that is not coming |
 | *any suspendable* | `blocked` | any skill | work-item, bug | | a documented impasse no skill can resolve |
 | `blocked` | *the status it came from* | any skill | all | | a human recorded a resolution in the item |
-| `open` | `done` | `review-close` | epic | ✓ | the engagement ended at E1, E2 or E4 (§3.5): the epic Definition of Done passes and the stakeholder answered the termination question |
+| `open` | `done` | `review-close` | epic | ✓ | the engagement ended at E1, E2 or E4 (§3.5): the epic Definition of Done passes and the stakeholder answered the termination question — or, at E4 by **silence** (§3.5a), the ask stood unanswered for the threshold and the ending statement stands in the sign-off's place |
+| `awaiting-answer` | `done` | `review-close` | epic | ✓ | the engagement ended at E4 by **silence** (§3.5a) while the epic was suspended — the sign-off was filed and the threshold was reached before it was answered. Only `answer-questions` may otherwise leave `awaiting-answer`, and it has nothing to answer |
 | `open` | `blocked` | `review-close` | epic | ✓ | the engagement ended at E3 (§3.5): the impasse, with the stakeholder having been asked |
-| `done` | `open` | any skill | epic | | a defect was filed against the epic's delivered behaviour after it closed (§3.4) |
+| `done` | `open` | any skill | epic | | a **child item was filed against the epic after it closed** (§3.4) — a defect in what it delivered, or work routed from a stakeholder request that arrives after the ending. Either way the goal is no longer met |
 
 
 Notes:
@@ -211,10 +333,11 @@ Notes:
   gates refuse only the move that declares its work complete; every other move is reported and
   allowed, because trapping a skill that is trying to file a question or send an item back is
   worse than letting it move. That reasoning is about *work in flight*. An epic has none — it
-  advances only through its children — so both of its terminal moves, `open → done` and
-  `open → blocked`, declare the engagement finished and both are refused while the termination
-  gate fails. Without this, the impasse ending would run the acknowledgment gate and ignore its
-  verdict, which is F-045 by a different route (ADR-0006 §1c).
+  advances only through its children — so every one of its terminal moves — `open → done`,
+  `open → blocked`, and `awaiting-answer → done` — declares the engagement finished, and all
+  three are refused while the termination gate fails. Without this, the impasse ending would run
+  the acknowledgment gate and ignore its verdict, which is F-045 by a different route
+  (ADR-0006 §1c).
 - **Terminal and suspendable are different questions.** `terminal` asks whether the pipeline
   advances an item out of this status by itself; `suspendable` asks whether a blocking question
   or an impasse may stop an item here. An epic at `open` is terminal — it advances only through
@@ -312,3 +435,4 @@ protecting.
 | 3 | 2026-08-27 | §3.5: the four endings of an engagement, rest as the mechanical trigger, and the rule that every ending passes through the stakeholder (F-045, F-046). §4: transitions declare `applies_to`; the epic ending rows; the deferral row; an epic's terminal moves are gated. New §5: creation authority and `arose-from` provenance (F-029, F-042). Derived in ADR-0006. |
 | 4 | 2026-08-27 | §4: a rule elsewhere that requires an item to be at a status declares the move that satisfies it, in `pipeline.yaml`'s `rule_obligations`; the scope is checked against this table rather than remembered (F-050). |
 | 5 | 2026-08-30 | New §3.6: an ending is not the same as being closed. `engagement-state` gains the `closed` verdict, the orchestrator dispatches `retro` on `ended`, and the retrospective gates nothing (ADR-0009). |
+| 6 | 2026-09-10 | §3.5: E4 gains a **second route** — silence, not only withdrawal — and rest stops being the trigger for it. New §3.5a: the silent round, the derived count over `tracker/waiting/<EP-ID>.md`, `termination.silence.threshold_rounds`, the `abandoned` verdict, the ending statement, the child classification and the orphan's move to `blocked` with no `outcome`. §3.2: ownership answers *who is dispatched*, not *who may move it*. §4: two new rows — `awaiting-answer → blocked` (`review-close`, work-item/bug) and `awaiting-answer → done` (`review-close`, epic, gated), both F-050's shape found by derivation; the `done → open` condition widened to §3.4's own prose, *a child item filed against the epic after it closed*, so a returning stakeholder has a legal route back. Derived in ADR-0011 (F-060, F-008, H-008). |

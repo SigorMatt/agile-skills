@@ -81,10 +81,10 @@ question.
 | `from-skill` | always | the skill that filed it |
 | `addressed-to` | always | `architect` \| `human` |
 | `blocking` | always | `true` \| `false` |
-| `status` | always | `open` \| `answered` \| `deferred` |
+| `status` | always | `open` \| `answered` \| `deferred` \| `abandoned` |
 | `created` | always | UTC ISO-8601 |
-| `answered-at` | when `answered` or `deferred` | UTC ISO-8601, ≥ `created` |
-| `answered-by` | when `answered` or `deferred` | `answer-questions`, or `human` when escalated |
+| `answered-at` | when `answered` or `deferred` | UTC ISO-8601, ≥ `created`. MUST be absent when `abandoned` — nothing arrived, so there is no time at which it did |
+| `answered-by` | when `answered` or `deferred` | `answer-questions`, or `human` when escalated. MUST be absent when `abandoned` |
 | `kind` | optional | `decision` (the default when absent) \| `sign-off` \| `elicitation` |
 
 ### Body rules
@@ -118,7 +118,8 @@ question.
   thinking the previous rule demands — but a reader must reach the options before they reach our
   preference, and must be able to see that the preference is ours.
 - `## Answer` and `## Consequences` MUST be non-empty when `status: answered` or
-  `status: deferred`.
+  `status: deferred`. When `status: abandoned`, `## Answer` MUST be **empty** and
+  `## Consequences` MUST be non-empty — see below.
 - `## Consequences` MUST name **files**, not intentions. "Updated the plan" is not a
   consequence; "`artifacts/plan.md` step 3 rewritten; `item.md` AC2 amended; `docs/architecture/
   adr/ADR-0004.md` created" is. This is what makes the rule "downstream skills re-read
@@ -184,6 +185,56 @@ question and is not at `blocked` (or already closed).
 A deferred **sign-off** (below) is the one deferral with a further consequence: the engagement
 does not end, because the acknowledgment did not happen. The honest record is E3, the impasse
 (`ids-and-statuses.md` §3.5).
+
+### `status: abandoned` — the reply that never came
+
+`deferred` records a reply of "not yet". `abandoned` records **no reply at all**: the question was
+addressed to `human`, it stood open across `termination.silence.threshold_rounds` silent rounds,
+and the engagement ended at E4 by silence (`ids-and-statuses.md` §3.5a). It is the pipeline's only
+vocabulary for absence, and it is forced rather than chosen:
+
+- leaving the question `open` is fatal rather than untidy. `next` step 3 surfaces open
+  human-addressed questions and stops **before** everything else, so an abandoned engagement's
+  leftovers would halt the whole workspace for ever — the deadlock E4 exists to end would survive
+  its own ending. Definition of Done DE5 also requires open questions closed or re-filed.
+- `answered` and `deferred` are both lies. Each asserts that a reply arrived, and each requires a
+  non-empty `## Answer` to back it. Using `deferred` for silence would destroy the one distinction
+  F-028 created it to record.
+
+The rules:
+
+- **`## Answer` MUST be empty.** Writing anything there — a summary, a note that nobody replied, a
+  reconstruction of what they would probably have said — is the exact fiction this status exists
+  to prevent. The emptiness is the evidence.
+- **`## Consequences` MUST be non-empty** and names files like any other consequence. It says what
+  the pipeline did instead: the ending it was closed under (E4, with the round count and the
+  threshold), the epic whose ending closed it, and the item's own class from §3.5a's table —
+  delivered, dropped earlier, blocked earlier, orphaned in flight, or orphaned never started.
+- **`answered-at` and `answered-by` stay unset.** No reply arrived, so there is no time and no
+  author to record. The closing act is recorded by the epic's ending, which is where a fact about
+  the engagement belongs.
+- **Only `review-close` sets it, and only when declaring E4.** No other skill, and no other
+  ending. A question is never abandoned on its own account: abandonment is a fact about the
+  engagement, not about one question (H-008).
+- **It is not open.** `next` does not stop on it, the orchestrator does not re-ask it, and no item
+  resumes on the strength of it. It settled nothing, so no skill may cite it as a basis for a
+  decision.
+
+**What may and may not be done with it afterwards.** Never edit it: the general rule that a
+question is never deleted and its `status` never reverted (§3, rule 6) applies here with no
+exception, and it matters more here than anywhere else, because the empty `## Answer` is the whole
+record of what happened. In particular, a stakeholder who comes back does **not** answer an
+abandoned question — reopening the engagement is done through `tracker/requests/`, which returns
+the epic `done → open` (`ids-and-statuses.md` §3.4), and the thing they need to be asked is filed
+as a **new** question that cites this one. An abandoned question may be quoted, cited and counted;
+it may not be revived.
+
+An abandoned **sign-off** is the one abandonment with a further consequence, and it is what
+distinguishes E4 from E3 in the record: `status: abandoned` with an empty `## Answer`, against
+E3's `answered` or `deferred` with the stakeholder's words in it verbatim
+(`ids-and-statuses.md` §3.5a). It does not satisfy DE7's *asked and answered* form; what it
+satisfies is DE7's E4 form, *asked, and the ask stood unanswered for the threshold*
+(`dor-dod.md` §4).
 
 ### `## Cross-answer check` — the section that stops a contradiction being settled privately
 
@@ -345,8 +396,12 @@ Rules:
    still filed, still answered, and still shows on the board. Use it for "this should be
    written down somewhere" rather than "I cannot proceed".
 3. **The orchestrator will not advance an item while a blocking question on it is open.**
-4. **A question addressed to `human` stops the autonomous loop.** The orchestrator surfaces it
-   and stops; there is nothing else it can legitimately do.
+4. **A question addressed to `human` stops the autonomous loop.** The orchestrator records the
+   halt on the engagement's waiting log, surfaces the question and stops; there is nothing else
+   it can legitimately do — with one exception, and it is still not the orchestrator deciding
+   anything. Where the halt is the one at which `scripts/engagement-state` reports `abandoned`,
+   the orchestrator dispatches `review-close` on that epic instead of surfacing, and stops
+   (`ids-and-statuses.md` §3.5a).
 5. **Answers propagate into artifacts.** `answer-questions` MUST update the authoritative
    documents — the plan, the item's acceptance criteria, an architecture doc, a new ADR — and
    list them under `## Consequences`. An answer that exists only inside the question file has
@@ -358,6 +413,11 @@ Rules:
    a deferred *blocking* question leaves a work item or a bug at `blocked` with what would
    unblock it written down, and returns an **epic** to `open`, where the engagement waits to be
    ended through the stakeholder rather than parked by the answerer (§2, F-050).
+8. **Silence is not a reply, and it is recorded as such.** A question addressed to `human` that
+   is never answered is closed `abandoned` by `review-close` when it declares E4, with an empty
+   `## Answer` (§2). Nobody else may set it, it is set for no other reason, and it is set only on
+   questions that were still `open` at the declaration — an already-`answered` or `deferred`
+   question is untouched by the ending.
 
 ---
 
@@ -390,3 +450,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 6 | 2026-08-27 | §2: what a deferral does to an **epic** — it returns the epic to `open`, because `blocked` on an epic is the impasse ending and only `review-close` reaches it. Move 2 as written was impossible to execute on an epic (F-050). |
 | 7 | 2026-08-29 | §2: `## Cross-answer check` — a consumed human answer records what it was checked against, and a declared conflict is put to its author rather than settled in a document (F-062). Derived in ADR-0008. |
 | 8 | 2026-08-29 | §2: options before the recommendation, and the recommendation marked as ours (F-063); `kind: elicitation`, the one open question per engagement that is not about the team's agenda (F-064). |
+| 9 | 2026-09-10 | §2: `status: abandoned` — the fourth question status, and the pipeline's only vocabulary for **absence**. `## Answer` MUST be empty, `## Consequences` names the ending and the item's orphan class, `answered-at`/`answered-by` stay unset, and only `review-close` sets it, only at E4. §3: rule 4 gains the orchestrator's `abandoned` branch, and new rule 8. Derived in ADR-0011 (F-060, F-028, H-008). |
