@@ -1,5 +1,5 @@
 name: implement
-version: 0.3.0
+version: 0.4.0
 persona: developer
 purpose: Execute the recorded plan on a branch, with tests, and report which evidence satisfies each acceptance criterion.
 
@@ -21,7 +21,7 @@ inputs:
     why: the acceptance criteria define what to build and when to stop
   - path: tracker/items/{{item.id}}/artifacts/plan.md
     required: true
-    why: the design decisions this skill executes and must not re-litigate
+    why: the design decisions this skill executes and must not re-litigate, and the invalidation set, deliverable-documents and binding-adrs that bound what it may write under docs/
   - path: tracker/items/{{item.id}}/history.md
     required: true
     why: distinguishes a fresh start from resuming a branch, and carries any send-back reason
@@ -30,7 +30,10 @@ inputs:
     why: an answered question changes the plan, and the answer is in the artifacts it updated
   - path: docs/architecture/adr/
     required: false
-    why: constraints the plan assumes but does not restate
+    why: constraints the plan assumes but does not restate, and the decisions listed as binding-adrs that verify will judge this change against
+  - path: "every document named in the plan's invalidation set or deliverable-documents"
+    required: false
+    why: the sentences this change makes false, and the documents it was asked to produce; this is the only part of docs/ this skill may write
   - path: tracker/project.yaml
     required: true
     why: the branch prefix, the commit subject convention, and the commands the gates run
@@ -43,6 +46,12 @@ outputs:
     kind: commit
     when: always
   - path: tracker/items/{{item.id}}/artifacts/impl-report.md
+    kind: file
+    when: always
+  - path: "the documents named in the plan's invalidation set or deliverable-documents, each with a version bump and a change-log row"
+    kind: file
+    when: conditional
+  - path: "a disposition on every entry of the plan's invalidation set, in tracker/items/{{item.id}}/artifacts/plan.md"
     kind: file
     when: always
   - path: tracker/items/{{item.id}}/journal.md
@@ -94,9 +103,14 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: claims-are-sourced
-    description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves.
-    command: scripts/lint-claims --changed-since {{trunk}}
+    description: Every absolute claim this execution wrote into docs/ cites something that exists, and every citation resolves - over a window that is this branch's diff plus the documents its plan named.
+    command: scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}
     expect: exit-zero
+    enforcement: hard
+    on_failure: stay
+  - name: document-writes-are-declared
+    description: Every document this execution wrote was one its plan named, and every entry of the plan's invalidation set is closed.
+    manual_check: List every path under docs/ in the branch diff. Each must appear in the plan's invalidation set or in deliverable-documents; a document you had to change that appears in neither is added to the set as a new entry before you write it, never written silently. Then read the set - every entry carries a disposition of to-update, verified-still-true, owned-by-ending or question-filed:<ITEM>/Q-###, and no entry disposed owned-by-ending was edited. An engagement-state section is not yours at any disposition.
     enforcement: hard
     on_failure: stay
 
@@ -109,6 +123,9 @@ exit_criteria:
   - No sentence in docs/ that cites one of the stakeholder's answers was rewritten because a later answer of theirs overtook it; that is a question, filed, not an edit (ADR-0008).
   - Every acceptance criterion has code and a test or reproducible command that exercises it.
   - All hard gates passed on the branch head, not on an earlier state.
+  - Every entry in the plan's invalidation set carries a disposition, and every entry disposed to-update was updated with a version bump and a change-log row (spec/dor-dod.md D7).
+  - Nothing under docs/ was written that the plan's invalidation set or deliverable-documents does not name; a document falsified mid-change was added to the set as an entry and then repaired (spec/doc-header.md section 5).
+  - No engagement-state section was written. An entry whose subject is one is disposed owned-by-ending and left alone; the ending owns it (spec/doc-header.md section 4a).
   - impl-report.md maps each acceptance criterion to its evidence and lists any deviation from the plan.
   - Every commit on the branch references the item ID.
   - The journal entry and the history row for this execution are written.

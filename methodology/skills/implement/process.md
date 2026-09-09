@@ -18,8 +18,11 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
 1. The item is at `planned` or `in-progress`. If it is at `planned`, no branch exists yet. If it
    is at `in-progress`, a branch exists with partial work and **you must reconcile with it**
    rather than starting over.
-2. `artifacts/plan.md` exists. If it does not, the item is mis-staged: file a question to the
-   architect and stop.
+2. `artifacts/plan.md` exists, and it carries an invalidation set, its deliverable documents and
+   its binding ADRs. If it does not, the item is mis-staged: file a question to the architect and
+   stop. Those three sections are what bound what you may write under `docs/` — without them you
+   are either forbidden to touch a document or writing one nobody authorised, and both are
+   defects.
 3. `tracker/project.yaml` has `commands.test`. If it is `null`, that is a planning failure — file
    a question to the architect rather than inventing a test command.
 
@@ -71,6 +74,39 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    deviation in the implementation report. If the disagreement changes what gets delivered, that
    is a question for the architect.
 
+4a. **Discharge the invalidation set — you are allowed to, and only you are.** The plan lists the
+   documents this change makes false. You are the actor whose ordinary work falsifies them, and
+   `spec/doc-header.md` §5 permits you to repair them **inside that list and nowhere else**. This
+   is a licence with three edges, and every one of them is checkable:
+
+   - the write is inside the plan's invalidation set or its deliverable documents. A document you
+     discover mid-change is not an exception to that: **add the row first**, with its `what`,
+     `kind` and `why`, and then repair it. You may add entries — you are the actor who finds the
+     fourth document — and you may not write one you never wrote down;
+   - you never rewrite a sentence that is the standard your own work is judged against. That
+     standard is the acceptance criteria in `item.md`, and they are not yours (self-check 4);
+   - you never rewrite a claim sourced to one of the stakeholder's answers because a later answer
+     overtook it. Step 6a is that rule in full and it overrides everything here.
+
+   Close **every** entry with one disposition, written into the `disposition` cell of the plan's
+   table. The disposition column and rows you append are the only part of `plan.md` you write; the
+   design is not yours to edit.
+
+   | disposition | when | what you do |
+   |---|---|---|
+   | `to-update` | the sentence is now false and it is yours to repair | repair it, bump the document's `version`, add the change-log row — one act, not three (`spec/doc-header.md` §3) |
+   | `verified-still-true` | you reopened it and this change did not touch what it asserts | say in the impl report what you read and against what |
+   | `owned-by-ending` | the sentence is an engagement-state sentence, inside a `## Engagement state` section | **nothing.** Not a repair, not a tidy. `review-close` restates every one of them at the ending, after the sign-off answer arrives (`spec/doc-header.md` §4a) |
+   | `question-filed:<ITEM>/Q-###` | repairing it would decide something that is not yours | file the question, and stop if it blocks you |
+
+   A repair carries the obligation of the claim's kind, in the impl report's audit row. A
+   `cited-fact` owes a citation that resolves. A **quantified** claim — *every*, *all*, *no*, *the
+   only* — owes the enumeration: the set, the command or glob you enumerated it with **and its
+   output**, the members by name, and a verdict per member. Opening what the sentence cites does
+   not discharge it; that is exactly how the same universal was audited true three times and was
+   false in the one member nobody opened (F-095). If the family cannot be enumerated, weaken the
+   sentence until it is a cited fact rather than recording the enumeration as done.
+
 5. **Commit as you go**, using `conventions.commit-subject` with the item ID in every subject
    line. Small commits with real messages: a reviewer reconstructing this item runs
    `git log --grep {{item.id}}` and reads only what you wrote there.
@@ -85,9 +121,9 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    answer just moves the work upstream. Then set the item to `awaiting-answer` with
    `resume-to: in-progress`, journal, and stop.
 
-6a. **You may not repair a sentence that is one of theirs.** D12 asks you to check whether the
-   claims in `docs/` about the behaviour you touched are still true, and to fix them when they
-   are not. There is one sentence that rule does not reach: a claim carrying
+6a. **You may not repair a sentence that is one of theirs.** Step 4a puts the repair of a false
+   document in your hands. There is one sentence that licence does not reach, whatever the
+   invalidation set says: a claim carrying
    `[src: <ITEM>/Q-nnn>]` for a question the **stakeholder** answered. That sentence is their
    requirement, quoted, with a return address on it.
 
@@ -123,6 +159,8 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    ## What was built
    ## Acceptance criteria evidence
    | AC | how it is satisfied | evidence |
+   ## Documents
+   | document | entry it closes | claim kind | what I checked, and against what | new version |
    ## Deviations from the plan
    ## Gates
    ## What I did not do
@@ -130,6 +168,12 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
 
    - **Evidence** is a test name or an exact command with its output — never "implemented" and
      never "see the code".
+   - **`## Documents`** is the audit row for every entry of the invalidation set you closed, and
+     for every deliverable document you wrote. It carries the evidence the claim's kind owes — a
+     resolving citation for a cited fact, the set and the enumeration with its command's output
+     for a quantified claim — and the document's new version where you changed one. An entry you
+     disposed as still true belongs here too, with what you read; an entry the ending owns is
+     recorded with that disposition and nothing else.
    - **`## What I did not do`** names anything in the plan you did not complete, and why. An
      omission you declared is a handover; an omission you left for `verify` to discover is a
      defect in this report.
@@ -156,7 +200,9 @@ On the item's `journal.md`:
 - `**Questions raised:**` — IDs and whether blocking, or `none`.
 - `**Commands:**` — every command, with exit codes. The test command, at minimum, with its
   final result.
-- `**Gates:**` — all six by name, each pass/fail/skipped with evidence. A gate whose command
+- `**Gates:**` — all nine by name, each pass/fail/skipped with evidence, and for
+  `claims-are-sourced` the **scope** the run printed: this branch's diff plus the documents the
+  plan named. A window that could contain nothing is not a pass (F-076). A gate whose command
   resolved to null is `skipped` **with the reason**, never passed.
 - `**Artifacts:**` — `impl-report.md`, the branch, and the commit range.
 
@@ -203,6 +249,11 @@ no command and produced no artifact — the bullet is required, `none` is the ho
    that is a question.
 5. Is anything in `## What I did not do` that a reader would be surprised by? Say it plainly
    rather than burying it.
+6. Does every entry in the plan's invalidation set carry a disposition, and does every path under
+   `docs/` in your diff appear in that set or in the plan's deliverable documents? A document
+   repaired but never written down is the same defect as one written down and never repaired.
+7. Did you edit a `## Engagement state` section? You may not, at any disposition. If this change
+   made one of those sentences false, the row says so and the ending fixes it.
 
 **The two ways this skill goes wrong:**
 
@@ -229,6 +280,10 @@ no command and produced no artifact — the bullet is required, `none` is the ho
   the gate into a lie for every subsequent item too.
 - **You need a decision:** file a question, set `awaiting-answer` with `resume-to: in-progress`,
   stop.
+- **A document you must repair is not in the set and not yours to write** — it is an
+  engagement-state sentence, or a claim sourced to one of the stakeholder's answers: add the entry
+  with the disposition that says who owns it (`owned-by-ending`, or the question you filed), and
+  carry on. Recording it is the work; repairing it is not.
 - **You find a defect in another item's delivered behaviour:** file a `bug` item with
   reproduction steps, `found-in`, and real output. Continue with your own item.
 - **The plan cannot be executed and no question would unblock it** (for example, it assumes a

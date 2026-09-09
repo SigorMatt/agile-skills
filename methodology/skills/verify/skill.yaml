@@ -1,5 +1,5 @@
 name: verify
-version: 0.2.0
+version: 0.3.0
 persona: qa-engineer
 purpose: Independently decide whether an item meets its acceptance criteria, with evidence, and file bugs for what is wrong.
 
@@ -24,7 +24,13 @@ inputs:
     why: the claimed evidence, which this skill checks rather than trusts
   - path: tracker/items/{{item.id}}/artifacts/plan.md
     required: true
-    why: deviations from the plan are where undeclared behaviour hides
+    why: deviations from the plan are where undeclared behaviour hides, and the plan carries the binding-adrs this change is judged against and the invalidation set whose dispositions this skill checks
+  - path: docs/architecture/adr/
+    required: true
+    why: an ADR named in binding-adrs is read here, in full, because a conformance verdict quotes the clause of its Decision that the change satisfies or breaks
+  - path: "every document named in the plan's invalidation set"
+    required: false
+    why: an entry disposed verified-still-true is true only if someone reopened the sentence; this skill is that someone, and it repairs nothing
   - path: tracker/items/{{item.id}}/artifacts/refinement-qa.md
     required: false
     why: settles what a criterion meant when its wording is contested
@@ -89,6 +95,16 @@ quality_gates:
     manual_check: For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065).
     enforcement: hard
     on_failure: stay
+  - name: adr-conformance-is-decided
+    description: Every ADR the plan names as binding carries a verdict in the verification report - conforms, violates or not-engaged.
+    manual_check: For each ID in the plan's binding-adrs list, read that ADR's Decision section and record one row in verify-report.md. A conforms verdict quotes the clause it conforms to and names the file and line in this change that satisfies it. A not-engaged verdict says why the change does not touch the decision's subject. A violates verdict is a send-back to in-progress. A row for an ID the plan does not name, or an ID with no row, fails this gate.
+    enforcement: hard
+    on_failure: stay
+  - name: invalidation-set-is-disposed
+    description: Every entry in the plan's invalidation set carries a disposition, and the ones claiming a document is still true are true.
+    manual_check: Read the set. Every entry has a disposition. For each entry disposed verified-still-true, open the sentence and decide it against the branch head, recording what you read. For each disposed to-update, confirm the document was updated with a version bump and a change-log row. An entry that is wrong is a send-back or a question; repairing it yourself is forbidden - this skill writes no document.
+    enforcement: hard
+    on_failure: stay
   - name: tests-would-fail-without-the-change
     description: The tests demonstrating each criterion are sensitive to the behaviour they claim to test.
     manual_check: For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed.
@@ -105,6 +121,9 @@ exit_criteria:
   - Every acceptance criterion has a verdict backed by a command this skill ran and its actual output.
   - Every criterion that passed is ticked in item.md, and no criterion is ticked without evidence.
   - Failures are recorded as a send-back for this item's own criteria, or as bug items for behaviour delivered elsewhere.
+  - Every ID in the plan's binding-adrs list has a conformance verdict in verify-report.md - conforms with the Decision clause quoted and the file and line that satisfies it, violates as a send-back, or not-engaged with the reason (spec/dor-dod.md D13).
+  - Every entry in the plan's invalidation set carries a disposition, and every entry claiming a document is still true was reopened and read against the branch head.
+  - This execution wrote no document under docs/. A document it found wrong is a question or a send-back - an execution that may repair what it judges has made the judgement circular (spec/doc-header.md section 5).
   - verify-report.md records the verdicts, the gates, and the defects found.
   - The journal entry and the history row for this execution are written.
 

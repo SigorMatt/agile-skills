@@ -73,7 +73,35 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    or a follow-up item — an acceptable gap that exists only inside a report will be forgotten.
 
 6. **Apply the Definition of Done** (`spec/dor-dod.md` §3), criterion by criterion, recording a
-   result and evidence for each. D1–D11. A single verdict does not satisfy the gate.
+   result and evidence for each. D1–D13. A single verdict does not satisfy the gate.
+
+6a. **D7 is a confirmation, and D13 is a completeness question.** Neither is a rediscovery, and
+   the difference is the whole of why they moved.
+
+   **D7.** The plan carries the invalidation set — the documents this change could make false —
+   and `implement` closed each entry. Your part is three reads and one question:
+
+   - every entry carries a disposition;
+   - every entry disposed `to-update` names a document that was updated, with a version bump and
+     a change-log row (`spec/doc-header.md` §3);
+   - every entry disposed `owned-by-ending` was left alone by the item. Those sentences are the
+     ending's, and an item that edited one has done something no criterion asked of it;
+   - then the one question the set cannot answer for itself: **did this change falsify a document
+     the set does not name?** Answer it by reading, and record what you read. This used to be the
+     first time anybody asked what the change made false, and twice in one banked engagement the
+     answer sent an item back and was cleared by editing documents only (F-087). It is now a claim
+     against an enumerated set, and it is attributable to you.
+
+   Engagement-state sentences are **not** in scope here. No item audit is charged with one; an
+   item asked to repair one has been handed a defect it is structurally unable to fix
+   (`spec/doc-header.md` §4a).
+
+   **D13.** The plan lists the ADRs this change is bound by, and `verify` has already recorded a
+   verdict for each in `verify-report.md`. You do not re-decide conformance — you ask the cheap
+   half nobody was asking: **did the plan name every ADR this change engages?** Read the diff you
+   have already read at step 4 against the ADR index. An ADR you find engaged and unlisted is a
+   finding, and the plan that listed nothing at all is the case this criterion exists to catch
+   (F-092).
 
 7. **Decide.**
    - **Reject** → `in-review → in-progress`, with the specific defects in `review.md` and named
@@ -131,6 +159,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    ## What I examined
    ## Definition of Done
    | # | criterion | result | evidence |
+   ## Invalidation set confirmation
+   | document | disposition | confirmed by |
+   ## Sections restated at the ending
    ## Findings
    ## Accepted gaps
    ## Verdict
@@ -138,6 +169,11 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 
    `## What I examined` is required and comes first. A review that records only a verdict is
    indistinguishable from one that examined nothing, which is exactly what makes reviews rot.
+
+   `## Invalidation set confirmation` is step 6a's record: one row per entry, and beneath the
+   table the answer to *did this change falsify a document the set does not name*, with what you
+   read to reach it. `## Sections restated at the ending` is written only at an ending (step 10);
+   at an item close it says `not an ending`.
 
 9a. **Audit the claims, from the citations — not from the prose.** D12, and DE6 when you are
     closing an epic, ask whether the confident sentences in `docs/` are still true. Do it the one
@@ -220,6 +256,28 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     `scripts/lint-answers` is a hard gate here). One extra round trip at the ending is cheaper
     than ending on a record the stakeholder would not recognise as theirs.
 
+    **When the reply is in the file, restate the engagement's own sentences — first.** Some
+    sentences in `docs/` are about the **engagement** rather than the product: *"the stakeholder
+    has not yet been asked to accept this"*, *"this is the only remaining gap"*, *"three of four
+    work items are delivered"*. No code change makes them true or false; your ending does. They
+    live in exactly one `## Engagement state` section per document, so the set is enumerable
+    rather than a matter of reading everything (`spec/doc-header.md` §4a), and every one of them
+    is yours at this moment and at no other.
+
+    - Enumerate the sections. Every document under `docs/` that has one.
+    - Restate **all of them** from the ending you are recording — not the ones you noticed were
+      wrong. A section you read and found still true is restated as still true, and it is listed.
+    - Do it **after** the sign-off answer has arrived, never before. Their answer is itself part
+      of the engagement's state, and a restatement written before it is a statement about an
+      engagement that had not finished.
+    - Record the list, and each restatement, under `## Sections restated at the ending` in
+      `review.md`.
+
+    In the run this rule comes from, the vision said the stakeholder had not yet been asked. The
+    pipeline's own closing turn made that false, and the execution that noticed it recorded that
+    *"there was no send-back available that would not have been a fiction"* — because the sentence
+    belonged to no item, and no item could ever have fixed it (F-093).
+
     **If the reply is already in the file — record the ending.** Apply the epic Definition of
     Done (`spec/dor-dod.md` §4) criterion by criterion, then take exactly one of the four
     endings, and set the epic's `outcome` to match what actually happened:
@@ -253,7 +311,9 @@ On the item's `journal.md`:
   was checked against by ID, and the verdict for each; `none` with the reason when there were
   none (ADR-0008 §4).
 - `**Gates:**` — every one, with the per-criterion Definition of Done table as the evidence for
-  `definition-of-done`, `scripts/engagement-state`'s verdict as the evidence for the epic
+  `definition-of-done`, the list of restated sections as the evidence for
+  `engagement-state-is-restated` (or `not applicable - an item close`, never `passed`),
+  `scripts/engagement-state`'s verdict as the evidence for the epic
   decision, and — for `claims-are-sourced` — the **scope** the gate actually examined, quoted
   from its own output. A gate whose scope you did not read is a gate you cannot report (F-066).
 - `**Artifacts:**` — `review.md`, the merge commit, any bug you filed, the sign-off question, and
@@ -325,6 +385,11 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
    looked?
 7. If you ended an engagement: does the epic's `outcome` say what actually happened, and does the
    sign-off you are relying on name **every** child item?
+7a. If you ended an engagement: did you restate **every** `## Engagement state` section, or the
+   ones that caught your eye? And did you write them after the reply arrived, or before it — a
+   restatement that predates the answer describes an engagement that had not ended.
+7b. Did D7 confirm against the plan's set, or did you answer it from memory? "Nothing else was
+   falsified" is a claim about an enumerated set now, and the enumeration is in the plan.
 8. Is `git rev-parse {{trunk}}` the same sha it was before the trial merge? A trial that moved
    the trunk was not a trial, and the worktree removal did not undo it (F-055).
 

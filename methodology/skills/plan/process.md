@@ -95,6 +95,47 @@ will not have been tested by anyone.
    The line: if a reader would have to change any code to satisfy the new text, it is a new
    decision and §4's supersession rule applies with full force.
 
+5c. **Ask what this change makes false.** This is the question the pipeline used to ask last, at
+   the close, after `implement` and `verify` had both passed — and twice in one banked engagement
+   the answer sent an item back and was cleared by editing documents only, with no code change in
+   either (F-087). It is answerable only by someone who knows what the change does, and right now
+   that is you. It is not a check; it is the other half of "which documents constrain this
+   design", which you performed at step 4.
+
+   Read the documents rather than recalling them: `docs/product/`, `docs/architecture/overview.md`,
+   `docs/process/`, and the standing ADRs. For each sentence this change would make false, write a
+   row of the **invalidation set** (step 6). Three seeds catch most of them:
+
+   - every document your own steps cite, or whose subject a step changes;
+   - every document that describes the behaviour this item's criteria name;
+   - every absolute or universal sentence about a thing this change touches — a universal is
+     falsified by a member the sentence does not name (`spec/doc-header.md` §4a).
+
+   Classify each row's `kind`, because the kind decides who may act on it:
+
+   | kind | what it is | what happens to it |
+   |------|-----------|--------------------|
+   | `cited-fact` | an assertion about a named thing — an identifier, a call, a path | `implement` repairs it, and the repair cites what it now points at |
+   | `quantified` | a claim over a family: *every*, *all*, *no*, *the only* | repaired the same way, and whoever audits it owes the enumeration, not the citation |
+   | `engagement-state` | a sentence about the **engagement**, not the product: "the stakeholder has not yet been asked", "this is the only remaining gap" | nobody touches it. Its disposition is `owned-by-ending`, and `review-close` restates it at the ending (`spec/doc-header.md` §4a) |
+
+   You leave `disposition` open. `implement` closes every row and may add rows — it is the actor
+   that discovers mid-change that a fourth document was falsified. Completeness is not something
+   you can guarantee and this is not asking you to: what changes is that "nothing else was
+   falsified" becomes a claim against an enumerated set instead of a memory.
+
+   Beside the set, write two lists that belong to the same act:
+
+   - **deliverable documents** — the documents this item is *asked* to produce or change, because
+     an acceptance criterion is about them. Usually `none`. When it is not, this list is what
+     permits `implement` to write them at all (`spec/doc-header.md` §5), so an omission here is
+     an item nobody is allowed to deliver.
+   - **binding ADRs** — by ID, every ADR that constrains this change. You have just read them all
+     in order not to re-decide anything silently; naming what you read is the whole addition.
+     `verify` gives each ID a verdict and `review-close` asks whether the list is complete
+     (`spec/dor-dod.md` D13). A list that names nothing on a change that plainly engages a
+     decision is the case D13 exists to catch.
+
 6. **Write `artifacts/plan.md`.** Required shape:
 
    ```markdown
@@ -108,6 +149,10 @@ will not have been tested by anyone.
    | AC | satisfied by step | demonstrated by |
    ## Assumptions
    ## Decisions and ADRs
+   ## Invalidation set
+   | document | what | kind | why | disposition |
+   ## Deliverable documents
+   ## Binding ADRs
    ## Scaffolding
    ## Risks
    ## Out of scope for this item
@@ -119,6 +164,14 @@ will not have been tested by anyone.
      `summarise()`" is.
    - **`## Acceptance criteria mapping`** is a table with one row per AC. An AC with no row is a
      hole in the design and the `every-criterion-is-addressed` gate fails.
+   - **`## Invalidation set`** is the table from step 5c, one row per document at risk, with
+     `disposition` left open. `what` locates the sentence or section precisely enough for someone
+     else to reopen it — a quote, or a heading and a line. An empty set is written as one row
+     saying `none`, with why nothing is at risk; an absent section is not an empty one, and the
+     `documents-at-risk-are-enumerated` gate fails on it.
+   - **`## Deliverable documents`** lists the documents an acceptance criterion is about, by path,
+     or `none`. **`## Binding ADRs`** lists by ID the ADRs this change is constrained by, one line
+     each saying which clause binds it, or `none`.
    - **`## Scaffolding`** lists every file you created outside `tracker/` and `docs/`, one line
      each, naming the command that could not otherwise execute — or says `none`, which is the
      usual answer. You produce no code, and this is the one carve-out: a gate command you record
@@ -164,8 +217,9 @@ On the item's `journal.md`:
   recorded answers it was checked against by ID and the verdict for each, or `none` with the
   reason (ADR-0008 §4).
 - `**Questions raised:**` — anything asked of the human, verbatim with their answer, or `none`.
-- `**Gates:**` — all five, with the AC mapping table as the evidence for
-  `every-criterion-is-addressed`.
+- `**Gates:**` — all eight, with the AC mapping table as the evidence for
+  `every-criterion-is-addressed` and the invalidation set as the evidence for
+  `documents-at-risk-are-enumerated`.
 - `**Artifacts:**` — `plan.md`, every ADR created, docs updated with their new versions.
 
 
@@ -217,13 +271,20 @@ the item's whole story rather than only its code.
    would you have to make a decision the plan does not make? That is the step to rewrite.
 2. **Does any step instruct a downstream skill to do something its contract forbids?** Read each
    step and ask who executes it. `implement` may not tick an acceptance criterion — that is
-   `verify`'s, per `spec/work-item.md`; `implement` and `verify` may not write to `docs/`, per
-   `doc-header.md` §5; nobody but `review-close` ends an engagement. A plan step that says
+   `verify`'s, per `spec/work-item.md`; `verify` may not write to `docs/` at all, and `implement`
+   may write only inside the invalidation set and the deliverable documents **you** declared, per
+   `doc-header.md` §5; nobody but `review-close` writes an engagement-state sentence, and nobody
+   but `review-close` ends an engagement. A plan step that says
    otherwise is an instruction the pipeline must refuse, and refusing it costs a turn and a
    journal entry to explain. A real run had step 7 tell `implement` to tick the criteria;
    `implement` declined and declared it and the review agreed — the enforcement held, and the
    step should not have been written (F-048).
 3. Does every AC appear in the mapping table with a *specific* demonstration, not "tests"?
+3a. Did you open the documents, or remember them? The invalidation set is written from a read of
+   `docs/`; a set assembled from recollection names the documents you happened to think of, which
+   is the failure it replaces. And is every acceptance criterion whose subject is a document
+   matched by that document under `## Deliverable documents`? If it is not, the item is one
+   nobody is permitted to deliver.
 4. For every assumption: is it genuinely reversible, and did you say what reversing it costs?
 5. Did you write code into the plan? Interfaces, signatures and contracts are yours;
    implementations are not.

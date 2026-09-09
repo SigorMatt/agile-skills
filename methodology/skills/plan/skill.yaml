@@ -1,5 +1,5 @@
 name: plan
-version: 0.4.1
+version: 0.5.0
 persona: architect
 purpose: Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute.
 
@@ -27,7 +27,10 @@ inputs:
     why: the existing shape of the system, which this change must fit or explicitly change
   - path: docs/architecture/adr/
     required: false
-    why: decisions already taken must not be silently re-decided
+    why: decisions already taken must not be silently re-decided, and the ones this change is constrained by are listed by ID as binding-adrs
+  - path: docs/
+    required: false
+    why: every document this change could make false; the invalidation set is seeded by reading them rather than by recalling them
   - path: tracker/project.yaml
     required: true
     why: the trunk branch and the project's own commands, which this skill must fill in if absent
@@ -37,6 +40,9 @@ inputs:
 
 outputs:
   - path: tracker/items/{{item.id}}/artifacts/plan.md
+    kind: file
+    when: always
+  - path: "the invalidation set, deliverable-documents and binding-adrs, as sections of tracker/items/{{item.id}}/artifacts/plan.md"
     kind: file
     when: always
   - path: docs/architecture/adr/ADR-####-{{item.id}}.md
@@ -88,6 +94,11 @@ quality_gates:
     manual_check: Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make.
     enforcement: advisory
     on_failure: stay
+  - name: documents-at-risk-are-enumerated
+    description: The plan names the documents this change can falsify, the documents it is asked to produce, and the ADRs that constrain it.
+    manual_check: plan.md carries an invalidation set with a row per document at risk - document, what (the sentence or section, located precisely enough to reopen), kind (cited-fact, quantified or engagement-state), why, and a disposition left open for implement. It carries deliverable-documents, naming every document an acceptance criterion is about, and binding-adrs, naming by ID every ADR this change is constrained by. Each of the three says none where none applies; an absent section is not an empty one.
+    enforcement: hard
+    on_failure: stay
   - name: cross-answer-consistency
     description: A document this execution wrote does not overwrite a claim sourced to one of the stakeholder's answers without asking them.
     command: scripts/lint-answers --uncommitted
@@ -110,6 +121,9 @@ exit_criteria:
   - No plan step instructs a downstream skill to do something its own contract forbids (F-048).
   - No ADR or document this execution wrote settles a contradiction between two of the stakeholder's own recorded answers; where one exists, a question quoting both by ID was filed instead (ADR-0008).
   - plan.md exists with numbered steps, each naming the files it touches and the observable result.
+  - plan.md carries an invalidation set - a row per document this change can make false, with the sentence located precisely enough to reopen, its claim kind, why this change would falsify it, and the disposition left open for implement to close (spec/dor-dod.md D7).
+  - Every acceptance criterion whose subject is a document names that document under deliverable-documents, so the item that must deliver it is the item allowed to write it (spec/doc-header.md section 5).
+  - binding-adrs names, by ID, every ADR this change is constrained by - the list verify decides conformance against and review-close checks for completeness (spec/dor-dod.md D13).
   - Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.
   - Every non-obvious decision is an ADR or a recorded reversible assumption.
   - tracker/project.yaml names the test and lint commands, or an ADR records why it cannot.

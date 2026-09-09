@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.6.0
+version: 0.7.0
 
 item_types:
   - epic
@@ -196,7 +196,7 @@ transitions:
     applies_to: [work-item, bug]
     gated: true
     resume_to: forbidden
-    condition: Design recorded and plan.md written.
+    condition: Design recorded and plan.md written, carrying the invalidation set, the deliverable documents and the binding ADRs the later stages consume - implement discharges the set, verify decides each ADR, review-close confirms against both (spec/dor-dod.md D7, D13).
 
   - from: planned
     to: in-progress
@@ -211,7 +211,7 @@ transitions:
     applies_to: [work-item, bug]
     gated: true
     resume_to: forbidden
-    condition: Hard gates pass and impl-report.md is written.
+    condition: Hard gates pass, impl-report.md is written, and every entry in the plan's invalidation set carries a disposition - the documents this change made false are repaired, still true, owned by the ending, or a question.
 
   - from: verifying
     to: in-review
@@ -219,7 +219,7 @@ transitions:
     applies_to: [work-item, bug]
     gated: true
     resume_to: forbidden
-    condition: Every acceptance criterion is confirmed with evidence.
+    condition: Every acceptance criterion is confirmed with evidence, every ADR the plan named as binding carries a conformance verdict, and every entry of the invalidation set is disposed.
 
   - from: verifying
     to: in-progress
@@ -249,7 +249,7 @@ transitions:
     applies_to: [epic]
     gated: true
     resume_to: forbidden
-    condition: The engagement ended at E1, E2 or E4 - every child is terminal, the epic Definition of Done passes, and the stakeholder answered the termination question.
+    condition: The engagement ended at E1, E2 or E4 - every child is terminal, the epic Definition of Done passes, the stakeholder answered the termination question, and every Engagement state section in the workspace was restated afterwards from the ending being recorded (spec/dor-dod.md DE4).
 
   - from: open
     to: blocked
@@ -257,7 +257,7 @@ transitions:
     applies_to: [epic]
     gated: true
     resume_to: required
-    condition: The engagement ended at E3 - the impasse. Every child is terminal, at least one did not deliver, and the stakeholder was asked and did not accept.
+    condition: The engagement ended at E3 - the impasse. Every child is terminal, at least one did not deliver, the stakeholder was asked and did not accept, and every Engagement state section was restated afterwards from the ending being recorded (spec/dor-dod.md DE4).
 
   - from: done
     to: open

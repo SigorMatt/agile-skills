@@ -1,4 +1,4 @@
-# Contract — plan v0.4.1
+# Contract — plan v0.5.0
 
 Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -17,7 +17,8 @@ Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative li
 | `tracker/items/{{item.id}}/item.md` | yes | the acceptance criteria are the contract this design must satisfy |
 | `tracker/items/{{item.id}}/artifacts/refinement-qa.md` | no | assumptions and unresolved points recorded during refinement constrain the design |
 | `docs/architecture/overview.md` | no | the existing shape of the system, which this change must fit or explicitly change |
-| `docs/architecture/adr/` | no | decisions already taken must not be silently re-decided |
+| `docs/architecture/adr/` | no | decisions already taken must not be silently re-decided, and the ones this change is constrained by are listed by ID as binding-adrs |
+| `docs/` | no | every document this change could make false; the invalidation set is seeded by reading them rather than by recalling them |
 | `tracker/project.yaml` | yes | the trunk branch and the project's own commands, which this skill must fill in if absent |
 | `the project's source code` | no | a plan written without reading what exists is a guess |
 
@@ -26,6 +27,7 @@ Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative li
 | path | kind | when |
 |------|------|------|
 | `tracker/items/{{item.id}}/artifacts/plan.md` | file | always |
+| `the invalidation set, deliverable-documents and binding-adrs, as sections of tracker/items/{{item.id}}/artifacts/plan.md` | file | always |
 | `docs/architecture/adr/ADR-####-{{item.id}}.md` | file | conditional |
 | `docs/architecture/overview.md` | file | conditional |
 | `tracker/project.yaml` | file | conditional |
@@ -45,6 +47,7 @@ Every gate below appears in the journal entry for every execution — including 
 | `project-commands-resolved` | hard | tracker/project.yaml has a real command for test and lint, or an ADR records why the project has none. A command that does not exist, or one that exits zero without checking anything, fails this gate. | stay |
 | `decisions-recorded` | hard | List the choices this plan makes. For each, point to an ADR, or to an entry under Assumptions stating what would be needed to reverse it. | stay |
 | `plan-is-executable-without-you` | advisory | Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make. | stay |
+| `documents-at-risk-are-enumerated` | hard | plan.md carries an invalidation set with a row per document at risk - document, what (the sentence or section, located precisely enough to reopen), kind (cited-fact, quantified or engagement-state), why, and a disposition left open for implement. It carries deliverable-documents, naming every document an acceptance criterion is about, and binding-adrs, naming by ID every ADR this change is constrained by. Each of the three says none where none applies; an absent section is not an empty one. | stay |
 | `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --uncommitted`, expect exit-zero | stay |
 | `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --uncommitted`, expect exit-zero | stay |
 
@@ -59,6 +62,9 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] No plan step instructs a downstream skill to do something its own contract forbids (F-048).
 - [ ] No ADR or document this execution wrote settles a contradiction between two of the stakeholder's own recorded answers; where one exists, a question quoting both by ID was filed instead (ADR-0008).
 - [ ] plan.md exists with numbered steps, each naming the files it touches and the observable result.
+- [ ] plan.md carries an invalidation set - a row per document this change can make false, with the sentence located precisely enough to reopen, its claim kind, why this change would falsify it, and the disposition left open for implement to close (spec/dor-dod.md D7).
+- [ ] Every acceptance criterion whose subject is a document names that document under deliverable-documents, so the item that must deliver it is the item allowed to write it (spec/doc-header.md section 5).
+- [ ] binding-adrs names, by ID, every ADR this change is constrained by - the list verify decides conformance against and review-close checks for completeness (spec/dor-dod.md D13).
 - [ ] Every acceptance criterion maps to at least one step and to the evidence that will demonstrate it.
 - [ ] Every non-obvious decision is an ADR or a recorded reversible assumption.
 - [ ] tracker/project.yaml names the test and lint commands, or an ADR records why it cannot.

@@ -1,5 +1,5 @@
 name: review-close
-version: 0.6.0
+version: 0.7.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -27,7 +27,7 @@ inputs:
     why: declared deviations from the plan, which the review must judge
   - path: tracker/items/{{item.id}}/artifacts/plan.md
     required: true
-    why: the design the change is reviewed against
+    why: the design the change is reviewed against, and the enumerated set D7 confirms against - the invalidation set, deliverable-documents and binding-adrs
   - path: tracker/items/{{item.id}}/journal.md
     required: true
     why: the Definition of Done includes the completeness of the record itself
@@ -39,7 +39,10 @@ inputs:
     why: the review judges the change, not the description of it
   - path: docs/architecture/adr/
     required: false
-    why: the change must not silently contradict a recorded decision
+    why: the change must not silently contradict a recorded decision, and D13 asks whether the plan's binding-adrs named every ADR this change engages
+  - path: "every Engagement state section in docs/"
+    required: false
+    why: at an ending they are all restated, from the ending being recorded, after the sign-off answer arrives
   - path: "scripts/engagement-state {{item.id}}"
     required: false
     why: on an epic, whether the engagement is at rest - the same function the termination gate reads, so the two cannot disagree
@@ -54,6 +57,9 @@ outputs:
   - path: "merge of {{item.branch}} into {{trunk}}"
     kind: commit
     when: on-success
+  - path: "docs/ - a correction inside this item's invalidation set at an item close, and at an ending every Engagement state section, restated"
+    kind: file
+    when: conditional
   - path: tracker/items/EP-###/item.md
     kind: file
     when: conditional
@@ -72,8 +78,13 @@ outputs:
 
 quality_gates:
   - name: definition-of-done
-    description: Every Definition of Done criterion is evaluated individually and recorded.
-    manual_check: Walk spec/dor-dod.md section 3 criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate.
+    description: Every Definition of Done criterion is evaluated individually and recorded - section 3 at an item close, section 4 at an engagement's ending.
+    manual_check: Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here.
+    enforcement: hard
+    on_failure: stay
+  - name: engagement-state-is-restated
+    description: At an ending, every Engagement state section in the workspace has been restated from the ending being recorded, after the sign-off answer arrived.
+    manual_check: At an ending only. List every document under docs/ carrying an Engagement state section - the set is enumerable because the convention is one such section per document. Restate each one from the ending you are recording, all of them and not the ones you noticed, and only after the sign-off question has been answered, because that answer is itself part of the engagement's state. Record the list and each restatement in review.md. At an item close this gate is not applicable and is journaled as such, never as passed.
     enforcement: hard
     on_failure: stay
   - name: verification-postdates-the-code
@@ -133,6 +144,9 @@ exit_criteria:
   - Every Definition of Done criterion is recorded as passed, or the item was rejected.
   - The claims audit ran over a scope that could contain something - the item's own diff at an item close, the whole document set at an ending. A gate that examined nothing is a failure, never a pass (F-066).
   - Any true-but-unsourced claim found in a standing ADR was repaired through its append-only Corrections section rather than left as an accepted gap (doc-header.md section 4b).
+  - D7 was confirmed against the plan's invalidation set, not rediscovered - every entry carries a disposition, every entry disposed to-update was updated with a version bump and a change-log row, and the answer to did this change falsify a document the set does not name is recorded with what was read to reach it.
+  - The plan's binding-adrs list is complete - the change engages no ADR the list does not name, and each listed ADR already carries verify's conformance verdict (spec/dor-dod.md D13).
+  - At an ending, every Engagement state section in the workspace was restated after the sign-off answer arrived; at an item close, none was touched (spec/doc-header.md section 4a).
   - review.md states what was examined, not only the verdict.
   - The branch is merged into the trunk and the item is done with an outcome recorded.
   - If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.

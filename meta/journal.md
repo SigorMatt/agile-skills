@@ -4399,3 +4399,71 @@ recall is a reading, not a number, and the report says which.
   step passes, including `lint-skills`, the must-fail fixtures and the claims-window cases. No
   check was deleted or loosened to make room.
 - **Artifacts:** `spec/doc-header.md` (revision 5), `spec/dor-dod.md` (revision 7).
+
+## 2026-09-10 — META-147 — the four skill contracts carry ADR-0010, and the dist is current again
+
+- **Unit:** META-147
+- **Inputs read:** `meta/adr/ADR-0010-document-as-deliverable.md` in full (699 lines);
+  `spec/doc-header.md` §4a/§5 and `spec/dor-dod.md` D7/D12/D13/DE4/DE6 as META-146 left them —
+  the spec, not the ADR, is what a gate reads, so the contracts were written against the spec's
+  wording; `spec/skill-contract.md` (schema, gate rules, §3 versioning); `spec/workspace-layout.md`
+  §1.2 and `spec/work-item.md` for where an artifact may live; the four contracts and their
+  procedures; `methodology/pipeline.yaml`; `scripts/lint-skills`'s gate-name cross-check (F-059)
+  and `scripts/lint-claims`'s CLI, to name a flag in a form its own option parser will accept.
+- **Decisions:**
+  - **The invalidation set stays inside `artifacts/plan.md`**, as `## Invalidation set` with the
+    five columns `spec/dor-dod.md` D7 already fixed, beside `## Deliverable documents` and
+    `## Binding ADRs`. No new artifact file: `workspace-layout.md` §1.2 fixes the artifact names
+    and a sixth one would have to be added there, and D7's prose already says "a table in
+    `artifacts/plan.md`". The two lists sit beside the table because they are one act of the same
+    read (ADR-0010 §5.1).
+  - **`implement` writes the `disposition` column and appended rows of that table, and nothing
+    else in `plan.md`.** ADR-0010 §5.2 gives `implement` the set to close and to extend, and
+    `workspace-layout.md` §1.2 says a skill overwrites its own artifact and nothing else — the
+    contract resolves the two by bounding the write to the column and the rows, and says so in
+    the procedure. The design is not `implement`'s to edit.
+  - **`implement`'s claims window becomes `scripts/lint-claims --changed-since {{trunk}}
+    --plan-documents {{item.id}}`.** The flag does not exist yet and is META-148's to build; the
+    contract names the invocation rather than inventing a workaround, which is what F-076 asks
+    for — the window has to be able to contain something (branch diff **plus** the invalidation
+    set **plus** the deliverable documents).
+  - **Three new hard gates, all `manual_check`, because their scripts do not exist yet**:
+    `documents-at-risk-are-enumerated` on `plan`, `adr-conformance-is-decided` and
+    `invalidation-set-is-disposed` on `verify`, plus `document-writes-are-declared` on
+    `implement` and `engagement-state-is-restated` on `review-close`. ADR-0010's enforcement table
+    calls obligations 11, 13, 15, 19 `[auto]`; naming a command that does not run would be the
+    F-001 failure this ledger exists for, so each is a manual check today and META-148's scripts
+    are what turn them into commands.
+  - **`verify` writes no document, now as a derived consequence**: its exit criterion says so and
+    gives the reason (an execution that may repair what it judges has made the judgement
+    circular), rather than asserting a rule about a directory.
+  - **`review-close`'s `definition-of-done` gate was widened rather than split** — it now says
+    §3 at an item close and §4 at an ending, and names D7 as a confirmation and D13 as the
+    completeness question. Splitting it would have renamed a gate, which is a MAJOR bump under
+    `skill-contract.md` §3 for no gain.
+  - **The K8 restatement is its own gate on `review-close`, and it is `not applicable` at an item
+    close, never `passed`.** DE4 already carries the criterion; the gate is what makes the
+    enumeration a listed set in `review.md` rather than a recollection.
+  - **`review.md` gains `## Sections restated at the ending`, deliberately not headed
+    `## Engagement state`** — that literal heading is the delimiter a script will enumerate, and
+    an item artifact carrying one would put a K8 section inside a record (ADR-0010 §1, K5).
+  - **Version bumps, all MINOR** (`skill-contract.md` §3 — a new gate, a new output, a new step;
+    no removed output, no renamed gate, no changed transition): `plan` 0.4.1 → **0.5.0**,
+    `implement` 0.3.0 → **0.4.0**, `verify` 0.2.0 → **0.3.0**, `review-close` 0.6.0 → **0.7.0**,
+    `pipeline.yaml` 0.6.0 → **0.7.0** (five transition conditions restated).
+  - **`plan`'s self-check 2 said `implement` and `verify` may not write to `docs/`** — a sentence
+    ADR-0010 makes false, in the one place a plan step is checked against what a downstream
+    contract forbids (F-048). Corrected in the same unit that made it false.
+- **Questions raised:** none blocking. Three things named rather than solved: `intake`'s authority
+  to write the initial `## Engagement state` section and `answer-questions`' place in the L7 row
+  (ADR-0010 §3.2) are **not** in these four contracts and no unit yet owns them; ADR-0010's
+  obligations 11, 13, 15, 18, 19 and 20 are `[auto]` in the model and manual in the contracts
+  until META-148 ships; and §3.3 item 7's residual gap (a false sentence found after the
+  engagement closes has no owner) is unchanged.
+- **Gates:** `./scripts/check` green — `check: all steps passed`. `scripts/lint-skills`: 0 errors,
+  0 warnings over 9 contracts. The `rendered output is current` step that META-146 left red is
+  green because the dist was re-rendered and committed. Two exit criteria had to lose a
+  colon-space that `miniyaml` and PyYAML parse differently — the library self-test's cross-check
+  caught both, which is the check working.
+- **Artifacts:** `methodology/skills/{plan,implement,verify,review-close}/{skill.yaml,process.md}`,
+  `methodology/pipeline.yaml`, `adapters/claude-code/dist/**`.

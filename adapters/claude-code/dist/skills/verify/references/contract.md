@@ -1,4 +1,4 @@
-# Contract — verify v0.2.0
+# Contract — verify v0.3.0
 
 Rendered from `methodology/skills/verify/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -16,7 +16,9 @@ Rendered from `methodology/skills/verify/skill.yaml`. This is the authoritative 
 |------|----------|-----|
 | `tracker/items/{{item.id}}/item.md` | yes | the acceptance criteria are the only standard this skill judges against |
 | `tracker/items/{{item.id}}/artifacts/impl-report.md` | yes | the claimed evidence, which this skill checks rather than trusts |
-| `tracker/items/{{item.id}}/artifacts/plan.md` | yes | deviations from the plan are where undeclared behaviour hides |
+| `tracker/items/{{item.id}}/artifacts/plan.md` | yes | deviations from the plan are where undeclared behaviour hides, and the plan carries the binding-adrs this change is judged against and the invalidation set whose dispositions this skill checks |
+| `docs/architecture/adr/` | yes | an ADR named in binding-adrs is read here, in full, because a conformance verdict quotes the clause of its Decision that the change satisfies or breaks |
+| `every document named in the plan's invalidation set` | no | an entry disposed verified-still-true is true only if someone reopened the sentence; this skill is that someone, and it repairs nothing |
 | `tracker/items/{{item.id}}/artifacts/refinement-qa.md` | no | settles what a criterion meant when its wording is contested |
 | `the code on branch {{item.branch}}` | yes | verification runs against the branch head, not against a description of it |
 | `tracker/project.yaml` | yes | the commands the gates run |
@@ -44,6 +46,8 @@ Every gate below appears in the journal entry for every execution — including 
 | `every-criterion-independently-checked` | hard | For each AC, record the command this skill ran and its actual output. Citing the implementation report as evidence fails this gate. | stay |
 | `negative-cases-exercised` | hard | For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened. | stay |
 | `a-criterion-about-criteria-is-read` | hard | For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065). | stay |
+| `adr-conformance-is-decided` | hard | For each ID in the plan's binding-adrs list, read that ADR's Decision section and record one row in verify-report.md. A conforms verdict quotes the clause it conforms to and names the file and line in this change that satisfies it. A not-engaged verdict says why the change does not touch the decision's subject. A violates verdict is a send-back to in-progress. A row for an ID the plan does not name, or an ID with no row, fails this gate. | stay |
+| `invalidation-set-is-disposed` | hard | Read the set. Every entry has a disposition. For each entry disposed verified-still-true, open the sentence and decide it against the branch head, recording what you read. For each disposed to-update, confirm the document was updated with a version bump and a change-log row. An entry that is wrong is a send-back or a question; repairing it yourself is forbidden - this skill writes no document. | stay |
 | `tests-would-fail-without-the-change` | advisory | For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed. | stay |
 
 ## Escalation
@@ -58,6 +62,9 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] Every acceptance criterion has a verdict backed by a command this skill ran and its actual output.
 - [ ] Every criterion that passed is ticked in item.md, and no criterion is ticked without evidence.
 - [ ] Failures are recorded as a send-back for this item's own criteria, or as bug items for behaviour delivered elsewhere.
+- [ ] Every ID in the plan's binding-adrs list has a conformance verdict in verify-report.md - conforms with the Decision clause quoted and the file and line that satisfies it, violates as a send-back, or not-engaged with the reason (spec/dor-dod.md D13).
+- [ ] Every entry in the plan's invalidation set carries a disposition, and every entry claiming a document is still true was reopened and read against the branch head.
+- [ ] This execution wrote no document under docs/. A document it found wrong is a question or a send-back - an execution that may repair what it judges has made the judgement circular (spec/doc-header.md section 5).
 - [ ] verify-report.md records the verdicts, the gates, and the defects found.
 - [ ] The journal entry and the history row for this execution are written.
 

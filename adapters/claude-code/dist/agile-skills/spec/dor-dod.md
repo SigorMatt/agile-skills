@@ -81,12 +81,41 @@ time and records the result in the filing journal entry.
 | D4 | No open blocking question remains on the item | [auto] |
 | D5 | `journal.md` has an entry for every skill execution, and `history.md` chains without a gap to the current status | [auto] |
 | D6 | Every decision that changed the design is in an ADR, and the ADR is cited from the plan or journal | [skill] |
-| D7 | Documents the change invalidated have been updated, with a version bump and a change-log row | [skill] |
+| D7 | Every entry in the plan's **invalidation set** carries a disposition, and every entry disposed `to-update` was updated, with a version bump and a change-log row. Plus the one question the set cannot answer for itself: did this change falsify a document the set does not name? The scope is what this change **touched or its plan named** — engagement-state sentences excluded, they are the ending's (DE4) | [skill] + [auto] |
 | D8 | Every commit on the branch references the item ID, so `git log --grep <ID>` reconstructs the item's code history | [auto] |
 | D9 | The change is merged into the trunk, and the branch's work is not left only on the branch | [auto] |
 | D10 | `verify` ran **after** the last code change. A verification older than the code it verifies does not count | [auto] |
 | D11 | The review record exists at `artifacts/review.md` and states what was examined, not only the verdict | [skill] |
-| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it. Absolute claims this execution wrote carry a resolvable citation (`doc-header.md` §4a) | [skill] + [auto] |
+| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it. Absolute claims this execution wrote carry a resolvable citation, and every **quantified** claim it audited carries, in its audit row, the set, how the set was enumerated with the command's output, the members by name, and a verdict per member — opening what the claim cites does not discharge it (`doc-header.md` §4a). **Engagement-state sentences are out of scope**: no item audit is charged with one | [skill] + [auto] |
+| D13 | The plan's `binding-adrs` list is **complete** — the change engages no ADR the list does not name. Whether the change *conforms* to each listed ADR is `verify`'s verdict in `artifacts/verify-report.md`, not this criterion's | [skill] |
+
+### D7 confirms against a set; it does not discover
+
+D7 used to be scoped to what the execution *touched*. "Touched" is a diff, and every piece of
+document machinery here is built on one — `--changed-since`, D12's scoping, `lint-claims`'s
+window — so a document the branch never opens is invisible to all of it, and the first person to
+ask about it was `review-close`, at the last gate, after `implement` and `verify` had both
+passed. Two items in one banked engagement were sent back and cleared by editing documents only,
+with no code change in either (F-087). In the sharper of the two, the plan had learned from its
+predecessor and carried a step for the architecture overview, `implement` executed it faithfully,
+and the document that failed was the product vision, which no step named.
+
+"What does this change make false?" is answerable only by someone who knows what the change does,
+and it is a design output rather than a check: it is the same act as "which documents constrain
+this change", which `plan` already performs. So the **invalidation set** is a table in
+`artifacts/plan.md` — one row per document at risk, with the sentence or section located
+precisely enough to reopen, its claim kind (`doc-header.md` §4a), why this change would falsify
+it, and a `disposition` of `to-update`, `verified-still-true`, `owned-by-ending` or
+`question-filed:<ITEM>/Q-###`. Beside it the plan carries `deliverable-documents` (documents this
+item is *asked* to produce or change, because a criterion is about them) and `binding-adrs` (D13).
+
+`plan` emits the set, `implement` discharges every entry and may add entries — it is the actor
+that discovers mid-change that a fourth document was falsified — `verify` checks that every entry
+has a disposition and that the `verified-still-true` ones are true, and D7 **confirms**. The
+"nothing else was falsified" answer is now a claim against an enumerated set, attributable to
+whoever made it, rather than a memory. That every entry carries a disposition is a shape a script
+decides; whether the set is **complete** is not, and never was — what changed is who is on the
+hook and what they are answering against.
 
 ### D12 exists because D7 was not enough
 
@@ -100,6 +129,13 @@ Every machine-decidable gate held throughout; every gate resting on a human-styl
 D12 is scoped deliberately — the behaviour *this item touched*, not all of `docs/` — so it is a
 real read of a few paragraphs rather than a ritual nobody performs.
 
+Two things are outside it. A **quantified** claim is not discharged by opening what it cites: the
+citation names the general case and the falsifier is a member the sentence does not name, so the
+audit row carries the enumeration instead (`doc-header.md` §4a). And an **engagement-state**
+sentence is not D12's at all — nothing an item does makes it true or false, so an item that fails
+D12 on one has been handed a defect it is structurally unable to fix. DE4 owns those (F-093,
+F-095).
+
 **The half of D12 that is now a program.** The read itself cannot be automated; what can be, and
 now is, is the demand that the confident sentences point at something. `doc-header.md` §4a
 requires an absolute claim about named code to carry a citation, and requires every citation to
@@ -107,6 +143,24 @@ resolve; `scripts/lint-claims` is a hard gate on `plan`, `implement` and `review
 does not make the claim true — it makes it *checkable in one hop*, by a reader who does not have
 to reconstruct where the sentence came from. The sentence that propagated through seven documents
 would have carried, from its first appearance, a pointer to the code it was wrong about.
+
+### D13 asks whether the list is complete, not whether the change conforms
+
+D6 asks that *new* decisions become ADRs. Nothing asked whether a change obeys the ADRs that
+already exist, and the same ADR was broken twice, four items apart, each time caught only because
+a reviewer happened to read the diff against it (F-092). The fix is split in two, deliberately.
+
+`verify` decides **conformance**: for every ID in the plan's `binding-adrs`, `verify-report.md`
+carries a row with a verdict of `conforms`, `violates` or `not-engaged`; a `conforms` verdict
+quotes the clause of that ADR's `## Decision` it conforms to and names the file and line that
+satisfies it; `not-engaged` is legal and says why the change does not touch the decision's
+subject; `violates` is a send-back. That belongs to `verify` because judging a change against a
+standard it did not write is `verify`'s whole contract, and because putting it at the close moves
+the read one stage further from the person who could act on it.
+
+D13 is the other half and the cheap one: did the plan name every ADR the change engages? Nothing
+can decide that mechanically — it is the same shape as D7's closing question — and it is the half
+that catches a plan which listed nothing at all.
 
 ### D3 and D10 are the two that get skipped
 
@@ -125,9 +179,9 @@ to `done` with a note.
 | DE1 | Every child item is at a **terminal** status (`done` or `blocked`), and every child that was not delivered is named in the termination question and in the epic's outcome | [auto] |
 | DE2 | Every child item's `outcome` is recorded; dropped items say why in their `## Notes` | [auto] |
 | DE3 | The epic's `## Success measures` are each addressed — met, or explicitly not met with the reason | [skill] |
-| DE4 | `docs/product/` reflects what was actually built, not what was proposed | [skill] |
+| DE4 | `docs/product/` reflects what was actually built, not what was proposed. And the ending has restated **every** `## Engagement state` section in the workspace — all of them, not the ones it noticed — written **after** the sign-off answer arrived, because the answer is itself part of the engagement's state (`doc-header.md` §4a) | [skill] + [auto] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
-| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written. Every citation in the workspace resolves | [skill] + [auto] |
+| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written, each quantified claim by the enumeration its audit row owes rather than by opening what it cites (`doc-header.md` §4a). Every citation in the workspace resolves. **Engagement-state sentences are out of scope**: DE4 owns them | [skill] + [auto] |
 | DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and answered — in **every** ending, not only closure | [auto] |
 | DE8 | The stakeholder was asked, at least once in this engagement, an **open** question that was not about the team's agenda — a `kind: elicitation` question (`question.md` §2) — and it was answered | [auto] |
 
@@ -226,3 +280,4 @@ criterion is that the question was asked and answered, never that the answer was
 | 4 | 2026-08-27 | R8 reads `refinement-qa.md`'s `status` field rather than the filename: an `[auto]` check that only tests existence is trusted and wrong (F-031). |
 | 5 | 2026-08-27 | DE1 generalised from "every child `done`" to "every child terminal, and every undelivered child named" (F-045, F-046); DE7 generalised from a completion gate to a **termination** gate, triggered by rest. Derived in ADR-0006. |
 | 6 | 2026-08-29 | A criterion whose subject is other criteria is read against their **text**, with the suite as evidence rather than as the definition, and non-intersection stated or waived by name (F-065). DE8 added: an engagement is asked at least one open question that is not about the team's agenda (F-064). |
+| 7 | 2026-09-10 | D7 becomes a **confirmation** against the invalidation set `plan` emits: every entry disposed, plus "did this change falsify a document the set does not name?", scoped to what the change touched **or its plan named** (F-087). D12 and DE6 gain the member enumeration a **quantified** claim owes and exclude **engagement-state** sentences; DE4 gains the ending's restatement of every delimited `## Engagement state` section, after the sign-off answer (F-095, F-093). D13 added: the plan's `binding-adrs` list is complete, `review-close`'s to check, each ADR's conformance verdict `verify`'s to decide (F-092). Derived in ADR-0010. |

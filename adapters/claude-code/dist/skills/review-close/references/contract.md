@@ -1,4 +1,4 @@
-# Contract — review-close v0.6.0
+# Contract — review-close v0.7.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -17,11 +17,12 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 | `tracker/items/{{item.id}}/item.md` | yes | the criteria, their tick state, and the outcome to be recorded |
 | `tracker/items/{{item.id}}/artifacts/verify-report.md` | yes | the evidence behind each tick, and the declared gaps |
 | `tracker/items/{{item.id}}/artifacts/impl-report.md` | yes | declared deviations from the plan, which the review must judge |
-| `tracker/items/{{item.id}}/artifacts/plan.md` | yes | the design the change is reviewed against |
+| `tracker/items/{{item.id}}/artifacts/plan.md` | yes | the design the change is reviewed against, and the enumerated set D7 confirms against - the invalidation set, deliverable-documents and binding-adrs |
 | `tracker/items/{{item.id}}/journal.md` | yes | the Definition of Done includes the completeness of the record itself |
 | `tracker/items/{{item.id}}/history.md` | yes | a gap in the chain means a status changed outside a skill |
 | `the diff of {{item.branch}} against {{trunk}}` | yes | the review judges the change, not the description of it |
-| `docs/architecture/adr/` | no | the change must not silently contradict a recorded decision |
+| `docs/architecture/adr/` | no | the change must not silently contradict a recorded decision, and D13 asks whether the plan's binding-adrs named every ADR this change engages |
+| `every Engagement state section in docs/` | no | at an ending they are all restated, from the ending being recorded, after the sign-off answer arrives |
 | `scripts/engagement-state {{item.id}}` | no | on an epic, whether the engagement is at rest - the same function the termination gate reads, so the two cannot disagree |
 
 ## Outputs
@@ -31,6 +32,7 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 | `tracker/items/{{item.id}}/artifacts/review.md` | file | always |
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `merge of {{item.branch}} into {{trunk}}` | commit | on-success |
+| `docs/ - a correction inside this item's invalidation set at an item close, and at an ending every Engagement state section, restated` | file | conditional |
 | `tracker/items/EP-###/item.md` | file | conditional |
 | `tracker/items/EP-###/questions/Q-###.md` | file | conditional |
 | `tracker/items/BUG-####/` | file | conditional |
@@ -43,7 +45,8 @@ Every gate below appears in the journal entry for every execution — including 
 
 | gate | enforcement | how it is checked | on failure |
 |------|-------------|-------------------|------------|
-| `definition-of-done` | hard | Walk spec/dor-dod.md section 3 criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. | stay |
+| `definition-of-done` | hard | Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here. | stay |
+| `engagement-state-is-restated` | hard | At an ending only. List every document under docs/ carrying an Engagement state section - the set is enumerable because the convention is one such section per document. Restate each one from the ending you are recording, all of them and not the ones you noticed, and only after the sign-off question has been answered, because that answer is itself part of the engagement's state. Record the list and each restatement in review.md. At an item close this gate is not applicable and is journaled as such, never as passed. | stay |
 | `verification-postdates-the-code` | hard | run `.claude/agile-skills/scripts/check-verify-freshness {{item.id}} {{item.branch}}`, expect exit-zero | verifying |
 | `commits-reference-the-item` | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
 | `tests-pass-on-the-merge-result` | hard | run `{{commands.test}}`, expect exit-zero | stay |
@@ -64,6 +67,9 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] Every Definition of Done criterion is recorded as passed, or the item was rejected.
 - [ ] The claims audit ran over a scope that could contain something - the item's own diff at an item close, the whole document set at an ending. A gate that examined nothing is a failure, never a pass (F-066).
 - [ ] Any true-but-unsourced claim found in a standing ADR was repaired through its append-only Corrections section rather than left as an accepted gap (doc-header.md section 4b).
+- [ ] D7 was confirmed against the plan's invalidation set, not rediscovered - every entry carries a disposition, every entry disposed to-update was updated with a version bump and a change-log row, and the answer to did this change falsify a document the set does not name is recorded with what was read to reach it.
+- [ ] The plan's binding-adrs list is complete - the change engages no ADR the list does not name, and each listed ADR already carries verify's conformance verdict (spec/dor-dod.md D13).
+- [ ] At an ending, every Engagement state section in the workspace was restated after the sign-off answer arrived; at an item close, none was touched (spec/doc-header.md section 4a).
 - [ ] review.md states what was examined, not only the verdict.
 - [ ] The branch is merged into the trunk and the item is done with an outcome recorded.
 - [ ] If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.

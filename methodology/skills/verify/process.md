@@ -20,6 +20,9 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    to the architect and stop.
 3. The branch `{{item.branch}}` exists and you can run the project's commands against it. If you
    cannot, that is an impasse, not a failure of the item.
+4. `plan.md` carries an invalidation set and a list of binding ADRs. Two of your checks are
+   against those lists; if either is missing, the item reached you without them and that is a
+   send-back with the reason, not something for you to reconstruct.
 
 ---
 
@@ -86,6 +89,50 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    accounts for is a finding — either unrequested scope, or behaviour that nobody specified and
    nobody will verify next time. Record it.
 
+6a. **Decide every binding ADR, one verdict each.** The plan names the ADRs this change is
+   constrained by. Nothing in the pipeline used to ask whether a change obeys the decisions that
+   already exist — D6 asks only that *new* decisions become ADRs — and the same ADR was broken
+   twice, four items apart, each time caught only because a reviewer happened to read the diff
+   against it (F-092). You are the stage whose whole contract is judging a change against a
+   standard it did not write, so the read is yours.
+
+   For each ID, open the ADR, read its `## Decision`, and record one row:
+
+   | verdict | what it means | what it must carry |
+   |---------|---------------|--------------------|
+   | `conforms` | the change obeys the decision | the clause of `## Decision` **quoted**, and the file and line in this change that satisfies it |
+   | `violates` | the change breaks it | the clause quoted and the hunk that breaks it — this is a send-back to `in-progress`, not a finding to note |
+   | `not-engaged` | the change does not touch the decision's subject | why not, in one sentence. This verdict is legal and common; it is not a way to avoid reading the ADR |
+
+   A verdict with no quoted clause is not a verdict — it is the shape of one. If you find the
+   change engages an ADR the plan does not name, record it anyway with its verdict and say so;
+   `review-close` asks separately whether the list was complete, and your row is what it reads.
+
+6b. **Check the invalidation set, and repair nothing.** The plan listed the documents this change
+   could make false, and `implement` closed each entry with a disposition. Your part is narrow and
+   it is not a rewrite:
+
+   - every entry has a disposition. One left open is a send-back;
+   - every entry disposed `verified-still-true` gets **reopened**: read the sentence against the
+     branch head and say what you read. That disposition is a claim, and it is the one nobody
+     else checks;
+   - every entry disposed `to-update` names a document that was actually updated, with a version
+     bump and a change-log row;
+   - an entry disposed `owned-by-ending` is left exactly as it is. If a `## Engagement state`
+     section was edited by this item, that is a defect and a send-back — those sentences belong to
+     the ending (`spec/doc-header.md` §4a).
+
+   Where a quantified claim was repaired — *every*, *all*, *no*, *the only* — the audit row owes
+   the enumeration, not the citation: the set, how it was enumerated with the command's output,
+   the members, and a verdict per member. An audit that opened only what the sentence cites has
+   not checked it (F-095).
+
+   **You write no document, ever.** Not a typo, not a stale sentence, not the one word that would
+   make an entry true. You judge a change against criteria you did not write; an execution that
+   may also repair the document it is judging has made its own judgement circular. A document you
+   find wrong is a question (`spec/question.md`) or a send-back, and `answer-questions` makes the
+   edit.
+
 7. **Classify every failure.** This is the decision that most affects what happens next, and it
    has exactly two answers:
    - **A failure of *this item's own* acceptance criteria** → the item goes back to
@@ -114,6 +161,10 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    ## Verdict
    ## Criteria
    | AC | verdict | command run | actual output | notes |
+   ## ADR conformance
+   | ADR | verdict | clause quoted from its Decision | file and line, or why not engaged |
+   ## Invalidation set
+   | document | disposition | what I reopened, and what I found |
    ## Gates
    ## Negative and boundary cases exercised
    ## Test sensitivity check
@@ -124,6 +175,11 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
    The `Verified-commit:` line is not decoration. It is what lets `review-close` prove
    mechanically that the verification postdates the last change; without it, D10 becomes an
    opinion about how small the last fix looked.
+
+   `## ADR conformance` carries one row per ID in the plan's binding ADR list, and any ADR you
+   found engaged that the list does not name. `## Invalidation set` carries one row per entry in
+   the plan's set — what you reopened for the ones claiming a document is still true, and what you
+   found. Neither section is a place you repair anything.
 
    `## Not verified, and why` is mandatory and is often the most valuable section. Anything you
    could not check — no environment, no data, a criterion that turned out to be unfalsifiable —
@@ -145,7 +201,9 @@ On the item's `journal.md`:
   criterion you judged `ambiguous` and what you did about it.
 - `**Questions raised:**` — IDs, or `none`.
 - `**Commands:**` — every command with its exit code. This is the evidence trail; be complete.
-- `**Gates:**` — all six by name with results.
+- `**Gates:**` — all nine by name with results, with the conformance table as the evidence for
+  `adr-conformance-is-decided` and the disposition table as the evidence for
+  `invalidation-set-is-disposed`.
 - `**Artifacts:**` — `verify-report.md`, any bug items filed, the criteria ticked in `item.md`.
 
 
@@ -200,6 +258,12 @@ the item's whole story rather than only its code.
 4. Is everything you could not verify written in `## Not verified, and why`?
 5. Did you send back a defect that is really someone else's item, or file a bug for something
    this item's own criteria cover? Both misroute the work.
+6. Does every ADR verdict quote a clause of that ADR's `## Decision`, or is one of them a bare
+   `conforms` you decided from the ADR's title?
+7. Did you open the sentences behind the entries disposed `verified-still-true`, or accept the
+   disposition because the rest of the item was sound?
+8. Did you edit any file under `docs/`? If you did, undo it and file the question instead — your
+   independence is the only thing this stage sells.
 
 **The two ways this skill goes wrong:**
 
@@ -226,6 +290,10 @@ the item's whole story rather than only its code.
   verifier who repairs the code has no one checking the repair.
 - **A gate command is null:** record the gate as `skipped` with the reason, and note in
   `## Not verified, and why` what that leaves unchecked. Never record it as passed.
+- **A document is wrong and nobody repaired it:** it is a send-back if this item's own change made
+  it false, and a question addressed to the architect otherwise. Never the edit. The one entry you
+  leave alone entirely is an engagement-state sentence: it is false because the engagement moved,
+  and the ending owns it (`spec/doc-header.md` §4a).
 - **The code will not run at all:** set the item to `blocked` with what you tried and the exact
   errors. This is an impasse, not a verdict on the item.
 - **You find several defects at once:** file each as its own bug item if they belong elsewhere,
