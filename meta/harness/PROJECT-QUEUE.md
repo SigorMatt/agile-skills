@@ -134,3 +134,47 @@ the sim resolves it when asked.
 the pipeline completes an epic with no skill version bumps, no forced
 transitions, and a trail the owner signs off without findings. If iteration 4
 is not boring, the queue continues with re-runs and new entries until a run is.
+
+## Iteration 5 — `envel` (envelope-budgeting CLI) — E2 + held-out retro calibration
+
+- **Project:** `envel`. Idea (verbatim in probe §1): a command-line envelope-budgeting
+  tool — named envelopes, income allocated into them, spending recorded against them,
+  balances shown; data persists; Python, no services.
+- **Persona:** `pragmatic-manager` (new). Decisive, scope-conscious, cost-aware; answers
+  product questions promptly and firmly; resists scope growth; treats sign-off as a
+  business decision. Sim model: opus.
+- **Planted probe:** exactly one, firing at the END — partial acceptance at sign-off. The
+  stakeholder accepts delivery but defers the reporting/summary child by name: "ship
+  without it; park it." Target: ending **E2, delivered-partial** — never executed — with
+  the termination statement naming the deferred child, and the deferred child at a
+  terminal status the board renders honestly.
+- **Second purpose — held-out retro calibration:** the engagement ends with `next`
+  dispatching `retro` live (source tree and git history present — the confounds
+  FINAL-REPORT-4 §8 named, removed). Protocol, strict order: (1) the owner reviews the
+  trail independently and writes down findings; (2) only then is the retro's report read
+  and scored against them. Builder sessions must not pre-read this trail or the retro
+  report; the queue entry is the contract.
+- **Also exercised organically:** the derivation's new document rules on a fresh project;
+  F-082's delegation scoping and F-097's question batching under a crisp stakeholder;
+  the E2 rows; option B's corrected wording at the first sign-off.
+
+## Iteration 5b — `droll` (dice roller CLI) — E4 regression
+
+- **Project:** `droll`. A deliberately tiny idea (one or two items): roll dice from a
+  spec like `3d6+2`, show the result, keep a session history. Small on purpose — the
+  project is scaffolding; the ending is the test.
+- **Persona:** `ghosting-founder` (new). Engaged and ordinary through intake and the
+  first refinement round; then silent forever. Sim model: sonnet (the discipline is
+  scripted silence, not judgment).
+- **Planted behavior:** after answering the first round of refinement questions, the
+  stakeholder never responds again — not to questions, not to reminders, not to the
+  sign-off. The sim still takes its turns and logs them: it reads what is addressed to
+  it and declines to answer, per script.
+- **Target:** ending **E4, abandoned** — never executed. The builder-5 mechanism under
+  test: the silence threshold, review-close's abandonment declaration, the termination
+  statement listing delivered and orphaned children by ID, the driver recognizing the
+  declared E4 as a terminal stop rather than a stall. Success is the engagement ending
+  THROUGH the mechanism with an honest record, and the run stopping on a terminal
+  reason with the trail explaining exactly what happened and why.
+- **Run after** iteration 5's calibration review completes; it is a cheap mechanism
+  regression, not a calibration engagement — normal findings pass applies.

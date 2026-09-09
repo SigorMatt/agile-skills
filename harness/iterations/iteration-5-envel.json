@@ -1,0 +1,10 @@
+{
+  "id": "iteration-5-envel",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 5 — envel (envelope-budgeting CLI): E2 + held-out retro calibration",
+  "project": "envel",
+  "persona": "pragmatic-manager",
+  "probe": "iteration-5-envel",
+  "max-turns": 30,
+  "worker-model": "opus",
+  "sim-model": "opus"
+}

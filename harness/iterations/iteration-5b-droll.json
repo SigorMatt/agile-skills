@@ -1,0 +1,10 @@
+{
+  "id": "iteration-5b-droll",
+  "queue-entry": "meta/harness/PROJECT-QUEUE.md — Iteration 5b — droll (dice roller CLI): E4 regression",
+  "project": "droll",
+  "persona": "ghosting-founder",
+  "probe": "iteration-5b-droll",
+  "max-turns": 20,
+  "worker-model": "opus",
+  "sim-model": "sonnet"
+}
