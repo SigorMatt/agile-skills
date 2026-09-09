@@ -4269,3 +4269,76 @@ Phase III ends here. Scope held: three findings fixed, nothing else touched, not
 
 **Phase V ends here.** The retro skill is built, contracted, gated, dispatched and read. Its
 recall is a reading, not a number, and the report says which.
+
+## 2026-09-10 — META-145 — ADR-0010: what a document is, who may change it, what makes a claim checked
+
+- **Unit:** META-145
+- **Inputs read:** `meta/BUILDER-5-PROMPT.md` (cluster 1); `meta/adr/ADR-0006` and `ADR-0008` as
+  the house style; `spec/doc-header.md` in full (§4, §4a, §4b, §5), `spec/dor-dod.md`,
+  `spec/workspace-layout.md` §1, `spec/question.md` §1–2, `spec/ids-and-statuses.md` §5,
+  `spec/retro.md`; `methodology/pipeline.yaml` and the seven+two skill contracts;
+  `scripts/lib/scope.py`, `scripts/check-verify-freshness`, `scripts/lint-claims`;
+  `meta/findings/FINDINGS.md` F-053, F-057, F-058, F-076, F-087, F-092, F-093, F-095, and
+  F-001/F-024/F-066/F-067/F-069/F-098 for lineage.
+- **Decisions:**
+  - **`docs/` is not one kind of thing, and every one of the eight findings is that mistake.**
+    *Record* (a statement about what happened; later work cannot falsify it) and *deliverable*
+    (a statement about the product; later work can) are properties of **sentences**, not of
+    files or directories. Nine document kinds are enumerated (§1) and a third kind of sentence
+    is named that the specs had no word for: the **engagement-state statement** (K8).
+  - **F-076's two-way question is answered: `spec/doc-header.md` §5 does not hold, and the gate
+    stays on `implement`.** §5 is an absolute over a directory justified by an argument about
+    circularity, and the argument covers only the record half. The over-broad half is exactly
+    what produced F-057, F-058 and F-076. §5's last paragraph is replaced: `verify` still writes
+    no document ever; `implement` writes only inside the invalidation set and the deliverable
+    documents its plan declared, never a sentence that is the standard its own work is judged
+    against, and never a claim sourced to a human answer (ADR-0008 §3 overrides every new "may
+    write"). `scope.py` gains a **fourth** state — *out-of-scope-by-construction* — because
+    F-066's "real and empty is an honest pass, because the comparison could have found
+    something" is the justification F-076 falsifies.
+  - **The claim taxonomy is derived from the falsifier, not from the sentence's grammar.** The
+    obligation on a claim follows from *what would falsify it and who would witness that*, and
+    that question has exactly three answers: a named thing changes (→ cite it, today's §4a); an
+    unnamed member of a quantified family (→ **enumerate the members, with the enumeration
+    method and its output, in the audit row** — opening what the claim cites does not discharge
+    it, F-095); the engagement's own act (→ **owned by the ending**, F-093). Not two, not four,
+    and the test is what stops the taxonomy growing by analogy.
+  - **The definition the mission said was missing:** a claim is *checked* when a named execution
+    recorded **what would have falsified it and where that was looked for**, discharging its
+    kind's obligation, such that a later reader can repeat the look. "I read it and it is true"
+    records the verdict and destroys the method.
+  - **The invalidation set is a `plan` output** (path / what / claim-kind / why / disposition),
+    plus `deliverable-documents` and `binding-adrs`. `implement` closes and may extend it —
+    it is simultaneously its obligation and its licence to write; `verify` checks dispositions
+    and repairs nothing; `review-close`'s D7 becomes a **confirmation against an enumerated
+    set**; `check-verify-freshness` subtracts `deliverable-documents` from its `docs/` exemption
+    (F-058); and `implement`'s claims window becomes diff **plus** the set, which is what stops
+    it being empty by construction.
+  - **ADR conformance is decided by `verify`, not `review-close` (F-092).** `plan` lists
+    `binding-adrs`; `verify` records `conforms`/`violates`/`not-engaged` per ID, a `conforms`
+    quoting the `## Decision` clause and naming the file and line; `review-close` checks only
+    that the **list is complete**. `verify` already carries the identical move in
+    `a-criterion-about-criteria-is-read`.
+  - **F-053 contributes a constraint rather than a fix:** a document's state machine (version /
+    change-log row / status, unit = the edit) and an item's (status / history / journal, unit =
+    the execution) are two machines and neither may be derived from the other; the only legal
+    coupling is the audit row that names both. Its half-written-record shape is the trap the new
+    document writes must not reproduce — content edit, version bump and change-log row are one
+    act. F-058 is that constraint violated: the freshness gate reads a document's kind off its
+    directory, which is a proxy for the item's machine.
+  - **Two things are written down as unfixed rather than smoothed over.** §3.3 item 7: a false
+    sentence discovered after an engagement is *closed* has no owner in this model — the epic is
+    done, the retro is written, and reopening is scoped to delivered behaviour. And the
+    enforcement table's obligation 10: whether a K8 sentence was *written as* a K8 sentence,
+    inside its delimited section, has no mechanical half at all, and everything else about the
+    K8 mechanism rests on it. F-093's own sentence was written loose.
+  - **Enforcement boundary, counted:** 20 obligations — 12 `[auto]`, 6 `[skill]` with a
+    mechanical shell that makes the judgement attributable, and 3 (10, 12, 17 — two of them
+    completeness) that no gate can see. Stated in a table rather than inferred, per ADR-0008 §5.
+- **Questions raised:** none. Four contradictions with standing rules are handed to META-146/147
+  and named in the ADR's `Amends:` line: `doc-header.md` §5's final paragraph, `dor-dod.md` D7 /
+  D12 / DE4 / DE6, `implement`'s `--changed-since {{trunk}}` window, and
+  `check-verify-freshness`'s wholesale `docs/` exemption.
+- **Gates:** `./scripts/check` green — `check: all steps passed`. Docs-only unit; no spec, skill,
+  script, fixture or findings-status edit, per the unit's scope.
+- **Artifacts:** `meta/adr/ADR-0010-document-as-deliverable.md`.
