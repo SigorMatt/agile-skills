@@ -10,39 +10,22 @@ sha, `./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 9adff0e
+## The gate is GREEN at 5ae1539 — 31 steps
 
-`./scripts/check: all steps passed`. Cluster 1's derivation, specs and six contracts are in.
-What remains of cluster 1 is the **enforcement half** — the scripts that decide the obligations
-ADR-0010 marks `[auto]` but nothing implements yet — split into three units because the
-accumulated to-do list is too large for one.
+`./scripts/check: all steps passed`. `fixtures/broken-workspace` still emits **82 codes**
+(unchanged, the migration proof). `scripts/lib/selftest.py` is now **273** cases.
 
 ## Current unit
 
-**META-148** — the enforcement half, part 1: the **window**.
+**META-148b** — the enforcement half, part 2: the **obligations**.
 
-1. **`scripts/lib/scope.py` gains a fourth state**, *out-of-scope-by-construction* — distinct
-   from "a real window that is empty". Its docstring's three-state model and its justification
-   ("real and empty is a pass **because the comparison could have found something**") are
-   directly falsified by F-076 and must be rewritten, not patched around.
-2. **`scripts/lint-claims --plan-documents <ITEM-ID>`** — the flag does not exist;
-   `implement`'s `claims-are-sourced` gate already names it:
-   `scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}`.
-   Semantics the contract assumes: the rule-2 window is the branch diff **plus** every path in
-   that item's `## Invalidation set` **plus** its `## Deliverable documents`.
-   (`lint-claims`' parser already takes `--flag value`, so the form parses.)
-3. **`scripts/check-verify-freshness`** (~line 94): the `path.startswith("docs/")` exemption
-   must subtract the item's declared deliverable documents — a document that IS the deliverable
-   is not record, and treating it as record is F-058.
+Build the gate script(s) that decide the eight `[auto]` obligations META-147/147b had to write
+as `manual_check`, then flip those gates from `manual_check` to `command` in the contracts.
+Follow the `claims.py` / `lint-claims` shape: one implementation in `scripts/lib/`, one gate
+script over it — the same rule must not live in two places.
 
-- Done when: all three land with fixtures **both ways** (a case that must fail and a case that
-  must pass), a new `./scripts/check` step proving it, `./scripts/check` green, journalled,
-  committed AND pushed.
-- Next units: **META-148b** (the eight `[auto]` obligations, listed below, still written as
-  `manual_check`), then **META-148c** (the historical cases as fixtures), then **META-149**
-  (findings statuses).
-
-### The eight obligations META-148b owns — currently `manual_check`, ADR-0010 marks them `[auto]`
+### The eight obligations, currently `manual_check`
+ — currently `manual_check`, ADR-0010 marks them `[auto]`
 
 | gate | contract | ADR-0010 obligation |
 |---|---|---|
@@ -59,7 +42,32 @@ Obligation 10 — whether a K8 sentence was *written into* its section rather th
 has **no mechanical half at all**, and the whole K8 mechanism rests on it. It stays `[skill]`.
 Do not let a unit quietly claim it.
 
+### What META-148 deliberately left to this unit
+
+`lint-claims` reads the invalidation set's `document` column and reports rows it cannot resolve
+(`plan.row.malformed`, `plan.document.unreadable`), but it does **not** validate the `kind` or
+`disposition` enums — that is obligations 11 and 13, and duplicating the check would put one
+rule in two places. `check-verify-freshness` likewise prints plan-shape errors without failing
+on them.
+
+- Done when: each obligation has a must-fail fixture and a must-pass counterpart, the contracts
+  name real commands, `./scripts/check` green with the broken-workspace count unchanged at 82
+  unless a change to it is argued for, journalled, committed AND pushed.
+- Next units: **META-148c** (the historical cases as fixtures), then **META-149** (findings
+  statuses, including the two edges below).
+
+## Two edges META-148 named rather than solved — META-149 files or dispositions them
+
+- **(a)** `implement`'s widened window includes entries disposed `owned-by-ending`, which
+  `implement` may read but not write. A pre-existing unsourced absolute in such a document would
+  block `implement` **with no legal repair**. It cannot arise while `review-close`'s
+  `--context epic` whole-tree run is green, so it is a real edge and not a present one.
+- **(b)** `lint-claims` rule 2 still reads only under `docs/`, so a deliverable document declared
+  **outside** `docs/` is in the window but never examined. `claim.plan.document-absent` catches
+  the missing-file case, not this one.
+
 ## Done this session
+
 
 
 - **META-144** — Phase VI laid out in `meta/plan.md` (2c4b0b7, 0deafc0).
@@ -102,6 +110,20 @@ Do not let a unit quietly claim it.
   A seam it closed on its own initiative and flagged: an `answer-questions` execution
   propagating into `docs/` mid-flight puts paths there that `implement` never wrote, so
   `answer-questions` records those rows itself, disposed `to-update`. **Accepted as it stands.**
+- **META-148** — the window (**5ae1539**), 31 steps green, 82 codes unchanged, selftest 252→273.
+  `scope.py` now has **four** states, and the third is the one F-076 needed: *real and
+  non-empty* → examine; *real and empty* → pass, saying the window **was searched**;
+  ***out-of-scope-by-construction*** → **pass with a mark** (exit 0, a `claim.scope.by-construction`
+  warning, and the scope line `NOTHING COULD HAVE BEEN IN SCOPE`) — exit 0 deliberately, because
+  an item with no documents is ordinary work and a gate that fails on ordinary work is one
+  somebody switches off; the honesty lives in the wording; *degenerate* → fail (F-066,
+  unchanged). `constrained(window, permitted, reason)` is the only way into the third state and
+  it takes the permission knowledge from the caller — **no diff can distinguish "nobody wrote a
+  document" from "nobody was allowed to"**. `--plan-documents <ITEM>` widens the rule-2 window to
+  the diff + invalidation set + deliverable documents; `check-verify-freshness` subtracts the
+  deliverable documents from its `docs/` exemption (F-058). The new step was **proved
+  non-vacuous**: stashed against the old scripts, five of its eight cases failed, each reporting
+  `0 document(s) in 0 path(s)` — the empty window F-076 is about.
 
 ## Standing instructions (still in force)
 
