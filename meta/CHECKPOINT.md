@@ -10,50 +10,41 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN — 35 steps, 97 codes, selftest 307, 49 findings citations
+## The gate is GREEN at 4d1b7ce — 35 steps, 97 codes, selftest 307, 49 findings citations
 
 ## Current unit
 
-**META-152** — `fixtures/abandoned-engagement/`, the E4 rows end to end. META-151b landed the
-programs; this is the fixture that runs them over a whole engagement.
+**META-152** — `fixtures/abandoned-engagement/`: the E4 rows exercised **end to end**.
 
-- ADR-0011's `ghosting-founder` walkthrough is the worked example, and §6 names what it does
-  **not** exercise: every child there is *orphaned, never started*, so the fixture must also carry
-  an *orphaned, in flight* child (at `in-progress` with a branch, or at `in-review`), and a second
-  shape where the silence begins **after** rest — a sign-off filed, open, and ending `abandoned`
-  with an empty `## Answer`, which is the case `check-epic-signoff`'s new branch is for.
-- The programs to run it against: `scripts/record-halt`, `scripts/engagement-state`,
-  `scripts/check-epic-signoff`, `scripts/validate-workspace`.
-- The waiting log's format is `spec/workspace-layout.md` §1.4 and it is now enforced by eleven
-  `waiting.*` validator codes — write rows with `record-halt` rather than by hand where possible.
-- Next after: **META-153** (harness — **separate commit**).
+What is already proved: the threshold's single source, by execution (step 14b, 18
+observations); the must-fail shapes (15 new codes in `fixtures/broken-workspace`). What is
+**not** proved is an actual E4 **ending** — the thing the mission's acceptance asks for.
 
-## Done in META-151b
+Model it on `fixtures/ended-engagement/`, which step 10 (*the termination gate*) already drives
+with **one epic per verdict the gate has to reach**. Add the abandoned case:
 
-- `scripts/record-halt` is the waiting-log writer, a **new script** rather than a mode of
-  `engagement-state`, so that "the reader never writes" is structural rather than a flag
-  discipline. `next`'s `silence-is-recorded` gate is that command with no arguments; it records
-  only where a halt exists, so it can run on every pass.
-- **The registry decision: obligation 5 is registered, and the shape grew to admit it.** An entry
-  may now name a **class** of move (`from: any-non-terminal`, `to: terminal`, `actor:`) and
-  enumerate the concrete pairs under `satisfied_by`; `lint-skills` checks **coverage** per item
-  type, with the classes read off the statuses table's own flags. Pinning the actor is what makes
-  it bite — `awaiting-answer → blocked` existed for `answer-questions` all along. Non-vacuity is
-  `scripts/check` step 11, fault 8: change that row's actor and `obligation.unsatisfiable` comes
-  back for both item types. `validate-workspace` reads the entry for the rule's scope.
-- **The threshold's single source is proved by execution** (new step 14b, 18 observations): 3 → 5
-  over one unchanged workspace, and `record-halt`, `engagement-state` and `check-epic-signoff`
-  each change their mind. Also proved there: a reader leaves the log byte-identical, and an answer
-  resets the count while our own writes do not.
-- `check-epic-signoff` gains a second **accepting branch**, not a relaxation: threshold reached,
-  an ask that stood unanswered (so *ending while never having asked* stays illegal), no sign-off
-  left `open`, and `## Ending statement` in `review.md` naming every child.
-- Three `spec/workspace-layout.md` §1.4 sentences were underspecified and were fixed **in the same
-  commit**: `*.md` only for request lines, the `## Answer` body hashed with trailing whitespace
-  stripped and nothing else normalised, and which epics a halt is against.
-- `review-close`'s procedure was cut to fit the 500-line rendered body limit; what was cut is
-  reference already in `spec/ids-and-statuses.md` §3.5a, and every rule a reader could get wrong
-  stayed.
+- an engagement whose stakeholder went silent past the threshold — a `tracker/waiting/<EP-ID>.md`
+  with ≥ threshold trailing rows at one `inbound` digest;
+- `review-close`'s declaration: `## Ending statement` in `review.md`, mirrored in the epic's
+  `## Notes`, naming **every child by ID** in its class (delivered / dropped earlier / blocked
+  earlier / orphaned in flight / orphaned never started);
+- orphans at `blocked`, reason prefixed `orphaned by E4:`, and **no `outcome` at all**;
+- open questions closed `abandoned` with an **empty** `## Answer`;
+- the epic `done`, `outcome: dropped`;
+- `scripts/check-epic-signoff` **passing** it, and `scripts/engagement-state` reporting it.
+
+**A near-miss E4 must fail**: one round short of the threshold, or an orphan carrying an
+`outcome`, or a question closed `answered` with an empty body. A fixture that only shows the
+happy path proves the gate can say yes, not that it can say no.
+
+- Done when: the fixture exists both ways, a `./scripts/check` step drives it, the step is
+  **proved non-vacuous** against the pre-change behaviour, gate green, journalled, committed
+  AND pushed.
+- Next unit: **META-153** — the harness side, in a **separate commit**: a sim job that
+  legitimately declines to answer (scripted silence, logged), and the driver recognising
+  *"human silent past threshold, E4 declared"* as a terminal **epic-done-class** stop rather
+  than a stall. `harness/run_iteration.py` today knows only `epic-done`,
+  `blocked-no-recourse` and `stalled`.
 
 ## Owed to the next findings pass — do not lose these
 
@@ -66,6 +57,7 @@ programs; this is the fixture that runs them over a whole engagement.
    `epic.closed-with-active-children` is registered. Nothing owed.
 
 ## Done this session
+
 
 - **META-144** Phase VI planned (2c4b0b7, 0deafc0).
 - **CLUSTER 1 — document-as-deliverable — COMPLETE.** Full detail is in the ADR, the journal and
@@ -123,6 +115,31 @@ programs; this is the fixture that runs them over a whole engagement.
     `## Answer`, never a missing ask. A near-miss caught by the library crosscheck: three new
     `pipeline.yaml` scalars carried `: ` inside a plain scalar — `miniyaml` accepted them,
     **PyYAML did not**.
+  - **META-151b** the programs (**4d1b7ce**), 35 steps, 82 → **97** codes (deliberate: 4
+    `question.abandoned.*`, 11 `waiting.*`; `EXPECTED-CODES.txt` updated in the same commit),
+    selftest 307, pipeline faults 8, shipped scripts 17. Bumps: `pipeline.yaml` 0.9.0, `next`
+    0.5.0, `review-close` 0.9.0.
+    **`scripts/record-halt` is a new script, not a mode of the reader** — a `--record` flag would
+    make "the reader never writes" a matter of which flag a caller passed, when
+    `check-epic-signoff` and `review-close` both read the count; a separate entry point makes the
+    separation structural. `next` invokes it as the `silence-is-recorded` hard gate at step 3(a),
+    **before** reading any verdict.
+    **The registry grew rather than taking a false triple**: an entry may name a *class* of move
+    (`from: any-non-terminal`, `to: terminal`, `actor: review-close`) and enumerate `satisfied_by`
+    pairs; `lint-skills` checks **coverage** per item type, with classes read off the statuses
+    table's own flags. **Pinning the actor is what makes it bite** — `awaiting-answer → blocked`
+    existed all along for `answer-questions`, so an actor-blind check would have called that
+    status covered while an orphan sat there with no move `review-close` could make. Fault 8
+    proves it.
+    **Threshold single-source proved by execution** (step 14b, 18 observations): the value is
+    moved 3 → 5 in a copy of `pipeline.yaml` and all three consumers move with it; stubbing the
+    reader to `return 3` names all three in the failure. The same step proves the reader leaves
+    the log byte-identical, and that an answer resets the count while our own writes do not.
+    **A rule tying an abandoned question to its epic's ending was considered and refused** —
+    `review-close` closes questions before it moves the epic and `transition` validates before
+    the move, so the rule would fail correct work: F-014's shape.
+    `review-close`'s procedure hit the **500-line rendered body limit**; what was cut is material
+    already in `spec/ids-and-statuses.md` §3.5a, replaced by a citation.
 
 ## Standing instructions (still in force)
 
