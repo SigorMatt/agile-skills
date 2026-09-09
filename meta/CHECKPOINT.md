@@ -10,63 +10,64 @@ sha, `./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 5ae1539 — 31 steps
+## The gate is GREEN at a843114 — 34 steps
 
-`./scripts/check: all steps passed`. `fixtures/broken-workspace` still emits **82 codes**
-(unchanged, the migration proof). `scripts/lib/selftest.py` is now **273** cases.
+`./scripts/check: all steps passed`. `fixtures/broken-workspace` still **82 codes**.
+Library self-test **290** cases. Cluster 1 is complete except for its findings statuses.
+
+**META-148c was absorbed, not skipped.** Its content — the derivation's historical cases run as
+fixtures — already landed as two by-execution steps (*the document window (F-076, F-058, 8
+cases)* and *the document obligations by execution (F-087, F-093, F-095, 8 cases)*), each proved
+non-vacuous against the pre-change scripts. Re-authoring them would put one assertion in two
+places. What is left of it is F-053's class, which is a status decision and belongs below.
 
 ## Current unit
 
-**META-148b** — the enforcement half, part 2: the **obligations**.
+**META-149** — cluster 1's findings statuses, with resolving citations.
 
-Build the gate script(s) that decide the eight `[auto]` obligations META-147/147b had to write
-as `manual_check`, then flip those gates from `manual_check` to `command` in the contracts.
-Follow the `claims.py` / `lint-claims` shape: one implementation in `scripts/lib/`, one gate
-script over it — the same rule must not live in two places.
+Every status must cite what settles it — the ADR section, the spec revision, the contract
+version, the `./scripts/check` step. `meta/findings/FINDINGS.md` is **appended to, never
+rewritten**: existing finding text stays, the new status and its reasoning go below it.
 
-### The eight obligations, currently `manual_check`
- — currently `manual_check`, ADR-0010 marks them `[auto]`
+Settle from the derived model:
 
-| gate | contract | ADR-0010 obligation |
-|---|---|---|
-| `documents-at-risk-are-enumerated` | `plan` | 11 |
-| `document-writes-are-declared` | `implement` | 13 + 19 |
-| `adr-conformance-is-decided` | `verify` | 15 |
-| `invalidation-set-is-disposed` | `verify` | 13 |
-| `engagement-state-is-restated` | `review-close` | 6–8 |
-| `engagement-state-is-delimited` | `intake` | 6 |
-| `engagement-state-is-left-to-the-ending` | `answer-questions` | 7 |
-| `propagated-claims-carry-their-obligation` | `answer-questions` | 3 |
+- **F-076** — `implement`'s claims gate examines an empty window by construction. Settled:
+  `doc-header.md` §5's absolute does not hold, the gate stays on `implement`, the window widened
+  (`--plan-documents`), and `scope.py` gained *out-of-scope-by-construction*.
+- **F-087** — the invalidation set is a `plan` output and the falsification question is asked
+  where the change is made.
+- **F-093** — engagement-state sections are owned by the ending.
+- **F-095** — quantified claims need member enumeration recorded in the audit row.
+- **F-092** — `verify` decides ADR conformance per ID; `review-close` checks only that
+  `binding-adrs` is complete (D13).
+- **F-057, F-058** — the two founding members of the *document-as-deliverable* class. The class
+  was deferred behind "an ADR-0006-shaped derivation"; that gate has now been met.
+- **F-053** — NOT fixed here. Its *class* was the lifecycle-state input to ADR-0010; record what
+  it contributed and what remains, and leave it in the *half-written record* class (F-036,
+  F-043, F-051) behind its named gate. Do not mark it fixed.
 
-Obligation 10 — whether a K8 sentence was *written into* its section rather than left loose —
-has **no mechanical half at all**, and the whole K8 mechanism rests on it. It stays `[skill]`.
-Do not let a unit quietly claim it.
+Also file or disposition the **two edges META-148 named** and the **two reaches META-148b
+declared**, so none is rediscovered later as a fresh finding:
 
-### What META-148 deliberately left to this unit
+1. `implement`'s widened window can include an `owned-by-ending` document it may read but not
+   write; a pre-existing unsourced absolute there would block it with no legal repair. META-148b
+   reports this is **avoided by construction** — the quantified rule reads only paragraphs *new*
+   in the diff — so check that claim before filing, and file only what survives it.
+2. A deliverable document declared **outside** `docs/` is in the window but never examined
+   (`lint-claims` rule 2 reads only under `docs/`).
+3. **Obligation 10 is not claimed by anything** — whether a K8 sentence was written into its
+   section rather than left loose. `fixtures/document-obligations/wrong/docs/process/
+   ways-of-working.md` holds such a sentence that no rule fires on, deliberately.
+4. Obligation 5's partial reach: a universal phrased without a quantifier word is caught by
+   nothing.
 
-`lint-claims` reads the invalidation set's `document` column and reports rows it cannot resolve
-(`plan.row.malformed`, `plan.document.unreadable`), but it does **not** validate the `kind` or
-`disposition` enums — that is obligations 11 and 13, and duplicating the check would put one
-rule in two places. `check-verify-freshness` likewise prints plan-shape errors without failing
-on them.
-
-- Done when: each obligation has a must-fail fixture and a must-pass counterpart, the contracts
-  name real commands, `./scripts/check` green with the broken-workspace count unchanged at 82
-  unless a change to it is argued for, journalled, committed AND pushed.
-- Next units: **META-148c** (the historical cases as fixtures), then **META-149** (findings
-  statuses, including the two edges below).
-
-## Two edges META-148 named rather than solved — META-149 files or dispositions them
-
-- **(a)** `implement`'s widened window includes entries disposed `owned-by-ending`, which
-  `implement` may read but not write. A pre-existing unsourced absolute in such a document would
-  block `implement` **with no legal repair**. It cannot arise while `review-close`'s
-  `--context epic` whole-tree run is green, so it is a real edge and not a present one.
-- **(b)** `lint-claims` rule 2 still reads only under `docs/`, so a deliverable document declared
-  **outside** `docs/` is in the window but never examined. `claim.plan.document-absent` catches
-  the missing-file case, not this one.
+- Done when: every cluster-1 finding has a current status with a resolving citation, the four
+  items above are filed or dispositioned, `./scripts/check` green (step *findings citations
+  resolve* included), journalled, committed AND pushed.
+- Next unit: **META-150** — cluster 2 opens: ADR-0011, the silence threshold and E4.
 
 ## Done this session
+
 
 
 
@@ -124,6 +125,23 @@ on them.
   deliverable documents from its `docs/` exemption (F-058). The new step was **proved
   non-vacuous**: stashed against the old scripts, five of its eight cases failed, each reporting
   `0 document(s) in 0 path(s)` — the empty window F-076 is about.
+- **META-148b** — `scripts/lib/documents.py` + `scripts/lint-documents --rule <name>` decide
+  **all eight** `[auto]` obligations (**a843114**); 34 steps, 82 codes unchanged, selftest 290.
+  Every gate flipped from `manual_check` to a real command, and **each command decides less than
+  the manual_check text it replaced** — the narrowing is written into each gate's own
+  `description`. Bumps: `plan` 0.6.0, `implement` 0.5.0, `verify` 0.4.0, `review-close` 0.8.0,
+  `intake` 0.5.0, `answer-questions` 0.6.0; `doc-header.md` revision 6 (the enumeration's
+  labelled form — obligation 3 needed a *findable* form to be a shape check at all, so it was
+  written into the spec rather than left as an unwritten form a gate enforced).
+  **Non-vacuity proved twice**: with the script moved aside, and again with the script present
+  but every `rule_*` body replaced by `return` — the second is the one that proves the
+  assertions are sensitive to the rules and not merely to the file existing.
+  **A contradiction between two META-147 outputs, found and corrected here**: `verify/skill.yaml`
+  said a conformance row for an ADR the plan does not name *fails* the gate, while
+  `verify/process.md` asks for exactly such a row. Refusing it would make the honest move
+  illegal (F-050's shape). The procedure's version was implemented; the row is
+  `document.adr.row.unplanned`, a **warning**, being evidence that `binding-adrs` was incomplete
+  — which is D13, `review-close`'s read.
 
 ## Standing instructions (still in force)
 

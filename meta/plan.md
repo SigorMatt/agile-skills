@@ -494,9 +494,13 @@ Format of each line: **unit** — scope — the gate that closes it.
       implementing the eight `[auto]` obligations that META-147/147b had to write as
       `manual_check`, and those gates flipped from `manual_check` to `command` in the
       contracts. Gate: must-fail fixture per obligation + a `./scripts/check` step.
-- [ ] **META-148c** — the derivation's historical cases run as fixtures: F-076, F-087, F-093,
-      F-095 each as a case that fails against the pre-ADR-0010 shape and passes against the
-      derived one. Gate: a `./scripts/check` step; red before, green after.
+- [x] **META-148c** — **absorbed, not skipped.** The derivation's historical cases already run
+      as by-execution `./scripts/check` steps, landed by the two units before it: step 6b *the
+      document window (F-076, F-058, 8 cases)* and *the document obligations by execution
+      (F-087, F-093, F-095, 8 cases)*, both proved non-vacuous against the pre-change scripts.
+      Re-authoring them here would put one assertion in two places. What is genuinely left of
+      this unit — **F-053's class as the lifecycle-state input** — is a status decision, not a
+      fixture, and moves to META-149.
 - [ ] **META-149** — findings statuses settled from the derivation, with resolving citations:
       F-076, F-087, F-093, F-095, F-053, F-092, F-057, F-058.
       Gate: no stale status; `./scripts/check` step 17 green.
