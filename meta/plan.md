@@ -511,10 +511,16 @@ Format of each line: **unit** — scope — the gate that closes it.
       threshold (rest-time or unanswered rounds, stated in `pipeline.yaml`), who declares E4,
       and the DE-style ending statement. Derivation only.
       Gate: E4's row in ADR-0006 §1 reconciled, not contradicted.
-- [ ] **META-151** — the mechanism: `pipeline.yaml` threshold, `spec/dor-dod.md` E4 rows,
-      `review-close`'s contract + procedure, `scripts/engagement-state` /
-      `scripts/check-epic-signoff` where E4 must be decidable. Re-render.
-      Gate: `./scripts/check` green; version bumps.
+- [ ] **META-151** — the mechanism, part 1 — the model on paper: `ids-and-statuses.md` §3.5's
+      and ADR-0006 §1's E4 rows amended for the silence route, `question.md`'s new
+      `status: abandoned`, `dor-dod.md`'s DE7/DE8 E4 form, `workspace-layout.md`'s
+      `tracker/waiting/`, and `pipeline.yaml`'s `termination.silence` block plus the two
+      transition rows the derivation found missing. Gate: `./scripts/check` green.
+- [ ] **META-151b** — the mechanism, part 2 — the programs: the waiting-log writer,
+      `engagement.py` / `engagement-state` / `check-epic-signoff` / `validate-workspace`, `next`
+      step 3 and its `silence-is-recorded` gate, `review-close` step 10. Re-render.
+      Gate: `./scripts/check` green; version bumps; the threshold read from `pipeline.yaml` by
+      all three consumers, proved by execution.
 - [ ] **META-152** — `fixtures/abandoned-engagement/` exercising the E4 rows end to end, plus
       its `./scripts/check` step. Gate: the fixture fails before the mechanism and passes after.
 - [ ] **META-153** — harness (separate commit): a sim job that legitimately declines to answer

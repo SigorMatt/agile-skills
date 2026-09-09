@@ -10,38 +10,49 @@ sha, `./scripts/check` or the unit's fixture) → advance this file.
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## CLUSTER 1 IS COMPLETE at f474027 — 34 steps green
-
-`./scripts/check: all steps passed`; `findings citations resolve (49 cited)`; 82 codes
-unchanged; selftest 290. The document-as-deliverable derivation is built, specified, contracted,
-enforced, fixtured and settled in the ledger. Cluster 2 opens now.
+## The gate is GREEN at 94606f5 — 34 steps. Cluster 1 complete; cluster 2 derived.
 
 ## Current unit
 
-**META-150** — `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`. Derivation only.
+**META-151** — the E4 mechanism, part 1: the model on paper.
 
-Nothing in this pipeline can currently declare a stakeholder gone. E4 (`abandoned`) is a legal
-ending in `spec/ids-and-statuses.md` §3.5 and in ADR-0006 §1, and it is **fixture-only** — the
-ROADMAP §2 stamp records E2 and E4 as never executed. Derive:
+ADR-0011 §7 *"The changes this obliges, named"* lists them file by file. This unit takes the
+spec and `pipeline.yaml` half; META-151b takes the programs.
 
-1. **A silence threshold** — measured in rest-time or in unanswered rounds, **stated in
-   `pipeline.yaml`** so the orchestrator and the gate cannot disagree about it (the same
-   argument `ids-and-statuses.md` §3.5 makes for `scripts/engagement-state` being a program).
-2. **The abandonment decision, owned by `review-close`** — an ending statement listing
-   delivered children and orphaned ones **by ID**, DE-style, mirroring E2/E3.
-3. Where E4 differs from E3: E3 is *the stakeholder did not accept*; E4 is *the stakeholder
-   never answered*. Both leave children not `done`. Say what distinguishes them in the record,
-   and how a reader tells them apart later.
+- `spec/ids-and-statuses.md` §3.5's E4 row and `meta/adr/ADR-0006-termination-model.md` §1's
+  E4 row — **amended**: E4 gains a **second route**, silence, alongside withdrawal. ADR-0006 is
+  a standing ADR: repair it the legal way (`spec/doc-header.md` §4b, `## Corrections`), do not
+  rewrite its decision.
+- §3.4's `done → open` row: condition widened to §3.4's own prose (*a child item filed after
+  closure*), so a **returning** stakeholder's request has a legal way back in.
+- `spec/question.md` §2/§3 — the new `status: abandoned`, with an **empty** `## Answer`. Forced:
+  leaving questions open deadlocks `next` step 3 for ever, and `answered`/`deferred` both assert
+  a reply arrived.
+- `spec/dor-dod.md` — DE7/DE8's E4 form is **asked, not answered**; DE4's trigger becomes *after
+  the ending is determined* (this amends ADR-0010 §4.3 — say so).
+- `spec/workspace-layout.md` — `tracker/waiting/<EP-ID>.md`, the append-only halt log.
+- `methodology/pipeline.yaml` — the `termination.silence` block
+  (`threshold_rounds`, default **3**), and **two new transition rows**, both F-050's shape found
+  by derivation rather than by a run: `awaiting-answer → blocked` (`review-close`,
+  work-item/bug — `awaiting-answer` is not suspendable, so the generic impasse row cannot reach
+  it) and `awaiting-answer → done` (`review-close`, epic, gated).
 
-- Done when: the ADR exists in the ADR-0006 shape, E4's row in ADR-0006 §1 and
-  `ids-and-statuses.md` §3.5 are **reconciled, not contradicted** (if the derivation changes
-  what E4 means, say so and amend explicitly), the enforcement boundary is stated per obligation,
-  `./scripts/check` green, journalled, committed AND pushed.
-- Next units: **META-151** (the mechanism: pipeline.yaml, dor-dod.md, review-close,
-  engagement-state, check-epic-signoff), **META-152** (`fixtures/abandoned-engagement/`),
-  **META-153** (harness — separate commit).
+- Done when: all of the above land, revisions rows appended, `./scripts/check` green,
+  journalled, committed AND pushed.
+- Next units: **META-151b** (the programs), **META-152** (`fixtures/abandoned-engagement/`),
+  **META-153** (harness, separate commit).
+
+## A finding ADR-0011 surfaced and correctly declined to file — the next findings pass owes it
+
+`next` step 3 halts on **any** open human-addressed question, while `spec/question.md` §2 says an
+elicitation *"must not stop the loop"*. Both cannot hold; today the first wins. Consequence: an
+unanswered elicitation halts the workspace and — because rest requires no open question anywhere
+— makes **every** ending unreachable, **E1 included**. ADR-0011 §6 records it with both
+citations. It is adjacent to **F-097** (cluster 5, META-162) and must be filed with an F-number
+by whichever unit gets there first. Do not lose it.
 
 ## Done this session
+
 
 
 
@@ -138,6 +149,32 @@ ROADMAP §2 stamp records E2 and E4 as never executed. Derive:
   execution), **F-102** (obligation 10, open and *known, derived and accepted*), **F-103** (a
   universal carried by a bare plural is recognised by nothing — with a correction that
   ADR-0010's own illustration of it is wrong, because `each` IS in `QUANTIFIER_RE`).
+- **META-150** — `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`, 627 lines
+  (**94606f5**). **The threshold is a *silent round***: one orchestrator execution that ended at
+  *waiting on the human* and observed **no inbound change** since the previous such execution.
+  Inbound = only what a stakeholder can change. Default **3**, in `pipeline.yaml` as
+  `termination.silence.threshold_rounds`, read by all three consumers (`next`,
+  `engagement-state`, `check-epic-signoff`) — because two of them disagreeing is F-045's
+  mechanism. Resets on **any** inbound change including a partial answer and a deferral (it
+  measures presence, not compliance — F-028: a deferral is a reply); never resets on anything we
+  write. Rejected: **wall-clock** measures how long the pipeline was switched off, so it is wrong
+  in **both** directions; **turns** are the harness's unit and importing one puts the harness
+  inside the contract it exists to grade (ADR-0005). The count is **derived** from an append-only
+  log `tracker/waiting/<EP-ID>.md` — the trailing run of equal inbound digests (ADR-0003's
+  no-counter argument) — the halt is recorded **before** the state is read, and **the reader
+  never writes**, because `engagement-state` is consulted by the gate and by `review-close` and a
+  counting reader would advance the clock by being asked.
+  **`review-close` declares E4**; the ending statement is **a document, not a question** (there
+  is nobody to address) — `## Ending statement` in `review.md`, mirrored in the epic's
+  `## Notes`. Children classify from status alone: delivered / dropped earlier / blocked earlier
+  / **orphaned, in flight** / **orphaned, never started**; orphans move to `blocked` with reason
+  prefix `orphaned by E4:` and take **no `outcome` at all**, because the validator makes outcome
+  present *iff* `done`. **E3 vs E4 in one test: did the stakeholder's own words arrive?** The
+  `done`/`blocked` asymmetry is justified, not amended — `blocked` means *a human must act*,
+  which at E4 is a standing instruction to wait for nobody, and `done` on an epic is the one
+  state in this pipeline that reopens, so the ending most likely to be wrong is the only
+  undoable one. **F-060 is not a dependency**: abandonment is only ever declared against an open
+  ask, and F-060's case is the opposite one.
 
 ## Standing instructions (still in force)
 
