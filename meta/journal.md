@@ -4830,3 +4830,106 @@ recall is a reading, not a number, and the report says which.
   is what F-024 exists for).
 - **Artifacts:** `meta/findings/FINDINGS.md` (append-only: eight status updates, four new
   findings F-100..F-103), `meta/journal.md`.
+
+## 2026-09-10 — META-150 — ADR-0011: stakeholder silence, and the threshold that makes E4 reachable
+
+- **Unit:** META-150
+- **Inputs read:** `meta/BUILDER-5-PROMPT.md` (cluster 2); `meta/adr/ADR-0006` in full (§1, §2, §4,
+  §5) and `ADR-0010` (header, §3, the enforcement boundary, §7–§8) as the house style;
+  `spec/ids-and-statuses.md` §3.1–§3.6, §4, §5, `spec/dor-dod.md` §4 and its DE commentary,
+  `spec/question.md` in full, `spec/work-item.md` §1; `methodology/pipeline.yaml`,
+  `methodology/skills/next/` and `methodology/skills/review-close/`; `scripts/engagement-state`,
+  `scripts/lib/engagement.py`, `scripts/check-epic-signoff`, `scripts/validate-workspace`
+  (`QUESTION_STATUS`, the outcome rules, `check_epics`); `harness/run_iteration.py`'s `decide`,
+  `scan_project` and the stop tables; the `ghosting-founder` persona and the `iteration-5b-droll`
+  probe; `meta/findings/FINDINGS.md` F-060, F-008, H-008, and F-021/F-028/F-033/F-045/F-046/F-050
+  for lineage; `meta/ROADMAP.md` §2's stamp. **Iteration 5's probe was not opened** — it is the
+  held-out calibration engagement and this unit had no reason to touch it.
+- **Decisions:**
+  - **E4 as written could only be reached by a stakeholder who speaks in order to leave.** ADR-0006
+    §1's E4 is *withdrawal* — a request, or an answer to the termination question. Silence has no
+    route at all, and cannot acquire one through rest, because rest requires that no question
+    anywhere is open and an unanswered question is open by definition. So an engagement with a
+    silent stakeholder is `active` for ever, `review-close` is never dispatched, and DE7 is never
+    evaluated. **Amends** ADR-0006 §1 and `ids-and-statuses.md` §3.5: E4 gains a second route.
+  - **The threshold counts the pipeline's own asks, and the argument against the alternatives is
+    the unit's real content.** Wall-clock measures how long the *pipeline* was switched off — it
+    declares a patient stakeholder abandoned after a holiday and never fires inside an hour-long
+    harness run, so it is wrong in both directions rather than in one. A turn is the harness's unit
+    and importing it would make the methodology depend on the thing built to grade it. What is left
+    is **a silent round: one orchestrator execution that ended at *waiting on the human* and
+    observed no inbound change since the previous such execution.** Defined against the **halt**,
+    not against the question set, so it survives whichever way the step-3 scope question is later
+    settled.
+  - **The count is derived from an append-only log, never stored.** `tracker/waiting/<EP-ID>.md`,
+    one row per halt, each carrying a digest of the *inbound* state only — every human-addressed
+    question's status/`answered-at`/`## Answer`, and every request. The count is the trailing run of
+    equal digests. ADR-0003's refusal of a counter file, applied again; the `round` column is for
+    the reader and hand-editing it cannot make an abandonment happen sooner.
+  - **Record the halt before reading the state, and never the other way round.** A pass that read
+    first would decide on a picture excluding itself and would leave the declaring halt unrecorded.
+    And **the reader never writes**: `engagement-state` is consulted by `check-epic-signoff` and by
+    `review-close`, so a counting reader would advance the clock by being asked.
+  - **Default `threshold_rounds: 3`, in `pipeline.yaml`**, for §3.5's reason — three consumers now
+    read it and any two disagreeing is F-045's mechanism. **Every** inbound change resets it,
+    including a partial answer and a deferral (F-028: a deferral is a reply), and **nothing we
+    write** resets it, or a pipeline that keeps asking could never reach the threshold.
+  - **E4's ending statement is a document, not a question.** Same content as the sign-off's —
+    goal restated, every child named by ID, DE-style — in `review.md`'s `## Ending statement` and
+    the epic's `## Notes`, because there is nobody to address. Children are classified from status
+    alone: delivered / dropped earlier / blocked earlier / **orphaned, in flight** / **orphaned,
+    never started**.
+  - **An orphan's `outcome` becomes nothing at all.** Orphans go to `blocked` (honouring §3.5)
+    with a history reason prefixed `orphaned by E4:`. The tempting answer — `outcome: dropped` on
+    each — is refused by the validator itself: outcome is present **iff** `status: done`, so it is
+    either `item.outcome.premature` or a claim that the item concluded.
+  - **A fourth question status, `abandoned`, is forced rather than chosen.** Leaving the questions
+    `open` is fatal, not untidy: step 3 halts the whole workspace on open human questions, so an
+    abandoned engagement's leftovers would deadlock everything for ever — the deadlock would
+    survive its own ending. `answered`/`deferred` both assert a reply arrived. `abandoned` requires
+    an **empty** `## Answer`.
+  - **The E3/E4 asymmetry stands, and the justification is recoverability.** `blocked` means only a
+    human can move it, which is true at E3 and a standing instruction to wait for nobody at E4;
+    `done, outcome: dropped` says the true thing, and a `done` epic is the one item state in this
+    pipeline that reopens. The ending chosen for the case most likely to be wrong is the only one
+    that can be undone. **The cold reader's test: did the stakeholder's own words arrive?** E3 has
+    them in a `## Answer`; E4 has an empty one and a log of the occasions when nothing came.
+  - **F-060 is touched and is not a dependency**, and the boundary is a derived rule:
+    **abandonment is only ever declared against an open ask.** F-060's case — an item parked on a
+    promised artifact with nothing open — is the one E4 cannot see and must not act on. The forward
+    note is written into the ADR so the next author need not invent it: whatever channel makes the
+    pipeline halt on the human is an ask, and its halts are silent rounds.
+  - **Two transition rows are missing, both F-050's shape, found by derivation and not by a run:**
+    `awaiting-answer → blocked` (`review-close`, work-item/bug) for an orphan suspended on a
+    question nobody will answer — `awaiting-answer` is **not suspendable**, so the generic impasse
+    row cannot reach it — and `awaiting-answer → done` (`review-close`, epic, gated) for the epic
+    itself when the silence began after the sign-off was filed.
+  - **DE7 and DE8 are weakened for exactly one ending**, and the ADR says so under costs rather
+    than in passing: *asked and answered* becomes *asked, and the ask stood unanswered for the
+    threshold*, decided by the pending move the way F-033's `--resolving` already decides the
+    deferral branch. DE4's trigger moves from *after the sign-off answer arrived* to *after the
+    ending is determined*, because at E4 no answer arrives (ADR-0010 §4.3).
+  - **The false-positive cost is answered with five concrete controls, not with a reassurance:**
+    every inbound change resets; the ending is the recoverable one and `tracker/requests/` is the
+    stakeholder's own way back; the log holds the arithmetic with timestamps so a reader can
+    challenge it; the statement claims only that we asked and nothing came; the threshold is
+    configuration. And the cost that has no control — **the rate at which rounds accrue is set by
+    whoever runs the loop and no program can check it** — is stated as the price of counting asks
+    instead of time.
+  - **Enforcement boundary: ten of fourteen obligations are `[auto]`, two `[skill]`, two neither** —
+    and obligation 10, *the stakeholder is actually gone*, is named as the premise the other
+    thirteen serve rather than as one row among them. Obligation 11 (is the threshold right for
+    this workspace's cadence) is an operator's calibration and is admitted as one.
+- **Questions raised:** one contradiction surfaced and **not filed here**, because filing is not
+  this unit's: `next` step 3 stops the loop on **any** question with `addressed-to: human` and
+  `status: open`, while `spec/question.md` §2 says of an elicitation *"`blocking` MUST be `false`.
+  It must not stop the loop — it is not a thing anyone is waiting on."* Both cannot hold, and today
+  the first wins: an unanswered elicitation halts the workspace, and — since rest requires no open
+  question anywhere — makes **every** ending unreachable, E1 included. ADR-0011 §6 records it with
+  both citations and explicitly declines to fix it; what E4 changes is that the deadlock now ends
+  honestly instead of never. It is reported to the orchestrator as a finding candidate.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, 34 steps, `findings citations
+  resolve (49 cited)` unchanged. Docs-only change: one new file under `meta/adr/`, no spec, script,
+  contract, fixture or harness file touched — those are META-151/152/153.
+- **Artifacts:** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` (627 lines),
+  `meta/journal.md`.
