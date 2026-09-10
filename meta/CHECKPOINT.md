@@ -10,30 +10,31 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 715ef26 — 40 steps; 108 codes; selftest 354; 61 citations; harness 110
+## The gate is GREEN at 83541cf — 41 steps; 108 codes; selftest 354; 62 citations; harness 110
 
-**CLUSTERS 1, 2 AND 3 ARE COMPLETE.** Cluster 4 — ending contracts — opens now.
+**CLUSTERS 1–4 ARE COMPLETE.** Cluster 5 — planning/criteria and the stakeholder protocol —
+opens now.
 
 ## Current unit
 
-**META-159** — cluster 4: **F-085, F-086, F-061**.
+**META-160** — cluster 5, part 1: **F-089, F-090, F-088**.
 
-- **F-085** — one contract serves two subjects, and at an engagement's ending half of it is
-  undefined. `review-close`'s gate list gains an **epic-subject column**: *"skipped, an epic has
-  no branch"* becomes the contract's answer rather than a thing each execution improvises.
-  Note this lands on top of META-154, which made `transition` compose the whole `**Gates:**`
-  bullet from the contract and added the `pending` verdict — so the epic-subject column and that
-  composition must agree. Read META-154's work before designing this.
-- **F-086** — the acceptance is asked for **before** the epic's Definition of Done is applied,
-  so a late finding invalidates an acceptance already given. Fix: **DE1–DE6 applied before the
-  sign-off is filed; DE7 alone waits for the reply.** Check this against ADR-0011's E4 work,
-  which put an ending statement in front of a sign-off that will never be answered.
-- **F-061** — a conditional acceptance costs a full engagement cycle, and the stakeholder
-  noticed. The fix is **truth-in-labelling, one sentence in `spec/question.md` §2**: option B's
-  consequence line must say what actually happens — the epic stays open, the follow-up is built,
-  a fresh sign-off follows. F-061 is an **open observation** whose mechanism the retro found;
-  read its addendum. **Do not over-build this one** — the mission specifies one sentence, and
-  the finding's own history is that the cost was hidden by a label, not by a missing mechanism.
+- **F-089** — a criterion that **counts** artefacts is a criterion that will be amended after
+  the fact. Criteria must **name** artifacts rather than count them, and a wanted count is
+  **measured first**. (This session has twice been saved by measuring before scoping — the same
+  discipline, now written into a contract.)
+- **F-090** — work recorded in an artifact for a skill that is dispatched only by status or by
+  an open question is **inert**. An accepted gap naming an owner must become **dispatchable** —
+  an open question at acceptance time.
+- **F-088** — a claim audit is passed by an example that **could not have falsified** the claim.
+  An audit example must be able to falsify; the audit row records **why** it could. This is the
+  same disease as F-076 (*a window empty by construction*) and F-052/F-066 (*a gate reporting a
+  scope it did not have*) — read META-148's `scope.py` fourth state before designing it, and
+  reuse rather than reinvent if it fits.
+
+Note F-088 lands on the **audit row**, which META-146 defined in `spec/doc-header.md` §4a and
+META-148b gave a labelled form (`Enumeration:` / `Set:` / `Enumerated by:` / `Members:` /
+`Verdict:`). Extend that form; do not start a second one.
 
 ## Discipline reminders that have paid off this session
 - Must-fail fixtures both ways; a `./scripts/check` step **proved non-vacuous in the strong
@@ -48,8 +49,8 @@ Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
 - Done when: three fixed, fixtures where a rule changed, gate green, three statuses updated with
   resolving citations, journalled, committed AND pushed.
-- Next: cluster 5 (**META-160** F-089/F-090/F-088, **META-161** F-082, **META-162** F-097),
-  cluster 6 (**META-163**), staging (**META-164**), the report (**META-165**).
+- Next: **META-161** (F-082), **META-162** (F-097 + F-104's deadlock), cluster 6
+  (**META-163**), staging (**META-164**), the report (**META-165**).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -103,7 +104,7 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   predicate restored → five failures. A false negative removed: E4 **by withdrawal** now
   recognised. **No toolkit change needed or made.**
 
-### Cluster 3 — enforcement mechanics — in progress
+### Cluster 3 — enforcement mechanics — COMPLETE
 - **META-154** the `**Gates:**` bullet (**1ebba5a** + **e5a9bb8**), 37 steps, 97 → **102** codes,
   selftest 320. `transition` now **composes the whole bullet from the contract** — one line per
   gate, in contract order, verdict from the run, evidence from the caller — so F-091's
@@ -192,4 +193,31 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   step's first run *is* the finding) and `715ef26` is green; the reverse order would have filed
   the tombstone before the instrument that found it, citing a sha that did not exist — F-024's
   trap.
+
+### Cluster 4 — ending contracts — COMPLETE
+- **META-159** F-085/F-086/F-061 (**bb76d7d** + **83541cf**), 41 steps, 108 codes unmoved.
+  **F-085**: a gate row gains `applies_to` + `not_applicable`, reusing `pipeline.yaml`'s scoping
+  key, syntax and meaning; `run-gate` **does not run** the gate on a type the row leaves out and
+  `transition` composes the line from it. **No third verdict word** — a contract-declared
+  non-subject is `skipped` reached *deliberately* rather than through a null placeholder; one
+  fact, one word, and what changed is only who noticed it. The load-bearing case:
+  `tests-pass-on-the-merge-result` resolves `{{commands.test}}`, which an epic **has**, so it
+  **ran the suite and reported PASS at an ending that merged nothing** — iteration-4b's worker
+  recorded it skipped, `run-gate` disagreed by running it, and they had to correct their own
+  entry. Now unwritable. **F-086**: `dor-dod.md` §4a — DE1/2/3/5/6 and DE4's first half **before**
+  the engagement's account of itself; DE4's restatement, DE7, DE8 after. It **is** ADR-0011's E4
+  ordering, unified by one argument: a late DE6 finding invalidates an acceptance at E1–E3, and
+  at E4 it files a bug, which is a child, which the `## Ending statement` must name — the same
+  audit broken by a second route. **F-061**: one sentence, as specified. **No mechanism needed
+  and none filed** — the mechanism worked (it reopened, built and asked again); the *label* lied,
+  and a gate here would have to decide whether prose is true. **Deliberate non-scoping recorded**:
+  `epic-sign-off` self-passes on a work item — the same shape from the other side — but scoping
+  it would flip every work-item entry from `pass` to `skipped` across banked fixtures for
+  something F-085 did not ask. **F-086 has no fixture, and the reason is stated rather than
+  skipped**: `definition-of-done` is a `manual_check`, so its verdict is the caller's word by
+  design (F-091), and nothing in a workspace distinguishes a checklist applied before an
+  acceptance from one applied after. **F-085's section-3/4 half was already fixed** before the
+  unit and is recorded, not re-claimed. Fourth unit running to catch a vacuous case of its own:
+  inverting the scoping to fire everywhere failed 5 observations, including *"it skips everywhere
+  and checks nothing"*.
 
