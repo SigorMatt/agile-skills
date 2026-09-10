@@ -10,54 +10,37 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 8e61fdb — 44 steps; 108 codes; selftest 356; harness 110
+## The gate is GREEN at c662d8c — 45 steps; 108 codes; selftest 356; harness 110
 
-**CLUSTERS 1–5 COMPLETE. STAGING VERIFIED.** Remaining: cluster 6's triage, then the report.
+**ALL SIX CLUSTERS COMPLETE. STAGING VERIFIED.** One unit remains.
 
-## Current unit
+## Current unit — the last
 
-**META-163** — cluster 6: **every remaining open finding gets a decision.** No status left
-stale. Fix here only if small and adjacent; otherwise defer behind a **named** gate, or reject
-with a reason.
+**META-165** — `meta/FINAL-REPORT-5.md`, and the **ROADMAP §4 stamp**.
 
-### A trap in this ledger, found while preparing this unit — read it first
+The mission's acceptance list, which the report must answer line by line:
 
-`meta/findings/FINDINGS.md` is **append-only**, so a resolved finding still carries its
-**original** `Status:` line and the new one is appended **below**. A naive grep for
-`Status: open` therefore returns findings that were fixed this session — F-076, F-080, F-085,
-F-086, F-087, F-091, F-092, F-093, F-094, F-095, F-096 and F-099 all still show `open` on their
-first status line and are all resolved. **Read the LAST status bullet of each entry, not the
-first.** That the ledger cannot be read correctly by the obvious command is itself worth a
-finding — decide whether to file it.
+- [x] `./scripts/check` green; every enforcement change carries its must-fail fixture; the
+      derivation's historical cases (F-076/F-087/F-093/F-095/F-053-class) run as fixtures.
+- [x] E4 executes end to end in fixtures and harness tests (the run itself is 5b's job).
+- [x] Findings statuses current; F-099's sweep results handled honestly.
+- [x] Both regression configs provision-verified and torn down.
+- [ ] `meta/FINAL-REPORT-5.md` — **this unit.**
 
-### Genuinely undecided, as of 8e61fdb
-- **Filed this session, never triaged:** F-100, F-101, F-102, F-103, F-105, F-106, F-107,
-  F-108, F-109, F-110, H-020. (F-102 and F-103 already carry *known, derived and accepted*;
-  confirm that is still the right standing rather than restating it.)
-- **Open from before and untouched this session:** F-098 (the toolkit's own ADRs and a
-  consumer's share one citation form and one number space).
-- **Standing deferrals whose gates must be re-confirmed, not assumed:** F-008, F-010, F-030,
-  F-036, F-043, F-051, F-053, F-060, F-068. Several gates moved this session — ADR-0010 consumed
-  F-053's class as input, ADR-0012 settled the halt question next door to F-008/F-060, and the
-  *document-as-deliverable* class closed. **A deferral whose gate has been met and not noticed
-  is how a backlog rots** — META-149 said so about F-057/F-058 and was right.
-- **From META-164, journalled but not filed, awaiting an F-number decision:** `install.py:174`
-  copies `adapters/claude-code/hooks/` wholesale with `shutil.copytree`, and that directory
-  carries a **git-ignored** `__pycache__/*.pyc` left by this repo's own gate. Every consumer
-  install therefore receives a `.pyc` compiled on the builder's machine. Established, not
-  assumed: `git ls-files` lists two files, `git check-ignore -v` → `.gitignore:1:__pycache__/`,
-  and a fresh install into an empty temp dir reproduces it. **Severity low** — the project's own
-  `.gitignore` covers it, so what git tracks in a provisioned project is unaffected; what is
-  affected is that **a fresh install's contents depend on untracked local state**, so
-  `--uninstall`'s "remove exactly what was installed" varies by machine. Also: a second
-  provision always reprints `wrote .gitignore` because `provision.py` step 2 and
-  `workspace-init` step 4 each write it; it converges (md5-proved) but the order is load-bearing
-  and undocumented.
+The report must carry, per the mission: the derivation's decisions; what each cluster changed;
+versions bumped; the F-099 sweep's yield; **explicit confirmation that iteration 5 was not run
+or read**; and the recommended launch order (expected: iteration 5 → owner review → retro
+comparison → 5b).
 
-- Done when: **every** finding's last status is current and dated; each undecided one is fixed,
-  deferred behind a named gate, or rejected with a reason; gate green; journalled, committed
-  AND pushed.
-- Next: **META-165** — `meta/FINAL-REPORT-5.md` + the ROADMAP §4 stamp.
+**Say what is not proven.** The house standard is FINAL-REPORT-4, which said in three places
+that a procedure fix made after reading a miss is not a measurement. The equivalents here:
+**no live run has produced an E4** — everything is fixture and unit test; **nothing in cluster 1
+has been exercised by a real engagement**; the eight `[auto]` obligations each decide **less**
+than the `manual_check` text they replaced; and obligation 10 is claimed by nothing.
+
+- Done when: the report exists, the ROADMAP carries its §4 stamp, `./scripts/check` green,
+  journalled, `meta/plan.md` ticked, committed AND pushed.
+- After this unit: **the session is done.** Update this checkpoint to say so.
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -309,4 +292,37 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   *exercised* — stated honestly rather than glossed. **Neither iteration was run**;
   `run_iteration.py` was never invoked in any mode; the held-out probe was **not read**, its
   existence established by `os.path.isfile` + `getsize` only.
+
+### Cluster 6 — triage — COMPLETE
+- **META-163** (**c662d8c**), 45 steps, 108 codes unmoved. **130 entries read by last status,
+  133 after filing, 133 current**: 108 fixed, 3 tombstones that had carried **no status at all**,
+  1 rejected, 21 open — **none saying only "open"** (17 deferred behind a named gate, 2
+  known-derived-and-accepted with the standing *confirmed* rather than restated, 1 open-unstarted
+  -sequenced, 1 re-gated on scope). 24 status blocks appended; nothing rewritten.
+  **Two deferrals were already fixed and nobody had noticed**: **F-053 and F-043**, at
+  **8804bd7** (META-156), incidentally, while it was fixing F-083's *ordering* — and
+  **META-149's own status on F-053, written this session, says "`transition` still has no
+  `--outcome`"**, true when written and false seven units later; corrected by appending.
+  **F-010's gate has been met since 2026-08-30** — its gate *is* ROADMAP §2, whose stamp that day
+  named F-010 among the opened tracks; it read `deferred (gated)` for eleven days.
+  **The half-written-record class's gate was literally met this session** (META-144); F-036 is
+  one print statement and was **deliberately not taken**, because a message telling the caller to
+  hand-write a journal entry documents the path F-051 exists to delete. **H-015's blocker was
+  gone** (no run in flight all session) and it was re-gated honestly on scope.
+  **F-098 deferred behind a named one-sweep unit, price measured**: 97 bare `ADR-nnnn` citations
+  over 11 numbers, **37 written this session**, surface 60 → 97 — and the collision is already
+  exhibited in-repo, since `examples/toy-project` holds a real, different ADR-0001…ADR-0010.
+  **Item D filed as F-111 and H-021, both differing from the report it was handed**: the
+  `__pycache__` leak is **wider** (13 `.pyc` from **two** ignored dirs, not one from one) and its
+  reported consequence **does not survive the code** (`uninstall()` rmtree's the shared dir
+  wholesale), so the narrower true claim was filed instead; and the `.gitignore` reprint is **not
+  cosmetic** — `provision.py` *writes* where `workspace-init` *appends*, so it **destroys** what
+  the project added, proved by inserting `/build/` between two provisions.
+  **The trap is F-112, filed and fixed**, because its subject *is* this unit: the naive grep names
+  24 entries of which **13 are already resolved**, **misses F-076 entirely**, is blind to F-061's
+  `###`-heading status, and 3 entries had no status at all — wrong in both directions and blind
+  to one form. New step 17c requires every entry to carry a status and the header to state that
+  the **last** one is current; proved non-vacuous three ways. **The orchestrator's own account of
+  the trap was hearsay too** — its list was 12, missed F-057/F-058/F-061/H-020, and wrongly named
+  F-076. META-153b's lesson in a third place.
 
