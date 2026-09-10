@@ -10,202 +10,101 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at a98dbd0 — 36 steps; 55 findings citations; harness self-test 110
-
-**CLUSTERS 1 AND 2 ARE COMPLETE.** Cluster 3 — enforcement mechanics — opens now.
+## The gate is GREEN at e5a9bb8 — 37 steps; 102 codes; selftest 320; 56 citations; harness 110
 
 ## Current unit
 
-**META-154** — F-091 (the anchor) **and F-080 together**: they are one bullet.
+**META-156** — cluster 3's three record-shape fixes: **F-081, F-083, F-084**.
 
-**F-091** — `transition` runs the acting skill's gates, prints a report, and appends the body
-the caller wrote; the body's `**Gates:**` bullet is composed **before** the run, and nothing
-compares the two. Two entries in one engagement recorded a verdict the program had
-contradicted. Direction on file: *the tool that runs the gates writes their verdicts into the
-entry it appends, the way it already owns the `**Status:**` bullet; the worker supplies the
-evidence sentence, not the pass or fail.*
+- **F-081** — the close-before-merge order leaves the merge unrecordable in the entry that
+  reports it. `review-close` closes the item, *then* merges; the merge sha is created **after**
+  the closing entry is written, so the entry that reports the merge cannot name it. Give the sha
+  a sanctioned home. (Related and already filed: **F-035**, `check-commit-refs` reports a merge
+  that never happened.)
+- **F-083** — `review-close`'s recorded step order fails its own `workspace-valid` gate. Make
+  the legal order legal.
+- **F-084** — a document's version row is a self-reported field with nothing behind it; match
+  the rows against the executions that claim them.
 
-**F-080** — the same bullet from the other side: `implement`'s opening entry is required to
-record *"`**Gates:**` recording that the completion gates have not run yet"*, while
-`spec/journal-and-history.md` §2.2 admits only `pass`, `fail` and `skipped`. Eleven opening
-entries used three vocabularies. A hard gate, `commits-reference-the-item`, is recorded as
-**fail, not blocking** on a move that proceeded — it fails at the opening transition of every
-`implement` execution, because the branch it inspects has no commits yet. Direction on file:
-**a fourth verdict** for a gate that will run later in the same execution, and the check that
-reads the bullet **compares its gate names against the contract of the skill in the heading**.
-F-080 also asks a question the derivation must answer: *whether a gate that cannot hold at a
-skill's opening transition belongs in that entry at all.*
+Each ships its must-fail fixture. F-083 in particular is F-014's family — *the gate runs against
+the pre-move workspace* — so check whether the fix belongs in the order or in when the gate runs,
+and say which and why.
 
-Note the interaction with F-049, already fixed: `transition` writes the `**Status:**` bullet and
-accepts a body without one, while standalone `journal-entry` still requires it. The `**Gates:**`
-bullet should end up with the **same** ownership story, and F-049's fixture shows the shape.
+- Done when: three fixes, fixtures both ways, a `./scripts/check` step proved non-vacuous,
+  gate green, the three statuses updated with resolving citations (a second commit if a sha
+  must be cited), journalled, committed AND pushed.
+- Next units: **META-157** (F-094, F-096), **META-158** (the F-099 sweep), then cluster 4
+  (**META-159**), cluster 5 (**META-160/161/162**), cluster 6 (**META-163**),
+  staging (**META-164**), the report (**META-165**).
 
-- Done when: the runner owns the verdicts, the fourth verdict exists in
-  `spec/journal-and-history.md`, the bullet is compared against the contract, must-fail fixtures
-  both ways, a `./scripts/check` step proved **non-vacuous** against the pre-change behaviour,
-  gate green, findings statuses for F-091 and F-080 with resolving citations, journalled,
-  committed AND pushed.
-- Next units: **META-156** (F-081, F-083, F-084), **META-157** (F-094, F-096),
-  **META-158** (the F-099 sweep).
+## Done this session — one line per unit; the shas are the record
 
-## Done this session
-
-
-
-
-
+Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`.
 
 - **META-144** Phase VI planned (2c4b0b7, 0deafc0).
-- **CLUSTER 1 — document-as-deliverable — COMPLETE.** Full detail is in the ADR, the journal and
-  the ledger; the shas are the record.
-  - **META-145** `meta/adr/ADR-0010-document-as-deliverable.md`, 699 lines (**3701069**).
-    `doc-header.md` §5 does not hold, the claims gate **stays on `implement`** (F-076);
-    record-vs-deliverable is a property of **sentences**, not files; **K8** engagement-state
-    statements are **owned by the ending** (F-093); the **invalidation set** is a `plan` output
-    (F-087); quantified claims discharge only by member enumeration in the audit row (F-095);
-    `verify` decides ADR conformance, `review-close` checks the list is complete (F-092).
-  - **META-146** the two spec files carry it (**c1fbde8**); D13 new, marked `[skill]` honestly.
-  - **META-147** four contracts + `pipeline.yaml` + dist (**5e6434d**). **META-147b** `intake`
-    and `answer-questions` (**9adff0e**) — `intake` gets **no** `lint-claims` gate, because that
-    window would be empty by construction, F-076's shape in a new place.
-  - **META-148** the window (**5ae1539**): `scope.py`'s fourth state
-    *out-of-scope-by-construction* passes **with a mark**; `constrained()` takes the permission
-    knowledge from the caller, because **no diff can distinguish "nobody wrote a document" from
-    "nobody was allowed to"**. Proved non-vacuous: 5 of 8 cases failed against the old scripts.
-  - **META-148b** all eight `[auto]` obligations become real commands via
-    `scripts/lib/documents.py` + `lint-documents` (**a843114**); each decides **less** than the
-    `manual_check` it replaced, and says so. **Obligation 10 is not claimed** — a fixture holds a
-    loose K8 sentence no rule fires on, deliberately. Non-vacuity proved **twice**, the second
-    time with every rule body stubbed to `return`.
-  - **META-148c ABSORBED, not skipped** — its cases already run as by-execution steps from the
-    two units before it; re-authoring would put one assertion in two places.
-  - **META-149** the ledger (**f474027**), append-only proved mechanically (358 insertions, **0
-    deletions**), citations 43 → 49. Fixed: F-076, F-087, F-092, F-093, F-095, F-057, F-058 —
-    the last two saying **in those words** that their deferral's gate was met. **F-053 NOT
-    fixed**, consumed as input only. **META-148 and META-148b had filed contradictory reports;
-    META-148 was right**, established **by execution** — two hard gates on `implement` jointly
-    unsatisfiable, no legal repair but `--force`. Filed **F-100**; also **F-101** (a deliverable
-    document outside `docs/`), **F-102** (obligation 10, *known, derived and accepted*),
-    **F-103** (a bare-plural universal — with a correction that ADR-0010's own illustration of
-    it is wrong).
-- **CLUSTER 2 — E4 — in progress.**
-  - **META-150** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`, 627 lines
-    (**94606f5**). The threshold is a **silent round**, default **3**, in `pipeline.yaml`.
-    Rejected: **wall-clock** (measures how long the pipeline was switched off — wrong in **both**
-    directions) and **turns** (the harness's unit; importing it puts the harness inside the
-    contract it grades, ADR-0005). The count is **derived** from an append-only log, the halt is
-    recorded **before** state is read, and **the reader never writes**. Resets on a partial
-    answer and on a deferral (presence, not compliance — F-028). `review-close` declares E4; the
-    ending statement is **a document, not a question**, because there is nobody to address.
-    Orphans go to `blocked` with **no `outcome` at all**. **E3 vs E4 in one test: did the
-    stakeholder's own words arrive?** F-060 is **not** a dependency.
-  - **META-151** the model on paper (**877ee85**), gate green. **ADR-0006 was repaired by a
-    header pointer — `**Amended by:** ADR-0011` — and no `## Corrections` entry**, argued four
-    ways: neither correction kind fits (nothing in §1 is false or unsourced); §4b's own boundary
-    (*"if a reader would have to change any code…, it is a new decision"*) rules it out, and
-    stretching that condition **in the file its own ledger watches** would be this repo failing
-    F-067; a correction entry is structurally illegal there anyway (no change log, no
-    frontmatter); house precedent is forward declaration. **Three absolutes had to be amended
-    rather than deleted** — each was true of four endings and false once E4-by-silence exists.
-    *Ending while never having asked is still illegal*: E4 permits an ask with an **empty**
-    `## Answer`, never a missing ask. A near-miss caught by the library crosscheck: three new
-    `pipeline.yaml` scalars carried `: ` inside a plain scalar — `miniyaml` accepted them,
-    **PyYAML did not**.
-  - **META-151b** the programs (**4d1b7ce**), 35 steps, 82 → **97** codes (deliberate: 4
-    `question.abandoned.*`, 11 `waiting.*`; `EXPECTED-CODES.txt` updated in the same commit),
-    selftest 307, pipeline faults 8, shipped scripts 17. Bumps: `pipeline.yaml` 0.9.0, `next`
-    0.5.0, `review-close` 0.9.0.
-    **`scripts/record-halt` is a new script, not a mode of the reader** — a `--record` flag would
-    make "the reader never writes" a matter of which flag a caller passed, when
-    `check-epic-signoff` and `review-close` both read the count; a separate entry point makes the
-    separation structural. `next` invokes it as the `silence-is-recorded` hard gate at step 3(a),
-    **before** reading any verdict.
-    **The registry grew rather than taking a false triple**: an entry may name a *class* of move
-    (`from: any-non-terminal`, `to: terminal`, `actor: review-close`) and enumerate `satisfied_by`
-    pairs; `lint-skills` checks **coverage** per item type, with classes read off the statuses
-    table's own flags. **Pinning the actor is what makes it bite** — `awaiting-answer → blocked`
-    existed all along for `answer-questions`, so an actor-blind check would have called that
-    status covered while an orphan sat there with no move `review-close` could make. Fault 8
-    proves it.
-    **Threshold single-source proved by execution** (step 14b, 18 observations): the value is
-    moved 3 → 5 in a copy of `pipeline.yaml` and all three consumers move with it; stubbing the
-    reader to `return 3` names all three in the failure. The same step proves the reader leaves
-    the log byte-identical, and that an answer resets the count while our own writes do not.
-    **A rule tying an abandoned question to its epic's ending was considered and refused** —
-    `review-close` closes questions before it moves the epic and `transition` validates before
-    the move, so the rule would fail correct work: F-014's shape.
-    `review-close`'s procedure hit the **500-line rendered body limit**; what was cut is material
-    already in `spec/ids-and-statuses.md` §3.5a, replaced by a citation.
-  - **META-152** `fixtures/abandoned-engagement/`, both ways (**e9f8d79**), 36 steps, 97 codes
-    unchanged. `right/` is a **valid workspace** holding the three states E4 has to reach:
-    **EP-001** silence *before* rest, six children — one per §3.5a class — three orphans at
-    `blocked` with no `outcome`, two questions `abandoned` with empty `## Answer`, epic
-    `done`/`dropped`; **EP-002** silence *after* rest, the epic taking the new
-    `awaiting-answer → done` row; **EP-003** the moment *before* the declaration, verdict
-    `abandoned` and the gate correctly failing. All digests **computed**, not invented; EP-003's
-    is recomputed inside `./scripts/check` and required to match. Must-fail: a round short, an
-    orphan carrying an `outcome`, a sign-off `answered` with an empty body, an ending statement
-    omitting a child. **Non-vacuity proved in the strong form** — five deciding function bodies
-    stubbed, five distinct failures. It also surfaced **three defects in the mechanism, reported
-    and not bent around** — see *Owed to the findings ledger* above.
-  - **META-153** the harness half (**b845342**, a harness-only commit), self-test 74 → **105**
-    tests. The driver **asks** rather than infers: it runs the project's own `engagement-state
-    --all` and parses the verdict plus the two numbers in its silence sentence, so *"the
-    threshold was reached"* stays the toolkit's judgement. A test reads the driver's own source
-    with comments stripped and **requires `threshold_rounds`, `tracker/waiting` and
-    `pipeline.yaml` to be absent from it** — F-045's mechanism, refused structurally. The enabler
-    is that the silent-round count **survives the declaration**, being derived from the
-    append-only log. New terminal stop **`abandoned`**, checked **first** in
-    `engagement_terminal()`, because an E4 workspace otherwise reads as an impasse (orphaned
-    children) or as a delivery (a finished board whose sign-off nobody answered) — H-014's shape,
-    the most specific true thing wins. **Two moments, opposite handling:** verdict `abandoned`
-    but undeclared is **not a stop** — the ending is owed, and the turn goes to the **worker**,
-    never the sim, or the loop reproduces ADR-0011's Context (b) verbatim; verdict `ended` with
-    the threshold reached **is** the stop, with **no closing sim turn** — the one place E4
-    departs from H-007, because this ending *is* the recorded finding that there is nobody to
-    show it to. Scripted silence is classified from the **questions, not the exit code**, and
-    `scripted-silence` requires a `Withheld:` line **and** a `[PLANTED: …]` tag in that turn's own
-    SIM-LOG — silence without both is `unexplained-silence`, flagged as possibly a broken sim.
-    The sim skill's own checklist contradicted the persona (*"an open question whose `## Answer`
-    is still empty? Then you are not finished"*) and was outranked: skill 1.1.0 → 1.2.0, sim-turn
-    prompt 2 → 3. Non-vacuity proved **in both directions**: stubbing the recognition to return
-    nothing gives `'stalled' != 'abandoned'`; stubbing it to return everything gives
-    `'abandoned' != 'stalled'`.
-  - **META-153b** cluster 2's ledger (**bc21bce**), append-only proved (335 insertions, **0
-    deletions**), citations 49 → **54**, every sha checked with `git log -1` **and**
-    `git merge-base --is-ancestor`. Filed **F-104** (the elicitation deadlock), **F-105**
-    (`check-epic-signoff` refuses with a bare header), **F-106** (the gate passes a sign-off
-    claiming a reply it does not have), **F-107** (`rest reached at` printed under every
-    verdict), **H-020** (the driver's declared-E4 reading). It **corrected the orchestrator's
-    summary in three places by reading the code**: F-105's explanatory block is unreachable on
-    **every** input, not merely late — and the regression anchoring **F-045** asserts only
-    `returncode != 0`, so it has been green for as long as the gate has printed nothing and would
-    stay green if it began refusing for an unrelated reason; F-107 prints under **every** verdict
-    including `active`; and F-104 has a locus in no ADR — **rest itself** counts elicitations, so
-    repairing step 3 alone moves the deadlock rather than removing it, which is a cost META-162
-    now knows about. **F-060 not settled**, deliberately, still deferred behind F-008 — with one
-    gap recorded: ADR-0011 §6 promised it a must-fail fixture that was never built. **F-045 stays
-    fixed**; two of its edges are now filed as F-105 and F-106. E4's status says plainly that
-    **no live run has produced an E4** — everything is fixture or unit test — and records a
-    verified correction to the ROADMAP §2 stamp's implication: at that stamp E4 was not even
-    fixture-covered.
-  - **META-153c** H-020's unsound half fixed (**4a59a9a** harness + **a98dbd0** ledger), 110
-    tests, 55 citations. **Two commits on purpose**: a commit cannot cite its own sha, and the
-    citation step uses `git merge-base --is-ancestor` — its own error text prescribes the
-    follow-up commit. The driver now tests **the ending the toolkit recorded** — engagement ended
-    **and** the epic `done` with `outcome: dropped`, a pair §3.5 gives to E4 and to no other
-    ending — because that is **current state**, while every waiting-log derivation is append-only
-    and outlives the silence it describes, which is exactly how the old reading became unsound.
-    The history prefix `E4 abandoned:` was **considered and rejected on the same argument**.
-    Old predicate restored in place → **five** tests fail, including
-    `'abandoned' != 'epic-done'` on the recovered-then-delivered case and a byte-identical
-    `engagement-state` output over two records giving `[('EP-001', 3, 3)] != []`. The mislabel
-    also **stole the closing sim turn**, which E4 alone skips. A false negative was removed in
-    passing: E4 **by withdrawal** (no silent round at all) is now recognised. **No toolkit change
-    was needed or made** — `scan_project` already read `outcome`; asking `engagement-state` to
-    print it for the grader's benefit is the ADR-0005 move H-020 refused at filing. H-020 stays
-    **open** for its first half, now a dependency of a detail line's evidence rather than of the
-    recognition, and its status says exactly that rather than claiming the finding.
+
+### Cluster 1 — document-as-deliverable — COMPLETE
+- **META-145** ADR-0010, 699 lines (**3701069**). §5 does not hold; the claims gate stays on
+  `implement` (F-076). Record-vs-deliverable is a property of **sentences**, not files. **K8**
+  engagement-state statements are **owned by the ending** (F-093). The **invalidation set** is a
+  `plan` output (F-087). Quantified claims need member enumeration in the audit row (F-095).
+  `verify` decides ADR conformance; `review-close` checks the list is complete (F-092).
+- **META-146** specs carry it (**c1fbde8**); D13 new, marked `[skill]` honestly.
+- **META-147** four contracts + dist (**5e6434d**); **META-147b** `intake` + `answer-questions`
+  (**9adff0e**) — `intake` gets **no** `lint-claims` gate, F-076's shape in a new place.
+- **META-148** the window (**5ae1539**): `scope.py`'s fourth state
+  *out-of-scope-by-construction* passes **with a mark**; `constrained()` takes the permission
+  knowledge from the caller, because **no diff distinguishes "nobody wrote a document" from
+  "nobody was allowed to"**. 5 of 8 cases failed against the old scripts.
+- **META-148b** all eight `[auto]` obligations become commands (**a843114**); each decides
+  **less** than the `manual_check` it replaced and says so. **Obligation 10 is not claimed.**
+  Non-vacuity proved twice, the second time with every rule body stubbed.
+- **META-148c ABSORBED** — its cases already ran as by-execution steps.
+- **META-149** the ledger (**f474027**), append-only proved (358/0), citations 43 → 49. Fixed
+  F-076/087/092/093/095/057/058; **F-053 NOT fixed**. **META-148 and META-148b had filed
+  contradictory reports; META-148 was right**, proved by execution. Filed **F-100..F-103**.
+
+### Cluster 2 — E4 — COMPLETE
+- **META-150** ADR-0011, 627 lines (**94606f5**). The threshold is a **silent round**, default
+  3, in `pipeline.yaml`. Wall-clock rejected (wrong in **both** directions); turns rejected
+  (ADR-0005). The count is **derived** from an append-only log; the halt is recorded **before**
+  state is read; **the reader never writes**. E3 vs E4 in one test: **did the stakeholder's own
+  words arrive?**
+- **META-151** the model on paper (**877ee85**). **ADR-0006 repaired by a header pointer, not a
+  `## Corrections` entry**, argued four ways — stretching §4b in the file its own ledger watches
+  would be this repo failing F-067.
+- **META-151b** the programs (**4d1b7ce**): `record-halt` is a **separate script**, so "the
+  reader never writes" is structural. **The registry grew rather than taking a false triple** —
+  pinning the actor is what makes it bite. Threshold single-source proved by execution.
+- **META-152** the fixture, both ways (**e9f8d79**); digests **computed**, non-vacuity in the
+  strong form; **three defects reported, not bent around**.
+- **META-153** the harness (**b845342**), 74 → 105 tests. The driver **asks**; a test forbids the
+  threshold's mechanics from its source. `abandoned` checked **first**. Undeclared abandonment is
+  **not** a stop; the declared one takes **no closing sim turn**.
+- **META-153b** cluster 2's ledger (**bc21bce**), 335/0, citations 49 → 54. Filed
+  **F-104..F-107, H-020**; **corrected the orchestrator's summary in three places by reading the
+  code**. F-060 not settled, deliberately. **No live run has produced an E4.**
+- **META-153c** H-020's unsound half fixed (**4a59a9a** + **a98dbd0**), 110 tests. The driver
+  reads **current state** (`done` + `outcome: dropped`), not an append-only derivation. Old
+  predicate restored → five failures. A false negative removed: E4 **by withdrawal** now
+  recognised. **No toolkit change needed or made.**
+
+### Cluster 3 — enforcement mechanics — in progress
+- **META-154** the `**Gates:**` bullet (**1ebba5a** + **e5a9bb8**), 37 steps, 97 → **102** codes,
+  selftest 320. `transition` now **composes the whole bullet from the contract** — one line per
+  gate, in contract order, verdict from the run, evidence from the caller — so F-091's
+  completeness symptom is **unwritable**. A contradicted verdict is **replaced and named on
+  stdout**, never silently overwritten. Two things stay the caller's because nothing decided
+  them: a `manual_check`'s verdict, and the whole bullet under `--force`. The fourth verdict is
+  **`pending`** — *no verdict is owed*, legal in exactly one **derived, not named** situation: a
+  move into a status the acting skill's own `dispatch.on_status` contains. Two alternatives were
+  tested against the transition table and rejected. **F-080's open question answered: yes, the
+  gate belongs in the entry** — an entry naming a gate as not-owed-here is *stronger* evidence
+  than silence, because it shows nobody was surprised. The comparison is **version-scoped**: an
+  entry records an execution under the contract of its own time. It also found `implement`'s
+  procedure was **factually false** (the gates *had* run; what was true is that nothing was
+  owed — which is why `pending` means *not owed*, not *not run*) and a verbatim duplicated
+  bullet in the same file.
 
 ## Standing instructions (still in force)
 
