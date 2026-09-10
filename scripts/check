@@ -147,6 +147,12 @@ Steps, in order:
                                                in read-only evidence is corrected without the
                                                evidence being edited. A tracked path the sweep
                                                cannot read as text is named on stdout
+ 17c. every finding's status is readable    — meta/findings/FINDINGS.md is append-only, so the
+                                               LAST status line in an entry is the current one
+                                               (F-112). Every `## F-###`/`## H-###` entry carries
+                                               at least one, the header states the reading rule,
+                                               and the reader is proved on a probe whose first
+                                               entry has none
  18. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
  19a. the retrospective format             — scripts/lint-retro over fixtures/retro: a correctly
@@ -3795,6 +3801,97 @@ def check_finding_refs(runner: Runner) -> None:
         print(f"      not read as text, and checked by hand instead: {entry}")
 
 
+STATUS_LINE = re.compile(r"^(\s*[-*]\s+|#{3,6}\s+)\**\s*Status\b", re.IGNORECASE)
+SECTION = re.compile(r"^#{1,2} ")
+READING_RULE = "The last status line in an entry is the current one."
+
+
+def finding_statuses(text: str) -> list:
+    """[(finding, [status lines])] in file order — the ledger read the way it must be read.
+
+    F-112. The ledger is append-only, so a resolved finding keeps its original `Status:` line and
+    the new one is appended below it: the LAST status line in an entry is the current one, and
+    `grep 'Status: open'` names entries that were closed months ago. Two forms are recognised
+    because two exist — a bullet, and the `### Status update ...` heading F-061's resolution is
+    written as. A `#`/`##` heading that is not a finding closes the entry it follows, so the
+    status lines under a section heading like `## Cluster 2 status` belong to nobody.
+    """
+    entries = []
+    current = None
+    for line in text.split("\n"):
+        heading = FINDING_HEADING.match(line)
+        if heading:
+            current = (heading.group(1), [])
+            entries.append(current)
+        elif SECTION.match(line):
+            current = None
+        elif current is not None and STATUS_LINE.match(line):
+            current[1].append(line.strip())
+    return entries
+
+
+def check_finding_statuses(runner: Runner) -> None:
+    """F-112: every finding carries a status, and the file says which one is current."""
+    label = "every finding's status is readable"
+    path = os.path.join(ROOT, LEDGER)
+    if not os.path.isfile(path):
+        runner.skip(label, f"{LEDGER} does not exist")
+        return
+    with open(path, "r", encoding="utf-8") as handle:
+        text = handle.read()
+
+    # Non-vacuity, checked here rather than assumed: a reader that stopped seeing a missing
+    # status would let this step pass on any input, so the step proves on a synthetic ledger
+    # that it still sees one. The probe also carries both status forms and a section heading.
+    # The probe's finding numbers are assembled rather than written, so that this file does not
+    # cite three numbers the ledger has never filed — which is the sweep in step 17b (F-099).
+    one, two, three = ("F-" + number for number in ("901", "902", "903"))
+    probe = (f"## {one} — an entry nobody gave a status\n"
+             "- Severity: none\n"
+             "\n"
+             f"## {two} — an entry with a bullet status\n"
+             "- Status: open\n"
+             "\n"
+             f"## {three} — an entry resolved under a heading\n"
+             "- Status: open\n"
+             "### Status update — fixed\n"
+             "\n"
+             "## Cluster 9 status — a section heading, not a finding\n"
+             "- Status: this belongs to no entry\n")
+    seen = finding_statuses(probe)
+    expected = [(one, 0), (two, 1), (three, 2)]
+    if [(name, len(rows)) for name, rows in seen] != expected:
+        runner.emit(label, False, detail=(
+            "the ledger reader does not see what it must see on its own probe:\n"
+            f"  expected {expected}\n"
+            f"  got      {[(name, len(rows)) for name, rows in seen]}\n"
+            "this step can only report a missing status if it can find one (F-112)."))
+        return
+
+    entries = finding_statuses(text)
+    if not entries:
+        runner.skip(label, f"{LEDGER} files no findings")
+        return
+    missing = [name for name, rows in entries if not rows]
+    if missing:
+        detail = ["these entries carry no status line at all, so a reader cannot tell a "
+                  "tombstone from a finding nobody triaged:"]
+        detail += [f"  - {name}" for name in missing]
+        detail.append("every `## F-###`/`## H-###` entry carries one; a tombstone says it is a")
+        detail.append("tombstone (F-112). The ledger is append-only: append, never rewrite.")
+        runner.emit(label, False, detail="\n".join(detail))
+        return
+    if READING_RULE not in text:
+        runner.emit(label, False, detail=(
+            f"{LEDGER} does not state how to read a status. The file is append-only, so the\n"
+            "LAST status line in an entry is the current one; without that sentence in the\n"
+            f"header the obvious command reads the file wrongly (F-112). Expected: {READING_RULE!r}"))
+        return
+    appended = sum(1 for _, rows in entries if len(rows) > 1)
+    runner.emit(f"{label} ({len(entries)} entries, every one with a status; "
+                f"{appended} re-triaged at least once)", True)
+
+
 def check_export(runner: Runner) -> None:
     """F-007 both ways: the product profile ships no workspace, and the guard can refuse."""
     import tempfile
@@ -4068,6 +4165,7 @@ def main() -> int:
     check_guard(runner)
     check_findings_citations(runner)
     check_finding_refs(runner)
+    check_finding_statuses(runner)
     check_export(runner)
     check_harness(runner)
 

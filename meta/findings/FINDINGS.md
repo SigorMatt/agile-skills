@@ -3,6 +3,16 @@
 Convention: F-### sequential, never reused. Every finding cites evidence in
 `evidence/` or in this repo. Status: open | fixing | fixed (with commit) | rejected (with reason).
 
+**How to read a status (2026-09-10, F-112).** This file is **append-only**: when a finding is
+resolved or re-triaged, its original `Status:` line stays where it is and the new one is appended
+**below** it. **The last status line in an entry is the current one.** A status may be written as
+a bullet (`- Status: ...`, `- **Status update ...**`) or as a `###` heading, so a search for the
+bullet form alone misses entries too; and three entries are tombstones or pointers rather than
+findings, and say so in their status. `grep 'Status: open'` is the wrong tool for this file — at
+commit 8e61fdb it named 24 entries, 13 of which had already been resolved. `./scripts/check`'s
+*every finding's status is readable* step requires each `## F-###` / `## H-###` entry to carry at
+least one status line and reports the tally of last statuses.
+
 ---
 
 ## F-001 — Judgement gates don't hold; make claim-checking mechanical
@@ -180,6 +190,14 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   that motivated this is gone. What remains is a design change — making the file protocol the
   canonical channel with the interactive tool as one transport over it — and its evidence has
   to come from someone who is not us
+- Status update 2026-09-10 (META-163): **still deferred, gate unchanged, re-confirmed.** The
+  gate is evidence from a **real asynchronous human who is not us**, before the open-source
+  release. Nothing produced it: no live run was made this session, and both staged regressions
+  were provisioned, verified and torn down **without being run** (commit 8e61fdb). What moved
+  next door and does **not** meet the gate: ADR-0011 gives silence an ending and ADR-0012
+  (commit b4f1909) decides which questions stop the loop. Both make the question-file protocol
+  carry more weight, and neither makes it *the canonical channel with the interactive tool as one
+  transport over it*, which is the design change this finding is. F-060 stays gated on this one.
 
 ## F-009 — Prior art: BMAD-METHOD; README must position against it
 - Severity: strategy/docs, ship-blocker for the open-source release
@@ -247,6 +265,19 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   (3) the F-001 fix (mechanical claim provenance / adversarial verification)
   has survived a real run.
 - Status: deferred (gated)
+- Status update 2026-09-10 (META-163): **the gate is MET, and has been since 2026-08-30 —
+  nothing recorded it here.** This finding's gate is `meta/ROADMAP.md` §2 by its own text, and §2
+  carries a stamp dated 2026-08-30: all three conditions found positive against the final kernel
+  by confirmation run 4c, ending *"The kernel is proven. The gated tracks are open"*, with F-010
+  named in the sentence that follows. The status line above has read only *deferred (gated)* for
+  the eleven days since, and META-128's triage table that same day recorded it as *already gated
+  on ROADMAP §2* without checking whether §2 had been stamped.
+  **It is not reclassified as a defect, because it never was one.** F-010 is a roadmap decision —
+  *quarry, don't fork* — and what changes is only that it is now **schedulable**: `ROADMAP.md` §3
+  sequences it behind the retro skill (built; §3 stamp) and the Codex CLI adapter. Its own rules
+  bind whoever starts it, unchanged: one workflow at a time, fully translated into contract form,
+  gates authored honestly, facilitation-shaped content excluded or explicitly marked ungated,
+  renamed, attributed. **Open, unstarted and sequenced — not deferred.**
 
 ## F-011 — `answer-questions` precondition excludes the case the protocol depends on
 - Severity: correctness (blocks the async human path; harness works around it in a prompt)
@@ -543,6 +574,11 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   finding: both citing files are read-only history — banked evidence and an append-only
   journal — and **neither is edited**. This entry is what makes their citations resolve, the
   same correction the F-071 tombstone makes for `iteration-3b/README.md:27`.
+- **Status:** not a finding — **tombstone**, and that is its final state. The number is burned,
+  never reused, and the entry exists so the two citations above resolve (F-099). Re-confirmed
+  2026-09-10 (META-163) when every entry in this ledger was read for a current last status; a
+  tombstone with no status bullet reads as *unexamined* to any mechanical reader, which is the
+  one thing it is not.
 
 ## H-002 — turn-failed is terminal in code; USAGE §9 promises resume; --fresh destroys the run
 - Severity: harness, correctness + doc contradiction (sharpest harness defect of iteration 1)
@@ -1002,6 +1038,14 @@ is not a ledger.
   board cannot mislead about what is next, so the field only lies when there is a queue — and
   that track is where a queue first exists. Adding a `sequence` field before then would be a
   schema change with no run able to exercise it
+- Status update 2026-09-10 (META-163): **still deferred, gate unchanged, re-confirmed.** The
+  gate is the sprint-ceremonies / multi-item-parallelism track (`meta/ROADMAP.md` §3, last), and
+  that track has not started. What moved and does not meet it: ADR-0012 §6 (commit b4f1909)
+  records that the loop now dispatches **past** an outstanding ask, so *"an engagement with a long
+  queue and an absent stakeholder"* is a state an ordinary engagement now reaches — the queue this
+  finding needs is nearer than it was. It is not here yet, because the one-action rule is
+  **preserved unamended**: `next` still chooses one item per pass, so the board still cannot
+  mislead about what is next. Re-confirmed rather than moved: the gate is a track, not a symptom.
 
 ## F-031 — an `[auto]` Definition of Ready check that only tests file existence
 - Severity: correctness (F-001's class, in a machine-decidable gate)
@@ -1105,6 +1149,22 @@ is not a ledger.
 - Status: **deferred** as one of the four-finding *half-written record* class — with F-043,
   F-051 and F-053 — gated on the next builder session's first unit. Triaged 2026-08-30
   (META-128); see the triage note below for why they move together
+- Status update 2026-09-10 (META-163): **still deferred — and the class it was deferred with
+  has broken up, so the gate is re-named rather than repeated.** The *half-written record* gate
+  was *the next builder session's first unit*. This **is** the next builder session, its first
+  unit was META-144, and two of the class's four members are now fixed: F-043 and F-053 were
+  closed by commit 8804bd7, incidentally, while META-156 was fixing F-083's ordering. Nobody
+  noticed at the time and their statuses said *deferred* for four more units.
+  **This one is not fixed, checked rather than assumed.** `scripts/new-item` still writes the
+  history creation row and a bare journal header, and its closing lines still say only *"fill in
+  the body headings before transitioning it"* — nothing about the journal entry the workspace is
+  about to demand, and no `journal-entry` command to copy.
+  **Not fixed here, and the reason is F-051.** F-036's fix is one message; but a message telling
+  the caller to hand-write a journal entry documents the hand-written path F-051 exists to remove,
+  and would have to be unwritten when F-051 lands. **New gate:** the unit that gives `new-item`
+  the write-both-or-neither shape `transition` now has — `--journal-body-file`, or the creation
+  entry written by the tool — after which this message is composed from what that unit writes.
+  It moves with F-051 and no longer with F-043 or F-053.
 
 ## F-037 — the citation rule made the append-only rule unsatisfiable
 - Severity: **structural, severe** — one invariant added this session broke another
@@ -1184,6 +1244,10 @@ is not a ledger.
 Merged into F-029; both occurrences of "a skill is told to create an item it may not create" are
 filed there. Fixed with it (see F-029's status); the derivation found a third occurrence —
 Definition of Ready R9's split — that neither filing had noticed.
+- **Status:** not a finding of its own — **merged into F-029** and fixed with it; see F-029's
+  status. Re-confirmed 2026-09-10 (META-163), and written as a status bullet for the same reason
+  the tombstones now carry one: an entry with no status line is indistinguishable from an entry
+  nobody read.
 
 ## F-043 — `--outcome` is unreachable in practice and named in no contract
 - Severity: UX (a working flag went unused, and the workaround is hand-editing `item.md`)
@@ -1196,6 +1260,16 @@ Definition of Ready R9's split — that neither filing had noticed.
   before the move is refused. Hand-editing `item.md` is precisely what the tooling exists to remove.
 - Status: **deferred** with the *half-written record* class (F-036, F-051, F-053), gated on the
   next builder session's first unit. Triaged 2026-08-30 (META-128)
+- Status update 2026-09-10 (META-163): **fixed** (commit 8804bd7) — found by re-confirming a
+  gate, not by anyone setting out to fix it. Both halves of the direction hold on the current
+  tree. `--outcome` is **named in a contract**: `methodology/skills/review-close/process.md` step
+  11 says the transition writes it — *"`--outcome` at step 11, never an edit of `item.md`"* — and
+  `skill.yaml`'s Definition of Done says the same. And *why setting the field before the move is
+  refused* is now written where the refusal happens: `scripts/transition` refuses `--outcome` on
+  any move that does not end at `done`, **requires** it on one that does, and carries the reason
+  beside both — `spec/work-item.md` §1 makes the outcome present if and only if the item is done,
+  so status and outcome are one act. The workaround this finding was filed about — transition,
+  hand-edit `item.md`, re-validate — is now refused rather than merely undocumented.
 
 ## F-044 — `transition` does not escape `|` in `--reason` and corrupts `history.md`
 - Severity: **correctness, severe** — silent record corruption after a reported success
@@ -1512,6 +1586,13 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   should hold at creation too.
 - Status: **deferred** with the *half-written record* class (F-036, F-043, F-053), gated on the
   next builder session's first unit. Triaged 2026-08-30 (META-128)
+- Status update 2026-09-10 (META-163): **still deferred, re-gated with F-036 alone.** The
+  *half-written record* class is down to these two: F-043 and F-053 were fixed by commit 8804bd7
+  and their statuses now say so. `scripts/new-item` is unchanged — it takes no
+  `--journal-body-file`, writes no creation entry, and leaves `journal.execution.missing` firing
+  from the moment an item exists until the caller writes the entry by hand. **New gate:** one unit
+  on `new-item` giving it the write-both-or-neither shape `transition` now has; F-036's message is
+  composed from whatever that unit writes, so the two move together.
 
 ## F-052 — `lint-claims --changed-since` reports a scope it did not have
 - Severity: correctness — F-033's class, in the same script
@@ -1573,6 +1654,19 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   actually succeeded, on every item it closes. It stays in the *half-written record* class with
   F-036, F-043 and F-051, behind the same gate, and it moves when they move. Recorded here so the
   next reader does not mistake "ADR-0010 cited it" for "ADR-0010 closed it"
+- Status update 2026-09-10 (META-163): **fixed** (commit 8804bd7) — and the update immediately
+  above is **false on the tree as it now stands**, which is why this bullet exists rather than an
+  edit. META-149 wrote *"`transition` still has no `--outcome`"*; that was true at f474027 and
+  stopped being true at 8804bd7, seven units later, when META-156 needed the legal close order for
+  F-083. The direction's **first** branch was taken as filed: `transition` grows `--outcome` and
+  writes it with the move, the way it already writes `--branch`. A move to `done` without it is
+  refused with the reason; `--outcome` on a move that does not end at `done` is refused with the
+  reason; an item leaving `done` has its outcome cleared by the same act. The cost this finding
+  was filed for is gone: `review-close` no longer takes a non-zero exit on a transition that
+  actually succeeded. The second branch — teaching `--resolving` that `item.outcome.premature` is
+  resolved by the pending move — is **not** taken and is not needed; the finding named it as the
+  alternative, and ADR-0010 §6's rule that the two state machines stay separate is the argument
+  for preferring the branch that was taken.
 
 ## F-054 — `lint-claims` rejects a citation whose path is wrapped in backticks, with a misleading message
 - Severity: UX
@@ -1769,6 +1863,18 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
   `REST_VERDICTS` requires `at-rest` (not `abandoned`) for every epic in `fixtures/ended-engagement`,
   which has no waiting log at all; the parked-artifact shape that is F-060's own is modelled
   nowhere. Recorded so that a later reader does not find the ADR's fixture line and assume it ran
+- Status update 2026-09-10 (META-163): **still deferred behind F-008, gate unchanged,
+  re-confirmed against ADR-0012.** ADR-0012 (commit b4f1909) re-decided this finding by name — the
+  third document to do so — and stopped short of it deliberately: `next`'s report now names every
+  outstanding **and standing** ask on every pass, including passes that dispatch, so what is
+  pending is visible without the loop stopping to say it. The ADR states why that is not the fix,
+  in its own words: *"a line in a report, not a channel"*, which says nothing to anybody who is
+  not already reading the run's output. F-060's case remains the one where **no ask is open at
+  all**. The new `standing ask` class (`addressed-to: human`, `blocking: false`) is the nearest
+  thing the toolkit has to a pending-input channel and it is still not one: it is a question, so
+  only a skill that owns a runnable item may file it — the exact constraint this finding was filed
+  about. ADR-0011 §6's promised must-fail fixture is **still not built**; META-153b's note above
+  stands unchanged.
 
 ### Addendum to F-035 (2026-08-27, iteration 1e) — reproduced three times, with the exact message
 F-035 (`check-commit-refs` reports a merge that never happened) fired on **every** item's
@@ -2227,6 +2333,15 @@ the gated tracks (retro skill, Codex adapter, content packs) unlock.
   release. Triaged 2026-08-30 (META-128): the example is what a reader opens first, so it is
   release-blocking and not kernel-blocking
   kernel rather than the example
+- Status update 2026-09-10 (META-163): **still deferred, gate unchanged, re-confirmed by
+  measurement rather than by assumption.** `python3 scripts/lint-claims --root
+  examples/toy-project --all` reports **41 errors** on the current tree — the same 41 META-124
+  measured, so nothing this session moved it in either direction, in a session that changed nine
+  contracts. The gate is the open-source release, and the reason it is release-blocking and not
+  kernel-blocking is unchanged: the example is what a reader opens first.
+  **F-108 joins this gate.** It is the same class in the same tree — the shipped example's own
+  record is not a model for the rules the toolkit teaches — and the two are one job together and
+  two half-jobs apart.
 
 ---
 
@@ -2289,6 +2404,21 @@ stakeholder's own verdict carried both sides. 3b re-runs the engagement that pro
   and probe a run used into the evidence that gets banked.
 - Status: open — filed during this session, not fixed here (the fix touches `harness/` while a
   run is in flight)
+- **Status update 2026-09-10 (META-163): open — the stated blocker is GONE, and the finding is
+  re-gated rather than left resting on it.** The status above defers on *"the fix touches
+  `harness/` while a run is in flight"*. **No run is in flight**: this session ran no iteration in
+  any mode, and META-164 provisioned, verified and tore down both staged regressions without
+  invoking `run_iteration.py` (commit 8e61fdb). So the reason recorded here has not been true for
+  the whole of this session, and nothing said so.
+  **It is still not fixed, and the new reason is scope, not safety.** The fix the finding prefers
+  — render the sim skill **into the run directory** and point `--add-dir` at it — changes
+  `run_iteration.py`'s `SKILL_TARGET`, `render_sim_skill` and every caller, and moves what gets
+  banked into the evidence. That is a harness unit, and this session's harness budget went to
+  H-020's unsound half (commit 4a59a9a).
+  **Gate:** the next harness change window — a unit that opens `harness/` while no run is in
+  flight and no evidence is being banked. **The interim guard is operational and is written down
+  where it is enforced**, not left implicit: the standing instruction that iterations run
+  **sequentially**, which is why 3b and 4b were run one after the other rather than together.
 
 ---
 
@@ -2879,6 +3009,9 @@ second occurrence shows the error is common rather than incidental.
   journal's artifacts line for the pass names F-069, F-070, F-072 and H-016, never F-071,
   and F-071 appears in no committed version of this file. The number is burned, not
   reused. The class this exposed is filed as F-099.
+- **Status:** not a finding — **tombstone**, and that is its final state. The number is burned
+  and the entry is what makes `meta/harness/evidence/iteration-3b/README.md:27` resolve without
+  that read-only file being edited. Re-confirmed 2026-09-10 (META-163).
 
 # Findings accepted from retro 0.1.0 proposals (owner triage 2026-08-31)
 
@@ -3959,6 +4092,23 @@ second occurrence shows the error is common rather than incidental.
   than only inside a source marker, would then make the collision a finding rather than a reading hazard.
 - **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-5); accepted at owner triage 2026-08-31.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): still open, deferred behind a named gate, and
+  re-priced upward — this session grew the collision surface by 62%.** Measured before deciding:
+  the shipped prose a consumer's workers read and copy from (`methodology/` and `spec/`) carries
+  **97** bare `ADR-nnnn` citations across **11** distinct numbers. **37 of the 97 were written
+  this session** — ADR-0010 ten times, ADR-0011 fourteen, ADR-0012 thirteen — so the surface went
+  60 → 97 while nobody was looking at this entry. And the collision is not hypothetical even
+  inside this repository: `examples/toy-project/docs/architecture/adr/` holds a real, different
+  ADR-0001 through ADR-0010, so **every one of the toolkit's ten lowest numbers already names two
+  documents in one repo**, ADR-0010 included as of commit 3701069.
+  **Not fixed here, and the size is the reason.** The direction is a change of citation *form* —
+  a prefix or the path — and it has to move `spec/doc-header.md` §4a, `scripts/lib/claims.py`'s
+  resolver, and all 97 citations **in one sweep**; doing part of it leaves two conventions in the
+  prose a worker copies from, which is worse than one wrong one. That is not small and it is not
+  adjacent to a triage unit.
+  **Gate:** one unit that changes the toolkit's own ADR citation form everywhere at once, before
+  the open-source release — with F-068 and F-108 in the same release bucket but not the same job.
+  Its cost only rises: every ADR this project writes adds citations to the sweep.
 
 ### Triage record (2026-08-31)
 
@@ -4089,6 +4239,24 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   is the hard gate on `implement`, has no such scoping. Established by execution in a throwaway
   git repository against the scripts at commit a843114, not by reading alone.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred behind a named gate.** Re-read and
+  re-confirmed: the deadlock is unchanged on the current tree and nothing since commit a843114
+  has touched either rule. It is not fixed here because the finding's own Direction says where the
+  choice belongs — *"beside ADR-0010 §4.3 rather than in a script"* — and it is a choice between
+  two defensible mechanisms (rule 2 skips the `## Engagement state` section of an
+  `owned-by-ending` document, or the disposition confers a narrow repair licence stated in the
+  contract), after which `implement`'s procedure and `lint-documents`' rule must be made to say
+  the same thing. A triage unit picking one of those in passing would be deciding an ADR question
+  in a script, which is what the finding says not to do.
+  **Gate:** the ADR-0010 amendment unit — an ADR-0011-style §4b header pointer (F-067's
+  mechanism, since ADR-0010 is standing) choosing one branch, with `lint-claims` rule 2,
+  `lint-documents`, `implement`'s procedure and a both-ways fixture moved in the same change.
+  **What it costs until then, said plainly:** the pair is jointly unsatisfiable only where the
+  unsourced absolute sits **inside** an `## Engagement state` section of a document disposed
+  `owned-by-ending`, and the escape is `--force`, which is recorded in the history reason forever.
+  No engagement has met it — the widening shipped at commit 5ae1539 and no run has executed
+  against it — so the deadlock is still ahead of the first consumer, not behind them. **It ranks
+  above F-101 in the same unit**, because a deadlock is worse than an overstated scope line.
 
 ## F-101 — a deliverable document declared outside `docs/` is inside the window and outside the rule
 
@@ -4128,6 +4296,18 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   it shipped `--plan-documents`; confirmed by execution in META-149 against the scripts at commit
   a843114.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred with F-100 behind the same named
+  gate.** Re-confirmed unchanged. The two are one decision seen twice — F-100 asks what the window
+  may *repair*, this asks what the window may *read* — and both are answered beside ADR-0010
+  (§4.3 and §5.1) rather than in `lint-claims`. Splitting them would mean opening the same ADR
+  twice.
+  **Gate:** the ADR-0010 amendment unit, as F-100. The choice here is the narrower of the two and
+  the finding already names it: either a deliverable document must live under `docs/` — a real
+  constraint on a consumer, so it belongs in `spec/workspace-layout.md` — or `documents()` reads
+  the window's paths instead of walking one directory. Until then the scope line overstates what
+  was read, which is F-052's and F-066's defect in the same script for the third time, and the
+  suppressed fourth state means an item whose only document is outside `docs/` gets a plain exit 0
+  instead of `NOTHING COULD HAVE BEEN IN SCOPE`.
 
 ## F-102 — nothing decides whether an engagement-state sentence was written where the mechanism can see it
 
@@ -4170,6 +4350,17 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   was named in the derivation, its cost was written into ADR-0010 §7, and the mechanism shipped
   with it. It is filed because an accepted gap that lives only in the prose of the decision that
   accepted it is one the next reader re-discovers as news
+- **Status update 2026-09-10 (META-163): standing confirmed, not restated — still *open —
+  known, derived and accepted*.** Checked for what could have moved it and nothing did:
+  ADR-0011 and ADR-0012 are about the loop and about endings, not about where a sentence is
+  written; no new `[auto]` obligation was claimed after commit a843114 (obligation 10 is still
+  unclaimed); and META-148's *out-of-scope-by-construction* fourth state marks a window nobody
+  could write in, which is a different question from where a sentence that **was** written ended
+  up. The one live interaction is **F-100**, which is about the same `## Engagement state` section
+  from the enforcement side; if the ADR-0010 amendment unit gives that section a rule, this
+  entry's residue should be re-read against it in the same unit. Until then it stays what it was
+  filed as: a gap named at derivation, shipped with, and tracked here so the next reader does not
+  re-discover it as news.
 
 ## F-103 — a universal carried by a bare plural is not recognised as a quantified claim by anything
 
@@ -4216,6 +4407,12 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   a843114); filed as a finding in META-149, with the ADR's illustration corrected.
 - **Status:** **open — known, derived and accepted.** Same standing as F-102: named at derivation,
   shipped with, filed so it is tracked
+- **Status update 2026-09-10 (META-163): standing confirmed, not restated — still *open —
+  known, derived and accepted*, the same standing as F-102.** Nothing since commit a843114
+  changed obligation 5's `[auto]`/`[skill]` split, and the limit is still printed on every run of
+  `propagated-claims-carry-their-obligation`. Re-confirmed rather than left silent, because a
+  deliberately-accepted gap and an unexamined one look identical in a ledger read by grep — which
+  is F-112.
 
 ---
 
@@ -4403,6 +4600,19 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   `git show 77a5d96:scripts/check-epic-signoff`; the unreachability proof and the reading of the
   assertion are META-153b's.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred behind a named gate, with F-106.**
+  Re-confirmed: unchanged on the current tree, and the two are one program and one unit —
+  `scripts/check-epic-signoff`, where F-105 is a refusal that says nothing and F-106 is a pass
+  that says something false. Both also need the same second half, and it is the more valuable
+  half: `./scripts/check`'s `TERMINATION_CASES` asserts `returncode != 0` and reads no message,
+  so the regression anchoring F-045's fix cannot tell a right refusal from a wrong one. Giving
+  each case an **expected substring** is what makes either fix provable.
+  **Gate:** one unit on the termination gate — print the no-sign-off explanation where the refusal
+  is decided, delete the block that can never run, make the E4 branch read the reply rather than
+  the status (F-106), and give every `TERMINATION_CASES` row an expected message. Not taken here:
+  a message change whose whole point is that nothing reads the message is not proved by a triage
+  unit editing a print statement, and `fixtures/abandoned-engagement/README.md` plus
+  `ABANDONED_NEAR_MISSES` both record today's behaviour as expected and move in the same change.
 
 ## F-106 — the termination gate passes a sign-off that says a reply arrived when its `## Answer` is empty
 
@@ -4446,6 +4656,13 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
 - **Provenance:** found by META-152 while building the near misses (commit e9f8d79) and reported
   rather than bent around; confirmed here by execution on the current scripts.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred behind F-105's named gate — same
+  program, same unit.** Re-confirmed unchanged. Ranked **first inside that unit**: this is a hard
+  gate reaching the wrong verdict (a PASS reading *"No reply arrived and none is claimed"* over a
+  record that claims one), where F-105 is a right verdict said badly. The workspace is still
+  refused by `validate-workspace`'s `question.answered.section` through the hard `workspace-valid`
+  gate, so nothing can be **recorded** on this input — that is a second program catching it, and
+  it is why the severity stops at medium rather than rising.
 
 ## F-107 — `engagement-state` prints `rest reached at <t>` on engagements that never reached rest
 
@@ -4479,6 +4696,20 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
 - **Provenance:** found by META-152 against `fixtures/abandoned-engagement` (commit e9f8d79) and
   reported as pre-existing and cosmetic; confirmed here by execution.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred — and the finding's own "one-line
+  change" is the reason, established by execution rather than argued.** `grep` over the tree for
+  the emitted sentence: the string is asserted verbatim in `harness/tests/test_harness.py:1026`,
+  and the code that emits it exists twice — `scripts/lib/engagement.py:150` and the rendered
+  `adapters/claude-code/dist/agile-skills/scripts/lib/engagement.py:150`. So the one line is a
+  toolkit change **plus** a re-render **plus** a harness-test change, and this repository keeps
+  toolkit commits and harness commits separate. It is one line and it is not adjacent.
+  **Gate:** the next unit that opens `scripts/lib/engagement.py` while no harness run is in
+  flight — most naturally F-110's unit, which is in the same file — taking the fix the finding
+  names: print the timestamp under the verdicts where rest occurred, and elsewhere label it what
+  the code calls it (the boundary, `last movement at <t>`).
+  **Worth carrying:** three separate live runs reported this unprompted in their worker notes
+  (iteration 3 turn 4, iteration 4 turns 8 and 10 — *"now three turns running"*). It is the
+  only finding in this ledger a stakeholder-facing program has volunteered that many times.
 
 ## H-020 — the driver's recognition of a declared E4 rests on a display rule, not on a contract
 
@@ -4588,6 +4819,16 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   when `fixtures/abandoned-engagement` is absent. Neither can now
   mislabel a run; both are unpromised dependencies of a detail line, which is the standing this
   finding leaves them in.
+- **Status update 2026-09-10 (META-163): open on its remaining half, deferred behind H-015's
+  harness gate.** Re-confirmed: the serious half is fixed at commit 4a59a9a and cannot mislabel a
+  run; what stands is the half this was filed for — nothing in ADR-0011, in
+  `spec/ids-and-statuses.md` §3.5a or in `scripts/lib/engagement.py`'s contract states that an
+  ended engagement's verdict still carries the silent-round sentence, and the driver quotes it.
+  After 4a59a9a the cost of that sentence disappearing is **a phrase of corroboration, not a
+  wrong verdict**, which is why this is deferred rather than ranked with the toolkit defects.
+  **Gate:** the next harness change window, with H-015 — either the contract gains the sentence
+  (ADR-0011 §5 says what the count is *for*, not how long it lives) or the driver stops quoting
+  what nothing promises. Ledger work only in this unit: no `harness/` file was touched.
 
 ## F-108 — `examples/toy-project`'s change-log rows were typed, not stamped
 
@@ -4623,6 +4864,15 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
 - **Provenance:** found by META-156's new `doc.changelog.*` rules on their first run over the
   example, 2026-09-10.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred — it joins F-068's release gate.**
+  Re-confirmed as filed, and the second half of its Direction is already structural rather than
+  pending: any re-import runs under `doc.changelog.no-execution`, which is asked while an item is
+  open, so the defect cannot reach the closed state again. What is left is the first half — the
+  README's *"Nothing here was written by hand"* narrowed to what is true — and that is prose in
+  the shipped example, which is exactly F-068's job in exactly F-068's tree.
+  **Gate:** the open-source release, with F-068. **Not fixed here on purpose**, and the reason is
+  the finding's own: the six imported rows stay as they are, because rewriting a run's record to
+  make a later check green is the act this repository exists to make impossible.
 
 ## F-109 — `next` still stops on a human answer that has already arrived: F-011's other half
 
@@ -4705,3 +4955,157 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   different rule from the one that ADR was deriving, its fix moves banked fixture digests, and
   filing it is what this ledger is for.
 - **Status:** open
+- **Status update 2026-09-10 (META-163): open, deferred behind a named gate.** Re-confirmed
+  unchanged, and re-read against ADR-0012 as filed: the finding is right that the reordering makes
+  it worse rather than better, because more work now happens between halts and every question
+  filed in between restarts the count. Three statements of the rule — the docstring,
+  `pipeline.yaml`'s `termination.silence` block and ADR-0011 §1.3's table — say the opposite of
+  what the code does, and only the code decides.
+  **Not fixed here, for the reason META-162 gave when it declined to fix it there:** the fix moves
+  the trailing digests of all three `abandoned-engagement` waiting logs, which `./scripts/check`
+  **recomputes and compares**, so the change is a rewrite of `inbound_rendering()` plus three
+  recomputed fixtures plus the both-ways step that proves the new rendering ignores our own asking.
+  **Gate:** one unit on `scripts/lib/engagement.py` that changes the rendering to carry only what
+  a reply looks like and recomputes the three fixture digests in the same commit — **F-107 rides
+  in that unit**, same file, and it is cheaper together than twice.
+
+## F-111 — a fresh install's contents are not a function of what git tracks
+
+- **Classification:** toolkit-defect
+- **Severity:** packaging, low — nothing a consumer ships is wrong; what is wrong is that two
+  machines installing the same commit do not get the same tree
+- **Component:** `adapters/claude-code/install.py` (`copy_tree`, and the three calls in
+  `install()`), `adapters/claude-code/hooks/`, `adapters/claude-code/dist/agile-skills/scripts/lib/`
+- **Symptom:** `copy_tree` is `shutil.copytree(source, destination)` with no `ignore`, so it
+  copies whatever is in the source directory, tracked or not. Two of the directories it is pointed
+  at accumulate a **git-ignored** `__pycache__/` whenever this repository's own gate runs —
+  `adapters/claude-code/hooks/` (from `test_guard.py`) and
+  `adapters/claude-code/dist/agile-skills/scripts/lib/` (from any script that imports `lib`).
+  Established by execution, not by reading: `python3 adapters/claude-code/install.py .` into a
+  fresh empty `git init` directory produces **13** `.pyc` files under `.claude/agile-skills/`,
+  every one of them stamped `cpython-312` by the interpreter that last ran the gate on the
+  builder's machine. `git ls-files adapters/claude-code/hooks/` lists exactly two files and
+  neither is one of them; `git check-ignore -v adapters/claude-code/hooks/__pycache__` answers
+  `.gitignore:1:__pycache__/`; `git ls-files adapters/claude-code | grep -c pycache` is `0`.
+- **What is NOT true of it, checked rather than repeated:** the reading this was first written
+  down with — that `--uninstall`'s *"remove exactly what was installed"* therefore varies by
+  machine — does not survive the code. `uninstall()` removes `SHARED_DIR` **wholesale** with
+  `shutil.rmtree`, so the stray files go with it whatever they are. The claim that holds is the
+  narrower one: **a fresh install's contents depend on untracked local state**, so the install is
+  not hermetic with respect to what git tracks, and a file count or a manifest taken on one
+  machine is not the file count on another.
+- **Counterfactual:** every install on every machine, with no project's subject matter involved.
+  A consumer's own `.gitignore` covers `__pycache__/` (F-003's fix, at `workspace-init` time), so
+  what git tracks in a provisioned project is unaffected — which is exactly why nothing has ever
+  reported it.
+- **Recurrence:** reproducible on demand; observed by META-164 during staging verification and
+  again here. It also quietly weakens that unit's rule 3 — *the install matches what the repo
+  renders* — which passes only because `hooks/` is excused from the `diff -r` wholesale.
+- **Direction:** one argument: `copy_tree` passes
+  `ignore=shutil.ignore_patterns("__pycache__", "*.py[cod]")`. The stronger version, if the
+  installer is ever run from inside a checkout, is to refuse to copy a path git ignores and say
+  so. Either way the proof is a step that installs into a temporary directory and asserts the
+  result contains no path this repository ignores — an assertion nothing makes today.
+- **Provenance:** journalled by META-164 (commit 8e61fdb) as *"the one real finding"* of the
+  staging verification and deliberately left unfiled pending triage. Verified independently here
+  by execution (META-163) and found **wider than reported**: 13 files from two directories, not
+  one file from one — the `dist/agile-skills/scripts/lib/__pycache__` half was not in that
+  reading, and it is the half that ships the analyzer's own bytecode rather than a hook's.
+- **Status:** open, **deferred behind a named gate.** The fix is one keyword argument and the
+  finding is two hours old, which is precisely why it is not being taken in a triage unit:
+  `adapters/` is not adjacent to the ledger, and a packaging change with no assertion behind it is
+  how a packaging break ships. **Gate:** the next unit that opens `adapters/claude-code/install.py`,
+  or the pre-release packaging pass, whichever comes first — with the temp-directory assertion in
+  the same change, because without it the next `copy_tree` source reintroduces this silently.
+
+## H-021 — a re-provision overwrites the project's `.gitignore`, and two programs disagree about who owns it
+
+- **Classification:** harness-defect
+- **Severity:** harness, low — it converges, and on the way it discards whatever the project put
+  there
+- **Component:** `harness/provision.py` (step 2, `GITIGNORE`, `write_file`), `scripts/workspace-init`
+  (`GITIGNORE_LINES`, step 4)
+- **Symptom:** `provision.py` step 2 **writes** its own five-line `.gitignore` — `write_file` is
+  a whole-file write, not an append — and step 4 then runs `workspace-init`, which **appends** the
+  lines of its own three that the file does not already contain. The two disagree about spelling
+  (`*.pyc` versus `*.py[cod]`; `/HARNESS-STATUS.md` versus `HARNESS-STATUS.md`), so the file after
+  step 4 can never equal what step 2 writes, and every re-provision rewrites it, prints
+  `wrote .gitignore`, and has step 4 put the two lines straight back. The provisioned project ends
+  up carrying both spellings of both rules.
+  Proved by execution, on a throwaway project outside this repository: three provisions of one
+  directory. The end state converges — `md5sum` is `c2e9596451f95d2247ac7f5378ad0e3c` after the
+  first run and after the second — and `wrote .gitignore` is printed on **every** run including
+  the one that reports *"nothing to commit (already provisioned)"*. Then the half that is not
+  cosmetic: a line added between two provisions (`/build/`) is **absent** after the next one.
+  Step 2 writes, so anything the project added is gone, and only step 4's append puts back the
+  three lines `workspace-init` happens to know about.
+- **Counterfactual:** any re-provision of an existing project, which is the documented idempotent
+  path. Nothing about an iteration's subject is involved.
+- **Recurrence:** every re-provision since the two programs both learned to write that file. Never
+  harmful in a run so far, because no run has edited `.gitignore` — which is luck about what the
+  worker chose to do, not a property of the tool.
+- **Consequence worth stating separately:** a provisioned project's `.gitignore` is not the
+  project's to edit, and the toolkit's own program is the one that gets this right —
+  `workspace-init` appends and never clobbers (F-003's fix), and the harness's provisioner does
+  the opposite one step earlier. The ordering is load-bearing and documented nowhere: only step 4
+  following step 2 on every run keeps the disagreement invisible.
+- **Direction:** step 2 appends the lines it wants rather than writing the file, using
+  `workspace-init`'s own idiom, and the two programs agree on **one** spelling per rule so a
+  provisioned project stops carrying two of each.
+- **Provenance:** observed by META-164 (commit 8e61fdb) and explicitly judged *not a defect* on
+  the ground that it converges; re-verified by execution here (META-163) and filed, because the
+  destructive half — a line the project added, silently discarded — was not in that reading, and
+  convergence of the parts a tool knows about is not convergence of the file.
+- **Status:** open, **deferred behind H-015's harness gate** — the next harness change window, a
+  unit that opens `harness/` while no run is in flight and no evidence is being banked. Ledger
+  work only in this unit: no `harness/` file was touched.
+
+## F-112 — the ledger's own status cannot be read by the obvious command
+
+- **Classification:** record-defect, in this repository's own findings ledger
+- **Severity:** correctness of the record, medium — the failure mode is a resolved finding
+  re-worked, or an open one never examined, and both cost a unit
+- **Component:** `meta/findings/FINDINGS.md` (its header convention), `scripts/check`
+- **Symptom:** this file is append-only by rule, so a resolved finding keeps its original
+  `Status:` line and the new one is appended below it. Nothing said so, and nothing checked
+  anything about a status, so the obvious reading is wrong in three separate ways. Measured at
+  commit 8e61fdb, the tree this was found on:
+  **(1)** `grep -E 'Status:\*{0,2} \*{0,2}open'` names **24** entries, and **13 of them** —
+  F-061, F-080, F-085, F-086, F-087, F-091, F-092, F-093, F-094, F-095, F-096, F-099 and H-020 —
+  carry a **later** status saying otherwise. A 54% false-positive rate on the command a reader
+  reaches for first.
+  **(2)** It is wrong in the other direction too. F-076 was fixed by META-149 and its *first*
+  status reads `deferred`, so the same grep does not name it at all; a reader who trusts the grep
+  to enumerate the open backlog gets a list that is both padded and short.
+  **(3)** Two status *forms* exist. F-061's resolving status is a `### Status update ...`
+  **heading**, not a bullet — a reader matching the bullet form (which is every other entry's
+  form) reports F-061 as `open (observation)` when META-159 closed it. And **three** entries
+  (H-001, F-042, F-071) carried **no** status line at all, being tombstones and a merge pointer,
+  which is indistinguishable to any mechanical reader from an entry nobody has examined.
+- **Counterfactual:** none needed — this is not about a consumer's project, it is about the file
+  that decides what this project works on next. It is F-024's class in the ledger's own margin: a
+  record whose form nobody verifies produces the appearance of a reading.
+- **Recurrence:** it has already cost real work. META-149 recorded F-053 as *still deferred*, and
+  META-156 fixed it three units later without noticing, so F-043 and F-053 sat at `deferred`
+  through four more units while being fixed. F-010's gate has been met since 2026-08-30 and its
+  status still read `deferred (gated)` eleven days later. Both were found by reading last statuses
+  one entry at a time, which is the reading this finding says nobody should have to do by hand.
+- **Direction:** say the rule where the file is opened, and make the machine hold the part it can.
+  The convention paragraph states that the last status line is the current one and that two forms
+  exist; `./scripts/check` gains a step that requires **every** `## F-###` / `## H-###` entry to
+  carry at least one status line, so a tombstone that says nothing and a finding nobody triaged
+  stop looking alike. What the step deliberately does **not** do is classify the words of a free
+  prose status — *"still deferred, and consumed as input"* is a legitimate status and a closed
+  vocabulary would either reject it or reduce it to a wrong label.
+- **Provenance:** found by the orchestrator while preparing META-163 and handed over as a trap to
+  avoid; the three-way measurement above is META-163's, and it is wider than the trap as reported
+  — the hand-listed set of stale entries was 12 and missed F-057, F-058, F-061 and H-020, and it
+  named F-076 as showing `open` when it shows `deferred`. Verifying it beat repeating it, which
+  is META-153b's lesson in a third place.
+- **Status:** **fixed** — both halves, in this unit, because this finding's subject *is* this
+  unit. The header of this file now states how to read a status. `./scripts/check` step **17c,
+  every finding's status is readable**, requires each entry to carry one and reports the tally in
+  its own label; it is proved non-vacuous inside the step, against a synthetic two-entry ledger
+  whose first entry has no status, so a reader that stopped seeing a missing status would fail the
+  step rather than pass it silently. The three status-less entries now carry one, saying what they
+  are.
