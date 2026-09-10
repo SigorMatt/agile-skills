@@ -1,5 +1,5 @@
 name: next
-version: 0.5.0
+version: 0.6.0
 persona: scheduler
 purpose: Pick the single next runnable action from workspace state and dispatch the skill that owns it.
 
@@ -28,7 +28,7 @@ inputs:
     why: the statuses, priorities, dependencies and creation times the selection key ranks
   - path: tracker/items/*/questions/*.md
     required: true
-    why: an open blocking question changes what may run, and a human-addressed question stops the loop
+    why: an open blocking question changes what may run, and an outstanding ask - human-addressed, blocking, unanswered - stops the loop once there is nothing else to do
   - path: tracker/items/*/history.md
     required: false
     why: reports where an item stopped when nothing is runnable
@@ -58,7 +58,7 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: silence-is-recorded
-    description: A pass that halts on the human records the halt, before it reads any engagement's state.
+    description: A pass that halts on the human records the halt, before it reads any engagement's state. A pass that has something to dispatch records nothing and says what - the halt is the last step, so an open ask no longer implies a halt.
     command: scripts/record-halt
     expect: exit-zero
     enforcement: hard
@@ -95,7 +95,8 @@ exit_criteria:
   - The board was regenerated.
   - Exactly one of - a question was surfaced and the loop stopped, a skill was dispatched, or the board was reported with the reason nothing is runnable.
   - Every epic was asked scripts/engagement-state, and none of them is at-rest and undispatched, abandoned and undispatched, or ended and unread.
-  - If the pass halted on the human, scripts/record-halt ran first and its round count is in the report. A halt that was surfaced without being recorded is a round nobody can count later.
+  - If the pass halted on the human, there was an outstanding ask and nothing dispatchable, scripts/record-halt ran first, and its round count is in the report. A halt that was surfaced without being recorded is a round nobody can count later; one recorded on a pass with work to do is a round that never happened.
+  - Every open human-addressed question is on the report's waiting line, whether or not this pass halted.
   - The dispatch decision names the item, its status, and the owning skill taken from pipeline.yaml.
 
 next_status: null

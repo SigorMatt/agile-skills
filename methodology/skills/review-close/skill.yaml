@@ -1,5 +1,5 @@
 name: review-close
-version: 0.13.0
+version: 0.14.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -152,7 +152,7 @@ quality_gates:
     enforcement: hard
     on_failure: stay
   - name: epic-sign-off
-    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied - or, at E4 by silence, until the ask stood unanswered for the threshold and the Ending statement in review.md names every child. Ending while never having asked stays illegal in both forms.
+    description: No engagement ends until the stakeholder has been asked what was delivered and what was not, after the engagement reached rest, and has replied - or, at E4 by silence, until the ask stood unanswered for the threshold and the Ending statement in review.md names every child. Ending while never having asked stays illegal in both forms. DE8's elicitation may be abandoned at any ending; outside E4 the waiting log must show it was surfaced, because filing one and closing it in the same execution shows nobody anything.
     command: scripts/check-epic-signoff {{item.id}}
     expect: exit-zero
     enforcement: hard

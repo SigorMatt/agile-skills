@@ -46,9 +46,43 @@ action.
    them: every other one — questions, answers, sign-off — begins with a skill asking (F-021,
    `spec/request.md` §1).
 
-3. **Surface questions addressed to the human — and count the halt.** Read every
-   `tracker/items/*/questions/*.md`. If any has `addressed-to: human` and `status: open`, the
-   pipeline is waiting on a person. Do these four things, in this order:
+3. **Dispatch `answer-questions` on anything answerable.** Read every
+   `tracker/items/*/questions/*.md`. A question is **answerable** when it is `status: open` and
+   either `addressed-to: architect`, or `addressed-to: human` **with `## Answer` filled in**.
+   Dispatch `answer-questions` on the item owning the **oldest** such question (by `created`,
+   then item ID) and stop.
+
+   The second shape is not a widening. It is `answer-questions`' own precondition 1, word for
+   word, and this step used to say something different: a reply the stakeholder had already
+   written was `addressed-to: human` and `open`, so the old step 3 stopped the loop and showed
+   them the answer they had just given, for ever. Two readings of one rule is one reading too
+   many, and here the two readings sat in two files saying opposite things about the same
+   question (F-011, F-109).
+
+4. **Dispatch the status owner.** Else build the candidate set: every item that is **runnable**,
+   which per `pipeline.yaml` means all of:
+   - its status has a non-null `owner` in `pipeline.yaml`;
+   - it has no open blocking question;
+   - every ID in its `depends-on` is at status `done`.
+
+   Order the candidates by the selection key — priority rank ascending, then `created`
+   ascending, then ID ascending — and take the first. Dispatch the skill named as that status's
+   `owner`. Report which item, which status, and which skill.
+
+   The selection key is total and mechanical. Two runs over the same workspace must pick the
+   same item; if yours would not, you have applied judgement somewhere.
+
+   **This step sits above the halt, and that is the whole of it.** An open question addressed to
+   the human does not stop another item from being refined, planned or built. Each runnable item
+   is dispatched on its own pass, files the questions its own skill can state, and suspends; the
+   loop then stops once, with all of them in front of the person. That is one stakeholder round
+   trip per round instead of one per item, and you acquire no judgement doing it — you never ask
+   what an item *could* say, only what its status owner is (F-097).
+
+5. **Surface what the person still owes — and count the halt.** Else, if any question is an
+   **outstanding ask** — `addressed-to: human`, `blocking: true`, and `## Answer` **empty** — the
+   pipeline is waiting on a person and has nothing else it can do. Do these four things, in this
+   order:
 
    **(a) Record the halt, first, before you read anything else.**
 
@@ -58,8 +92,7 @@ action.
 
    This is the `silence-is-recorded` gate. It appends exactly one row — and nothing else — to
    `tracker/waiting/<EP-ID>.md` for every epic this halt is against, carrying the moment, the
-   digest of everything the stakeholder could have changed, and the questions surfaced. A pass
-   that does not halt writes nothing and exits 0, so you may run it on every pass.
+   digest of everything the stakeholder could have changed, and the questions surfaced.
 
    The order is not a preference. The halt is a fact about the pass being taken *now*: a pass
    that read the count first would decide on a picture that excludes itself, and the pass that
@@ -67,6 +100,11 @@ action.
    get nothing — would go unrecorded. Recording first is also what makes the arithmetic legible:
    on the declaring pass the count **equals** the threshold, rather than exceeding it by the one
    row nobody wrote.
+
+   **If it reports that nothing was recorded because something is dispatchable, you are at the
+   wrong step.** Go back and dispatch what it names. A row written on a pass that had work to do
+   would be a silent round in which the pipeline was working rather than waiting, and the count
+   an ending rests on would be inflated by our own busyness.
 
    **(b) Ask for each engagement's verdict.** For every epic not already ended:
 
@@ -84,34 +122,24 @@ action.
    prohibition below — *never decide for yourself that an engagement is over* — covers this one
    word for word.
 
-   **(d) Otherwise, surface every human-addressed question and stop.** Print each in full — the
-   item, the question ID, the question text, and the options considered — not a pointer to it.
-   The human returning to this session should be able to answer without opening a file. From the
-   second round, say where the count stands: *"round 2 of 3; at 3 this engagement is declared
+   **(d) Otherwise, surface every open human-addressed question and stop.** Print each in full —
+   the item, the question ID, the question text, and the options considered — not a pointer to
+   it. The human returning to this session should be able to answer without opening a file. From
+   the second round, say where the count stands: *"round 2 of 3; at 3 this engagement is declared
    abandoned and closed as dropped."* `scripts/record-halt` prints that line; pass it on. It is a
    line in a report the person is already being shown, not a new artifact and not a new channel.
+
+   **A halt shows everything; only an outstanding ask causes one.** A **standing ask** —
+   `addressed-to: human` with `blocking: false`, the elicitation among them — is surfaced here
+   like any other and never brings you to this step. `blocking: false` means nothing waits on it,
+   and a loop that waited on it anyway held every ending out of reach, E1 included: rest requires
+   that nothing open is ours to act on, and a question nobody is waiting on was making every
+   engagement wait (F-104, `spec/question.md` §2).
 
    **File no reminder question.** Filing another question addressed to someone who is not reading
    questions creates a second thing that will never be answered — and, since our own writes do
    not reset the count, changes nothing about the outcome. It would be activity mistaken for
    escalation.
-
-4. **Dispatch `answer-questions`.** Else, if any question has `addressed-to: architect` and
-   `status: open`, dispatch `answer-questions` on the item owning the **oldest** such question
-   (by `created`, then item ID). Stop.
-
-5. **Dispatch the status owner.** Else, build the candidate set: every item that is **runnable**,
-   which per `pipeline.yaml` means all of:
-   - its status has a non-null `owner` in `pipeline.yaml`;
-   - it has no open blocking question;
-   - every ID in its `depends-on` is at status `done`.
-
-   Order the candidates by the selection key — priority rank ascending, then `created`
-   ascending, then ID ascending — and take the first. Dispatch the skill named as that status's
-   `owner`. Report which item, which status, and which skill.
-
-   The selection key is total and mechanical. Two runs over the same workspace must pick the
-   same item; if yours would not, you have applied judgement somewhere.
 
 6. **End an engagement that is over.** Else nothing is runnable — and "nothing is runnable" is
    not the same as "there is nothing to do". An engagement whose children have all stopped is
@@ -136,7 +164,7 @@ action.
    ask, and to `done` or `blocked` to record the ending — leave `open`, so the epic cannot be
    dispatched here twice for the same reason.
 
-   **Abandonment is not reached here.** It is declared at step 3, where the halt is. An
+   **Abandonment is not reached here.** It is declared at step 5, where the halt is. An
    engagement nobody is answering never reaches rest, so a mechanism built on rest could not see
    it at all.
 
@@ -188,7 +216,7 @@ action.
   rather than the pass's action — the same category as regenerating the board. It carries an
   observation and no conclusion. Do not edit that file by hand, ever: it is append-only, and the
   count an ending rests on is derived from it.
-- **Never decide for yourself that an engagement is over, or that it is finished with.** Steps 3,
+- **Never decide for yourself that an engagement is over, or that it is finished with.** Steps 5,
   6 and 7 are a script's verdicts, not yours. Reading the board and concluding "this looks
   finished" is engineering judgement in the one place in the system that must have none — and
   `ended` and `closed` are different verdicts for the same reason: one of them still owes a
@@ -213,7 +241,15 @@ item:  WI-0007 (status: planned, priority: high)
 skill: implement
 because: highest-ranked runnable item; WI-0009 rejected (depends-on WI-0007 not done),
          BUG-0001 rejected (open blocking question Q-001)
+waiting: WI-0001/Q-002 (outstanding), EP-001/Q-001 (standing, stops nothing)
 ```
+
+The `waiting:` line appears on **every** pass that has any open human-addressed question, not
+only on the passes that halt. Since step 4 sits above the halt, the loop can now work for many
+passes while a person still owes an answer, and a reader of the run would otherwise have no way
+to see what is pending. It is a line in a report, and deliberately nothing more: it does not
+reach anybody who is not already reading the output, and it resets no count — the clock is over
+halts, and a pass that dispatched is not one.
 
 The `because` line is not decoration. It is what makes a scheduling decision reviewable, and it
 is the first thing to read when the pipeline picked something surprising.
@@ -224,8 +260,12 @@ is the first thing to read when the pipeline picked something surprising.
 
 1. Did you apply any criterion that is not in `pipeline.yaml`'s `runnable` list or
    `selection_key`?
-2. If you halted on the human: did `scripts/record-halt` run **before** you read any verdict, and
-   is its round count in your report?
+2. If you halted on the human: was there an **outstanding ask** — human-addressed, blocking,
+   with an empty `## Answer` — and was there genuinely nothing to dispatch? Did
+   `scripts/record-halt` run **before** you read any verdict, and is its round count in your
+   report? If it told you something was dispatchable and you halted anyway, you recorded a round
+   in which the pipeline was working.
+   And whatever this pass did: is every open human-addressed question on the `waiting:` line?
 3. If you stopped without dispatching: did you run `scripts/engagement-state` for **every** epic,
    not only the ones at `open`, and is its verdict in your report? Stopping on an engagement that
    is at rest without ending it, or on one that has ended without having it read itself, are the
@@ -255,7 +295,7 @@ is the first thing to read when the pipeline picked something surprising.
   attempt repairs; you do not know what the artifacts mean.
 - **A status has no owner and is not terminal:** report it as a pipeline defect, naming the
   status and the items in it. Do not guess a skill.
-- **Every item is `awaiting-answer` on human-addressed questions:** that is step 3's outcome —
+- **Every item is `awaiting-answer` on human-addressed questions:** that is step 5's outcome —
   record the halt, ask for each verdict, and either dispatch `review-close` on an engagement the
   script calls `abandoned` or surface them all and stop.
 - **`scripts/record-halt` fails:** report its output and stop without surfacing. A halt that is

@@ -3157,6 +3157,15 @@ def check_silence_threshold(runner: Runner) -> None:
                 "## Options considered\n\n- **A** one\n- **B** the other\n\n"
                 f"## Answer\n\n{answer}\n\n## Consequences\n\nNone yet.\n")
 
+    def second_decision(status):
+        return ("---\nid: Q-003\nitem: WI-0001\nfrom-skill: refine\naddressed-to: human\n"
+                "blocking: true\nkind: decision\n"
+                f"status: {status}\ncreated: 2026-09-10T09:06:00Z\n---\n\n"
+                "## Context\n\nA second thing only they can settle.\n\n"
+                "## Question\n\nAnd which of these?\n\n"
+                "## Options considered\n\n- **A** one\n- **B** the other\n\n"
+                "## Answer\n\n\n## Consequences\n\nNone yet.\n")
+
     observations, problems = 0, []
     with tempfile.TemporaryDirectory() as root:
         def run(script, *args, pipeline_path=None):
@@ -3268,19 +3277,281 @@ def check_silence_threshold(runner: Runner) -> None:
                 "it is not reading pipeline.yaml")
 
         # --- any inbound change resets the count ---------------------------------------------
+        # A **partial** answer, which is the row of ADR-0011 §1.3's table that carries the whole
+        # argument: the count measures presence, not compliance. Q-003 stays outstanding across
+        # the reply, so the halt goes on and the reset is visible in the count rather than in the
+        # halt disappearing. Answering the last outstanding ask would end the halt instead, which
+        # is a different (and correct) behaviour and proves nothing about the digest.
         write(os.path.join(questions, "Q-001.md"), elicitation("open"))
         write(os.path.join(questions, "Q-002.md"), decision("open"))
+        write(os.path.join(questions, "Q-003.md"), second_decision("open"))
+        halt()
         line = halt()
-        observe("round 4 of 3" in line,
+        observe("round 2 of 3" in line,
                 f"a halt with nothing changed should have continued the run, got {line!r}")
         write(os.path.join(questions, "Q-002.md"),
               decision("answered", "B — and the second case matters too."))
         line = halt()
         observe("round 1 of 3" in line,
-                f"an answer did not reset the count: expected 'round 1 of 3', got {line!r}")
+                f"a partial answer did not reset the count: expected 'round 1 of 3', got "
+                f"{line!r}")
         observe(verdict() != "abandoned",
                 "engagement-state called an engagement abandoned one round after the "
                 "stakeholder answered")
+
+    if problems:
+        runner.emit(label, False, detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit(f"{label} ({observations} observations)", True)
+
+
+def check_halt_is_last(runner: Runner) -> None:
+    """Which questions stop the loop, and where the halt belongs (F-097, F-104, F-109).
+
+    ADR-0012 says one thing three programs have to agree on: the orchestrator stops on the human
+    when, and only when, an **outstanding ask** exists — `addressed-to: human`, `open`,
+    `blocking: true`, `## Answer` empty — and it stops there **last**, once nothing else is
+    dispatchable. Three shipped rules disagreed with that, and each had a cost the record already
+    carries:
+
+      * a **standing ask** — `blocking: false`, the elicitation every engagement files at intake
+        — halted the workspace and held rest, so an unanswered one put every ending out of reach,
+        E1 included (F-104);
+      * the halt sat above dispatch, so the first human question stopped every other item from
+        stating its own, and a real run stepped outside the orchestrator to get past it (F-097);
+      * a reply the stakeholder had already written was still a reason to stop and show it to
+        them again (F-011's unfixed half, F-109).
+
+    Prose cannot be tested, so what is tested is the three programs the prose moves:
+    `engagement-state`'s rest, `record-halt`'s idea of a halt, and `check-epic-signoff`'s DE8.
+    The scratch workspaces are built rather than banked because every case is a **transition**
+    between two states of one engagement, and a fixture tree can hold only one of them.
+
+    Both directions, every time. The must-fail half is not a stub here: it is the same workspace
+    with one fact changed — a runnable item present, an outstanding ask still open, an
+    elicitation the log never surfaced — and each must produce the opposite verdict.
+    """
+    import tempfile
+    sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
+    label = "the halt is the last resort, and only an outstanding ask causes one (F-097, F-104)"
+    try:
+        import engagement as engagement_lib
+        from workspace import Workspace
+    except ImportError as exc:                       # pragma: no cover - the library is step 1
+        runner.skip(label, f"scripts/lib is unusable: {exc}")
+        return
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "new-item", "record-halt", "engagement-state",
+                          "check-epic-signoff")}
+    signed = os.path.join(ROOT, "fixtures", "signed-off-epic")
+    if not all(os.path.isfile(path) for path in tools.values()) or not os.path.isdir(signed):
+        runner.skip(label, "one of the orchestrator scripts or fixtures/signed-off-epic is absent")
+        return
+
+    def question(identifier, item, blocking, status, kind=None, answer="", created="09:00:00"):
+        return ("---\n"
+                f"id: {identifier}\nitem: {item}\nfrom-skill: refine\naddressed-to: human\n"
+                f"blocking: {'true' if blocking else 'false'}\n"
+                + (f"kind: {kind}\n" if kind else "")
+                + f"status: {status}\ncreated: 2026-09-10T{created}Z\n"
+                + ("answered-at: 2026-09-10T12:00:00Z\nanswered-by: human\n"
+                   if status in ("answered", "deferred") and kind != "elicitation" else "")
+                + "---\n\n## Context\n\nThe first refinement round.\n\n"
+                "## Question\n\nWhich of these did you mean?\n\n"
+                "## Options considered\n\n- **A** one\n- **B** the other\n\n"
+                # Filed empty means the placeholder comment, which is what `refine` writes and
+                # what F-032 requires to be there. It is not a reply, and a predicate that read
+                # it as one would call every freshly filed question answered.
+                + f"## Answer\n\n{answer or '<!-- filled in by answer-questions -->'}\n\n"
+                "## Consequences\n\nNone yet.\n")
+
+    observations, problems = 0, []
+
+    def observe(condition, complaint):
+        nonlocal observations
+        observations += 1
+        if not condition:
+            problems.append(complaint)
+
+    with tempfile.TemporaryDirectory() as root:
+        def run(script, *args):
+            return subprocess.run([sys.executable, tools[script], *args, "--root", root],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        def halt():
+            result = run("record-halt")
+            return (result.stdout + result.stderr).strip()
+
+        def verdict():
+            result = run("engagement-state", "EP-001")
+            return (result.stdout + result.stderr).strip()
+
+        subprocess.run([sys.executable, tools["workspace-init"], root],
+                       capture_output=True, text=True, cwd=ROOT)
+        for args in (("--id", "EP-001", "--type", "epic", "--title", "A goal", "--status",
+                      "open", "--actor", "intake", "--reason", "from the raw idea"),
+                     ("--id", "WI-0001", "--type", "work-item", "--epic", "EP-001", "--title",
+                      "Do the thing", "--status", "draft", "--actor", "intake", "--reason",
+                      "refined from the idea"),
+                     ("--id", "WI-0002", "--type", "work-item", "--epic", "EP-001", "--title",
+                      "Do the other thing", "--status", "draft", "--actor", "intake", "--reason",
+                      "refined from the idea")):
+            subprocess.run([sys.executable, tools["new-item"], "--root", root, *args],
+                           capture_output=True, text=True, cwd=ROOT)
+        questions = os.path.join(root, "tracker", "items", "WI-0001", "questions")
+        log = os.path.join(root, "tracker", "waiting", "EP-001.md")
+        elicitation = os.path.join(questions, "Q-001.md")
+        write(elicitation, question("Q-001", "WI-0001", False, "open", kind="elicitation"))
+        write(os.path.join(questions, "Q-002.md"),
+              question("Q-002", "WI-0001", True, "open", created="09:05:00"))
+
+        # --- the four classes, read off the record ------------------------------------------
+        # Q-002 is filed with `## Answer` holding the placeholder comment F-032 requires. It is
+        # an outstanding ask, not a reply, and nothing below would notice if that were wrong.
+        workspace = Workspace(root).load()
+        epic = workspace.items["EP-001"]
+        observe(engagement_lib.outstanding_asks(workspace, epic) == ["WI-0001/Q-002"],
+                f"the outstanding ask is the blocking, unanswered, human-addressed one and "
+                f"nothing else; got "
+                f"{engagement_lib.outstanding_asks(workspace, epic)}")
+        observe(engagement_lib.standing_asks(workspace, epic) == ["WI-0001/Q-001"],
+                f"the elicitation is a standing ask; got "
+                f"{engagement_lib.standing_asks(workspace, epic)}")
+
+        # --- the stakeholder speaking outranks everything, the halt included ----------------
+        request = os.path.join(root, "tracker", "requests", "R-001.md")
+        write(request, "---\nid: R-001\nfrom: human\nstatus: open\n"
+                       "created: 2026-09-10T09:10:00Z\n---\n\n"
+                       "## Request\n\nCan it also do the other thing?\n\n"
+                       "## Response\n\n\n## Consequences\n\n\n")
+        line = halt()
+        # The whole message is matched, not the ID: every one of these lines cites `ADR-0012`,
+        # and "R-001" is a substring of it. The first draft of this case passed with the request
+        # branch stubbed out entirely for exactly that reason.
+        observe("has not halted" in line
+                and "an open stakeholder request: R-001" in line,
+                f"an open request is step 2 and outranks the halt: the stakeholder has spoken "
+                f"and the pass has somewhere to go. record-halt should have recorded nothing "
+                f"and named it; got {line!r}")
+        write(request, read(request).replace("status: open", "status: accepted"))
+
+        # --- F-097: a pass with work to do is not a halt ------------------------------------
+        line = halt()
+        observe("has not halted" in line and "WI-0002" in line,
+                f"WI-0002 is runnable, so this pass had somewhere to go and is not a silent "
+                f"round. record-halt should have recorded nothing and named it; got {line!r}")
+        observe(not os.path.isfile(log),
+                "a waiting row was written on a pass that had a runnable item — the count an "
+                "ending rests on, inflated by the pipeline's own busyness (ADR-0012 §2.1)")
+
+        # The must-fail direction of the same case: take the work away and the halt is real.
+        write(os.path.join(root, "tracker", "items", "WI-0002", "item.md"),
+              read(os.path.join(root, "tracker", "items", "WI-0002", "item.md"))
+              .replace("status: draft", "status: done") + "")
+        item_path = os.path.join(root, "tracker", "items", "WI-0002", "item.md")
+        write(item_path, read(item_path).replace("\npriority:", "\noutcome: delivered\npriority:"))
+        line = halt()
+        observe("round 1 of 3" in line,
+                f"with nothing runnable and an outstanding ask open, this pass IS the halt; got "
+                f"{line!r}")
+        observe("WI-0001/Q-001" in line and "WI-0001/Q-002" in line,
+                f"a halt surfaces every open human-addressed question, the standing ask "
+                f"included — it stops nothing and is still shown; got {line!r}")
+
+        # --- F-109: a reply is answerable, not a reason to stop ------------------------------
+        write(os.path.join(questions, "Q-003.md"),
+              question("Q-003", "WI-0001", True, "open", created="09:06:00"))
+        write(os.path.join(questions, "Q-002.md"),
+              question("Q-002", "WI-0001", True, "open", answer="B, the second one.",
+                       created="09:05:00"))
+        rows_before = len(engagement_lib.read_waiting_log(root, "EP-001"))
+        line = halt()
+        observe("has not halted" in line and "WI-0001/Q-002" in line,
+                f"a human-addressed question carrying a reply is ours to propagate, not a "
+                f"reason to stop and show them the answer they just wrote (F-011, F-109); got "
+                f"{line!r}")
+        observe(len(engagement_lib.read_waiting_log(root, "EP-001")) == rows_before,
+                "a waiting row was written on a pass whose only news was the stakeholder's own "
+                "reply")
+
+        # --- F-104: rest, with a standing ask and without --------------------------------
+        write(os.path.join(questions, "Q-002.md"),
+              question("Q-002", "WI-0001", True, "answered", answer="B, the second one.",
+                       created="09:05:00"))
+        observe("EP-001 active" in verdict(),
+                "an outstanding ask (Q-003) is still open, so the engagement is not at rest — "
+                "rest ignores a standing ask and nothing else")
+        write(os.path.join(questions, "Q-003.md"),
+              question("Q-003", "WI-0001", True, "answered", answer="A, this time.",
+                       created="09:06:00"))
+        write(item_path.replace("WI-0002", "WI-0001"),
+              read(item_path.replace("WI-0002", "WI-0001"))
+              .replace("status: draft", "status: done")
+              .replace("\npriority:", "\noutcome: delivered\npriority:"))
+        state = verdict()
+        observe("EP-001 at-rest" in state,
+                f"every child has stopped and the only open question is a standing ask, so the "
+                f"engagement is at rest and review-close is due. Before ADR-0012 this workspace "
+                f"reported 'active' for ever and no ending — E1 included — was reachable "
+                f"(F-104). Got:\n      " + state.replace("\n", "\n      "))
+        observe("WI-0001/Q-001" in state,
+                f"the at-rest verdict must name the standing ask it passed over, or a reader "
+                f"cannot tell an engagement with nothing open from one carrying an ask nobody "
+                f"answered. Got:\n      " + state.replace("\n", "\n      "))
+        line = halt()
+        observe("no epic is halted" in line,
+                f"a standing ask must never produce a silent round: it stops nothing, so an "
+                f"engagement holding one is never declared abandoned over it (ADR-0012 §3); got "
+                f"{line!r}")
+
+    # --- DE8 at an ordinary ending: abandoned, and the evidence it was ever asked -----------
+    import shutil
+    with tempfile.TemporaryDirectory() as base:
+        root = os.path.join(base, "ws")
+        shutil.copytree(signed, root)
+        gate = os.path.join(SCRIPTS, "check-epic-signoff")
+
+        def signoff_gate():
+            result = subprocess.run([sys.executable, gate, "EP-001", "--root", root],
+                                    capture_output=True, text=True, cwd=ROOT)
+            return result.returncode, (result.stdout + result.stderr).strip()
+
+        code, _ = signoff_gate()
+        observe(code == 0, "fixtures/signed-off-epic no longer passes the termination gate; "
+                           "this case builds on it and proves nothing without it")
+        target = os.path.join(root, "tracker", "items", "EP-001", "questions", "Q-002.md")
+        body = read(target)
+        abandoned = (body.split("## Answer")[0]
+                     .replace("status: answered", "status: abandoned")
+                     .replace("answered-at: ", "x-answered-at: ")
+                     .replace("answered-by: ", "x-answered-by: ")
+                     + "## Answer\n\n\n## Consequences\n\n"
+                       "Closed unanswered at the ending; `artifacts/review.md` records it.\n")
+        abandoned = "\n".join(line for line in abandoned.split("\n")
+                               if not line.startswith("x-answered-"))
+        write(target, abandoned)
+        code, output = signoff_gate()
+        observe(code != 0 and "never surfaced it" in output,
+                f"an elicitation closed as 'abandoned' outside E4, with no waiting log at all, "
+                f"claims nobody replied to a question the record cannot show anybody was ever "
+                f"asked. The gate must refuse it; it exited {code} saying "
+                f"{output.splitlines()[0] if output else '(nothing)'!r}")
+        waiting = os.path.join(root, "tracker", "waiting", "EP-001.md")
+        rows = ("| round | observed | inbound | surfaced |\n"
+                "|-------|----------|---------|----------|\n"
+                "| 1 | 2026-08-22T01:10:00Z | deadbeef | EP-001/Q-001 |\n")
+        write(waiting, f"# Waiting log — EP-001\n\nAppend-only.\n\n{rows}")
+        code, output = signoff_gate()
+        observe(code != 0 and "never surfaced it" in output,
+                f"a halt that surfaced the sign-off and not the elicitation is not evidence "
+                f"that the elicitation reached anybody; the gate exited {code}")
+        write(waiting, f"# Waiting log — EP-001\n\nAppend-only.\n\n{rows}"
+                       "| 2 | 2026-08-22T01:20:00Z | deadbeef | EP-001/Q-001, EP-001/Q-002 |\n")
+        code, output = signoff_gate()
+        observe(code == 0,
+                f"the log now shows the elicitation in front of the person at a halt, which is "
+                f"what DE8 asks for where no reply ever came (ADR-0012 §4.1). The gate exited "
+                f"{code}: {output.splitlines()[0] if output else '(nothing)'}")
 
     if problems:
         runner.emit(label, False, detail="\n".join(f"  - {problem}" for problem in problems))
@@ -3791,6 +4062,7 @@ def main() -> int:
     check_record_catches_up(runner)
     check_criterion_identity(runner)
     check_silence_threshold(runner)
+    check_halt_is_last(runner)
     check_process_gate_names(runner)
     check_shipped_scripts(runner)
     check_guard(runner)

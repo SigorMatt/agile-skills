@@ -3,16 +3,27 @@
 
 Usage: scripts/record-halt [--root .] [--pipeline <path>] [EP-ID ...]
 
-`next` runs this at orchestrator step 3, **before** it reads any engagement's state, as the
+`next` runs this at the halt step, **before** it reads any engagement's state, as the
 `silence-is-recorded` gate — the way `board-current` runs `scripts/board-gen`. It appends
 **exactly one row and nothing else** to `tracker/waiting/<EP-ID>.md` for every epic the halt is
 against, then prints the round count and the threshold for each (`spec/workspace-layout.md`
 §1.4, `spec/ids-and-statuses.md` §3.5a).
 
 An epic **the halt is against** is one that is not already ended — its status is not `done` or
-`blocked` — and whose engagement holds at least one question with `addressed-to: human` and
-`status: open`. That set is exactly the condition under which step 3 halts, so a pass that did
-not stop on the human records nothing and exits 0: a pass that did not halt is not a round.
+`blocked` — and whose engagement holds at least one **outstanding ask**: a question with
+`addressed-to: human`, `blocking: true` and an empty `## Answer` (ADR-0012 §1). A question that
+does not stop the loop never produces a round, so a standing ask — the non-blocking one nobody is
+waiting on — is surfaced by the halt and never causes one.
+
+**And nothing else must be dispatchable.** The halt is the orchestrator's last resort, below
+every step that dispatches work (ADR-0012 §2), so an outstanding ask is necessary for a halt and
+no longer sufficient: a pass may hold one and still have a request to route, an answerable
+question to consume or a runnable item to dispatch. A row written on that pass would be a silent
+round that never happened. So this program asks the same existence question steps 2, 3 and 4 ask
+— never their selection question — and where the answer is yes it records nothing, names what is
+dispatchable, and exits 0. It fails **open** on purpose: under-counting rounds delays an ending,
+while refusing would leave a loop that can neither dispatch nor halt, and `silence-is-recorded`
+is a hard gate.
 
 Why this is a script of its own, and not a mode of `engagement-state`: **the reader never
 writes**. `engagement-state`, `check-epic-signoff` and `review-close` all read the count, and if
@@ -58,7 +69,7 @@ def halted_epics(workspace, wanted) -> list:
             continue
         if epic.status in ENDED_STATUSES:
             continue
-        if not engagement_lib.surfaced_questions(workspace, epic):
+        if not engagement_lib.outstanding_asks(workspace, epic):
             continue
         found.append(epic)
     return found
@@ -104,6 +115,15 @@ def main(argv: list) -> int:
     epics = halted_epics(workspace, set(positional))
     if not epics:
         print("record-halt: no epic is halted on the human; nothing recorded")
+        return 0
+
+    elsewhere = engagement_lib.dispatchable(workspace, options.get("pipeline"))
+    if elsewhere:
+        print(f"record-halt: nothing recorded — this pass has not halted. The orchestrator "
+              f"reaches the halt only when there is nothing else to do, and there is: "
+              f"{elsewhere}.\n"
+              f"  Dispatch it and come back. A row written now would be a silent round in "
+              f"which the pipeline was working, not waiting (ADR-0012 §2.1).")
         return 0
 
     observed = engagement_lib.utc_now()

@@ -1,4 +1,4 @@
-# Contract — next v0.5.0
+# Contract — next v0.6.0
 
 Rendered from `methodology/skills/next/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -17,7 +17,7 @@ Rendered from `methodology/skills/next/skill.yaml`. This is the authoritative li
 | `tracker/requests/` | no | an open stakeholder request outranks selecting work, so it is read before the candidate set is built |
 | `methodology/pipeline.yaml` | yes | the status graph, the status-to-skill map, and the selection key - this skill's entire world model |
 | `tracker/items/*/item.md` | yes | the statuses, priorities, dependencies and creation times the selection key ranks |
-| `tracker/items/*/questions/*.md` | yes | an open blocking question changes what may run, and a human-addressed question stops the loop |
+| `tracker/items/*/questions/*.md` | yes | an open blocking question changes what may run, and an outstanding ask - human-addressed, blocking, unanswered - stops the loop once there is nothing else to do |
 | `tracker/items/*/history.md` | no | reports where an item stopped when nothing is runnable |
 | `scripts/engagement-state <EP-ID>` | yes | whether an engagement is running, over, abandoned, or fully closed - the one judgement this skill is not allowed to make for itself |
 | `tracker/waiting/` | no | the halt log the silent-round count is derived from - written by this skill through scripts/record-halt, read by nothing here |
@@ -57,7 +57,8 @@ The **subject** column is the gate's own answer to *what does this gate look at 
 - [ ] The board was regenerated.
 - [ ] Exactly one of - a question was surfaced and the loop stopped, a skill was dispatched, or the board was reported with the reason nothing is runnable.
 - [ ] Every epic was asked scripts/engagement-state, and none of them is at-rest and undispatched, abandoned and undispatched, or ended and unread.
-- [ ] If the pass halted on the human, scripts/record-halt ran first and its round count is in the report. A halt that was surfaced without being recorded is a round nobody can count later.
+- [ ] If the pass halted on the human, there was an outstanding ask and nothing dispatchable, scripts/record-halt ran first, and its round count is in the report. A halt that was surfaced without being recorded is a round nobody can count later; one recorded on a pass with work to do is a round that never happened.
+- [ ] Every open human-addressed question is on the report's waiting line, whether or not this pass halted.
 - [ ] The dispatch decision names the item, its status, and the owning skill taken from pipeline.yaml.
 
 ## Schemas this skill writes against

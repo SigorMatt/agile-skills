@@ -5,8 +5,15 @@ can advance any item in it and none ever will without a person acting (`spec/ids
 §3.5). That condition is called **rest**, and it holds when all of:
 
   1. every child of the epic is at a terminal status — `done` or `blocked`;
-  2. no question anywhere in the engagement — on the epic or on a child — is `open`;
+  2. no open question in the engagement is anyone's to act on but the stakeholder's, and then
+     only non-blockingly — every open question in it is a **standing ask** (ADR-0012 §1);
   3. no request in `tracker/requests/` is `open`.
+
+Condition 2 read *no question anywhere is `open`* until ADR-0012, and it meant, in the world it
+was written for, *nothing is outstanding*: every open human-addressed question stopped the loop,
+so the two sentences picked out the same workspaces. They stopped doing so the moment
+`spec/question.md` grew a question that must **not** stop the loop, and the old wording then made
+every ending unreachable while an elicitation nobody answers stood open — E1 included (F-104).
 
 An engagement that has ended is not yet **closed**: the retrospective is written after the
 ending and before the engagement is archived (`meta/adr/ADR-0009-retrospective-reading.md` §2).
@@ -112,7 +119,7 @@ class Engagement:
     """The state of one epic and its children, and why."""
 
     __slots__ = ("epic", "children", "verdict", "reasons", "rest_since", "undelivered",
-                 "silent_rounds", "threshold", "surfaced", "waiting_rows")
+                 "silent_rounds", "threshold", "surfaced", "outstanding", "waiting_rows")
 
     def __init__(self, epic, children) -> None:
         self.epic = epic
@@ -124,6 +131,7 @@ class Engagement:
         self.silent_rounds = 0
         self.threshold = None
         self.surfaced = []
+        self.outstanding = []
         self.waiting_rows = []
 
     @property
@@ -226,6 +234,142 @@ def human_questions(workspace, epic) -> list:
 def surfaced_questions(workspace, epic) -> list:
     """The human-addressed questions that are `open` — what a halt puts in front of a person."""
     return [name for name, question in human_questions(workspace, epic) if question.is_open]
+
+
+# ---- the four classes of open question, and who owns each (ADR-0012 §1) ------------------
+#
+# Every open question is exactly one of these, decided by three frontmatter fields and one
+# section's emptiness so that the classification is a program's and not a reader's:
+#
+#   ours to answer     addressed-to: architect                   -> answer-questions
+#   a reply to consume addressed-to: human, `## Answer` written  -> answer-questions
+#   an outstanding ask addressed-to: human, blocking, no answer  -> THEIRS; the loop stops here
+#   a standing ask     addressed-to: human, non-blocking, none   -> theirs, and nothing waits
+#
+# The loop stops on the human when, and only when, an outstanding ask exists. Rest is the
+# complement: an open question holds rest unless it is a standing ask. Before ADR-0012 the halt
+# fired on every open human-addressed question and rest was held by every open question at all,
+# which made an elicitation — the one question `spec/question.md` §2 declares nobody is waiting
+# on — halt the workspace for ever and put every ending out of reach (F-104), and left a reply
+# the stakeholder had already written looking like a reason to stop and show it to them again
+# (F-011's unfixed half, F-109).
+
+
+def answer_text(question) -> str:
+    """The reply as a reader sees it: the `## Answer` body without its filed-empty placeholder.
+
+    A question is filed with `## Answer` present and empty but for an HTML comment, because the
+    answerer needs somewhere to write (F-032). That comment is not a reply, and a predicate that
+    counted it would call every freshly filed question answered.
+    """
+    return "\n".join(line for line in answer_body(question).split("\n")
+                      if not line.strip().startswith("<!--")).strip()
+
+
+def is_outstanding(question) -> bool:
+    """The pipeline is waiting on a person, and cannot go on until they act."""
+    return bool(question.is_open
+                and question.fields.get("addressed-to") == "human"
+                and question.fields.get("blocking") is True
+                and not answer_text(question))
+
+
+def is_standing(question) -> bool:
+    """Asked, and nobody is waiting on it — `spec/question.md` §2's `blocking: false`."""
+    return bool(question.is_open
+                and question.fields.get("addressed-to") == "human"
+                and question.fields.get("blocking") is not True
+                and not answer_text(question))
+
+
+def holds_rest(question) -> bool:
+    """Does this question keep the engagement short of rest? Everything open but a standing ask."""
+    return bool(question.is_open) and not is_standing(question)
+
+
+def outstanding_asks(workspace, epic) -> list:
+    """The asks this engagement is stopped on, by `<ITEM>/<Q-ID>`, ascending.
+
+    One predicate, three consumers — `scripts/record-halt` (does this pass halt?), the rest
+    condition below (is the engagement over?) and the abandonment trigger (is the count against
+    anything?). Any two of them disagreeing about what the pipeline is waiting for is F-045's
+    mechanism, which is why they read one function rather than three copies of a sentence.
+    """
+    return [name for name, question in human_questions(workspace, epic)
+            if is_outstanding(question)]
+
+
+def standing_asks(workspace, epic) -> list:
+    """The asks that were put to a person and stop nothing, by `<ITEM>/<Q-ID>`, ascending."""
+    return [name for name, question in human_questions(workspace, epic)
+            if is_standing(question)]
+
+
+def is_answerable(question) -> bool:
+    """A question a skill can act on now — `answer-questions`' precondition 1, as a predicate.
+
+    Addressed to the architect, or addressed to the human with a reply already written into
+    `## Answer`. The second shape is the one `next` never learned: a reply the stakeholder has
+    written is ours to propagate, not a reason to stop and show it to them again (F-011, F-109).
+    """
+    if not question.is_open:
+        return False
+    if question.fields.get("addressed-to") == "architect":
+        return True
+    return (question.fields.get("addressed-to") == "human" and bool(answer_text(question)))
+
+
+def _status_owners(pipeline_path=None) -> dict:
+    path = find_pipeline(pipeline_path)
+    if not path or not os.path.isfile(path):
+        return {}
+    import miniyaml
+    pipeline = miniyaml.load_file(path) or {}
+    owners = {}
+    for status in pipeline.get("statuses") or []:
+        if isinstance(status, dict) and status.get("name"):
+            owners[status["name"]] = status.get("owner")
+    return owners
+
+
+def dispatchable(workspace, pipeline_path=None):
+    """Is there anything the pipeline could be doing instead of halting? The reason, or None.
+
+    This is the **existence** question behind orchestrator steps 2, 3 and 4 — an open request,
+    an answerable question, a runnable item — and never the selection question. Which item, in
+    what order, stays the selection key's and the orchestrator's alone; nothing here ranks
+    anything.
+
+    It exists because ADR-0012 moved the halt below every dispatching step. While the halt was
+    step 3, "an ask is open" and "this pass halted" were the same statement, so `record-halt`'s
+    condition was sufficient by itself. After the reordering a pass may hold an outstanding ask
+    **and** dispatch work, and a row written on that pass would be a silent round that never
+    happened — the count an ending rests on, inflated by the pipeline's own busyness
+    (ADR-0012 §2.1).
+    """
+    requests = _open_requests(workspace)
+    if requests:
+        return f"an open stakeholder request: {', '.join(sorted(requests))}"
+    answerable = sorted(f"{item.identifier}/{question.identifier}"
+                        for item in workspace.items.values()
+                        for question in item.questions if is_answerable(question))
+    if answerable:
+        return f"an answerable question: {', '.join(answerable)}"
+    owners = _status_owners(pipeline_path)
+    runnable = []
+    for item in sorted(workspace.items.values(), key=lambda i: i.identifier):
+        if not owners.get(item.status):
+            continue
+        if item.blocking_questions():
+            continue
+        dependencies = item.fields.get("depends-on") or []
+        if any((workspace.items.get(other) is None
+                or workspace.items[other].status != "done") for other in dependencies):
+            continue
+        runnable.append(f"{item.identifier} ({item.status} -> {owners[item.status]})")
+    if runnable:
+        return f"a runnable item: {', '.join(runnable)}"
+    return None
 
 
 def request_lines(workspace) -> list:
@@ -380,12 +524,18 @@ def state(workspace, epic, pipeline_path=None) -> Engagement:
     engagement.waiting_rows = read_waiting_log(workspace.root, epic.identifier)
     engagement.silent_rounds = silent_rounds(engagement.waiting_rows)
     engagement.surfaced = surfaced_questions(workspace, epic)
+    engagement.outstanding = outstanding_asks(workspace, epic)
     try:
         engagement.threshold = threshold_rounds(pipeline_path)
     except SilenceConfigError as exc:
         engagement.threshold = None
         engagement.reasons.append(f"the silence threshold is unreadable: {exc}")
-    reached = bool(engagement.threshold is not None and engagement.surfaced
+    # The threshold is measured against an **outstanding** ask, never against any open
+    # human-addressed question. A standing ask produces no halt, so it accrues no rounds, so a
+    # count standing beside one is a count of halts on something else; declaring an abandonment
+    # over the one question nobody is waiting on would be F-104's defect wearing the ending's
+    # clothes (ADR-0011 §4 as narrowed by ADR-0012 §3).
+    reached = bool(engagement.threshold is not None and engagement.outstanding
                    and engagement.silent_rounds >= engagement.threshold)
     # Every verdict carries the count while it is above zero, so the clock is visible before it
     # strikes rather than only afterwards (ADR-0011 §5).
@@ -419,7 +569,11 @@ def state(workspace, epic, pipeline_path=None) -> Engagement:
             f"share one inbound digest ({engagement.waiting_rows[-1].inbound}), so nothing the "
             f"stakeholder could have changed has changed")
         engagement.reasons.append(
-            "still open and unanswered: " + ", ".join(engagement.surfaced))
+            "still open and unanswered: " + ", ".join(engagement.outstanding))
+        standing = standing_asks(workspace, epic)
+        if standing:
+            engagement.reasons.append(
+                "also asked, and stopping nothing: " + ", ".join(standing))
         engagement.reasons.append(
             "the ending is E4 by silence and it is not recorded; review-close declares it")
         return engagement
@@ -438,11 +592,13 @@ def state(workspace, epic, pipeline_path=None) -> Engagement:
               if child.status not in TERMINAL_CHILD_STATUSES]
     if active:
         blockers.append("still in flight: " + ", ".join(active))
-    open_questions = []
+    open_questions, standing = [], []
     for item in [epic] + children:
         for question in item.questions:
-            if question.is_open:
+            if holds_rest(question):
                 open_questions.append(f"{item.identifier}/{question.identifier}")
+            elif question.is_open:
+                standing.append(f"{item.identifier}/{question.identifier}")
     if open_questions:
         blockers.append("open questions: " + ", ".join(sorted(open_questions)))
     requests = _open_requests(workspace)
@@ -455,7 +611,12 @@ def state(workspace, epic, pipeline_path=None) -> Engagement:
 
     engagement.verdict = "at-rest"
     engagement.reasons.append(
-        "every child has stopped, no question is open, no request is open")
+        "every child has stopped, nothing open is ours to act on, no request is open")
+    if standing:
+        engagement.reasons.append(
+            "open and stopping nothing — a standing ask is nobody's to compel, and the ending "
+            "closes it as 'abandoned' if no reply ever comes (ADR-0012 §4.1): "
+            + ", ".join(sorted(standing)))
     if engagement.undelivered:
         engagement.reasons.append("not delivered: " + ", ".join(engagement.undelivered))
     return engagement

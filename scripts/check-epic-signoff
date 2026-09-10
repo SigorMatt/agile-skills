@@ -68,6 +68,17 @@ requires all of:
     E4 there is nobody to address and the statement becomes a document rather than a question;
   * DE8's elicitation, which at E4 may itself be `abandoned` with an empty `## Answer`.
 
+**DE8 at the other three endings.** An elicitation is `blocking: false` and stops nothing
+(ADR-0012), so an engagement can now reach its ending with one still unanswered — a state that
+could not exist while every open question held rest. DE5 then requires it closed, and the only
+honest closure for a question nobody replied to is `abandoned`. So this gate accepts an
+`abandoned` elicitation at **any** ending, and asks for the half DE8 never had in exchange: the
+waiting log must show that the question was actually put in front of the person. `review-close`
+may file the elicitation alongside the sign-off, and without this that route was one halt away
+from theatre — file it, close it, satisfy DE8, show nobody anything. The evidence exists by
+construction, because rest files a sign-off, a sign-off is blocking, and a blocking ask is
+reached through a halt that records every question it surfaced.
+
 F-022: two consecutive runs closed an epic with no sign-off ever addressed to the human. The
 Definition of Done gates all held — they check the record, and the record only holds what the
 stakeholder said when last consulted. One of those runs had, three items earlier, negotiated a
@@ -105,6 +116,18 @@ def answer_text(body: str) -> str:
             if stripped and not stripped.startswith("<!--"):
                 collected.append(stripped)
     return "\n".join(collected).strip()
+
+
+def surfaced_at_a_halt(rows, holder_id: str, question_id: str) -> bool:
+    """Did any recorded halt put this question in front of the person?
+
+    The waiting log's `surfaced` column is the record of what a halt showed
+    (`spec/workspace-layout.md` §1.4). It is written by `scripts/record-halt` on a different
+    pass from the one that closes the question, which is what makes it evidence rather than an
+    assertion by the closing execution about itself.
+    """
+    wanted = f"{holder_id}/{question_id}"
+    return any(wanted in row.surfaced for row in rows)
 
 
 def question_text(body: str) -> str:
@@ -297,7 +320,8 @@ def main(argv: list) -> int:
     # was filed, only that it exists in this engagement and got a reply. At E4 it may itself have
     # gone unanswered: the criterion is then that it was asked and stood unanswered, never that
     # it was skipped (dor-dod.md DE8).
-    elicitations = []
+    elicitations, unsurfaced = [], []
+    waiting_rows = engagement_lib.read_waiting_log(root, item.identifier)
     for holder in [item] + list(engagement.children):
         for question in holder.questions:
             if question.fields.get("kind") != "elicitation":
@@ -306,12 +330,29 @@ def main(argv: list) -> int:
             if status == "open":
                 continue
             if status == "abandoned":
-                if silence is None or answer_text(question.body):
+                if answer_text(question.body):
+                    continue
+                if silence is None and not surfaced_at_a_halt(
+                        waiting_rows, holder.identifier, question.identifier):
+                    unsurfaced.append(
+                        f"{holder.identifier}/{question.identifier} is 'abandoned' but "
+                        f"tracker/waiting/{item.identifier}.md never surfaced it")
                     continue
             elif not answer_text(question.body):
                 continue
             elicitations.append(os.path.relpath(question.path, root))
     if not elicitations:
+        for complaint in unsurfaced:
+            print(f"check-epic-signoff: FAIL — {complaint}.\n"
+                  f"  An elicitation closed as 'abandoned' says nobody replied, and outside E4 "
+                  f"by silence the record\n"
+                  f"  must also show that somebody was asked: the question's "
+                  f"<ITEM>/<Q-ID> in the 'surfaced' column of\n"
+                  f"  a halt. Filing an elicitation and closing it in the same execution shows "
+                  f"nobody anything\n"
+                  f"  (dor-dod.md DE8, ADR-0012 §4.1).", file=sys.stderr)
+        if unsurfaced:
+            return 1
         print(f"check-epic-signoff: FAIL — nobody asked {item_id}'s stakeholder an open "
               f"question.\n"
               f"  Epic Definition of Done DE8: at least once in an engagement, file a question "

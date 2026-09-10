@@ -141,8 +141,18 @@ gate must not be able to disagree about whether an engagement is over. An engage
 when all of:
 
 1. every child of the epic is at a terminal status (`done` or `blocked`);
-2. no question anywhere in the engagement — epic or child — is `open`;
+2. no open question in it is anyone's to act on but the stakeholder's, and then only
+   non-blockingly — every open question is a **standing ask**, `addressed-to: human` with
+   `blocking: false` and no reply written (`question.md` §2). A question addressed to the
+   `architect`, one carrying a reply nobody has propagated yet, and an **outstanding ask** each
+   hold rest, because each is something somebody can still act on;
 3. no request in `tracker/requests/` is `open`.
+
+Condition 2 read *no question anywhere is `open`* until ADR-0012, and in the world it was written
+for the two sentences picked out the same workspaces: every open human-addressed question stopped
+the loop. They came apart when the protocol grew a question that must **not** stop it, and the
+old wording then made every ending unreachable — E1 included — for as long as an elicitation
+nobody answers stood open (F-104).
 
 At rest, and while the epic is still `open`, the orchestrator dispatches `review-close` on the
 epic. `review-close` then does one of two things, and both leave `open`, so the step terminates:
@@ -177,7 +187,10 @@ a question's `## Answer` (with its `status` and `answered-at`), and a file under
 note says skills change statuses and nothing else does — so nothing else counts.
 
 The round is defined against the **halt**, not against the question set: a pass that did not stop
-on the human is not a round, and a question that does not stop the loop never produces one.
+on the human is not a round, and a question that does not stop the loop never produces one. That
+last clause is load-bearing rather than incidental. A **standing ask** stops nothing, so it
+accrues nothing, so an engagement holding one can never reach E4 by silence over it — which is
+why rest had to stop being held by one too (§3.5, ADR-0012 §3).
 
 **The count is derived, never stored.** The orchestrator appends one row per halt to the
 engagement's append-only waiting log, `tracker/waiting/<EP-ID>.md`
@@ -212,8 +225,9 @@ itself counted and the trailing run **equals** the threshold rather than exceedi
 nobody wrote. `next` decides nothing here: it reads a verdict, as it already does at steps 6
 and 7.
 
-**Abandonment is only ever declared against an open ask.** A silent round requires a halt, and a
-halt requires a question addressed to `human` that is `open`. Silence where nothing was asked is
+**Abandonment is only ever declared against an outstanding ask.** A silent round requires a halt,
+and a halt requires a question addressed to `human` that is `open`, `blocking: true` and carries
+no reply — and a pass with nothing left to dispatch. Silence where nothing was asked is
 not silence — nobody was asked anything — and ending an engagement because *we* failed to ask is
 the failure DE7 exists to prevent (F-022, F-045). Whatever channel later makes the pipeline halt
 on the human is an ask, and its halts are silent rounds.
@@ -444,3 +458,4 @@ protecting.
 | 5 | 2026-08-30 | New §3.6: an ending is not the same as being closed. `engagement-state` gains the `closed` verdict, the orchestrator dispatches `retro` on `ended`, and the retrospective gates nothing (ADR-0009). |
 | 6 | 2026-09-10 | §3.5: E4 gains a **second route** — silence, not only withdrawal — and rest stops being the trigger for it. New §3.5a: the silent round, the derived count over `tracker/waiting/<EP-ID>.md`, `termination.silence.threshold_rounds`, the `abandoned` verdict, the ending statement, the child classification and the orphan's move to `blocked` with no `outcome`. §3.2: ownership answers *who is dispatched*, not *who may move it*. §4: two new rows — `awaiting-answer → blocked` (`review-close`, work-item/bug) and `awaiting-answer → done` (`review-close`, epic, gated), both F-050's shape found by derivation; the `done → open` condition widened to §3.4's own prose, *a child item filed against the epic after it closed*, so a returning stakeholder has a legal route back. Derived in ADR-0011 (F-060, F-008, H-008). |
 | 7 | 2026-09-10 | §4's registry note: an obligation that **many** moves satisfy declares a class of move and enumerates the pairs that deliver it under `satisfied_by`, checked as coverage — `epic.closed-with-active-children` is registered that way rather than left unregistered or given a false triple. §3.5a's mechanism became programs: `scripts/record-halt` appends the halt row, `engagement-state` reports `abandoned`, `check-epic-signoff` accepts the E4 ending, and `validate-workspace` checks the log's shape and `status: abandoned` questions. |
+| 8 | 2026-09-10 | §3.5: rest's condition 2 — an open question holds rest unless it is a **standing ask**, `addressed-to: human` with `blocking: false` and no reply. §3.5a: the halt requires an **outstanding ask** and a pass with nothing else to dispatch, and the round-against-the-halt clause is stated as the reason rest had to change with it. Derived in ADR-0012 (F-097, F-104, F-109). |

@@ -4,7 +4,7 @@ description: "Review the change and its record against the Definition of Done, t
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.13.0
+  methodology-version: 0.14.0
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -308,9 +308,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     - Record the list, and each restatement, under `## Sections restated at the ending` in
       `review.md`.
 
-    In the run this comes from, the vision said the stakeholder had not yet been asked, the
-    closing turn made that false, and the execution that noticed recorded *"there was no send-back
-    available that would not have been a fiction"* (F-093).
+    The vision said the stakeholder had not yet been asked; the closing turn made that false:
+    *"no send-back available that would not have been a fiction"* (F-093).
 
     **If the reply is already in the file — record the ending.** DE1–DE6 were recorded when the
     sign-off was filed; add what waited for the reply — DE4's restatement, DE7, DE8 (§4a) — then
@@ -323,10 +322,12 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     | do not accept — or a deferral with no way forward | **E3 impasse** | `open → blocked`, `resume-to: open` |
     | withdraw the engagement | **E4 abandoned** | children not `done` to `blocked` first, then `open → done`, `outcome: dropped` |
 
-    A "no" ends the engagement as legitimately as a "yes"; ending while never having asked is
-    what is not allowed. Closing over an undelivered child is legal and calling that outcome
-    `delivered` is not — the validator refuses it. Ending lives here because this is the only
-    moment where every sibling's state is already in hand.
+    A "no" ends as legitimately as a "yes"; ending while never having asked is what is not
+    allowed. Closing over an undelivered child is legal and calling it `delivered` is not. Ending
+    lives here because every sibling's state is in hand only at this moment. **Any question still
+    `open` closes as `abandoned`** (E4's rule 3 below, DE5): a standing ask reaches an ending
+    unanswered because nothing waits on it, and `open` on a closed engagement claims a reply is
+    still expected.
 
     ### The ending nobody answers — E4 by silence
 
@@ -349,8 +350,7 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
        **empty**, because the emptiness is the evidence and anything written there is the fiction
        the status exists to prevent; `## Consequences` naming the ending, the count and
        threshold, the epic, and the item's class; `answered-at`/`answered-by` unset. One already
-       `answered` or `deferred` is untouched; one left `open` halts the whole workspace for ever
-       at `next` step 3.
+       `answered` or `deferred` is untouched. **At every ending, not only this one.**
     4. **Apply DE1–DE6, then write `## Ending statement`** in the epic's `artifacts/review.md`,
        mirrored in its `## Notes` — the ask's ordering (§4a), forced here because DE6's audit may
        file a bug, a bug is a child, and the statement must name every child. It carries the

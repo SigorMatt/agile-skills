@@ -6,7 +6,7 @@
 # Normative prose lives in spec/ids-and-statuses.md. This file is the machine-readable form of
 # it, and scripts/lint-skills fails the build when the two disagree.
 
-version: 0.9.0
+version: 0.10.0
 
 item_types:
   - epic
@@ -50,7 +50,7 @@ priorities:
 termination:
   silence:
     threshold_rounds: 3
-    unit: One orchestrator halt on the human with no inbound change since the previous halt. Recorded as a row in tracker/waiting/EP-###.md; the count is the trailing run of equal inbound digests, never a stored counter (spec/workspace-layout.md section 1.4).
+    unit: One orchestrator halt on the human with no inbound change since the previous halt. Recorded as a row in tracker/waiting/EP-###.md; the count is the trailing run of equal inbound digests, never a stored counter (spec/workspace-layout.md section 1.4). A halt requires an OUTSTANDING ASK - addressed-to human, blocking, with an empty Answer - and a pass with nothing else to do; a question that does not stop the loop never produces a round (ADR-0012 sections 1 and 3).
     inbound: Only what a stakeholder can change - a reply written into a question's Answer section, and a file under tracker/requests/. Nothing a skill writes is inbound.
     resets_on: Any inbound change - a full reply, a partial reply, a deferral, or a new request. The count measures PRESENCE rather than compliance - a slow stakeholder is never abandoned, an absent one is.
     declared_by: review-close, and only review-close. The orchestrator reads the verdict; it decides nothing (ADR-0011 section 5).
@@ -403,17 +403,17 @@ orchestrator:
       action: route-stakeholder-requests
       description: If any request under tracker/requests/ has status open, dispatch intake on the oldest one and stop. The stakeholder speaking outranks selecting work; a request handled after the current item finishes is a request answered against a plan they already tried to change.
     - id: 3
-      action: surface-human-questions
-      description: If any question with addressed-to human and status open exists, the pipeline is waiting on a person. FIRST record the halt - one row on tracker/waiting/EP-###.md for each epic this halt is against - because a pass that read the count first would decide on a picture that excludes itself and the declaring pass would go unrecorded. THEN run scripts/engagement-state EP-### for each epic not already ended. If any reports abandoned, dispatch review-close on that epic and stop - the threshold was reached and the ending is E4 by silence. Otherwise surface every human-addressed question in full, with its item and the round count against the threshold, and stop. next decides nothing here - it reads a verdict, exactly as at steps 6 and 7 (spec/ids-and-statuses.md section 3.5a, ADR-0011 section 5).
-    - id: 4
       action: dispatch-answer-questions
-      description: Else if any question addressed to architect is open, dispatch answer-questions on the oldest such question's item.
-    - id: 5
+      description: Else if any question is ANSWERABLE - addressed to architect, or addressed to human with its Answer section filled in - dispatch answer-questions on the item owning the oldest such question. The second shape is not new work for that skill; it is answer-questions' own precondition 1, which next never learned, so a reply the stakeholder had already written looked like a reason to stop and show it to them again (F-011, F-109).
+    - id: 4
       action: dispatch-owner
-      description: Else pick the runnable item with the best selection key and dispatch its status owner.
+      description: Else pick the runnable item with the best selection key and dispatch its status owner. This sits ABOVE the halt, which is the whole of F-097's fix - the loop lets every runnable item state its own questions, one pass and one journal entry at a time, before it stops on the person, so one round trip carries them all. No pass dispatches twice and no judgement about what could be asked enters the scheduler (ADR-0012 section 2).
+    - id: 5
+      action: surface-human-questions
+      description: Else, if any OUTSTANDING ASK exists - a question with addressed-to human, blocking true and an empty Answer - the pipeline is waiting on a person and has nothing else to do. FIRST record the halt - one row on tracker/waiting/EP-###.md for each epic this halt is against - because a pass that read the count first would decide on a picture that excludes itself and the declaring pass would go unrecorded. THEN run scripts/engagement-state EP-### for each epic not already ended. If any reports abandoned, dispatch review-close on that epic and stop - the threshold was reached and the ending is E4 by silence. Otherwise surface every open human-addressed question in full - standing asks included, because a halt shows the person everything - with its item and the round count against the threshold, and stop. A standing ask is surfaced and never causes a halt - blocking false means nothing waits on it, and the loop that waited on it anyway put every ending out of reach (F-104). next decides nothing here - it reads a verdict, exactly as at steps 6 and 7 (spec/ids-and-statuses.md section 3.5a, ADR-0011 section 5, ADR-0012 section 1).
     - id: 6
       action: end-the-engagement
-      description: Else, for each epic still at open, run scripts/engagement-state EP-###. If it reports at-rest, dispatch review-close on that epic and stop. Abandonment is not reached here - it is declared at step 3, where the halt is (spec/ids-and-statuses.md section 3.5a). An engagement that can no longer progress must be ended through the stakeholder, not left on the board - which is what happened in a run that stopped here with the stakeholder recording that nobody ever asked them (F-045). The step terminates because both of review-close's moves from open leave open.
+      description: Else, for each epic still at open, run scripts/engagement-state EP-###. If it reports at-rest, dispatch review-close on that epic and stop. This step is reachable because rest and the halt are complementary - an engagement at rest has no outstanding ask, so it falls past step 5 rather than being held there by a question nobody is waiting on (ADR-0012 section 4). Abandonment is not reached here - it is declared at step 3, where the halt is (spec/ids-and-statuses.md section 3.5a). An engagement that can no longer progress must be ended through the stakeholder, not left on the board - which is what happened in a run that stopped here with the stakeholder recording that nobody ever asked them (F-045). The step terminates because both of review-close's moves from open leave open.
     - id: 7
       action: retro-an-ended-engagement
       description: Else, for each epic whose scripts/engagement-state verdict is ended - the ending is recorded and the retrospective is not written - dispatch retro on that epic and stop. The stakeholder is not waiting on this; their engagement ended at sign-off. This step terminates because writing the report changes the verdict to closed (ADR-0009 section 2).
@@ -424,7 +424,7 @@ orchestrator:
   # An item is runnable when all of these hold.
   runnable:
     - Its status has a non-null owner.
-    - It has no open blocking question. A deferred question is not open - the person replied, and their reply was "not yet" (spec/question.md section 2).
+    - It has no open blocking question. A deferred question is not open - the person replied, and their reply was "not yet" (spec/question.md section 2). Neither is an abandoned one - nobody replied, and no item resumes on the strength of it.
     - Every id in its depends-on is at status done.
 
   # Deterministic and total: two runs over the same workspace pick the same item.
@@ -436,8 +436,8 @@ orchestrator:
   stop_conditions:
     - The workspace validator failed.
     - An open stakeholder request was routed to intake.
-    - A question addressed to the human is open, the halt was recorded, and the question was surfaced.
-    - A question addressed to the human is open, the halt was recorded, and scripts/engagement-state reported abandoned, so review-close was dispatched to declare E4 by silence.
+    - An outstanding ask is open, nothing else was dispatchable, the halt was recorded, and every open human-addressed question was surfaced.
+    - An outstanding ask is open, nothing else was dispatchable, the halt was recorded, and scripts/engagement-state reported abandoned, so review-close was dispatched to declare E4 by silence.
     - No item is runnable, and review-close was dispatched to end an engagement at rest.
     - No item is runnable, and retro was dispatched on an engagement that has ended.
     - No item is runnable and every engagement is closed - ended, with its retrospective written.

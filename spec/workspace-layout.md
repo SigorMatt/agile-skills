@@ -173,10 +173,17 @@ ADR-0003), and the derivation is idempotent and self-healing in the same sense.
 
 **Which epics a halt is against.** One row goes to each, and an epic is one of them when it is
 **not already ended** — its status is neither `done` nor `blocked` — and its engagement holds at
-least one question with `addressed-to: human` and `status: open`. That set is exactly the
-condition under which the orchestrator stops at step 3, so a pass that did not stop on the human
-writes nothing: a pass that did not halt is not a round. A question on an item with no `epic:`
-belongs to no engagement and produces no row.
+least one **outstanding ask**: a question with `addressed-to: human`, `blocking: true` and an
+empty `## Answer` (`question.md` §3 rule 4). A question that does not stop the loop never
+produces a round, so a standing ask is surfaced by the halt and causes none. A question on an
+item with no `epic:` belongs to no engagement and produces no row.
+
+That condition is **necessary and no longer sufficient**. The halt is the orchestrator's last
+step, below every step that dispatches work (ADR-0012 §2), so a pass may hold an outstanding ask
+and still have a request to route, a reply to propagate or a runnable item to dispatch — and a
+row written on that pass would be a silent round in which the pipeline was working rather than
+waiting. `scripts/record-halt` asks that second question too, records nothing where anything is
+dispatchable, and says what.
 
 **Who writes and who reads.** `next` appends exactly one row per halt, through
 `scripts/record-halt`, **before** it reads the engagement's state, so the declaring pass counts

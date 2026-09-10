@@ -142,7 +142,7 @@ are not answering yet.**
   status, and why `deferred` is not just `open` with a nicer name. It MUST name files, like any
   other consequence.
 - `answered-at` and `answered-by` are set, because a reply arrived.
-- The orchestrator does **not** stop on a deferred question (`next` step 3 reads `open`), and
+- The orchestrator does **not** stop on a deferred question (the halt step reads `open`), and
   the question is not re-asked. It is not open.
 
 **What happens to the item is decided, not left to taste.** The architect has two moves and
@@ -193,10 +193,13 @@ addressed to `human`, it stood open across `termination.silence.threshold_rounds
 and the engagement ended at E4 by silence (`ids-and-statuses.md` §3.5a). It is the pipeline's only
 vocabulary for absence, and it is forced rather than chosen:
 
-- leaving the question `open` is fatal rather than untidy. `next` step 3 surfaces open
-  human-addressed questions and stops **before** everything else, so an abandoned engagement's
-  leftovers would halt the whole workspace for ever — the deadlock E4 exists to end would survive
-  its own ending. Definition of Done DE5 also requires open questions closed or re-filed.
+- leaving the question `open` is fatal rather than untidy where the question is a **blocking**
+  one: the orchestrator halts on any outstanding ask, so an abandoned engagement's leftovers
+  would halt the whole workspace for ever — the deadlock E4 exists to end would survive its own
+  ending. A standing ask left open is not fatal any more (§3 rule 4a) and is still a lie in the
+  record, because `open` asserts that a reply is expected on a question nobody will ever answer,
+  in an engagement that has ended. Definition of Done DE5 also requires open questions closed or
+  re-filed.
 - `answered` and `deferred` are both lies. Each asserts that a reply arrived, and each requires a
   non-empty `## Answer` to back it. Using `deferred` for silence would destroy the one distinction
   F-028 created it to record.
@@ -213,12 +216,23 @@ The rules:
 - **`answered-at` and `answered-by` stay unset.** No reply arrived, so there is no time and no
   author to record. The closing act is recorded by the epic's ending, which is where a fact about
   the engagement belongs.
-- **Only `review-close` sets it, and only when declaring E4.** No other skill, and no other
-  ending. A question is never abandoned on its own account: abandonment is a fact about the
-  engagement, not about one question (H-008).
+- **Only `review-close` sets it, and only when declaring an ending.** No other skill, and never
+  on its own account: abandonment is a fact about the engagement, not about one question (H-008).
+  It was scoped to E4 alone when it was created, and that was a scoping decision rather than a
+  claim about the word: a question could not then survive to any other ending, because every open
+  question held the engagement short of rest. A **standing ask** can (§3 rule 4a), and the honest
+  closure for one nobody replied to is the same one — no reply arrived, and the empty `## Answer`
+  is the evidence. What distinguishes E4 from E3 is not this status appearing anywhere in the
+  engagement; it is the **sign-off's** status and the waiting log's trailing run
+  (`ids-and-statuses.md` §3.5a, ADR-0012 §4.1).
 - **It is not open.** `next` does not stop on it, the orchestrator does not re-ask it, and no item
   resumes on the strength of it. It settled nothing, so no skill may cite it as a basis for a
   decision.
+- **Outside E4 by silence, the record must show it was asked.** An abandoned elicitation
+  satisfies Definition of Done DE8 at an ordinary ending only where the waiting log names it in a
+  halt's `surfaced` column — `scripts/check-epic-signoff` reads it. Filing an elicitation and
+  closing it in the same execution shows nobody anything, and that route exists (`review-close`
+  may file one alongside the sign-off), so the evidence is asked for rather than assumed.
 
 **What may and may not be done with it afterwards.** Never edit it: the general rule that a
 question is never deleted and its `status` never reverted (§3, rule 6) applies here with no
@@ -338,7 +352,12 @@ the stakeholder had somewhere to speak unprompted, and was never *asked* to.
 An **elicitation** question is the vehicle. One per engagement, at least.
 
 - `addressed-to` MUST be `human`; `blocking` MUST be `false`. It must not stop the loop — it is
-  not a thing anyone is waiting on — and it must not be answered by anybody else.
+  not a thing anyone is waiting on — and it must not be answered by anybody else. That sentence
+  is now what executes: it is a **standing ask** (§3 rule 4a), so it is surfaced at every halt
+  and causes none, and it holds neither the loop nor rest. It did not execute for its first three
+  weeks — `next` stopped on any open human-addressed question and rest was held by any open
+  question at all, so the one question declared to be nobody's to wait on put every ending out of
+  reach, E1 included (F-104, ADR-0012).
 - It is exempt from the two-options rule, and from it alone. *"What else matters to you here that
   we have not asked about?"* is not a choice between options and inventing two would defeat it.
   Every other body rule applies, including one topic per question and a place to write the answer.
@@ -446,13 +465,33 @@ Rules:
 2. **A non-blocking question does not suspend anything.** The item continues. The question is
    still filed, still answered, and still shows on the board. Use it for "this should be
    written down somewhere" rather than "I cannot proceed".
-3. **The orchestrator will not advance an item while a blocking question on it is open.**
-4. **A question addressed to `human` stops the autonomous loop.** The orchestrator records the
-   halt on the engagement's waiting log, surfaces the question and stops; there is nothing else
-   it can legitimately do — with one exception, and it is still not the orchestrator deciding
-   anything. Where the halt is the one at which `scripts/engagement-state` reports `abandoned`,
-   the orchestrator dispatches `review-close` on that epic instead of surfacing, and stops
-   (`ids-and-statuses.md` §3.5a).
+3. **The orchestrator will not advance an item while a blocking question on it is open.** It
+   will advance every **other** item, and a question addressed to the human is no exception —
+   what a blocking question suspends is its own item. A skill that learns something invalidating
+   a *different* item files a blocking question on that item; nothing else stops it.
+4. **An outstanding ask stops the autonomous loop.** An **outstanding ask** is a question that is
+   `addressed-to: human`, `status: open`, `blocking: true`, and whose `## Answer` is still empty:
+   the pipeline is waiting on a person and cannot go on without them. The orchestrator records
+   the halt on the engagement's waiting log, surfaces every open human-addressed question and
+   stops; there is nothing else it can legitimately do — with one exception, and it is still not
+   the orchestrator deciding anything. Where the halt is the one at which
+   `scripts/engagement-state` reports `abandoned`, the orchestrator dispatches `review-close` on
+   that epic instead of surfacing, and stops (`ids-and-statuses.md` §3.5a).
+
+   It stops there **last**. The halt sits below every step that dispatches work, so the loop lets
+   each runnable item state its own questions before it comes to the person, and one round trip
+   carries them all instead of one per item (F-097, ADR-0012 §2).
+
+4a. **A standing ask stops nothing.** A **standing ask** is `addressed-to: human`, `open`,
+   `blocking: false`, with no reply — the elicitation is the one every engagement carries. It is
+   surfaced at every halt, so the person sees it as often as anything else; it causes no halt,
+   accrues no silent round, and does not hold the engagement short of rest. At the ending, one
+   still unanswered is closed `abandoned` by `review-close` (§2).
+
+4b. **A reply is not a reason to stop.** A question `addressed-to: human` whose `## Answer` has
+   been filled in is **answerable**, not outstanding: `answer-questions` is dispatched to
+   propagate it. The orchestrator once stopped on those too and showed the person the answer they
+   had just written (F-011, F-109).
 5. **Answers propagate into artifacts.** `answer-questions` MUST update the authoritative
    documents — the plan, the item's acceptance criteria, an architecture doc, a new ADR — and
    list them under `## Consequences`. An answer that exists only inside the question file has
@@ -504,3 +543,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 9 | 2026-09-10 | §2: `status: abandoned` — the fourth question status, and the pipeline's only vocabulary for **absence**. `## Answer` MUST be empty, `## Consequences` names the ending and the item's orphan class, `answered-at`/`answered-by` stay unset, and only `review-close` sets it, only at E4. §3: rule 4 gains the orchestrator's `abandoned` branch, and new rule 8. Derived in ADR-0011 (F-060, F-028, H-008). |
 | 10 | 2026-09-10 | §2: `kind: sign-off`'s accept-with-follow-ups option states the consequence it actually has — the epic stays `open`, the follow-up is built, a fresh sign-off follows — rather than an ending the status model forbids (F-061). |
 | 11 | 2026-09-10 | §2: `**Under delegation:**` — a decision taken under a stakeholder's category answer names the answer that granted it and the category it is taken to cover, and the sign-off names every answer so spent (F-082). |
+| 12 | 2026-09-10 | §2/§3: **which questions stop the loop.** An **outstanding ask** — `addressed-to: human`, `open`, `blocking: true`, `## Answer` empty — halts the orchestrator, and it halts last, below every dispatching step (F-097). A **standing ask** is surfaced and stops nothing, so the elicitation's own `blocking: false` finally executes (F-104); a question carrying a reply is answerable rather than a reason to stop (F-011, F-109). `status: abandoned` is set by `review-close` at **any** ending, not only E4, and outside E4 the waiting log must show the question was surfaced. Derived in ADR-0012. |
