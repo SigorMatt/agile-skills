@@ -464,33 +464,33 @@ Format of each line: **unit** — scope — the gate that closes it.
 
 ### Cluster 1 — the derivation: document-as-deliverable (centerpiece)
 
-- [ ] **META-144** — Phase VI laid out here; `meta/CHECKPOINT.md` opened on the session.
+- [x] **META-144** — Phase VI laid out here; `meta/CHECKPOINT.md` opened on the session.
       Gate: committed and pushed, tree clean.
-- [ ] **META-145** — `meta/adr/ADR-0010-document-as-deliverable.md`: document kinds × lifecycle
+- [x] **META-145** — `meta/adr/ADR-0010-document-as-deliverable.md`: document kinds × lifecycle
       events, the authority-and-obligation table, the claim taxonomy (cited fact / quantified
       claim / engagement-state statement) with a distinct audit obligation each, and every
       historical case re-checked against the derived model (F-076, F-087, F-093, F-095,
       F-053-class, F-092, F-057, F-058). Derivation only; no code.
       Gate: ADR reads in the ADR-0006 shape; every named finding has a row.
-- [ ] **META-146** — `spec/doc-header.md` + `spec/dor-dod.md` carry the derivation: the claim
+- [x] **META-146** — `spec/doc-header.md` + `spec/dor-dod.md` carry the derivation: the claim
       taxonomy's audit obligations, the falsification question, ADR-conformance as a criterion
       (F-092). Gate: `./scripts/check` green; revision rows appended.
-- [ ] **META-147** — the affected skill contracts from ADR-0010's to-do list: `plan` gains the
+- [x] **META-147** — the affected skill contracts from ADR-0010's to-do list: `plan` gains the
       invalidation set / `deliverable-documents` / `binding-adrs` outputs, `implement`'s claims
       window widens, `verify` gains the per-ADR conformance verdict, `review-close` gains the
       K8 restatement and the `binding-adrs` completeness criterion; `pipeline.yaml`; re-render.
       Gate: `scripts/lint-skills` clean; rendered dist current; semver bumps recorded.
-- [ ] **META-147b** — the two contracts ADR-0010 touches that META-147 did not own:
+- [x] **META-147b** — the two contracts ADR-0010 touches that META-147 did not own:
       `intake` gains the initial `## Engagement state` section (§3.2 row L1) and
       `answer-questions` gains the K1–K4 write under §4a's obligations (row L7). Found and
       flagged by META-147 rather than left to be rediscovered as a finding.
       Gate: `scripts/lint-skills` clean; dist current; `./scripts/check` green.
-- [ ] **META-148** — the enforcement half, part 1 — the window: `scripts/lib/scope.py`'s
+- [x] **META-148** — the enforcement half, part 1 — the window: `scripts/lib/scope.py`'s
       fourth state (*out-of-scope-by-construction*, F-076), `scripts/lint-claims
       --plan-documents <ITEM>` (the widened window `implement`'s contract already names), and
       `scripts/check-verify-freshness` subtracting the deliverable documents from its `docs/`
       exemption (F-058). Gate: fixtures both ways + a `./scripts/check` step.
-- [ ] **META-148b** — the enforcement half, part 2 — the obligations: one gate script
+- [x] **META-148b** — the enforcement half, part 2 — the obligations: one gate script
       implementing the eight `[auto]` obligations that META-147/147b had to write as
       `manual_check`, and those gates flipped from `manual_check` to `command` in the
       contracts. Gate: must-fail fixture per obligation + a `./scripts/check` step.
@@ -501,87 +501,107 @@ Format of each line: **unit** — scope — the gate that closes it.
       Re-authoring them here would put one assertion in two places. What is genuinely left of
       this unit — **F-053's class as the lifecycle-state input** — is a status decision, not a
       fixture, and moves to META-149.
-- [ ] **META-149** — findings statuses settled from the derivation, with resolving citations:
+- [x] **META-149** — findings statuses settled from the derivation, with resolving citations:
       F-076, F-087, F-093, F-095, F-053, F-092, F-057, F-058.
       Gate: no stale status; `./scripts/check` step 17 green.
 
 ### Cluster 2 — the E4 mechanism (gates regression 5b)
 
-- [ ] **META-150** — `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`: the silence
+- [x] **META-150** — `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md`: the silence
       threshold (rest-time or unanswered rounds, stated in `pipeline.yaml`), who declares E4,
       and the DE-style ending statement. Derivation only.
       Gate: E4's row in ADR-0006 §1 reconciled, not contradicted.
-- [ ] **META-151** — the mechanism, part 1 — the model on paper: `ids-and-statuses.md` §3.5's
+- [x] **META-151** — the mechanism, part 1 — the model on paper: `ids-and-statuses.md` §3.5's
       and ADR-0006 §1's E4 rows amended for the silence route, `question.md`'s new
       `status: abandoned`, `dor-dod.md`'s DE7/DE8 E4 form, `workspace-layout.md`'s
       `tracker/waiting/`, and `pipeline.yaml`'s `termination.silence` block plus the two
       transition rows the derivation found missing. Gate: `./scripts/check` green.
-- [ ] **META-151b** — the mechanism, part 2 — the programs: the waiting-log writer,
+- [x] **META-151b** — the mechanism, part 2 — the programs: the waiting-log writer,
       `engagement.py` / `engagement-state` / `check-epic-signoff` / `validate-workspace`, `next`
       step 3 and its `silence-is-recorded` gate, `review-close` step 10. Re-render.
       Gate: `./scripts/check` green; version bumps; the threshold read from `pipeline.yaml` by
       all three consumers, proved by execution.
-- [ ] **META-152** — `fixtures/abandoned-engagement/` exercising the E4 rows end to end, plus
+- [x] **META-152** — `fixtures/abandoned-engagement/` exercising the E4 rows end to end, plus
       its `./scripts/check` step. Gate: the fixture fails before the mechanism and passes after.
-- [ ] **META-153** — harness (separate commit): a sim job that legitimately declines to answer
+- [x] **META-153** — harness (separate commit): a sim job that legitimately declines to answer
       (scripted silence, logged), and the driver recognising "human silent past threshold, E4
       declared" as a terminal epic-done-class stop rather than a stall.
       Gate: `harness/tests/test_harness.py` green with new cases.
-- [ ] **META-153c** — H-020's fix, promoted ahead of cluster 3: the driver's declared-E4
+- [x] **META-153c** — H-020's fix, promoted ahead of cluster 3: the driver's declared-E4
       reading is **unsound**, not merely unpromised — a delivered run whose log carries a
       trailing silence run is stamped `abandoned`, proved by execution in META-153b. It would
       mislabel any iteration, 5b included, so it is fixed before the regressions are
       provision-verified. Harness commit. Gate: a test that fails on the old reading.
-- [ ] **META-153b** — cluster 2's findings pass: the elicitation deadlock ADR-0011 §6 recorded
+- [x] **META-153b** — cluster 2's findings pass: the elicitation deadlock ADR-0011 §6 recorded
       and declined to file, and the three defects `fixtures/abandoned-engagement/` surfaced in
       `check-epic-signoff` and `engagement-state`. Statuses for the E4 work.
       Gate: `./scripts/check` step *findings citations resolve* green.
 
 ### Cluster 3 — enforcement mechanics
 
-- [ ] **META-154** — F-091 (the anchor) **and F-080 together**, because they are one bullet:
+- [x] **META-154** — F-091 (the anchor) **and F-080 together**, because they are one bullet:
       `transition` owns the **Gates:** verdicts the way it owns **Status:** — the runner writes
       what ran, the worker supplies the evidence sentences — plus the fourth verdict for a gate
       that runs later in the same execution, and the bullet compared against the acting skill's
       contract. Gate: must-fail fixtures + `./scripts/check`.
-- [ ] **META-156** — F-081 (a home for the post-closing merge sha), F-083 (outcome/status
+- [x] **META-156** — F-081 (a home for the post-closing merge sha), F-083 (outcome/status
       ordering made legal), F-084 (doc version rows matched against executions).
       Gate: `./scripts/check` green; each with its fixture.
-- [ ] **META-157** — F-094 (criterion citations survive renumbering), F-096 (a substituted
+- [x] **META-157** — F-094 (criterion citations survive renumbering), F-096 (a substituted
       verification tick carries a mark). Gate: fixtures both ways.
-- [ ] **META-158** — F-099: the evidence-to-ledger citation sweep, mechanised, then run.
+- [x] **META-158** — F-099: the evidence-to-ledger citation sweep, mechanised, then run.
       Every phantom tombstoned or corrected, honestly. Gate: a `./scripts/check` step that
       resolves those citations; the sweep's yield recorded in the finding.
 
 ### Cluster 4 — ending contracts
 
-- [ ] **META-159** — F-085 (review-close's gate list gains an epic-subject column), F-086
+- [x] **META-159** — F-085 (review-close's gate list gains an epic-subject column), F-086
       (DE1–DE6 applied before the sign-off is filed; DE7 alone waits), F-061 (option B's
       consequence line tells the truth — one sentence in `spec/question.md` §2).
       Gate: `./scripts/check` green; fixtures for the gate-list change.
 
 ### Cluster 5 — planning/criteria and stakeholder protocol
 
-- [ ] **META-160** — F-089 (criteria name artifacts; wanted counts measured first), F-090 (an
+- [x] **META-160** — F-089 (criteria name artifacts; wanted counts measured first), F-090 (an
       accepted gap naming an owner is dispatchable), F-088 (an audit example must be able to
       falsify; the row records why). Gate: fixtures.
-- [ ] **META-161** — F-082 (a consumed delegation records the category it covers; the sign-off
+- [x] **META-161** — F-082 (a consumed delegation records the category it covers; the sign-off
       surfaces assumptions taken under delegations). Gate: fixture + `lint-answers`.
-- [ ] **META-162** — F-097: a collect-askable-questions pass before the loop stops on the human,
+- [x] **META-162** — F-097: a collect-askable-questions pass before the loop stops on the human,
       designed against the one-action rule; ADR the resolution.
       Gate: the ADR, plus whatever it makes enforceable.
 
 ### Cluster 6 — triage the rest
 
-- [ ] **META-163** — every remaining open finding gets a decision: fix here (small and
+- [x] **META-163** — every remaining open finding gets a decision: fix here (small and
       adjacent), defer behind a named gate, or reject with a reason. No status left stale.
       Gate: no `Status: open` without a dated triage line.
 
 ### Staging and close
 
-- [ ] **META-164** — provision-verify `iteration-5-envel` and `iteration-5b-droll` in throwaway
+- [x] **META-164** — provision-verify `iteration-5-envel` and `iteration-5b-droll` in throwaway
       paths, then tear down. The runs are the owner's to launch; iteration 5 is held-out
       calibration and is neither run nor read here.
       Gate: both provision, both validate, both removed; nothing left behind.
-- [ ] **META-165** — `meta/FINAL-REPORT-5.md` + the ROADMAP §4 stamp.
+- [x] **META-165** — `meta/FINAL-REPORT-5.md` + the ROADMAP §4 stamp.
       Gate: acceptance checklist answered line by line.
+
+### What actually ran, against what was planned
+
+Recorded here so the plan tells the truth rather than the intention (META-165):
+
+- **26 units ran, all committed and pushed** (the 27 lines above, less META-148c, which was
+  absorbed). `meta/journal.md` carries **24** entries covering META-145 … META-164, plus
+  META-165's, which is 25: **META-144 journalled nothing of its own**, being the unit that wrote
+  this phase.
+- **Four units were added after the phase was laid out**, each because the unit before it found
+  work it did not own rather than leaving it to be rediscovered as a finding: **META-147b**
+  (`intake` and `answer-questions` still owed ADR-0010's rows L1 and L7), **META-151b** (the E4
+  mechanism's programs, split from the paper model), **META-153b** (cluster 2's findings pass),
+  and **META-153c** (H-020's unsound half, promoted ahead of cluster 3 because it would have
+  mislabelled iteration 5b).
+- **META-148c was absorbed, not skipped** — see its line above.
+- **There is no META-155.** The numbering skips it; no unit was planned or run under that number.
+- **META-164 executed before META-163.** Staging verification was brought forward when it became
+  clear it was an acceptance item that gated nothing else, so the journal's last two session
+  entries read out of numeric order.

@@ -6524,3 +6524,74 @@ recall is a reading, not a number, and the report says which.
   gate, **2** are known-derived-and-accepted (F-102, F-103), **1** is open-unstarted-and-sequenced
   with its gate met (F-010), and **1** is re-gated on scope after its stated blocker went away
   (H-015). **No entry says only *open*.**
+
+## 2026-09-10 — META-165 — the session's report, and the roadmap stamp that says what is not proven
+
+- **Unit:** META-165 (Phase VI, the last — `meta/FINAL-REPORT-5.md` and the ROADMAP §4 stamp)
+- **Inputs read:** `meta/CHECKPOINT.md` in full; `meta/BUILDER-5-PROMPT.md`;
+  `meta/FINAL-REPORT-4.md` in full, as the house standard for tone and honesty;
+  `meta/ROADMAP.md`; `meta/plan.md` §Phase VI; `meta/adr/ADR-0010` (context, §3, §4,
+  the enforcement-boundary table, §7, §8), `ADR-0011` §1.1, `ADR-0012`'s outline;
+  `meta/findings/FINDINGS.md` — F-010, F-071, F-084, F-099, F-109, H-001 in full, and every
+  entry's last status by the same reader `./scripts/check` step 17c uses;
+  `meta/journal.md` META-156 … META-163 in full and every session entry's `**Gates:**` block;
+  `methodology/pipeline.yaml`, all nine `skill.yaml` versions at `66c3e22` and at HEAD, every
+  `spec/*.md` revision table at both ends; `scripts/lint-documents`' docstring and the nine gate
+  rows that call it; `harness/iterations/iteration-5*.json`; `meta/harness/PROJECT-QUEUE.md`
+  Iterations 5 and 5b.
+- **Decisions:**
+  - **The checkpoint was treated as a lead and checked, and the check paid four times.** Three
+    units this session established that an orchestrator's summary is hearsay and META-163 found
+    the checkpoint's account of a trap wrong in four particulars, so every load-bearing number in
+    the report was read out of the repository. Most held. **Four did not**, and they are in the
+    report as §9 rather than smoothed over:
+    (1) **"seven times running" is five.** META-156 … META-162 is a genuine run of seven
+    consecutive units — there is no META-155 — and five of them caught a defect in their own new
+    tests. **META-158 recorded none** (both its stubs bit; its own-case sentence is a positive
+    confirmation) and **META-159's event is the inverse shape** — its cases caught a hypothetical
+    bad implementation, and nothing in its fixture was rewritten. The journal's own ordinals
+    contradict each other on exactly this: META-159 says *"the third unit in a row"*, META-161
+    says *"Sixth"*, META-162 says *"Seventh"*.
+    (2) **"corrected the orchestrator's summary in three places" cannot be resolved to three** —
+    META-153b itemizes two (F-105, F-107) and records F-106 as *"exactly as described"*.
+    (3) **"3 tombstones"** is two tombstones (H-001, F-071) and one **merge pointer** (F-042);
+    the ledger header and META-163's own entry both say *"tombstones and pointers"*.
+    (4) the checkpoint's own account of META-163's trap was hearsay, which META-163 recorded and
+    the checkpoint then restated.
+  - **The report's §7 is longer than its §2, and that is the honest shape of this session.**
+    No live run has produced an E4; nothing in cluster 1 has met a live workspace; the eight
+    `[auto]` obligations each decide **less** than the `manual_check` prose they replaced and each
+    says so in its own gate description; **obligation 10 is claimed by nothing** and the whole K8
+    mechanism rests on it. F-053 and F-043 were fixed **incidentally** at `8804bd7` and noticed
+    only at triage seven units later, which is reported as evidence about the process rather than
+    about the code.
+  - **Every rule added this session is reported with the measurement that scoped it, not with the
+    rule alone**: F-084's ten rows in the must-pass example without its done-item boundary,
+    F-089's 26 of 53 for 2 true positives, F-094's 84 standing citations, F-082's eight fires for
+    one true positive, F-098's 97 bare `ADR-nnnn` citations of which 37 were written this session.
+  - **The launch order is argued from the queue entry rather than asserted.** Iteration 5 → owner
+    review → retro comparison → 5b, because iteration 5 is the only step whose value is destroyed
+    by anything happening before it, and because 5b is the step most likely to produce a toolkit
+    change — which before step 3 would contaminate the calibration. `PROJECT-QUEUE.md` says the
+    same thing in its own words: *"Run after iteration 5's calibration review completes."*
+  - **ROADMAP §4 records the state of the gated tracks, including the thing nobody had noticed.**
+    §2 is met and nothing is gate-blocked; §3's order stands (retro track open-not-finished, then
+    the Codex CLI adapter, then content packs); **F-010's gate has been met since 2026-08-30** and
+    the entry read `deferred (gated)` for eleven days. §2's stamp is **not withdrawn** — its three
+    conditions were met against the kernel of 2026-08-30 — but the stamp now says plainly that
+    condition 1 has been contradicted by three consecutive derivations, this one moving eight of
+    nine contracts, and that a re-confirmation run is owed.
+  - **`meta/plan.md` Phase VI now tells the truth about the units that ran**: 26 units, META-148c
+    absorbed, META-147b / META-151b / META-153b / META-153c added and why each was added, no
+    META-155, and META-164 executing before META-163.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **45 steps**; `must-fail
+  fixture` **108 codes**; `finding numbers cited resolve` **4278 citations, 133 numbers, 133
+  filed, over 1675 tracked files**, 0 phantoms — the sweep reads this unit's own files like any
+  other (the report, the stamp and this entry), so every finding number quoted in them had to
+  resolve; `every finding's status is readable` 133 entries, every one with a status; `scripts/lib/
+  selftest.py` **356**; `harness/tests/test_harness.py` **110**. Nothing executable changed in
+  this unit, so no fixture moved and none was expected to.
+- **Artifacts:** `meta/FINAL-REPORT-5.md` (new), `meta/ROADMAP.md` (§4 stamp; header date),
+  `meta/plan.md` (Phase VI boxes ticked and a *what actually ran* note), `meta/journal.md` (this
+  entry).
