@@ -45,11 +45,11 @@ SCRIPTS_TO_SHIP = [
     "check-commit-refs", "check-verify-freshness", "run-gate", "transition",
     "journal-entry", "lint-claims", "lint-answers", "check-epic-signoff",
     "engagement-state", "export", "lint-retro", "lint-documents",
-    "record-halt",
+    "record-halt", "record-merge",
 ]
 LIB_TO_SHIP = ["miniyaml.py", "frontmatter.py", "report.py", "record.py",
                "workspace.py", "board.py", "claims.py", "engagement.py", "scope.py",
-               "textio.py", "documents.py"]
+               "textio.py", "documents.py", "vcs.py"]
 SPEC_TO_SHIP = [
     "README.md", "ids-and-statuses.md", "work-item.md", "journal-and-history.md",
     "question.md", "request.md", "doc-header.md", "dor-dod.md", "skill-contract.md",

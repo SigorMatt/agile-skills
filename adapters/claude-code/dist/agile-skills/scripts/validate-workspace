@@ -32,13 +32,14 @@ import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
                        Workspace, id_kind, resolve_root)
-from record import (GATE_VERDICTS, duplicate_headings,  # noqa: E402
-                    sections as split_sections)
+from record import (GATE_VERDICTS, duplicate_headings, executed_at,  # noqa: E402
+                    execution_windows, sections as split_sections)
+import vcs  # noqa: E402
 
 ITEM_ID_IN_TEXT_RE = re.compile(r"\b(?:EP-\d{3}|WI-\d{4}|BUG-\d{4})\b")
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
 ITEM_FIELDS_OPTIONAL = ["epic", "branch", "outcome", "found-in", "arose-from", "depends-on",
-                        "blocks", "relates-to"]
+                        "blocks", "relates-to", "merge-commit"]
 OUTCOMES = {"delivered", "dropped", "duplicate"}
 EPIC_ONLY_OUTCOMES = {"delivered-partial"}
 TERMINAL_CHILD_STATUSES = {"done", "blocked"}
@@ -514,7 +515,10 @@ class Validator:
                               f"legal on an epic only (spec/work-item.md §1)")
         if item.status != "done" and outcome is not None:
             self.report.error(path, 0, "item.outcome.premature",
-                              f"outcome is set to {outcome!r} but the item is not done")
+                              f"outcome is set to {outcome!r} but the item is not done",
+                              hint="the outcome and the status are written by one act: pass "
+                                   "--outcome to the transition that closes the item, rather "
+                                   "than editing item.md first (F-083)")
 
         if expected_type != "epic":
             reached = item.statuses_reached()
@@ -524,6 +528,68 @@ class Validator:
                                   "the item has been in progress but records no branch",
                                   hint="git log --grep is only reconstructible if the branch "
                                        "is named here")
+
+        self.check_merge_commit(path, item, expected_type)
+
+    def check_merge_commit(self, path, item, expected_type) -> None:
+        """`merge-commit`: the one fact about a close that is created after the record (F-081).
+
+        The close must precede the merge — `commits-reference-the-item` reads
+        `trunk..branch`, and merging empties it — so the closing journal entry is written before
+        the merge commit exists and cannot name it. `scripts/record-merge` writes the sha
+        afterwards, and this asks git the same four questions that program asked, through the
+        same function, so a field somebody typed is held to what a field that program wrote is
+        held to. **A recorded merge that never happened is worse than an unrecorded one**, which
+        is F-035, and it is the whole reason this re-checks rather than trusting the field.
+
+        Where git cannot be asked — not a repository, no such branch, no trunk — this says
+        nothing at all. A check that could not look must not report a pass and must not invent a
+        failure either (`spec/skill-contract.md` §1.4).
+        """
+        recorded = item.fields.get("merge-commit")
+        branch = item.fields.get("branch")
+        delivered = (item.status == "done" and item.fields.get("outcome") == "delivered"
+                     and expected_type != "epic" and bool(branch))
+        if recorded is not None:
+            if not delivered:
+                self.report.error(path, 0, "item.merge.unexpected",
+                                  f"merge-commit is recorded on an item that is "
+                                  f"{item.status!r} with outcome "
+                                  f"{item.fields.get('outcome')!r}",
+                                  hint="the field records the merge that delivered the item, so "
+                                       "it belongs on a work-item or bug that is done, "
+                                       "delivered, and names the branch that was merged")
+                return
+            if not isinstance(recorded, str):
+                self.report.error(path, 0, "item.merge.malformed",
+                                  f"merge-commit must be a sha, found {recorded!r}")
+                return
+            problems = vcs.merge_problems(self.workspace.root, recorded.strip(), branch,
+                                          self.trunk_branch())
+            if problems is None:
+                return
+            for code, message in problems:
+                self.report.error(path, 0, code, message,
+                                  hint="scripts/record-merge writes this field only after git "
+                                       "has confirmed all four; one that says otherwise was "
+                                       "written by hand (F-035, F-081)")
+            return
+        if not delivered:
+            return
+        # The other direction: a merge that happened and nothing recorded. Decidable only where
+        # the branch still exists and can be seen to be on the trunk; a deleted branch, or a
+        # workspace that is not a repository, answers nothing and is not reported.
+        if vcs.merged_into(self.workspace.root, branch, self.trunk_branch()) is True:
+            self.report.error(path, 0, "item.merge.missing",
+                              f"{branch} is merged into {self.trunk_branch()} and no "
+                              f"merge-commit is recorded",
+                              hint="run scripts/record-merge <ITEM-ID> --merge <sha> after the "
+                                   "merge; the closing entry could not name a commit that did "
+                                   "not exist when it was written (F-081)")
+
+    def trunk_branch(self) -> str:
+        block = ((self.workspace.project or {}).get("project") or {})
+        return block.get("trunk-branch") or "main"
 
     def check_provenance(self, path, item, expected_type) -> None:
         """`arose-from`: what caused this item to exist (spec/ids-and-statuses.md §5).
@@ -1312,9 +1378,88 @@ class Validator:
                     if later >= earlier:
                         self.report.error(path, line, "doc.changelog.order",
                                           "change-log rows must be newest first")
+                self.check_changelog_rows(doc)
 
             if os.path.basename(os.path.dirname(path)) == "adr":
                 self.check_adr(doc)
+
+    def check_changelog_rows(self, doc) -> None:
+        """A version row's `when`, `by` and `for` are held to §0's rule (F-084).
+
+        `spec/journal-and-history.md` §0 exists because timestamps, skill names and personas are
+        the fields with nothing behind them, and they are the ones four real runs invented. A
+        change-log row carries exactly those three claims about exactly those things, and the
+        rule was never extended to it: one document version in a banked engagement is attributed
+        to `implement` on an item twelve minutes after that execution's closing entry, while the
+        item sat at `awaiting-answer`.
+
+        Four of the five checks here are about the row on its own terms and hold whenever they
+        can be asked. The fifth — *was that skill executing on that item then* — is asked only
+        while the item it names is **not yet `done`**, and the line is the one
+        `check_claim_citations` already draws: a row on a closed item is history, and demanding
+        its repair is a demand to rewrite a record rather than to improve one. It costs nothing
+        in coverage that matters: every skill runs this validator, the row is written during the
+        item's life, and the next gate run after it is written is inside the window.
+
+        What is **not** decidable here, and is nobody's `[auto]`: whether the version number is
+        the right one, whether `what changed` describes the change, and whether the skill that
+        was executing is the one that made this particular edit. See `spec/doc-header.md` §3.
+        """
+        rows = doc.changelog
+        if not rows:
+            return
+        top, top_line = rows[0]
+        top = [cell.strip() for cell in top]
+        if len(top) >= 4:
+            for column, (cell, field) in enumerate(
+                    zip(top[1:4], ("updated", "updated-by", "updated-for")), start=1):
+                stated = doc.fields.get(field)
+                if cell != ("" if stated is None else str(stated)):
+                    self.report.error(
+                        doc.path, top_line, "doc.changelog.header",
+                        f"the top change-log row says {cell!r} where the frontmatter's "
+                        f"{field} says {stated!r}",
+                        hint="the header and the top row describe the same version; a document "
+                             "that says it two ways is wrong in one of them (doc-header.md §3)")
+        for cells, line in rows:
+            cells = [cell.strip() for cell in cells]
+            if len(cells) < 4:
+                continue
+            _, when, by, made_for = cells[:4]
+            if not self.check_timestamp(doc.path, line, "doc.changelog.when", when, "when"):
+                continue
+            self.check_clock(doc.path, line, "doc.changelog", when, "when")
+            if self.skills and by not in self.skills:
+                self.report.error(doc.path, line, "doc.changelog.actor",
+                                  f"by is {by!r}, which is not a skill in pipeline.yaml",
+                                  hint="the column names the skill that made the change, never "
+                                       "a person and never a model "
+                                       "(spec/journal-and-history.md §1)")
+                continue
+            if made_for in ("\u2014", "-", ""):
+                continue
+            item = self.workspace.items.get(made_for)
+            if item is None:
+                self.report.error(doc.path, line, "doc.changelog.for",
+                                  f"for is {made_for!r}, which is not an item in this workspace",
+                                  hint="use the item ID the change was made for, or an em dash "
+                                       "for a change tied to no item")
+                continue
+            if item.status == "done":
+                continue
+            windows = execution_windows([(entry.when, entry.skill) for entry in item.journal])
+            if executed_at(windows, by, when) is None:
+                ran = [entry.when for entry in item.journal if entry.skill == by]
+                self.report.error(
+                    doc.path, line, "doc.changelog.no-execution",
+                    f"the row says {by} changed this at {when} for {made_for}, and "
+                    + (f"{made_for}'s journal has no execution of {by} at all"
+                       if not ran else
+                       f"no execution of {by} on {made_for} was running then "
+                       f"(its entries close at {', '.join(ran)})"),
+                    hint="a version row claims a timestamp, a skill and an item, which are the "
+                         "three fields real runs invented; the journal of the item it names is "
+                         "what it is checked against (spec/journal-and-history.md §0, F-084)")
 
     def check_option_order(self, question) -> None:
         """The recommendation comes after the options it recommends between (F-063).

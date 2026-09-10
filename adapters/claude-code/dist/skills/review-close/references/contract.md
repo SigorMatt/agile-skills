@@ -1,4 +1,4 @@
-# Contract — review-close v0.9.1
+# Contract — review-close v0.10.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -32,7 +32,7 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 |------|------|------|
 | `tracker/items/{{item.id}}/artifacts/review.md` | file | always |
 | `tracker/items/{{item.id}}/item.md` | file | always |
-| `merge of {{item.branch}} into {{trunk}}` | commit | on-success |
+| `merge of {{item.branch}} into {{trunk}}, its sha then recorded in item.md by scripts/record-merge` | commit | on-success |
 | `docs/ - a correction inside this item's invalidation set at an item close, and at an ending every Engagement state section, restated` | file | conditional |
 | `tracker/items/EP-###/item.md` | file | conditional |
 | `tracker/items/EP-###/questions/Q-###.md` | file | conditional |
@@ -74,7 +74,7 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] The plan's binding-adrs list is complete - the change engages no ADR the list does not name, and each listed ADR already carries verify's conformance verdict (spec/dor-dod.md D13).
 - [ ] At an ending, every Engagement state section in the workspace was restated after the ending was determined - which at E1 to E3 is when the sign-off answer arrived and at E4 by silence is when the threshold was reached, because no answer arrives there; at an item close, none was touched (spec/doc-header.md section 4a, ADR-0010 section 4.3 as amended by ADR-0011).
 - [ ] review.md states what was examined, not only the verdict.
-- [ ] The branch is merged into the trunk and the item is done with an outcome recorded.
+- [ ] The branch is merged into the trunk, the item is done with an outcome the closing transition wrote (--outcome, never an edit of item.md first - F-083), and the merge commit is recorded by scripts/record-merge, which is where the record catches up with a sha that did not exist when the closing entry was written (F-081).
 - [ ] If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
 - [ ] If scripts/engagement-state reported abandoned, the ending recorded is E4 by silence - every orphan at blocked with a reason beginning "orphaned by E4:" and NO outcome, every question still open closed as abandoned with an EMPTY Answer, and the Ending statement written into review.md and mirrored in the epic's Notes.
 - [ ] An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.

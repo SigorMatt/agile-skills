@@ -3,7 +3,7 @@ title: format_report grows optional parameters instead of changing its signature
 version: 2
 status: current
 updated: 2026-08-17T00:05:00Z
-updated-by: plan
+updated-by: review-close
 updated-for: WI-0002
 ---
 

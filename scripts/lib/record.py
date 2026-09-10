@@ -41,6 +41,7 @@ __all__ = [
     "labelled", "subtree", "split_row", "is_prose",
     "BULLET_RE", "HEADING_RE", "FENCE_RE", "TABLE_ROW_RE", "JOURNAL_HEADING_RE",
     "split_label", "GATE_VERDICTS", "GATE_LINE_RE", "gate_line", "gate_rows",
+    "execution_windows", "executed_at",
 ]
 
 # A list marker: `-`, `*`, or `1.` / `1)`. The marker set is deliberately small — a record whose
@@ -530,3 +531,44 @@ def entries(text: str, first_line: int = 1, level: int = 2):
         found.append(Entry(lines[index].rstrip(), title, first_line + index,
                            blocks(body, first_line + index + 1), level))
     return found
+
+
+def execution_windows(stamped):
+    """`(skill, opened, closed)` per journal entry, from `(when, skill)` pairs in file order.
+
+    A journal entry is appended when an execution **finishes**
+    (`spec/journal-and-history.md` §2), so `when` is the only stamp the record carries for it and
+    it is the execution's *upper* bound. The lower bound is the entry before it on the same item:
+    entries are non-decreasing and one execution per item runs at a time, so nothing this
+    execution did can predate its predecessor's own closing stamp. The first entry has no lower
+    bound at all and gets `None` — an item's first execution may have begun before anything was
+    written down, and inventing a floor for it would be the same kind of guess this bounds
+    exist to catch.
+
+    Pure, and separate from the rule that reads it: F-084 is a claim about *when a skill was
+    executing*, and that question is asked of a change-log row here and could be asked of
+    anything else tomorrow.
+    """
+    windows, previous = [], None
+    for when, skill in stamped:
+        windows.append((skill, previous, when))
+        previous = when
+    return windows
+
+
+def executed_at(windows, skill: str, when: str):
+    """The window in which `skill` was executing at `when`, or None.
+
+    `when` is compared as a string, which is correct for the UTC ISO-8601 the record uses and
+    wrong for anything else — the format is checked before this is called. The upper bound is
+    inclusive: a document written as the last act of an execution carries that execution's own
+    closing stamp often enough that excluding it would report correct work.
+    """
+    for entry_skill, opened, closed in windows:
+        if entry_skill != skill:
+            continue
+        if opened is not None and when < opened:
+            continue
+        if when <= closed:
+            return (entry_skill, opened, closed)
+    return None

@@ -84,6 +84,36 @@ Rules:
   description.
 - Fixing a typo is a content change. The rule has no exceptions, because "is this worth a row?"
   is exactly the judgement that erodes a change log into uselessness.
+- The top row **is** the header. Its `when`, `by` and `for` MUST equal the frontmatter's
+  `updated`, `updated-by` and `updated-for`; a document that describes its own latest version
+  two ways is wrong in one of them.
+- `by` names a skill the pipeline declares, and `for` names an item in this workspace or the em
+  dash. Never a person and never a model — the reason is `journal-and-history.md` §1.
+
+### What is checked, and what is not
+
+A row's `when`, `by` and `for` are the three fields `journal-and-history.md` §0 exists for: a
+clock, a skill, and an item, self-reported, with nothing behind them. §0 now reaches this table,
+and the honest split is worth stating rather than leaving a reader to assume the whole row is
+guarded.
+
+| Claim | Decided by |
+|-------|-----------|
+| the top row and the header agree | **[auto]** `validate-workspace` — `doc.changelog.header` |
+| `when` is a UTC timestamp a clock could have produced | **[auto]** — `doc.changelog.when`, `doc.changelog.timestamp.*` |
+| `by` is a skill this pipeline has | **[auto]** — `doc.changelog.actor` |
+| `for` is an item in this workspace | **[auto]** — `doc.changelog.for` |
+| that skill **was executing on that item** at that time | **[auto]** — `doc.changelog.no-execution`, matched against the named item's `journal.md`, while that item is not yet `done` |
+| the version **number** is the right one | **[skill]** — a change may deserve one bump or none, and no program can say which |
+| `what changed` describes what changed | **[skill]** — "Updated" passes every mechanical test there is |
+| the named skill made **this** edit | **[skill]** — the check establishes that an execution of it was running, not that this edit was its work |
+
+The execution match is asked only while the item the row names is **not yet `done`**, and the
+line is deliberate: a row on a closed item is history, and demanding its repair is a demand to
+rewrite a record rather than to improve one. It costs nothing that matters, because every skill
+runs the validator and a row is written during the item's life — the next gate run after it is
+written is inside the window. A row whose `for` is the em dash is matched against nothing, and
+that is the price of the escape hatch (F-084).
 
 ---
 
@@ -433,3 +463,4 @@ wholesale and so excludes the delivered thing on an item whose deliverable is a 
 | 4 | 2026-08-30 | §4b: a superseded ADR takes no **new** correction and keeps the ones it made — the rule is about the act, not the state, and as a state rule it described a document that could not exist. §4a: rule 2 does not read a superseded document, which has no legal way to gain a citation (F-069). |
 | 5 | 2026-09-10 | §5's absolute — "`implement` and `verify` do **not** write to `docs/`" — is replaced by a rule scoped to the record half: `verify` writes no document (now **derived**, not asserted), `implement` writes only inside the invalidation set and deliverable documents its plan declared (F-076, F-057; the freshness gate's `docs/` exemption is the same directory-as-proxy error, F-058). §4a: the citation is one obligation of three — a **quantified** claim is discharged by member enumeration recorded in the audit row, never by opening what it cites (F-095), and **engagement-state** sentences live in a delimited `## Engagement state` section owned by the ending (F-093). Derived in ADR-0010. |
 | 6 | 2026-09-10 | §4a: the four parts of a quantified claim's enumeration are written as labelled entries — `Enumeration:` carrying `Set:`, `Enumerated by:`, `Members:` and `Verdict:` — because a shape check needs the parts to be findable, and without a label nothing mechanical distinguishes opening what a claim cites from enumerating what it quantifies over. `scripts/lint-documents` decides that shape and the eight obligations of ADR-0010's enforcement table that had no implementation. |
+| 7 | 2026-09-10 | §3: `journal-and-history.md` §0 reaches the change log — the top row and the header must agree, `by` and `for` must resolve, `when` must be a time a clock could have produced, and the row is matched against the journal of the item it names while that item is not yet `done`. The `[auto]`/`[skill]` table says plainly which half of a version row is decidable: the version number and the description of the change are not (F-084). |

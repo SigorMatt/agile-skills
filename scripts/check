@@ -107,6 +107,23 @@ Steps, in order:
                                                run against a throwaway repository: the trunk sha
                                                is unchanged, and the same block with --detach
                                                removed moves it (F-055)
+ 15b. the record catches up                  — the three fields the record cannot hold at the
+                                               moment it is written, by execution in a throwaway
+                                               repository that is also a workspace. The merge
+                                               sha: record-merge refuses five shapes of merge
+                                               git cannot confirm and writes nothing after each
+                                               refusal, accepts the real one, and the validator
+                                               re-asks — catching both a typed field and a merge
+                                               nobody recorded (F-081, F-035). The close order:
+                                               transition refuses --outcome on a move that does
+                                               not end at done and refuses a move to done that
+                                               carries none, and the pending move does NOT
+                                               downgrade item.outcome.premature, because that
+                                               state is avoidable rather than forced (F-083,
+                                               contrast F-014). The version row: matched against
+                                               the journal of the item it names, both ways, plus
+                                               the boundary — the same offending row on a closed
+                                               item is history and is not reported (F-084)
  16. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
@@ -2300,6 +2317,304 @@ def check_trial_merge(runner: Runner) -> None:
         return
     runner.emit("a trial merge leaves the trunk alone (F-055, 2 cases)", True)
 
+def check_record_catches_up(runner: Runner) -> None:
+    """Three fields the record could not hold at the moment it was written.
+
+    **F-081 — the merge sha.** `review-close` must close before merging, because
+    `commits-reference-the-item` reads the commits not yet on the trunk and merging empties that
+    range. So the closing entry is appended before the merge commit exists and cannot name it,
+    and six real closes invented three different homes for the sha, three of them by rewriting a
+    stamped entry. The sha now lives in `item.md`'s `merge-commit`, written afterwards by
+    `scripts/record-merge`. What makes that a record rather than an assertion is that **nothing
+    is written which git has not confirmed** — so the cases below are mostly refusals, and the
+    refusals are the point: a recorded merge that never happened is worse than an unrecorded one
+    (F-035).
+
+    **F-083 — the outcome.** The procedure read as "set `status: done` and `outcome: delivered`",
+    then transition. Executed that way it produces a workspace `item.outcome.premature` refuses,
+    on the very move that would make the outcome true. The fix is the **order**, not the gate:
+    `--outcome` on the closing transition writes both fields in one act, after the gates have
+    run. Both halves are asserted — the tool refuses the illegal order, and the pending move
+    does **not** downgrade the finding, because that intermediate state is avoidable rather than
+    forced (contrast F-014, where it is forced and the downgrade is right).
+
+    **F-084 — the version row.** A change-log row claims a clock, a skill and an item, which are
+    the three fields real runs invented. It is now matched against the journal of the item it
+    names. The last case is the boundary, and it must fail if the boundary moves: the same
+    offending row on a **closed** item is not reported, because a row on a closed item is
+    history and demanding its repair is a demand to rewrite a record.
+    """
+    import shutil
+    import tempfile
+    label = "the record catches up: merge sha, close order, version row (F-081, F-083, F-084)"
+    if shutil.which("git") is None:
+        runner.skip(label, "git is not on PATH")
+        return
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "new-item", "transition", "validate-workspace",
+                          "record-merge")}
+    if not all(os.path.isfile(path) for path in tools.values()):
+        runner.skip(label, "one of the workspace tools is absent")
+        return
+
+    problems, observations = [], 0
+
+    def note(condition: bool, complaint: str) -> None:
+        nonlocal observations
+        observations += 1
+        if not condition:
+            problems.append(complaint)
+
+    import re
+    with tempfile.TemporaryDirectory() as root:
+        def git(*args, cwd=root):
+            return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+
+        def tool(name, *args):
+            return subprocess.run([sys.executable, tools[name], *args, "--root", root],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        def codes(result) -> set:
+            return codes_from(result.stdout + result.stderr)
+
+        def fields_of(item_id: str) -> str:
+            with open(os.path.join(root, "tracker", "items", item_id, "item.md"),
+                      "r", encoding="utf-8") as handle:
+                return handle.read()
+
+        def set_fields(item_id: str, **values) -> None:
+            """Write frontmatter fields straight into item.md.
+
+            Deliberately not through `transition`: these cases are about what the *field* says,
+            including what it says when somebody typed it, which is the case the validator has
+            to catch.
+            """
+            path = os.path.join(root, "tracker", "items", item_id, "item.md")
+            with open(path, "r", encoding="utf-8") as handle:
+                text = handle.read()
+            head, _, body = text.partition("\n---\n")
+            lines = [line for line in head.split("\n")
+                     if not any(line.startswith(f"{key}:") for key in values)]
+            lines += [f"{key}: {value}" for key, value in values.items() if value is not None]
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(lines) + "\n---\n" + body)
+
+        git("init", "--initial-branch=main")
+        git("config", "user.email", "check@example.invalid")
+        git("config", "user.name", "check")
+        subprocess.run([sys.executable, tools["workspace-init"], root],
+                       capture_output=True, text=True, cwd=ROOT)
+        for identifier, kind, extra in (("EP-001", "epic", ["--status", "open"]),
+                                        ("WI-0001", "work-item",
+                                         ["--status", "draft", "--epic", "EP-001"]),
+                                        ("WI-0002", "work-item",
+                                         ["--status", "draft", "--epic", "EP-001"]),
+                                        ("WI-0003", "work-item",
+                                         ["--status", "draft", "--epic", "EP-001"])):
+            subprocess.run([sys.executable, tools["new-item"], "--root", root,
+                            "--id", identifier, "--type", kind, "--title", f"Item {identifier}",
+                            "--actor", "intake", "--reason", "created for this case", *extra],
+                           capture_output=True, text=True, cwd=ROOT)
+        with open(os.path.join(root, "seed.txt"), "w", encoding="utf-8") as handle:
+            handle.write("base\n")
+        git("add", "-A")
+        git("commit", "-m", "base")
+
+        # ---- F-081: the merge sha ------------------------------------------------------
+        git("checkout", "-b", "wi/WI-0001")
+        with open(os.path.join(root, "delivered.txt"), "w", encoding="utf-8") as handle:
+            handle.write("the work\n")
+        git("add", "-A")
+        git("commit", "-m", "the change (refs WI-0001)")
+        branch_head = git("rev-parse", "HEAD").stdout.strip()
+        git("checkout", "-b", "wi/WI-0002", "main")
+        with open(os.path.join(root, "other.txt"), "w", encoding="utf-8") as handle:
+            handle.write("other work\n")
+        git("add", "-A")
+        git("commit", "-m", "other change (refs WI-0002)")
+        git("checkout", "main")
+        git("merge", "--no-ff", "-m", "merge WI-0002", "wi/WI-0002")
+        other_merge = git("rev-parse", "HEAD").stdout.strip()
+        base_commit = git("rev-parse", "main~1").stdout.strip()
+
+        # An item that is not delivered has nothing to point at.
+        note(tool("record-merge", "WI-0001", "--merge", other_merge).returncode != 0,
+             "record-merge accepted a merge for an item that is not done and delivered")
+        note(tool("record-merge", "EP-001", "--merge", other_merge).returncode != 0,
+             "record-merge accepted a merge for an epic, which has no branch (F-081)")
+
+        set_fields("WI-0001", status="done", outcome="delivered", branch="wi/WI-0001")
+        for case, argument, expected in (
+                ("a sha that resolves to nothing", "0badc0de0badc0de", "unresolved"),
+                ("a commit with one parent", base_commit, "not-a-merge"),
+                ("a merge of somebody else's branch", other_merge, "other-branch")):
+            result = tool("record-merge", "WI-0001", "--merge", argument)
+            note(result.returncode != 0 and f"item.merge.{expected}" in (result.stdout
+                                                                         + result.stderr),
+                 f"record-merge did not refuse {case} with item.merge.{expected}")
+            note("merge-commit" not in fields_of("WI-0001"),
+                 f"record-merge wrote a field after refusing {case}; it must write nothing "
+                 f"it could not confirm (F-035)")
+
+        # A real merge that is NOT on the trunk: a merge commit is not enough on its own.
+        git("checkout", "-b", "sidetrack", "main")
+        git("merge", "--no-ff", "-m", "merge WI-0001 off the trunk", "wi/WI-0001")
+        off_trunk = git("rev-parse", "HEAD").stdout.strip()
+        git("checkout", "main")
+        result = tool("record-merge", "WI-0001", "--merge", off_trunk)
+        note(result.returncode != 0
+             and "item.merge.unmerged" in (result.stdout + result.stderr),
+             "record-merge accepted a merge commit that is not an ancestor of the trunk")
+
+        git("merge", "--no-ff", "-m", "merge WI-0001 (refs WI-0001)", "wi/WI-0001")
+        real_merge = git("rev-parse", "HEAD").stdout.strip()
+        accepted = tool("record-merge", "WI-0001", "--merge", real_merge)
+        note(accepted.returncode == 0 and real_merge in fields_of("WI-0001"),
+             "record-merge refused the real merge of the item's branch onto the trunk:\n      "
+             + (accepted.stdout + accepted.stderr).strip()[-300:])
+        note(branch_head in git("rev-list", "--parents", "-n", "1", real_merge).stdout,
+             "the case's own merge does not contain the branch head; the fixture is wrong")
+        note(not {code for code in codes(tool("validate-workspace"))
+                  if code.startswith("item.merge.")},
+             "the validator reported a merge finding against a merge it should accept")
+
+        # The validator asks the same four questions again, so a typed field is caught too.
+        set_fields("WI-0001", **{"merge-commit": "0badc0de"})
+        note("item.merge.unresolved" in codes(tool("validate-workspace")),
+             "a hand-edited merge-commit that names no commit was not reported (F-035)")
+        set_fields("WI-0001", **{"merge-commit": base_commit})
+        note("item.merge.not-a-merge" in codes(tool("validate-workspace")),
+             "a hand-edited merge-commit naming an ordinary commit was not reported")
+        # ...and the other direction: a merge that happened and nothing recorded.
+        set_fields("WI-0001", **{"merge-commit": None})
+        note("item.merge.missing" in codes(tool("validate-workspace")),
+             "a branch merged into the trunk with no merge-commit recorded was not reported "
+             "(F-081)")
+        tool("record-merge", "WI-0001", "--merge", real_merge)
+
+        # ---- F-083: the close order ----------------------------------------------------
+        # Walk WI-0003 to `in-review` through the tool, gates forced. The gates are not what is
+        # under test — the order of the two fields is — and a refusal that came from a gate
+        # would make every assertion below vacuous, which is exactly what the first draft of
+        # this case did.
+        for to_status, actor in (("ready", "refine"), ("planned", "plan"),
+                                 ("in-progress", "implement"), ("verifying", "implement"),
+                                 ("in-review", "verify")):
+            tool("transition", "WI-0003", "--to", to_status, "--actor", actor,
+                 "--reason", "walking the item to the close", "--force")
+        note("status: in-review" in fields_of("WI-0003"),
+             "the case could not walk WI-0003 to in-review, so nothing below tested the order")
+
+        # The illegal order, executed: the outcome written first, then the move that would
+        # justify it. Both halves matter — the finding is reported, and the pending move does
+        # not forgive it.
+        set_fields("WI-0003", outcome="delivered")
+        note("item.outcome.premature" in codes(tool("validate-workspace")),
+             "an outcome set before the item is done was not reported")
+        pending = tool("validate-workspace", "--resolving", "WI-0003:in-review->done")
+        premature = [line for line in (pending.stdout + pending.stderr).split("\n")
+                     if "item.outcome.premature" in line]
+        note(any("ERROR" in line for line in premature),
+             "the pending move downgraded item.outcome.premature. That would make the illegal "
+             "order legal, and it is the fix F-083 explicitly did not take: the state is "
+             "avoidable, not forced (contrast F-014, where it is forced)")
+        set_fields("WI-0003", outcome=None)
+
+        # ...and the tool refuses to be used that way at all. Each refusal is read for the
+        # reason it gives: a refusal that came from somewhere else would prove nothing.
+        history = os.path.join(root, "tracker", "items", "WI-0003", "history.md")
+        with open(history, "r", encoding="utf-8") as handle:
+            before = handle.read()
+        refused = tool("transition", "WI-0003", "--to", "in-progress", "--actor",
+                       "review-close", "--reason", "rejected, with reasons in review.md",
+                       "--outcome", "delivered", "--force")
+        note(refused.returncode != 0
+             and "--outcome is only legal on a move to 'done'" in refused.stderr,
+             "transition accepted --outcome on a legal move that does not end at done, or "
+             "refused it for some other reason (F-083)")
+        with open(history, "r", encoding="utf-8") as handle:
+            note(handle.read() == before,
+                 "transition wrote a history row for a move it refused")
+        undone = tool("transition", "WI-0003", "--to", "done", "--actor", "review-close",
+                      "--reason", "closing", "--force")
+        note(undone.returncode != 0 and "must pass --outcome" in undone.stderr,
+             "transition accepted a move to done carrying no outcome; the two fields are "
+             "written by one act, or the workspace is invalid between them (F-083)")
+
+        # The legal order, end to end: one command writes both fields, and the workspace it
+        # produces does not carry the finding.
+        closed = tool("transition", "WI-0003", "--to", "done", "--actor", "review-close",
+                      "--outcome", "delivered", "--reason", "accepted; merging", "--force")
+        note("status: done" in fields_of("WI-0003") and "outcome: delivered" in
+             fields_of("WI-0003"),
+             "the closing transition did not write the status and the outcome together:\n      "
+             + (closed.stdout + closed.stderr).strip()[-300:])
+        note("item.outcome.premature" not in codes(tool("validate-workspace")),
+             "the legal order still produces item.outcome.premature")
+
+        # ---- F-084: the version row ----------------------------------------------------
+        journal = os.path.join(root, "tracker", "items", "WI-0002", "journal.md")
+        # `new-item` writes the history row and no entry (F-036), so the item has no execution
+        # for a version row to fall inside until one is written. Write it the only sanctioned
+        # way — the tool stamps the heading from the clock and the contract (§0).
+        subprocess.run([sys.executable, os.path.join(SCRIPTS, "journal-entry"), "WI-0002",
+                        "--skill", "intake", "--root", root, "--body-file", "-",
+                        "--status", "`draft` → `draft` (unchanged)"],
+                       input=journal_body("intake", item="WI-0002",
+                                          result="the item exists."),
+                       capture_output=True, text=True, cwd=ROOT)
+        with open(journal, "r", encoding="utf-8") as handle:
+            entries = handle.read()
+        stamps = re.findall(r"^## (\S+) — (\S+) ", entries, re.M)
+        note(bool(stamps), "WI-0002 has no journal entry to match a version row against")
+        during = stamps[-1][0] if stamps else "2026-01-01T00:00:00Z"
+        actor = stamps[-1][1] if stamps else "intake"
+        document = os.path.join(root, "docs", "architecture", "overview.md")
+
+        def write_doc(when, by, made_for, header=None) -> None:
+            head = header or (when, by, made_for)
+            with open(document, "w", encoding="utf-8") as handle:
+                handle.write(
+                    f"---\ntitle: Overview\nversion: 1\nstatus: current\n"
+                    f"updated: {head[0]}\nupdated-by: {head[1]}\nupdated-for: {head[2]}\n"
+                    f"---\n\n# Overview\n\nThe shape of the system.\n\n## Change log\n\n"
+                    f"| version | when | by | for | what changed |\n"
+                    f"|---------|------|----|-----|--------------|\n"
+                    f"| 1 | {when} | {by} | {made_for} | First version |\n")
+
+        write_doc(during, actor, "WI-0002")
+        note(not {code for code in codes(tool("validate-workspace"))
+                  if code.startswith("doc.changelog.")},
+             "a version row inside an execution of the skill and item it names was reported")
+        write_doc("2029-01-01T00:00:00Z", actor, "WI-0002")
+        note("doc.changelog.no-execution" in codes(tool("validate-workspace")),
+             "a version row naming a time at which that skill was not executing on that item "
+             "was not reported (F-084)")
+        write_doc(during, actor, "WI-0002", header=("2029-01-01T00:00:00Z", actor, "WI-0002"))
+        note("doc.changelog.header" in codes(tool("validate-workspace")),
+             "a header that disagrees with its own top change-log row was not reported")
+        write_doc(during, "the-architect", "WI-0002")
+        note("doc.changelog.actor" in codes(tool("validate-workspace")),
+             "a version row whose `by` is not a skill this pipeline has was not reported")
+        write_doc(during, actor, "WI-9999")
+        note("doc.changelog.for" in codes(tool("validate-workspace")),
+             "a version row naming an item that does not exist was not reported")
+
+        # The boundary, stated in spec/doc-header.md §3 and asserted here so that moving it
+        # fails loudly: the same offending row against a CLOSED item is history, not a defect.
+        write_doc("2029-01-01T00:00:00Z", actor, "WI-0001")
+        note("doc.changelog.no-execution" not in codes(tool("validate-workspace")),
+             "the execution match now fires on a row naming a done item. That may be an "
+             "improvement, but it is a demand to repair a closed record: change "
+             "spec/doc-header.md §3 and this case together, or not at all")
+
+    if problems:
+        runner.emit(label, False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit(f"{label} ({observations} observations)", True)
+
+
 def check_silence_threshold(runner: Runner) -> None:
     """One threshold, three consumers — proved by moving it and watching all three move.
 
@@ -2683,6 +2998,7 @@ def main() -> int:
     check_journal_body(runner)
     check_gate_verdicts(runner)
     check_trial_merge(runner)
+    check_record_catches_up(runner)
     check_silence_threshold(runner)
     check_process_gate_names(runner)
     check_shipped_scripts(runner)

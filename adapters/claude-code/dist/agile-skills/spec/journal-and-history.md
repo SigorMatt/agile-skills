@@ -46,6 +46,16 @@ So, normatively:
   asked to, so the row and the entry cannot disagree about what moved or when.
 - A validator MUST reject a recorded time that no clock could have produced — one in the future,
   or one outside the window in which the workspace's repository shows any activity at all.
+- **The rule reaches a document's header and its change log too.** A `## Change log` row's
+  `when`, `by` and `for` (`doc-header.md` §3), and the `updated` / `updated-by` / `updated-for`
+  the header repeats from the top row, are the same three claims about the same three things —
+  a clock, a skill, and an item — typed by the same worker whose journal heading the toolkit
+  already refuses to let them type. Forty-five of one engagement's forty-six version rows fall
+  inside an execution of the skill and item they name; the forty-sixth is attributed to
+  `implement` twelve minutes after that execution's closing entry, while the item sat at
+  `awaiting-answer` (F-084). A validator therefore matches a row against the journal of the item
+  it names, and `doc-header.md` §3 states exactly which half of that is decidable and which is
+  not.
 
 ---
 
@@ -230,6 +240,31 @@ is `journal.gates.unknown`. The validator applies this only to an entry whose he
 time, and holding it to a later gate list would report the skill's history as a defect in the
 record.
 
+### 2.2b A fact created after the entry
+
+One fact about a close cannot be in the entry that reports it. `review-close` must close the
+item **before** merging — `commits-reference-the-item` reads the commits not yet on the trunk,
+and merging empties that range — so the merge commit is created after the closing entry has been
+appended, and the entry cannot name a sha that does not exist yet.
+
+Appending a second entry does not fix it either: an entry is one **skill execution**, and the
+merge is the same execution, so a second entry would claim a second run of a skill that ran
+once. Amending the first is worse: this file has exactly one in-place exception and §0 says that
+wanting a second one is wanting a journal entry instead.
+
+So the sha does not live in the journal at all. It lives in `item.md`'s `merge-commit`
+(`work-item.md` §1), written after the merge by `scripts/record-merge` and by nothing else, and
+re-checked against git by every validation. Six closes in one engagement solved this three ways
+— three rewrote the stamped entry and declared the rewrite inside it, one used a follow-up trunk
+commit, two put the sha in `review.md` — which is three answers to a question the record had
+never answered (F-081). The entry says what it can say: that the item was accepted and is being
+merged, with the sha's home named.
+
+The generalisation, for the next fact of this shape: **a value the record cannot hold at the
+moment it is written belongs in a field a later, verifying invocation fills in — not in prose a
+later hand edits.** What makes it a record rather than an assertion is that the program which
+writes it refuses to write what it cannot confirm.
+
 ### 2.3 Journals on epics
 
 An epic's `journal.md` records executions that acted on the *epic*: `intake` creating it and
@@ -261,3 +296,4 @@ That is the test `examples/toy-project/AUDIT.md` applies to a real run.
 | 2 | 2026-08-22 | §0 added: every self-reported header field comes from a machine, timestamps are read from a clock and never estimated, and the restamp exception now covers `journal.md` as well as `history.md` (F-017). |
 | 3 | 2026-08-27 | §2.2: `**Status:**` is the transition tool's bullet — a body passed to it need not carry one, and every other bullet is still required of the caller (F-049). |
 | 4 | 2026-09-10 | §2.2a added: a fourth verdict `pending`, legal only on a move into a status the acting skill is itself dispatched on; `**Gates:**` is the transition tool's bullet for the verdict and the caller's for the evidence; the gate names are read against the contract of the skill in the entry's heading (F-080, F-091). |
+| 5 | 2026-09-10 | §0 extended to a document's header and change log, with the execution match a validator now makes (F-084); §2.2b — the merge sha has a sanctioned home in `item.md`, because it is created after the entry that reports it and neither a second entry nor an amendment is honest (F-081). |

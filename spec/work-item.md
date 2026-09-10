@@ -36,6 +36,7 @@ depends-on:
 | `created` | always | timestamp | UTC ISO-8601 to the second; set once, never changed |
 | `updated` | always | timestamp | bumped by every skill that writes the item |
 | `branch` | once code exists | string | `wi/<ID>`; set by `implement` when it creates the branch |
+| `merge-commit` | after the merge, on a delivered item | sha | the merge that put `branch` on the trunk; written by `scripts/record-merge`, never by hand |
 | `outcome` | when `status: done` | enum | `delivered` \| `dropped` \| `duplicate`; and `delivered-partial`, **epics only** |
 | `found-in` | `bug`, when known | ID | the work item whose delivered behaviour the bug contradicts |
 | `arose-from` | when the creating skill is not `intake`, unless a bug's `found-in` covers it | citation | what caused this item to exist: `<ITEM>`, `<ITEM>/Q-###`, or `R-###` (`ids-and-statuses.md` §5) |
@@ -61,6 +62,15 @@ Rules that a validator enforces:
   of the creation-authority table: it says *why* an item exists, where the actor on the creation
   row says *who* recorded it.
 - `branch` MUST be present once `status` has ever been `in-progress` or later.
+- `merge-commit` is legal on a `work-item` or `bug` that is `done` with `outcome: delivered` and
+  a `branch`, and nowhere else. It records the one fact about a close that is **created after
+  the record of it**: the close must precede the merge, because `commits-reference-the-item`
+  reads the commits not yet on the trunk and merging empties that range, so the closing journal
+  entry is written before the merge commit exists and cannot name it (F-081). `scripts/record-merge`
+  writes the field afterwards and writes nothing git has not confirmed — that the sha resolves,
+  that it has two or more parents, that it is an ancestor of the trunk, and that it contains the
+  item's branch. `validate-workspace` asks the same four questions again on every run, because a
+  recorded merge that never happened is worse than an unrecorded one (F-035).
 - `updated` MUST NOT be earlier than `created`, and MUST NOT be earlier than the timestamp of
   the last `history.md` entry.
 
@@ -209,3 +219,4 @@ trailing newline still counts — see `questions` on this item and `artifacts/re
 | # | Date | Change |
 |---|------|--------|
 | 1 | 2026-08-27 | §1: `arose-from` provenance for items a skill other than `intake` created (F-029); `outcome: delivered-partial` for an epic that ended at E2 (F-045). Derived in ADR-0006. |
+| 2 | 2026-09-10 | §1: `merge-commit` — the sanctioned home for a sha the closing entry could not name, written by `scripts/record-merge` after the merge and re-checked against git on every validation (F-081, F-035). |

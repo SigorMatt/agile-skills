@@ -13,7 +13,10 @@ artifact.refinement-qa.not-recorded
 board.missing
 claim.citation.unresolved
 doc.changelog.empty
+doc.changelog.header
+doc.changelog.no-execution
 doc.changelog.order
+doc.changelog.timestamp.outside-activity
 doc.changelog.version
 doc.section.duplicate
 epic.closed-with-active-children
@@ -38,6 +41,7 @@ item.field.missing
 item.field.unknown
 item.found-in.dangling
 item.id.mismatch
+item.merge.unexpected
 item.outcome.epic-only
 item.outcome.premature
 item.priority

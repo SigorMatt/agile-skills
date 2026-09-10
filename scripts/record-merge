@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Record the merge commit that closed an item, after the merge exists.
+
+Usage: scripts/record-merge <ITEM-ID> --merge <rev> [--root .] [--trunk main] [--dry-run]
+
+`review-close` closes the item and **then** merges, and the order is forced:
+`commits-reference-the-item` reads the commits on the branch that are not yet on the trunk, and
+merging first empties that range, so the gate would refuse the very close it is a precondition
+for. The closing journal entry is therefore written before the merge commit exists, and it
+cannot name a sha that does not exist yet. Six real closes solved this three ways — three
+rewrote the stamped entry and declared the rewrite inside it, one used a follow-up trunk commit,
+two put the sha in `review.md` — which is three answers to a question the record never answered
+(F-081).
+
+This is the answer: `merge-commit` in `item.md`, written **after** the merge by this program and
+by nothing else. The record catches up in a second write, which is the shape this repository
+already uses where a commit cannot cite its own sha.
+
+**Nothing is written that git has not confirmed.** The sha must resolve, it must have two or
+more parents, it must be an ancestor of the trunk, and it must contain the item's branch. A
+recorded merge that never happened is worse than an unrecorded one — that is F-035, and it is
+the reason this program refuses rather than trusting its caller. `validate-workspace` asks the
+same four questions again on every run, through the same function
+(`scripts/lib/vcs.py:merge_problems`), so a field edited by hand is caught too.
+
+Why a program of its own, and not a flag on `transition`: there is no status change to hang it
+on. The item is already `done`; the merge changes nothing about where the work stands, only what
+the record can say about it. A `transition` invocation with no transition would be a second
+meaning for the one command whose whole value is that it means one thing.
+
+Exit codes: 0 recorded, 1 refused (git could not confirm the merge, or the item cannot carry
+one), 2 a usage error.
+
+Standard library only (ADR-0002).
+"""
+
+from __future__ import annotations
+
+import datetime
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import frontmatter  # noqa: E402
+import miniyaml  # noqa: E402
+import vcs  # noqa: E402
+from workspace import resolve_root  # noqa: E402
+
+
+def trunk_from_project(root: str) -> str:
+    path = os.path.join(root, "tracker", "project.yaml")
+    try:
+        project = miniyaml.load_file(path)
+        return (project.get("project") or {}).get("trunk-branch") or "main"
+    except (OSError, miniyaml.YamlError):
+        return "main"
+
+
+def now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def main(argv: list) -> int:
+    if any(token in ("--help", "-h") for token in argv[1:]):
+        print(__doc__.strip())
+        return 0
+    if len(argv) < 2 or argv[1].startswith("--"):
+        print("usage: scripts/record-merge <ITEM-ID> --merge <rev> [--root .] [--trunk main]",
+              file=sys.stderr)
+        return 2
+    item_id = argv[1]
+    options, flags = {}, set()
+    index = 2
+    while index < len(argv):
+        token = argv[index]
+        if token == "--dry-run":
+            flags.add("dry-run")
+            index += 1
+            continue
+        if not token.startswith("--") or index + 1 >= len(argv):
+            print(f"record-merge: unexpected argument {token!r}", file=sys.stderr)
+            return 2
+        options[token[2:]] = argv[index + 1]
+        index += 2
+    if "merge" not in options:
+        print("record-merge: --merge <rev> is required", file=sys.stderr)
+        return 2
+
+    root = resolve_root(options.get("root"), tool="record-merge")
+    item_path = os.path.join(root, "tracker", "items", item_id, "item.md")
+    if not os.path.isfile(item_path):
+        print(f"record-merge: {item_path} does not exist", file=sys.stderr)
+        return 1
+    fields, body, _ = frontmatter.load_file(item_path)
+
+    # The record may only say the merge happened where the merge could have happened. An item
+    # that is not delivered has nothing on the trunk to point at, and an epic has no branch: it
+    # is not a branch-scoped unit of work (spec/workspace-layout.md §5).
+    if fields.get("type") == "epic":
+        print("record-merge: an epic is not a branch-scoped unit of work and has no merge to "
+              "record (spec/workspace-layout.md §5)", file=sys.stderr)
+        return 1
+    if fields.get("status") != "done" or fields.get("outcome") != "delivered":
+        print(f"record-merge: {item_id} is {fields.get('status')!r} with outcome "
+              f"{fields.get('outcome')!r}; a merge is recorded on a delivered, closed item — "
+              f"close it first, then merge, then run this", file=sys.stderr)
+        return 1
+    branch = fields.get("branch")
+    if not branch:
+        print(f"record-merge: {item_id} records no branch, so there is nothing that could have "
+              f"been merged", file=sys.stderr)
+        return 1
+
+    trunk = options.get("trunk") or trunk_from_project(root)
+    if not vcs.is_repo(root):
+        print(f"record-merge: {root} is not a git repository, so nothing here can confirm the "
+              f"merge. A sha this program cannot check is a sha it will not write (F-035).",
+              file=sys.stderr)
+        return 1
+    resolved = vcs.rev(root, options["merge"])
+    if resolved is None:
+        print(f"record-merge: refused — [item.merge.unresolved] {options['merge']!r} names no "
+              f"commit in this repository. Nothing was written.", file=sys.stderr)
+        return 1
+    problems = vcs.merge_problems(root, resolved, branch, trunk)
+    if problems:
+        print(f"record-merge: refused — {resolved[:12]} is not the merge of {branch} into "
+              f"{trunk}:", file=sys.stderr)
+        for code, message in problems:
+            print(f"  [{code}] {message}", file=sys.stderr)
+        print("  Nothing was written. A recorded merge that never happened is worse than an "
+              "unrecorded one (F-035).", file=sys.stderr)
+        return 1
+
+    previous = fields.get("merge-commit")
+    if previous and previous != resolved:
+        print(f"record-merge: {item_id} already records merge-commit {previous}; refusing to "
+              f"replace it with {resolved}. If the first was wrong, say so in a journal entry "
+              f"and fix it there — a field that silently changes its mind records nothing.",
+              file=sys.stderr)
+        return 1
+    if "dry-run" in flags:
+        print(f"record-merge: would record {resolved} on {item_id}")
+        return 0
+    fields["merge-commit"] = resolved
+    fields["updated"] = now()
+    with open(item_path, "w", encoding="utf-8") as handle:
+        handle.write(frontmatter.render(fields, body))
+    print(f"record-merge: {item_id} records merge-commit {resolved}")
+    print(f"  confirmed: a merge commit, containing {branch}, on {trunk}")
+    print("  commit item.md with the item's ID in the subject; the close is not recorded until "
+          "it is in version control.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

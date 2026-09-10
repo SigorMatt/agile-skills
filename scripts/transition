@@ -371,6 +371,24 @@ def main(argv: list) -> int:
         print("transition: --resume-to only applies when suspending an item", file=sys.stderr)
         return 1
 
+    # `outcome` is present if and only if the item is `done` (spec/work-item.md §1), so the two
+    # fields have to be written by the same act — which is this one. Writing the outcome first,
+    # by hand, is the order `review-close`'s procedure used to read as, and it fails
+    # `workspace-valid` on the very move that would make it true: `item.outcome.premature` is not
+    # among the codes the pending move resolves, and it should not be, because that intermediate
+    # state is avoidable rather than forced (F-083; contrast F-014, where it is forced). Refusing
+    # the flag here means the illegal order cannot be reached through the tool either.
+    if options.get("outcome") and to_status != "done":
+        print(f"transition: --outcome is only legal on a move to 'done'; this move ends at "
+              f"{to_status!r}. An item that is not done must carry no outcome "
+              f"(spec/work-item.md §1).", file=sys.stderr)
+        return 1
+    if to_status == "done" and not options.get("outcome") and not fields.get("outcome"):
+        print("transition: a move to 'done' must pass --outcome, so that the status and the "
+              "outcome are written by one act. Setting it in item.md first leaves a workspace "
+              "that fails workspace-valid on this very move (F-083).", file=sys.stderr)
+        return 1
+
     # The branch is a fact about the item, not part of the status change, and the gates need to
     # see it (check-commit-refs resolves {{item.branch}}). Write it before they run; if a gate
     # then fails, the field is still true — the branch does exist.

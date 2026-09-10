@@ -131,27 +131,28 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
       — running `{{commands.test}}` inside `<trial>` between the merge and the removal.
 
       **`--detach` is the whole of it.** `git worktree add <trial> {{trunk}}` *checks out the
-      real branch* in a second directory rather than copying it, so the trial merge
-      fast-forwards the real `{{trunk}}` ref, and removing the worktree does not move it back. A
-      review did exactly that and advanced the real trunk; `check-commit-refs` caught it
-      immediately and the rewind cost nothing, but the procedure had told a skill to do
-      something dangerous without saying how (F-055). Detached, the worktree has no branch to
-      advance and the merge has nowhere to land but a temporary HEAD.
+      real branch* rather than copying it, so the trial merge fast-forwards the real
+      `{{trunk}}` and removing the worktree does not move it back. A review did exactly that
+      and advanced the real trunk (F-055). Detached, the worktree has no branch to advance.
    2. **Discard the trial merge, and check that `{{trunk}}` did not move.** `git rev-parse
-      {{trunk}}` must return the same sha it returned before the trial. The trial was never
-      published and nothing depends on it — *provided* nothing was pointing at it, which is the
-      part worth confirming rather than assuming.
-   3. **Close the item while the branch is still unmerged** (step 9). This is the part that is
-      easy to get wrong: `commits-reference-the-item` inspects the commits on the branch that
-      are *not yet* on the trunk, and once the branch is merged that range is **empty**. Merging
-      first therefore makes the gate refuse the very close it was a precondition for.
-   4. **Then merge into `{{trunk}}` for real.**
+      {{trunk}}` must return the sha it returned before the trial — the part worth confirming
+      rather than assuming.
+   3. **Close the item while the branch is still unmerged** (step 9): `commits-reference-the-item`
+      inspects the commits on the branch that are *not yet* on the trunk, and merging first
+      empties that range, so the gate would refuse the very close it was a precondition for.
+   4. **Then merge into `{{trunk}}` for real, and record the sha:** `scripts/record-merge
+      <ITEM-ID> --merge <sha>`. The closing entry was written before the merge existed and
+      could not name it; this is where the record catches up, and the program writes nothing
+      git has not confirmed to be a merge of this branch onto the trunk (F-081, F-035).
 
    If you find yourself reaching for a gate override here, stop: you have merged too early.
    Rewind and close first.
 
-9. **Close the item.** Set `status: done` and `outcome: delivered` (or `dropped` / `duplicate`,
-   with the reason in `## Notes`). Write `artifacts/review.md`:
+9. **Close the item.** The outcome is `delivered` (or `dropped` / `duplicate`, with the reason
+   in `## Notes`), and the **transition writes it** — `--outcome` at step 11, never an edit of
+   `item.md` first. An item that is not yet `done` must carry no outcome, so setting it first
+   fails `workspace-valid` on the very move that would make it true (F-083). Write
+   `artifacts/review.md`:
 
    ```markdown
    # Review — <ITEM-ID>
@@ -191,11 +192,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     `--context` is not decoration. Closing an item, the scope is that item's diff. Ending an
     engagement, there is no branch and no diff — an ending is not an execution — so the scope is
     the **whole document set**, which is what `--context epic` selects. Before that flag existed,
-    the ending ran `--changed-since main` standing on `main`, found an empty diff, printed
-    "checked no documents" and exited 0. The reviewer who noticed wrote it down exactly: *"It
-    passed here, but it would have passed over anything"*, and a voluntary `--all` run then found
-    three real errors (F-066). A window that could not have seen anything now fails; you will
-    never again get a green from a gate that did not look.
+    an ending ran `--changed-since main` standing on `main`, saw an empty diff and exited 0 —
+    *"It passed here, but it would have passed over anything"*, and a voluntary `--all` then
+    found three real errors (F-066). A window that could not have seen anything now fails.
 
 9b. **A true claim with no source has a repair; use it.** `--all` at an ending will surface
     `claim.unsourced` on old prose, including inside standing ADRs. Read the sentence against the
@@ -355,8 +354,9 @@ On the item's `journal.md`:
   the restated sections for `engagement-state-is-restated` (`not applicable - an item close`,
   never `passed`); `scripts/engagement-state`'s verdict for the epic decision; and for
   `claims-are-sourced` the **scope** it examined, quoted from its own output (F-066).
-- `**Artifacts:**` — `review.md`, the merge commit, any bug you filed, the sign-off question, and
-  the epic if the engagement ended.
+- `**Artifacts:**` — `review.md`, any bug you filed, the sign-off question, and the epic if the
+  engagement ended. The merge commit is not here: it does not exist yet, and `record-merge`
+  puts it in `item.md`'s `merge-commit` once it does (F-081).
 
 If the epic was closed, also write an entry on the **epic's** journal summarising what the epic
 delivered against its success measures.

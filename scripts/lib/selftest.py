@@ -755,6 +755,44 @@ def run_record(results) -> None:
     results.check("record/gate-rows-when-there-is-no-such-bullet",
                   record_lib.gate_rows(record_lib.blocks("- **Item:** WI-0001\n", 1)), [])
 
+    # F-084: when was a skill executing on an item? An entry is written when the execution
+    # *finishes*, so its stamp is the upper bound and the entry before it is the lower one.
+    stamped = [("2026-08-16T09:00:00Z", "intake"),
+               ("2026-08-16T10:00:00Z", "plan"),
+               ("2026-08-16T12:00:00Z", "implement"),
+               ("2026-08-16T13:00:00Z", "plan")]
+    windows = record_lib.execution_windows(stamped)
+    results.check("record/execution-windows-one-per-entry", len(windows), 4)
+    results.check("record/execution-windows-first-has-no-floor", windows[0],
+                  ("intake", None, "2026-08-16T09:00:00Z"))
+    results.check("record/execution-windows-floor-is-the-entry-before", windows[2],
+                  ("implement", "2026-08-16T10:00:00Z", "2026-08-16T12:00:00Z"))
+    results.check("record/execution-windows-of-nothing",
+                  record_lib.execution_windows([]), [])
+    results.check("record/executed-at-inside-the-window",
+                  record_lib.executed_at(windows, "implement", "2026-08-16T11:30:00Z")[0],
+                  "implement")
+    results.check("record/executed-at-is-inclusive-of-the-close",
+                  record_lib.executed_at(windows, "plan", "2026-08-16T10:00:00Z") is not None,
+                  True)
+    results.check("record/executed-at-after-the-close-is-not-during",
+                  record_lib.executed_at(windows, "plan", "2026-08-16T10:00:01Z"), None)
+    results.check("record/executed-at-picks-the-right-run-of-two",
+                  record_lib.executed_at(windows, "plan", "2026-08-16T12:30:00Z")[1],
+                  "2026-08-16T12:00:00Z")
+    results.check("record/executed-at-before-the-first-entry-of-the-skill",
+                  record_lib.executed_at(windows, "plan", "2026-08-16T08:00:00Z"), None)
+    results.check("record/executed-at-a-skill-that-never-ran",
+                  record_lib.executed_at(windows, "verify", "2026-08-16T11:00:00Z"), None)
+    results.check("record/executed-at-with-no-entries-at-all",
+                  record_lib.executed_at([], "plan", "2026-08-16T11:00:00Z"), None)
+    # The one that matters: the row F-084 was filed for — a document version attributed to a
+    # skill twelve minutes after that execution's closing entry.
+    late = record_lib.execution_windows([("2026-08-16T21:53:00Z", "implement"),
+                                         ("2026-08-16T22:00:00Z", "answer-questions")])
+    results.check("record/executed-at-twelve-minutes-late-is-not-during",
+                  record_lib.executed_at(late, "implement", "2026-08-16T22:05:00Z"), None)
+
 
 def run_citations(results) -> None:
     """`path:line` is the most precise citation form, and it was the least checked (F-077)."""
