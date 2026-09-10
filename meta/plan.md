@@ -539,11 +539,11 @@ Format of each line: **unit** — scope — the gate that closes it.
 
 ### Cluster 3 — enforcement mechanics
 
-- [ ] **META-154** — F-091 (the anchor): `transition` owns the **Gates:** verdicts the way it
-      owns **Status:** — the runner writes what ran, the worker supplies evidence sentences.
-      Gate: must-fail fixture + `./scripts/check`.
-- [ ] **META-155** — F-080: the fourth gate verdict, and the **Gates:** bullet compared against
-      the acting skill's contract. Gate: must-fail fixture.
+- [ ] **META-154** — F-091 (the anchor) **and F-080 together**, because they are one bullet:
+      `transition` owns the **Gates:** verdicts the way it owns **Status:** — the runner writes
+      what ran, the worker supplies the evidence sentences — plus the fourth verdict for a gate
+      that runs later in the same execution, and the bullet compared against the acting skill's
+      contract. Gate: must-fail fixtures + `./scripts/check`.
 - [ ] **META-156** — F-081 (a home for the post-closing merge sha), F-083 (outcome/status
       ordering made legal), F-084 (doc version rows matched against executions).
       Gate: `./scripts/check` green; each with its fixture.

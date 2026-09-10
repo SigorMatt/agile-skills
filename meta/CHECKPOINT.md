@@ -10,43 +10,46 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at bc21bce — 36 steps; 54 findings citations; harness self-test 105
+## The gate is GREEN at a98dbd0 — 36 steps; 55 findings citations; harness self-test 110
 
-**CLUSTER 2 IS COMPLETE** — derived, specified, programmed, fixtured, driven and filed.
+**CLUSTERS 1 AND 2 ARE COMPLETE.** Cluster 3 — enforcement mechanics — opens now.
 
 ## Current unit
 
-**META-153c** — H-020's fix. **A HARNESS commit.** Promoted ahead of cluster 3 on purpose.
+**META-154** — F-091 (the anchor) **and F-080 together**: they are one bullet.
 
-META-153b filed H-020 and, in doing so, proved the defect is worse than the observation that
-prompted it: the driver's declared-E4 reading is **unsound**, not merely unpromised.
+**F-091** — `transition` runs the acting skill's gates, prints a report, and appends the body
+the caller wrote; the body's `**Gates:**` bullet is composed **before** the run, and nothing
+compares the two. Two entries in one engagement recorded a verdict the program had
+contradicted. Direction on file: *the tool that runs the gates writes their verdicts into the
+entry it appends, the way it already owns the `**Status:**` bullet; the worker supplies the
+evidence sentence, not the pass or fail.*
 
-`abandonment_declared()` takes verdict ∈ (`ended`, `closed`) **and** reported silent rounds ≥
-reported threshold. But `silent_rounds` is the trailing run of equal digests in an **append-only
-log that nothing resets**, and ADR-0011 §7 makes E4 **recoverable** — a stakeholder can come
-back. So an engagement that went silent, was recovered, and then **delivered** still satisfies
-both conjuncts. **Proved by execution in META-153b**: `fixtures/abandoned-engagement/right`'s
-EP-001 with only `outcome: delivered` changed is still returned by `abandonment_declared()`.
+**F-080** — the same bullet from the other side: `implement`'s opening entry is required to
+record *"`**Gates:**` recording that the completion gates have not run yet"*, while
+`spec/journal-and-history.md` §2.2 admits only `pass`, `fail` and `skipped`. Eleven opening
+entries used three vocabularies. A hard gate, `commits-reference-the-item`, is recorded as
+**fail, not blocking** on a move that proceeded — it fails at the opening transition of every
+`implement` execution, because the branch it inspects has no commits yet. Direction on file:
+**a fourth verdict** for a gate that will run later in the same execution, and the check that
+reads the bullet **compares its gate names against the contract of the skill in the heading**.
+F-080 also asks a question the derivation must answer: *whether a gate that cannot hold at a
+skill's opening transition belongs in that entry at all.*
 
-Consequence: the driver would stamp a **delivered** run `abandoned`. That mislabels any
-iteration whose stakeholder ever went quiet — **iteration 5b included** — so it is fixed before
-META-164 provision-verifies the regressions, not after.
+Note the interaction with F-049, already fixed: `transition` writes the `**Status:**` bullet and
+accepts a body without one, while standalone `journal-entry` still requires it. The `**Gates:**`
+bullet should end up with the **same** ownership story, and F-049's fixture shows the shape.
 
-The fix must read something that actually distinguishes the two. Candidates to weigh, not a
-prescription: the epic's `outcome` (`dropped` is E4's, `delivered`/`delivered-partial` are not);
-the history reason prefix `orphaned by E4:`; the presence of an `## Ending statement`. Whatever
-is chosen, **keep the driver asking rather than re-deriving** — the META-153 test that forbids
-`threshold_rounds`, `tracker/waiting` and `pipeline.yaml` from appearing in the driver's source
-must stay green, because that is F-045's mechanism refused structurally.
-
-- Done when: the reading is sound, a test **fails on the old reading** and passes on the new,
-  the recovered-then-delivered case is a test case in its own right, harness self-test green,
-  `./scripts/check` green, H-020's status updated with its resolving citation, journalled,
-  committed AND pushed as a harness commit (the H-020 status edit may ride with it — it is
-  ledger, not toolkit).
-- Next unit: **META-154** — cluster 3 opens with F-091, the anchor.
+- Done when: the runner owns the verdicts, the fourth verdict exists in
+  `spec/journal-and-history.md`, the bullet is compared against the contract, must-fail fixtures
+  both ways, a `./scripts/check` step proved **non-vacuous** against the pre-change behaviour,
+  gate green, findings statuses for F-091 and F-080 with resolving citations, journalled,
+  committed AND pushed.
+- Next units: **META-156** (F-081, F-083, F-084), **META-157** (F-094, F-096),
+  **META-158** (the F-099 sweep).
 
 ## Done this session
+
 
 
 
@@ -186,6 +189,23 @@ must stay green, because that is F-045's mechanism refused structurally.
     **no live run has produced an E4** — everything is fixture or unit test — and records a
     verified correction to the ROADMAP §2 stamp's implication: at that stamp E4 was not even
     fixture-covered.
+  - **META-153c** H-020's unsound half fixed (**4a59a9a** harness + **a98dbd0** ledger), 110
+    tests, 55 citations. **Two commits on purpose**: a commit cannot cite its own sha, and the
+    citation step uses `git merge-base --is-ancestor` — its own error text prescribes the
+    follow-up commit. The driver now tests **the ending the toolkit recorded** — engagement ended
+    **and** the epic `done` with `outcome: dropped`, a pair §3.5 gives to E4 and to no other
+    ending — because that is **current state**, while every waiting-log derivation is append-only
+    and outlives the silence it describes, which is exactly how the old reading became unsound.
+    The history prefix `E4 abandoned:` was **considered and rejected on the same argument**.
+    Old predicate restored in place → **five** tests fail, including
+    `'abandoned' != 'epic-done'` on the recovered-then-delivered case and a byte-identical
+    `engagement-state` output over two records giving `[('EP-001', 3, 3)] != []`. The mislabel
+    also **stole the closing sim turn**, which E4 alone skips. A false negative was removed in
+    passing: E4 **by withdrawal** (no silent round at all) is now recognised. **No toolkit change
+    was needed or made** — `scan_project` already read `outcome`; asking `engagement-state` to
+    print it for the grader's benefit is the ADR-0005 move H-020 refused at filing. H-020 stays
+    **open** for its first half, now a dependency of a detail line's evidence rather than of the
+    recognition, and its status says exactly that rather than claiming the finding.
 
 ## Standing instructions (still in force)
 
