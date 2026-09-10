@@ -28,7 +28,10 @@ verdict would be a tool the owner could not disagree with.
 
 ## Instruments
 
-- `find` on this machine is `bfs`, not GNU find — check the tool before trusting a flag.
+- `find` on this machine is two different programs, so check the tool before trusting a flag:
+  an interactive shell's `find` is a **function** wrapping `bfs`, while a **subprocess** gets
+  `/usr/bin/find`, GNU findutils. Write the form that is valid on both — the absolute `-newermt`
+  stamp below — and print the binary that actually answered alongside the result.
   *Example:* a `find` invocation silently behaved as `bfs` and the difference was not
   noticed until the result was already in a report.
 - Relative `-newermt` arguments fail here; always pass an absolute stamp.
