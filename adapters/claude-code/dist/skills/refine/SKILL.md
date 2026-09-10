@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.5.0
+  methodology-version: 0.6.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -75,8 +75,23 @@ acted on. Then write down exactly what was said.
      *category* with "whatever you think is best" — how it is built, what things are called,
      the exact wording of output, exit codes, file layout, libraries — that is a real answer and
      it applies to the category, not only to the question that produced it. Decide, record it in
-     the Q&A as `[assumed]` naming the deferral you are relying on, and move on. Asking anyway
-     tells them their answer was not heard.
+     the Q&A as `[assumed]`, and move on. Asking anyway tells them their answer was not heard.
+
+     **Name the licence and its scope, in the form the record can read** (DoR **R12**,
+     `spec/question.md` §2). Beside the `[assumed]` tag:
+
+     ```markdown
+     **Under delegation:** WI-0001/Q-002 — output wording, exit codes and file layout.
+     ```
+
+     The ID is the answer that granted the licence and it must resolve; after it, the category
+     you are taking it to cover. Without the pair, the licence is unbounded and untraceable, and
+     the person who gave it never learns what was spent: two such answers in one engagement
+     carried 38 assumptions across four items, of which exactly one was ever shown to him
+     (F-082). Choosing what the category covers is yours — `scripts/lint-answers` reads that the
+     answer resolves and that a category is named, and cannot read whether it reaches this
+     decision. `review-close` names every answer so spent in the sign-off, so write the line
+     even when the decision feels small; that list is the only thing that closes the loop.
    - **Implementation-only — route it to `plan`, not to a person.** If the answer would be the
      same whoever the stakeholder was, it is a design decision. Put it in the item's `## Notes`
      as an open design question and let `plan` settle it under its own preference order.
@@ -224,7 +239,10 @@ acted on. Then write down exactly what was said.
 
    Then every question and every answer, in order, verbatim. Tag each answer:
    - `[human]` — the human said this.
-   - `[assumed]` — you proposed it and they confirmed, or they deferred to you.
+   - `[assumed]` — you proposed it and they confirmed, or they deferred to you. Where a
+     standing delegation is what let you decide, the entry carries its
+     `**Under delegation:**` line (step 3); where nothing licensed it at all, say that instead,
+     and say where a later disagreement about it lands.
    - `[unresolved]` — asked, not settled; carried into `## Notes` as a risk.
 
    Verbatim means verbatim. Do not paraphrase a hesitant answer into a confident one. When
@@ -316,6 +334,10 @@ the item's whole story rather than only its code.
    said rather than what they did?
 3. Did you invent a threshold ("under 200ms") that nobody agreed to? If so, mark it `[assumed]`
    or remove it.
+3a. Take every `[assumed]` answer in turn. Which of the human's answers licensed it, and is that
+   answer named by ID with the category you read it as covering — or does the entry say plainly
+   that nothing licensed it? An assumption with neither is a decision taken on someone's behalf
+   with no way back to them (R12).
 4. Would `verify` — who cannot ask anyone anything — be able to do its job from this item alone?
 
 **The two ways this skill goes wrong:**

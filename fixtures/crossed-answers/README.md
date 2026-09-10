@@ -23,6 +23,32 @@ says."* Both are recorded. They cannot both hold.
 | `WI-0004/Q-004` | a section that reads like a check and says nothing checkable | `answer.cross-check.malformed` |
 | `EP-001/Q-005` | the sign-off consumed with no cross-answer check at all — the iteration-3 instance | `answer.cross-check.missing` |
 
+## The delegation, and what was spent under it
+
+The second half of the same protocol (F-082). A stakeholder answers one question with *"whatever
+is easier for you"* and every later execution has a licence nothing bounds. A decision taken
+under one records `**Under delegation:** <ANSWER-ID> — <category>`, and the ending puts every
+answer so spent in front of the person who gave it.
+
+| Where | What it is | Code |
+|-------|-----------|------|
+| `WI-0002/artifacts/refinement-qa.md` | the compliant delegation: it resolves, it names its category, and `EP-001/Q-005` surfaces it at the ending | — (must produce nothing, in either scope) |
+| `WI-0003/artifacts/plan.md` | a licence traced back to an answer this workspace does not have — and written as a **nested** line inside its assumption bullet, which is where `plan.md` puts it | `answer.delegation.unresolved` |
+| `WI-0004/artifacts/refinement-qa.md` Q1 | an answer ID and nothing else: the unbounded delegation, which is the finding's own shape | `answer.delegation.no-category`, and `answer.delegation.unsurfaced` at the ending |
+| `WI-0004/artifacts/refinement-qa.md` Q2 | a delegation in prose, naming no answer at all — no route back to anyone | `answer.delegation.unnamed` |
+| `WI-0004/artifacts/refinement-qa.md` Q3 | a delegation citing a request that does not exist | `answer.delegation.unresolved` |
+| `WI-0005/artifacts/refinement-qa.md` | the same pair again in the engagement that ended at **E4**: one delegation named in `EP-002`'s `## Ending statement`, one not. At E4 there is nobody to address, so the account of the engagement is a document | `answer.delegation.unsurfaced` (at the ending) on the second only |
+| `WI-0006/artifacts/plan.md` | a delegation spent in an engagement (`EP-003`) that has filed neither a sign-off nor an ending statement, and citing `R-001`, a request that **does** exist | — (a line on stdout, and no finding) |
+
+`answer.delegation.unsurfaced` is **not** in `EXPECTED-CODES.txt`: it is the ending's rule and
+fires only under `--context epic`, which is how `review-close` runs this gate. `scripts/check`
+runs the fixture both ways and pins it to exactly **two** occurrences in the second — one per
+place an engagement's account of itself can live — with a silent twin beside each: `EP-001`'s
+sign-off names `WI-0002/Q-002`, `EP-002`'s ending statement names `WI-0003/Q-001`, and neither
+may be reported. `EP-003` is the third branch and it is deliberately quiet: an ending with no ask
+at all is `scripts/check-epic-signoff`'s to refuse, and two gates reporting one failure teaches a
+reader to skim.
+
 `WI-0003` is the control, and it is deliberately awkward in four ways that a real record is
 awkward: `WI-0003/Q-002` names the two answers **only inside `## Options considered`**, because
 putting the person's two statements side by side as the options is how a good escalation reads;

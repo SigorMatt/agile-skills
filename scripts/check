@@ -303,7 +303,17 @@ def check_cross_answers(runner: Runner) -> None:
             ("answer.conflict.unescalated", 1,
              "WI-0003's escalation names both answers in its options and must produce none"),
             ("answer.cross-check.no-verdict", 1,
-             "WI-0003's verdict wraps onto a second line and must still be read")):
+             "WI-0003's verdict wraps onto a second line and must still be read"),
+            ("answer.delegation.unresolved", 2,
+             "a delegation citing an answer this workspace does not have, and one citing a "
+             "request that does not exist"),
+            ("answer.delegation.no-category", 1,
+             "an answer ID and nothing else is the unbounded delegation F-082 reports; "
+             "WI-0002's compliant one names its category and must produce none"),
+            ("answer.delegation.unnamed", 1,
+             "a delegation in prose, with no route back to whoever granted it"),
+            ("answer.delegation.unsurfaced", 0,
+             "the ending's rule; it must not fire in a scope that is not an ending")):
         seen = output.count(f"[{code}]")
         if seen != expected_count:
             extra = extra + [f"{code} fired {seen} time(s), expected {expected_count} — {why}"]
@@ -323,7 +333,69 @@ def check_cross_answers(runner: Runner) -> None:
                    [sys.executable, os.path.join(SCRIPTS, "lint-answers"),
                     os.path.join(ROOT, "fixtures", name)])
 
+    check_delegation_surfaced(runner)
     check_rewritten_claim(runner)
+
+
+def check_delegation_surfaced(runner: Runner) -> None:
+    """The ending surfaces the assumptions taken on the stakeholder's behalf (F-082, half 2).
+
+    Rule 5 runs only at an ending — `--context epic`, which is how `review-close` runs this gate —
+    so the fixture is run a second way and the count is pinned from both sides. `WI-0002/Q-002`
+    is spent and named in `EP-001/Q-005`'s `## Question`: it must produce nothing, or a rule that
+    fires on every delegation would pass here. `WI-0002/Q-001` is spent and named nowhere: it
+    must produce exactly one, or a rule that surfaced nothing would pass here too. `EP-002` is
+    that pair again at **E4**, where there is no sign-off and the engagement's account of itself
+    is `artifacts/review.md`'s `## Ending statement`; `EP-003` is the third branch — a delegation
+    spent in an engagement that has filed neither, which this gate names on stdout and does not
+    report, because an ending with no ask at all is `check-epic-signoff`'s to refuse.
+
+    The clean engagements are run the same way, because rule 5 walks every epic in a workspace
+    and a rule that reports an ending with no delegation at all is a rule nobody can end under.
+    """
+    fixture = os.path.join(ROOT, "fixtures", "crossed-answers")
+    result = subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-answers"),
+                             fixture, "--context", "epic"],
+                            capture_output=True, text=True, cwd=ROOT)
+    output = result.stdout + result.stderr
+    problems = []
+    seen = output.count("[answer.delegation.unsurfaced]")
+    if seen != 2:
+        problems.append(f"  - answer.delegation.unsurfaced fired {seen} time(s) over "
+                        f"fixtures/crossed-answers --context epic, expected exactly 2")
+    # One per place an ending's account of itself can live, each with its silent twin beside it
+    # in the same fixture: EP-001 has a sign-off, EP-002 ended at E4 and has an ending statement
+    # instead, and EP-003 has neither, which is not this gate's failure to report.
+    for wanted, why in (
+            ("EP-001 ends without the sign-off's `## Question` naming WI-0002/Q-001",
+             "the sign-off branch"),
+            ("EP-002 ends without `artifacts/review.md`'s `## Ending statement` naming "
+             "WI-0002/Q-002",
+             "the E4 branch, where there is nobody to address"),
+            ("EP-003: 1 delegation(s) spent, and no sign-off or ending statement exists yet",
+             "the branch that defers to check-epic-signoff rather than reporting twice")):
+        if wanted not in output:
+            problems.append(f"  - {why}: expected the report to say {wanted!r}")
+    for unwanted, why in (
+            ("EP-001 ends without the sign-off's `## Question` naming WI-0002/Q-002",
+             "EP-001's sign-off names WI-0002/Q-002"),
+            ("naming WI-0003/Q-001", "EP-002's ending statement names WI-0003/Q-001"),
+            ("R-001, which is not", "R-001 is a request that exists in this workspace")):
+        if unwanted in output:
+            problems.append(f"  - {why}, and it was reported anyway")
+    for name in ("ended-engagement", "signed-off-epic", "abandoned-engagement/right"):
+        clean = subprocess.run([sys.executable, os.path.join(SCRIPTS, "lint-answers"),
+                                os.path.join(ROOT, "fixtures", *name.split("/")),
+                                "--context", "epic"],
+                               capture_output=True, text=True, cwd=ROOT)
+        if clean.returncode != 0:
+            problems.append(f"  - fixtures/{name} --context epic exited {clean.returncode}\n"
+                            + (clean.stdout + clean.stderr).strip())
+    if problems:
+        runner.emit("the ending surfaces every delegation spent (F-082)", False,
+                    detail="\n".join(problems))
+        return
+    runner.emit("the ending surfaces every delegation spent (F-082, 12 observations)", True)
 
 
 REWRITTEN_CLAIM_QUESTION = """---

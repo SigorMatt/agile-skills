@@ -24,6 +24,21 @@ about what they cannot see — read §5 before trusting this script for more tha
      legal moves in the record: the question of rule 2, or a `**Cross-answer check:**` journal
      bullet naming that answer and saying why the edit is an ordinary repair.
 
+  4. **A delegation says what it was taken to cover.** A stakeholder who answers a whole
+     category with *"whatever you think is best"* has given a licence nothing bounds. Where a
+     skill decides something under one, the record of that decision carries
+     `**Under delegation:** <ITEM>/Q-nnn — <the category it is taken to cover>`. This rule reads
+     the line: the ID resolves to a recorded human answer, and a category is named. It does not
+     read whether the delegation really reaches the decision — that is judgement and it is the
+     acting skill's (`spec/dor-dod.md` R12).
+
+  5. **The ending surfaces what was spent** (with `--context epic`). Every answer ID a delegation
+     line cites in this engagement is named in the sign-off's `## Question` — or, at E4 where
+     there is nobody to address, in `artifacts/review.md`'s `## Ending statement`. The person who
+     gave the blank cheque sees the cheque before they accept (F-082). Where no sign-off and no
+     ending statement exists yet, this rule is silent: an ending with no ask at all is
+     `check-epic-signoff`'s to refuse, not this one's.
+
 Rule 3 is the mechanical half. In iteration 3 the pipeline found the stakeholder's own sentence —
 *"the marker decides everything … every row, every column, no exceptions"*, quoted in
 `docs/product/vision.md` with `[src: WI-0002/Q-001]` on it — had become false, and rewrote it:
@@ -34,6 +49,13 @@ the sentence was holding a one-line reconciliation nobody asked for.
 `kind: elicitation` question — the one open question that is not about the team's agenda
 (`spec/question.md` §2, F-064). `intake` runs it at the start, where an answer is cheapest to
 act on; `check-epic-signoff` enforces the same thing at the ending, where it is a last resort.
+
+Rules 4 and 5 are a pair and neither is the whole of F-082: **nothing here can tell that a
+delegation was relied on and never written down.** `[assumed]` is not the trigger — all 20 of
+`examples/toy-project`'s assumed answers were proposed by the analyst and confirmed by the human,
+not delegated — so the trigger is the skill's own knowledge that it decided under someone's
+licence, and what these rules do is make a written delegation traceable and impossible to spend
+in private.
 
 `--uncommitted` scopes rule 3 to the working tree instead, for a skill that works on the trunk
 and commits once after its gates (`plan`). `--context epic` says this execution is an
@@ -57,18 +79,67 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
 from claims import CITATION_RE  # noqa: E402
-from record import blocks, paragraphs  # noqa: E402
+from record import blocks, paragraphs, split_label  # noqa: E402
 from report import Report  # noqa: E402
 from scope import diff_scope, git, working_tree_scope  # noqa: E402
 from workspace import Workspace, resolve_root  # noqa: E402
 
 SECTION = "## Cross-answer check"
+DELEGATION_LABEL = "under delegation"
+SIGN_OFF_SECTION = "## Question"
+ENDING_SECTION = "## Ending statement"
 ANSWER_ID_RE = re.compile(r"\b(EP-\d{3}|WI-\d{4}|BUG-\d{4})/(Q-\d{3})\b")
 REQUEST_ID_RE = re.compile(r"\b(R-\d{3})\b")
 NONE_RE = re.compile(r"\bnone\b", re.IGNORECASE)
 VERDICTS = ("conflicts", "compatible")
 JOURNAL_BULLET_RE = re.compile(r"^\s*[-*]\s*\*\*Cross-answer check:\*\*(?P<rest>.*)$",
                                re.IGNORECASE)
+
+
+def read_text(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def named_answers(text: str) -> set:
+    """Every recorded-answer ID a piece of text names — questions and requests alike."""
+    found = {f"{a}/{b}" for a, b in ANSWER_ID_RE.findall(text)}
+    found.update(REQUEST_ID_RE.findall(text))
+    return found
+
+
+def section_text(text: str, heading: str) -> str:
+    """The body under a level-2 heading, up to the next one. Case-insensitive on the heading."""
+    collecting, collected = False, []
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            if collecting:
+                break
+            collecting = line.strip().lower() == heading.lower()
+            continue
+        if collecting:
+            collected.append(line)
+    return "\n".join(collected)
+
+
+def declared_delegation(block):
+    """`(line, value)` where this block declares a delegation, else `None`.
+
+    The declaration is usually a block of its own, and then `record.blocks()` has already folded
+    its continuation lines together. It is also, legitimately, a line *inside* another block —
+    `plan.md`'s `## Assumptions` is a list, and the natural place for the line is under the
+    assumption it belongs to. A reader that only looked at a block's own label would pass
+    silently over every one of those, which is a false clean bill on exactly the record F-082 is
+    about, so the lines of a block are read too.
+    """
+    if block.label and block.label.strip().lower() == DELEGATION_LABEL:
+        return block.start, block.body
+    for offset, raw in enumerate(block.lines[1:], start=1):
+        label, value = split_label(raw)
+        if label and label.strip().lower() == DELEGATION_LABEL:
+            rest = [value] + [line.strip() for line in block.lines[offset + 1:]]
+            return block.start + offset, " ".join(part for part in rest if part)
+    return None
 
 
 def answer_text(question) -> str:
@@ -293,6 +364,149 @@ class AnswerLinter:
                 return read(block)
         return None
 
+    # ---- rules 4 and 5: the delegation ---------------------------------------------------
+
+    def delegation_lines(self):
+        """Every `Under delegation:` line written anywhere in the tracker.
+
+        The line is a labelled declaration and is read by `record.blocks()`, the same reader
+        ADR-0008's `Checked against:` uses, so `- **Under delegation:** …` wrapped over three
+        lines is one declaration however its author broke it.
+
+        It is looked for wherever a decision is recorded: the item, its journal, and its
+        artifacts — `refinement-qa.md` beside the `[assumed]` tag, `plan.md` under
+        `## Assumptions`. Not in `questions/`: a question is where an answer is *given*, and a
+        delegation line records where one was *spent*.
+        """
+        found = []
+        for item in self.workspace.sorted_items():
+            paths = [os.path.join(item.root, "item.md"), os.path.join(item.root, "journal.md")]
+            artifacts = os.path.join(item.root, "artifacts")
+            if os.path.isdir(artifacts):
+                paths += [os.path.join(artifacts, name)
+                          for name in sorted(os.listdir(artifacts)) if name.endswith(".md")]
+            for path in paths:
+                if not os.path.isfile(path):
+                    continue
+                for block in blocks(read_text(path)):
+                    spotted = declared_delegation(block)
+                    if spotted is None:
+                        continue
+                    line, value = spotted
+                    found.append((item, path, line, value))
+        return found
+
+    def check_delegations(self, lines) -> int:
+        """Rule 4. A written delegation resolves to an answer and names a category."""
+        examined = 0
+        for item, path, line, value in lines:
+            if self.only_item and item.identifier != self.only_item:
+                continue
+            examined += 1
+            named = sorted(named_answers(value))
+            if not named:
+                self.report.error(
+                    path, line, "answer.delegation.unnamed",
+                    "a decision taken `under delegation` names no answer that granted it",
+                    hint="`**Under delegation:** WI-0001/Q-002 \u2014 <the category it is taken "
+                         "to cover>`. A delegation with no route back to the person who gave it "
+                         "is the whole of F-082")
+                continue
+            for answer_id in named:
+                if answer_id.startswith("R-"):
+                    target = os.path.join(self.root, "tracker", "requests", f"{answer_id}.md")
+                    if os.path.isfile(target):
+                        continue
+                elif answer_id in self.human:
+                    continue
+                self.report.error(
+                    path, line, "answer.delegation.unresolved",
+                    f"a decision was taken under {answer_id}, which is not a recorded human "
+                    f"answer in this workspace",
+                    hint="only a person can delegate, so the ID must reach something they said "
+                         "\u2014 an answered question with `answered-by: human`, or a request")
+            # The category. Presence, and nothing more: it cannot tell a real category from two
+            # words that look like one. What it can do is make the unbounded delegation — an
+            # ID and nothing else — unwritable, which is the shape the finding reports.
+            remainder = REQUEST_ID_RE.sub("", ANSWER_ID_RE.sub("", value))
+            words = [word for word in re.findall(r"[A-Za-z][A-Za-z'-]+", remainder)
+                     if len(word) > 1]
+            if len(words) < 2:
+                self.report.error(
+                    path, line, "answer.delegation.no-category",
+                    f"the delegation on {', '.join(named)} names no category it is taken to cover",
+                    hint="say what the licence is being read as covering \u2014 \"output "
+                         "wording, exit codes and file layout\" \u2014 so that its scope is "
+                         "something the record holds rather than something each execution "
+                         "re-derives (spec/question.md \u00a72)")
+        return examined
+
+    def check_delegations_surfaced(self, lines) -> None:
+        """Rule 5. At the ending, every delegation spent is in front of the person who gave it.
+
+        The containment check is F-046's, for F-046's reason: *"list what was spent"* cannot be
+        checked and *"name every answer that was spent under"* can. Whether the assumptions
+        listed beside each ID are the ones actually taken is judgement, and it stays the
+        reviewer's.
+        """
+        by_epic = {}
+        for item, path, line, value in lines:
+            epic = (item.fields.get("epic") if item.fields.get("type") != "epic"
+                    else item.identifier)
+            if not epic:
+                continue
+            for answer_id in named_answers(value):
+                # Only an ID that resolves. An unresolved one is rule 4's report and reporting
+                # it twice would teach a reader to skim this script's output.
+                if answer_id in self.human or (
+                        answer_id.startswith("R-")
+                        and os.path.isfile(os.path.join(self.root, "tracker", "requests",
+                                                        f"{answer_id}.md"))):
+                    by_epic.setdefault(epic, {}).setdefault(answer_id, (path, line))
+        for epic_id, spent in sorted(by_epic.items()):
+            epic = self.workspace.items.get(epic_id)
+            if epic is None:
+                continue
+            surfaced, where = self.ending_statement(epic)
+            if surfaced is None:
+                # Nothing has been filed to surface them in. An ending with no ask at all is
+                # `check-epic-signoff`'s to refuse; reporting it here would be two gates
+                # disagreeing about whose failure it is.
+                self.report.note(f"{epic_id}: {len(spent)} delegation(s) spent, and no sign-off "
+                                 f"or ending statement exists yet to surface them in")
+                continue
+            named = named_answers(surfaced)
+            for answer_id, (path, line) in sorted(spent.items()):
+                if answer_id in named:
+                    continue
+                self.report.error(
+                    path, line, "answer.delegation.unsurfaced",
+                    f"{epic_id} ends without {where} naming {answer_id}, under which this "
+                    f"engagement decided things on the stakeholder's behalf",
+                    hint="name the answer by ID, the category it was taken to cover, and the "
+                         "assumptions taken under it. They wrote the blank cheque; the ending is "
+                         "where they see what was spent, before they accept it (F-082)")
+
+    def ending_statement(self, epic):
+        """The text at this epic's ending that must carry the delegations, and what to call it.
+
+        The sign-off's `## Question` where one was filed; `artifacts/review.md`'s
+        `## Ending statement` at E4, where there is nobody to address and the statement is a
+        document instead (`spec/ids-and-statuses.md` §3.5a).
+        """
+        for question in epic.questions:
+            if question.fields.get("kind") != "sign-off":
+                continue
+            text = section_text(question.body, SIGN_OFF_SECTION)
+            if text.strip():
+                return text, f"the sign-off's `{SIGN_OFF_SECTION}`"
+        review = epic.artifact_path("review.md")
+        if os.path.isfile(review):
+            text = section_text(read_text(review), ENDING_SECTION)
+            if text.strip():
+                return text, f"`artifacts/review.md`'s `{ENDING_SECTION}`"
+        return None, ""
+
     # ---- rule 3 ------------------------------------------------------------------------
 
     def sourced_paragraphs(self, text: str):
@@ -391,9 +605,13 @@ class AnswerLinter:
             if code in self.BLINDING:
                 self.report.error(path, line, code, message, hint)
         examined = self.check_cross_answer_sections()
+        lines = self.delegation_lines()
+        delegated = self.check_delegations(lines)
+        if self.ending:
+            self.check_delegations_surfaced(lines)
         if self.require_elicitation:
             self.check_elicitation()
-        scope = (f"{examined} consumed human answer(s)"
+        scope = (f"{examined} consumed human answer(s) and {delegated} delegation(s) spent"
                  + (f" on {self.only_item}" if self.only_item else " in the workspace"))
         if self.changed_since or self.uncommitted:
             self.check_rewritten_claims()

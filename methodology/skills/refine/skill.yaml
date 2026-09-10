@@ -1,5 +1,5 @@
 name: refine
-version: 0.5.0
+version: 0.6.0
 persona: product-analyst
 purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
 
@@ -61,7 +61,7 @@ quality_gates:
     on_failure: stay
   - name: definition-of-ready
     description: Every DoR criterion for this item type is evaluated individually and recorded.
-    manual_check: Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. R11 is the one most easily passed by inattention - a criterion that counts something this item may move is a criterion somebody will amend after the code exists, so name the artefacts, and where a count is genuinely wanted measure it first and carry the measurement as a command-outcome citation (F-089).
+    manual_check: Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. R12 is the one most easily passed by silence - an assumed answer taken under a standing delegation names the answer that granted it and the category it is taken to cover, and one taken under no licence says so. R11 is the one most easily passed by inattention - a criterion that counts something this item may move is a criterion somebody will amend after the code exists, so name the artefacts, and where a count is genuinely wanted measure it first and carry the measurement as a command-outcome citation (F-089).
     enforcement: hard
     on_failure: stay
   - name: criteria-are-decidable
@@ -77,7 +77,7 @@ quality_gates:
     on_failure: stay
   - name: qa-recorded-verbatim
     description: The exchange with the human is preserved, with assumed answers marked as assumed.
-    manual_check: refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement.
+    manual_check: refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement, and every assumed answer taken under a standing delegation carrying its Under delegation line - the answer ID that granted the licence and the category it is taken to cover.
     enforcement: hard
     on_failure: stay
 

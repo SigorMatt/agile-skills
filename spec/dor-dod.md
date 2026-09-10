@@ -32,6 +32,7 @@ reviewer cannot tell which criterion was the weak one.
 | R9 | Estimated to be deliverable as one coherent change. If it is not, it was split, and this item is one of the parts | [skill] |
 | R10 | Every combination of the behaviours this item introduces — its options, its flags, its modes — either has a stated behaviour in a criterion, or is named in `## Out of scope`, or is recorded in `## Notes` as deliberately unconstrained with who left it so | [skill] |
 | R11 | Every criterion **names** the artefacts it constrains rather than counting them. Where it states a count of something this item may move — tests, files, criteria, cases — the count was **measured before the criterion was written**, and the criterion carries the measurement as a command-outcome citation `[src: run: <command> → <outcome>]` | [skill] |
+| R12 | Every assumed answer taken under a stakeholder's **standing delegation** — an answer that settled a whole category, *"whatever is easier for you"* — names the answer that granted it and the category it is taken to cover, in the form `**Under delegation:** <ANSWER-ID> — <category>` (`spec/question.md` §2). An assumption taken under **no** licence says that instead, and where the disagreement would land | [skill] |
 
 R10 was added after a real run found the checklist could not express what was wrong. An item
 specified `--sort`, an earlier item had specified `--top`, and nothing anywhere said what the two
@@ -75,6 +76,34 @@ that catches this finding's own three criteria also flags **26 of the 53** accep
 *"two files with the same count"*, none of which R11 is about. A mechanical rule with that error
 rate would be switched off in a week, and the honest version of it is a criterion `refine`
 applies with its eyes open.
+
+### R12: a delegation is an answer with a scope, and the scope is not remembered
+
+A stakeholder who says *"whatever is easier for you"* has answered a **category**, and treating
+that as a real answer is right — re-asking inside it tells them their answer was not heard
+(`refine`'s step 3, F-023). What has no home in the record is how far the licence was taken to
+reach. In one engagement two such answers carried **38** `[assumed]` decisions across four items,
+several of them with real product weight — what happens to a file the tool does not recognise,
+whether one broken rule file stops every run. All 38 were recorded and tagged; the protocol was
+followed exactly. Exactly one reached the person who gave the licence, and only because a
+reviewer chose to put it in a sign-off (F-082). `refine`'s own plan had named the exposure at the
+time: *"Five assumptions are load-bearing and none was confirmed by the stakeholder."*
+
+So the licence gets a scope the record holds: the answer that granted it, by ID, and the category
+it is being read as covering. `scripts/lint-answers` then holds the written line to something —
+the ID resolves, a category is named, and at the ending every answer so spent is named in the
+sign-off's `## Question`, which is `review-close`'s job and DE7's (`spec/question.md` §2).
+
+**R12 is `[skill]`, and the measurement says why.** Nothing mechanical can see a delegation that
+was relied on and never written down, and `[assumed]` is not a usable proxy for one. The
+must-pass `examples/toy-project` records **eight** assumed answers: six say in the same breath
+that the analyst proposed them and the human confirmed them, which is not a delegation at all;
+one (`WI-0001` AC12) states it was taken under **no** licence and names where a later
+disagreement lands, which is the honest form of the other half of this criterion; and exactly one
+(`WI-0003` Q7) is taken under a licence — *"don't hold the item up over it"* — quoted in prose,
+with no ID and no category, which is precisely the case R12 is for. A rule keyed on the tag would
+fire eight times for one true positive, and the shape it is looking for is one only the analyst
+who took the decision can see.
 
 ### The override
 
@@ -454,3 +483,4 @@ derivation, and where the two texts differ ADR-0011's is the later and governing
 | 9 | 2026-09-10 | D1 takes the third criterion state: `- [~]` is settled, so an item whose environment could not perform an observation still closes — and the close is spelled differently from one settled directly, and owes the stakeholder a question in time (F-096). |
 | 10 | 2026-09-10 | §4a added: **when** each epic criterion is applied. DE1–DE6 and DE4's first half go before the engagement's account of itself — the sign-off's `## Question`, or the `## Ending statement` at E4 — and DE4's restatement, DE7 and DE8 follow the ending. One ordering for all four endings, because a criterion applied after the account is applied to a state the account no longer describes (F-086). |
 | 11 | 2026-09-10 | **R11** added: a criterion **names** the artefacts it constrains rather than counting them, and a wanted count is **measured first** and carried as a command-outcome citation — four criteria in one engagement counted things their own item moved and every one had to be amended afterwards (F-089). It is `[skill]`, and the measurement that says why is in §1. **D11** gains its second half: an accepted gap carries an owner and a disposition the orchestrator can act on, written at acceptance time, because the orchestrator dispatches on open questions and item status and on nothing else (F-090). **D12/DE6**: the audit row carries the **falsifier** — an example that could not have failed does not discharge a claim, and an absolute about a rule with a boundary is checked at the boundary (F-088). |
+| 12 | 2026-09-10 | **R12** added: an assumed answer taken under a standing delegation names the answer that granted it and the category it is taken to cover, and one taken under no licence says so — a stakeholder's two category answers carried 38 assumptions and one of them was ever shown to him (F-082). It is `[skill]`, and the measurement that says why is in §1.

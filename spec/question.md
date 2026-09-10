@@ -289,6 +289,42 @@ overtakes it.** If the sentence is false because the pipeline paraphrased badly,
 code changed, correcting it is an ordinary D12 repair and always was. If it is false because the
 person has since said something incompatible, the document is not the thing that is wrong.
 
+### `Under delegation:` — the answer that covers a whole category
+
+A stakeholder who says *"you decide the technical details"* has answered a **category**, not a
+question. That is a real answer and this protocol treats it as one: the skill decides inside the
+category rather than asking again, because asking anyway tells them their answer was not heard.
+What the protocol had no way to record is how far the licence was taken to reach. In one
+engagement two such answers carried **38** `[assumed]` decisions across four items — among them
+what happens to a file the tool does not recognise, and whether one broken rule file stops every
+run — and exactly one of the 38 ever reached the person who gave the licence, because a reviewer
+chose to put it in a sign-off (F-082).
+
+So a decision taken under a delegation says so, in one line, beside the decision:
+
+```markdown
+**Under delegation:** WI-0001/Q-002 — output wording, exit codes and file layout.
+```
+
+- The ID is the recorded human answer that granted the licence: a question with
+  `answered-by: human` — `answered` or `deferred`, since a deferral is a reply (§3 rule 7) — or a
+  `tracker/requests/R-nnn.md`. It MUST resolve. A licence with no route back to whoever gave it
+  is the whole of what the finding names.
+- After it, **the category the licence is being taken to cover**, in words, so that its scope is
+  something the record holds rather than something each later execution re-derives privately.
+- It lives wherever the decision is recorded: in `artifacts/refinement-qa.md` beside the
+  `[assumed]` tag, in `artifacts/plan.md` under `## Assumptions`, in the item's `## Notes` where
+  the assumption is carried there. It may be a line of its own or a line under the assumption it
+  belongs to; both are read.
+- The **sign-off names every answer spent under** (below). That is the half that closes the loop:
+  the person who wrote the blank cheque sees what was spent before they accept.
+
+`scripts/lint-answers` reads the line — that the ID resolves, that a category is named, and at an
+ending that every ID so spent is in front of its author. It cannot read whether the delegation
+really reaches the decision taken under it, and it cannot see a delegation relied on and never
+written down at all. Both are judgement, both are the acting skill's, and `dor-dod.md` R12 is
+where that is written down as such rather than left to be inferred from a gate's silence.
+
 ### `kind: elicitation` — the one question that is not about our agenda
 
 Every other question in this protocol is closed-form and comes from the team's list of things it
@@ -326,7 +362,7 @@ accept it, and it is filed by `review-close` when the engagement reaches **rest*
 epic may reach *any* of its endings, not only closure (`ids-and-statuses.md` §3.5,
 `dor-dod.md` DE7).
 
-It obeys every rule above and adds five:
+It obeys every rule above and adds six:
 
 - `addressed-to` MUST be `human` and `blocking` MUST be `true`. Nobody accepts on the
   stakeholder's behalf, and an acceptance question that does not stop the epic is a formality.
@@ -345,6 +381,15 @@ It obeys every rule above and adds five:
   ends only from rest, rest requires every child terminal, and the follow-up is created at
   `draft`), and which cost the stakeholder a second full cycle they had chosen the option to
   avoid: *"more process than I expected for one follow-up request"* (F-061).
+- `## Question` MUST also name **every delegation this engagement spent**: each answer ID that
+  an `**Under delegation:**` line cites, the category it was taken to cover, and the assumptions
+  taken under it. Naming the IDs is the checkable half, for the same reason naming every child is
+  — *"list what we assumed on your behalf"* cannot be checked and *"name every answer we spent"*
+  can — and whether the assumptions listed beside them are the ones actually taken is the
+  reviewer's. At E4 there is no sign-off and the same list goes into `artifacts/review.md`'s
+  `## Ending statement`, which is where an ending's statement lives when there is nobody to
+  address (§2, `ids-and-statuses.md` §3.5a). A stakeholder whose two answers carried 38
+  assumptions was shown one of them (F-082).
 - Exactly one sign-off is due per **rest**. If the engagement re-enters rest after further work,
   the acknowledgment is due again, because the previous one accepted something else.
 
@@ -458,3 +503,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 8 | 2026-08-29 | §2: options before the recommendation, and the recommendation marked as ours (F-063); `kind: elicitation`, the one open question per engagement that is not about the team's agenda (F-064). |
 | 9 | 2026-09-10 | §2: `status: abandoned` — the fourth question status, and the pipeline's only vocabulary for **absence**. `## Answer` MUST be empty, `## Consequences` names the ending and the item's orphan class, `answered-at`/`answered-by` stay unset, and only `review-close` sets it, only at E4. §3: rule 4 gains the orchestrator's `abandoned` branch, and new rule 8. Derived in ADR-0011 (F-060, F-028, H-008). |
 | 10 | 2026-09-10 | §2: `kind: sign-off`'s accept-with-follow-ups option states the consequence it actually has — the epic stays `open`, the follow-up is built, a fresh sign-off follows — rather than an ending the status model forbids (F-061). |
+| 11 | 2026-09-10 | §2: `**Under delegation:**` — a decision taken under a stakeholder's category answer names the answer that granted it and the category it is taken to cover, and the sign-off names every answer so spent (F-082). |

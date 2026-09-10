@@ -49,7 +49,13 @@ will not have been tested by anyone.
       so this uses integer arithmetic." A cited answer costs nothing and cannot drift.
    2. **Make a reversible assumption and record it.** Under `## Assumptions` in the plan, state
       the assumption, what it would take to reverse it, and why reversal is cheap. Reversible
-      means: one file, no data migration, no published interface change.
+      means: one file, no data migration, no published interface change. Where what let you
+      assume it is a stakeholder answer that settled a whole *category* — *"whatever is easier
+      for you"* — say so on the assumption, in the form the record can read:
+      `**Under delegation:** WI-0001/Q-002 — output wording and exit codes`. The ID must resolve
+      to something they said, and the category is the scope you are taking the licence to have;
+      `review-close` names every answer so spent in the sign-off, which is the only thing that
+      tells them what their blank cheque bought (`spec/question.md` §2, DoR R12, F-082).
    3. **Ask the human.** Only when the decision is *irreversible* or depends on *intent no
       document records*. Ask directly, in a batch, and record the answer in the plan and in an
       ADR.

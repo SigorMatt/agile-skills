@@ -4,7 +4,7 @@ description: "Review the change and its record against the Definition of Done, t
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: review-close
-  methodology-version: 0.12.0
+  methodology-version: 0.13.0
   persona: reviewer
   human-interaction: via-questions
 ---
@@ -97,10 +97,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 5a. **An accepted gap that names an owner is made dispatchable now, in this execution.** The
    orchestrator dispatches on **open questions** and on **item status**, and on nothing else
    (`pipeline.yaml`). So a remedy recorded in `review.md`, or in the item's `## Notes`, is a
-   to-do only a reader can act on: nothing will ever cause its owner to run. One engagement
-   wrote *"this belongs to `answer-questions`"* into an accepted gap, two executions passed over
-   it, and it survived only because a later verification volunteered a question nobody required —
-   and said so: the obligation would otherwise have died at close (F-090).
+   to-do only a reader can act on: nothing will ever cause its owner to run. One engagement wrote
+   *"this belongs to `answer-questions`"* into a gap, two executions passed over it, and it
+   survived only because a later verification volunteered a question nobody required (F-090).
 
    Two routes, and which one is legal follows from who owns it:
    - the owner is `answer-questions` or the human → **file the question** (non-blocking, so D4
@@ -126,9 +125,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    - every entry disposed `owned-by-ending` was left alone by the item. Those sentences are the
      ending's, and an item that edited one has done something no criterion asked of it;
    - then the one question the set cannot answer for itself: **did this change falsify a document
-     the set does not name?** Answer it by reading, and record what you read — twice in one banked
-     engagement that answer sent an item back and was cleared by editing documents only (F-087).
-     It is a claim against an enumerated set, attributable to you.
+     the set does not name?** Answer it by reading, record what you read, and own it as a claim
+     against an enumerated set — twice in one banked engagement it sent an item back (F-087).
 
    Engagement-state sentences are **not** in scope: no item audit is charged with one, and an item
    asked to repair one has a defect it cannot fix (`doc-header.md` §4a).
@@ -163,9 +161,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 
       — running `{{commands.test}}` inside `<trial>` between the merge and the removal.
 
-      **`--detach` is the whole of it.** Without it the worktree *checks out* the real branch,
-      so the trial fast-forwards the real `{{trunk}}` and removing the worktree does not move it
-      back — a review did exactly that (F-055). Detached, there is no branch to advance.
+      **`--detach` is the whole of it.** Without it the worktree *checks out* the real branch, so
+      the trial fast-forwards the real `{{trunk}}` and removal does not move it back (F-055).
    2. **Discard the trial merge, and check that `{{trunk}}` did not move.** `git rev-parse
       {{trunk}}` must return the sha it returned before the trial — the part worth confirming
       rather than assuming.
@@ -221,8 +218,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     absolute about a rule with a boundary is checked **at** the boundary (`doc-header.md` §4a).
     *"No column's width depends on its marker"* was audited **holds** from a table whose cells
     were all wider than any marker, so the rule it denies never applied; the sentence was false
-    and one empty column shows it (F-088). That is the empty-window failure reached through the
-    example rather than the scope — the paragraph below is the other half of it.
+    and one empty column shows it (F-088) — the empty-window failure of the paragraph below,
+    reached through the example rather than through the scope.
 
     **Run it over a scope that could have found something.** `--context` in the gate's command
     is not decoration: closing an item the scope is that item's diff, and at an ending there is
@@ -253,9 +250,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     reads, so you and the gate cannot disagree about whether there is anything left to do
     (`spec/ids-and-statuses.md` §3.5).
 
-    **`abandoned` means something else, and it is below**, under *the ending nobody answers*.
-    Read that branch first if the verdict is `abandoned`: an engagement nobody is answering never
-    reaches rest, so none of the at-rest procedure applies.
+    **`abandoned` means something else**: read *the ending nobody answers*, below, first — an
+    engagement nobody is answering never reaches rest, so none of the at-rest procedure applies.
 
     **Apply the Definition of Done before you ask, not after** (`spec/dor-dod.md` §4a). DE1, DE2,
     DE3, DE5, DE6 and DE4's first half go against the state you are about to show them, recorded
@@ -277,6 +273,11 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     - `## Options considered` offers the real choices: accept as complete; accept with named
       follow-ups; do not accept, and say what is missing. Options first, the recommendation last
       and marked as the team's preference, never above them (F-063).
+    - `## Question` also **names every answer this engagement spent under delegation** — each
+      ID an `**Under delegation:**` line cites, the category it was taken to cover, and what was
+      assumed under it. Someone who answered "whatever is easier for you" wrote a blank cheque;
+      this is where they see what it bought, before they accept. `lint-answers` checks every ID
+      is there; whether the assumptions beside them are the ones taken is yours (F-082).
     - **DE8: has anyone ever asked them an open question?** `check-epic-signoff` requires one
       `kind: elicitation` question in the engagement — the one not about our agenda. If nobody
       filed one, file it now alongside the sign-off, non-blocking, addressed to `human`: *"What
@@ -458,7 +459,7 @@ fails `check-commit-refs` for a work item that did nothing wrong (`workspace-lay
 6. Did you run `scripts/engagement-state` on the epic, or decide from the board how finished it
    looked?
 7. If you ended an engagement: does the epic's `outcome` say what actually happened, and does the
-   sign-off you are relying on name **every** child item?
+   sign-off name **every** child item and **every** answer spent under delegation?
 7a. If you ended an engagement: did you restate **every** `## Engagement state` section, or the
    ones that caught your eye? And did you write them after the reply arrived, or before it — a
    restatement that predates the answer describes an engagement that had not ended.
@@ -471,12 +472,11 @@ fails `check-commit-refs` for a work item that did nothing wrong (`workspace-lay
 
 - **Treating "nothing left to run" as "nothing left to do".** Closing the loop feels like
   tidying; it is a decision, and it belongs to the person who asked for the work. A run ended
-  exactly here and the stakeholder wrote down that the question never came (F-045). Run
-  `scripts/engagement-state` and act on it.
+  exactly here and the stakeholder wrote that the question never came (F-045). Ask the program.
 - **Approving because everything upstream says it is fine.** Every upstream stage checked its
   *own* claim; you are the only one checking that the claims are about the same thing. The
-  defence is step 4: read the diff and map every hunk to a criterion. If you cannot bring
-  yourself to do that, you are countersigning rather than reviewing.
+  defence is step 4: read the diff and map every hunk to a criterion — less than that is
+  countersigning rather than reviewing.
 - **Closing an item with an unrecorded gap.** Once the item is `done` nobody reads its
   verification report again. Accepting a gap is fine; writing it somewhere the orchestrator never
   looks is how an obligation dies at close while the record says it was carried (F-090).
