@@ -140,6 +140,13 @@ Steps, in order:
                                                file and allows every way of reading or naming one
  17. findings citations resolve             — every `commit <sha>` cited in
                                                meta/findings/FINDINGS.md is an ancestor of HEAD
+ 17b. finding numbers cited resolve         — and the other direction (F-099): every
+                                               `F-###`/`H-###` written in any git-tracked file
+                                               matches a `## ` heading in the ledger. A
+                                               tombstone resolves; that is how a phantom banked
+                                               in read-only evidence is corrected without the
+                                               evidence being edited. A tracked path the sweep
+                                               cannot read as text is named on stdout
  18. export profiles                        — scripts/export leaves the workspace behind, and
                                                refuses to write a workspace file into a copy
  19a. the retrospective format             — scripts/lint-retro over fixtures/retro: a correctly
@@ -162,6 +169,7 @@ to prevent.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 
@@ -2931,6 +2939,119 @@ def check_findings_citations(runner: Runner) -> None:
     runner.emit(f"findings citations resolve ({len(cited)} cited)", True)
 
 
+LEDGER = os.path.join("meta", "findings", "FINDINGS.md")
+
+# The ledger's own numbering form. Every finding in meta/findings/FINDINGS.md is filed under a
+# `## F-###` or `## H-###` heading and every citation in this repository is written the same way:
+# `git ls-files -z | xargs -0 grep -ohE '\b[FH]-[0-9]{1,5}\b' | sort -u` returns three-digit
+# forms and nothing else (measured 2026-09-10 over 8bd792a, 3276 occurrences). A citation
+# written some other way — `F-71`, `F-0071` — is not one this sweep recognises, and none exists.
+FINDING_REF = re.compile(r"\b([FH]-[0-9]{3})\b")
+FINDING_HEADING = re.compile(r"^## ([FH]-[0-9]{3})\b")
+
+
+def sweep_finding_refs(root: str, ledger_text=None, tracked=None) -> dict:
+    """Resolve every `F-###` / `H-###` cited anywhere in the tree against the ledger (F-099).
+
+    The opposite direction to `check_findings_citations`. That step resolves what the ledger
+    cites *out* (commit shas); nothing resolved what the repository cites *in*. F-071 is the
+    tombstone that proves the class: `meta/harness/evidence/iteration-3b/README.md:27` names a
+    number that was never filed, and it named it for two months in a file nobody may edit.
+
+    Scope, decided rather than inherited:
+
+    * **Every git-tracked file**, no path excluded. Not `meta/**` only: a phantom shipped in
+      `adapters/claude-code/dist/` reaches a user, a phantom in `fixtures/` is a fixture that
+      teaches a wrong number, a phantom in `harness/` is in the instrument. Untracked files are
+      not the record and are not read.
+    * **`meta/harness/evidence/**` is read-only history and is swept anyway.** This function
+      only reads; it reports `path:line` and never opens the file for writing. That is the whole
+      requirement: the correction for a phantom banked in evidence is a **tombstone entry in the
+      ledger** — which makes the standing citation resolve without the evidence being touched —
+      exactly as F-071 was corrected. A tombstone therefore counts as filed, by construction:
+      it is a `## ` heading like any other.
+    * **A `## ` heading in the ledger files a number; it does not cite one.** Heading lines are
+      skipped so the count is citations, not definitions. Every other occurrence inside
+      FINDINGS.md is a citation and is resolved — including a finding that names itself, which
+      resolves through its own heading, and including the quoted `"F-071"` inside F-071's own
+      tombstone and inside F-099. That last is the shape worth naming: **the report of a phantom
+      has to quote the phantom**, so a sweep with no tombstone mechanism would fail on the
+      sentence that reports the failure. The tombstone is what makes reporting possible.
+    * **There is no allowlist.** `FOREIGN_SHAS` exists above because a finding legitimately cites
+      a throwaway repository's commit; nothing here legitimately cites a number that was never
+      filed. `fixtures/` was searched for a deliberately-wrong finding citation before this was
+      written and holds none — its wrong citations name items, files and questions, not findings.
+      A fixture that one day needs one is a reason to add a named constant here, not a reason to
+      exclude a directory now.
+    * **A tracked path that is not readable text is named, never passed over.** One exists:
+      `meta/harness/evidence/iteration-1-full/project` is a gitlink (mode 160000, an embedded
+      repository), so its 129 files are outside `git ls-files` here. Checked by hand: they cite
+      no finding number at all. H-016 is the reminder that a walker meeting a file it cannot
+      decode must say so rather than crash or shrug.
+
+    What it does not do: resolve a number that is only implied. `F-080..F-098` cites two numbers,
+    not nineteen, and the seventeen in between are not checked because they are not written.
+    """
+    if ledger_text is None:
+        with open(os.path.join(root, LEDGER), "r", encoding="utf-8") as handle:
+            ledger_text = handle.read()
+    filed = {match.group(1) for match in
+             (FINDING_HEADING.match(line) for line in ledger_text.split("\n")) if match}
+    if tracked is None:
+        listing = subprocess.run(["git", "ls-files", "-z"], cwd=root,
+                                 capture_output=True, text=True)
+        tracked = [name for name in listing.stdout.split("\0") if name]
+    citations = 0
+    numbers = set()
+    phantoms = {}
+    unread = []
+    for relative in tracked:
+        try:
+            with open(os.path.join(root, relative), "r", encoding="utf-8") as handle:
+                lines = handle.read().split("\n")
+        except (OSError, UnicodeDecodeError) as error:
+            unread.append(f"{relative} — {type(error).__name__}")
+            continue
+        is_ledger = relative.replace(os.sep, "/") == LEDGER.replace(os.sep, "/")
+        for number, line in enumerate(lines, 1):
+            if is_ledger and FINDING_HEADING.match(line):
+                continue
+            for cited_number in FINDING_REF.findall(line):
+                citations += 1
+                numbers.add(cited_number)
+                if cited_number not in filed:
+                    phantoms.setdefault(cited_number, []).append(f"{relative}:{number}")
+    return {"citations": citations, "numbers": numbers, "filed": filed,
+            "phantoms": phantoms, "unread": unread, "files": len(tracked)}
+
+
+def check_finding_refs(runner: Runner) -> None:
+    """F-099, the other direction: a number cited into the ledger must be in the ledger."""
+    label = "finding numbers cited resolve"
+    if not os.path.isfile(os.path.join(ROOT, LEDGER)):
+        runner.skip(label, f"{LEDGER} does not exist")
+        return
+    swept = sweep_finding_refs(ROOT)
+    if not swept["citations"]:
+        runner.skip(label, "no file in this repository cites a finding number")
+        return
+    if swept["phantoms"]:
+        detail = ["these finding numbers are cited and match no `## ` heading in "
+                  f"{LEDGER}:"]
+        for cited_number in sorted(swept["phantoms"]):
+            detail.append(f"  - {cited_number}, cited at:")
+            detail += [f"      {site}" for site in swept["phantoms"][cited_number]]
+        detail.append("a number that was never filed is corrected by a tombstone entry in the")
+        detail.append("ledger, not by editing the file that cites it — meta/harness/evidence/**")
+        detail.append("is read-only history (F-071's precedent; the class is F-099).")
+        runner.emit(label, False, detail="\n".join(detail))
+        return
+    runner.emit(f"{label} ({swept['citations']} citations, {len(swept['numbers'])} numbers, "
+                f"{len(swept['filed'])} filed, over {swept['files']} tracked files)", True)
+    for entry in swept["unread"]:
+        print(f"      not read as text, and checked by hand instead: {entry}")
+
+
 def check_export(runner: Runner) -> None:
     """F-007 both ways: the product profile ships no workspace, and the guard can refuse."""
     import tempfile
@@ -3200,6 +3321,7 @@ def main() -> int:
     check_shipped_scripts(runner)
     check_guard(runner)
     check_findings_citations(runner)
+    check_finding_refs(runner)
     check_export(runner)
     check_harness(runner)
 
