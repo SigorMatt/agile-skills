@@ -5315,3 +5315,86 @@ recall is a reading, not a number, and the report says which.
 - **Artifacts:** `harness/run_iteration.py`, `harness/audit.py`, `harness/tests/test_harness.py`,
   `harness/skills/simulated-human/SKILL.md`, `harness/prompts/sim-turn.md`, `harness/USAGE.md`,
   `meta/journal.md`.
+
+## 2026-09-10 — META-153b — cluster 2's findings pass: five filed, E4's status recorded
+
+- **Unit:** META-153b
+- **Inputs read:** the five cluster-2 commits, each verified with `git log -1` **and**
+  `git merge-base --is-ancestor` before it was cited — **94606f5** (ADR-0011), **877ee85** (the
+  specs and `pipeline.yaml`), **4d1b7ce** (the programs), **e9f8d79** (the fixture), **b845342**
+  (the harness); `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` §5, §6 and §7;
+  `scripts/check-epic-signoff` in full, `scripts/lib/engagement.py` in full,
+  `scripts/engagement-state`, `methodology/skills/next/process.md` step 3, `spec/question.md` §2,
+  `scripts/check`'s `TERMINATION_CASES`, `ABANDONED_CASES`, `ABANDONED_NEAR_MISSES` and
+  `check_findings_citations`; `harness/run_iteration.py`'s recognition functions and
+  `harness/tests/test_harness.py`'s `Abandonment`; `fixtures/abandoned-engagement/README.md`;
+  `meta/ROADMAP.md` §2; and in `meta/findings/FINDINGS.md` F-045, F-060, F-097 and the format of
+  F-080..F-103.
+- **Decisions:**
+  - **Five filed: F-104, F-105, F-106, F-107 and H-020.** F-numbers sequential from the highest
+    filed (F-103; F-071 stays a burned tombstone), and the ledger is **appended to** — every
+    existing line stands byte-for-byte. `git diff --stat` reports **335 insertions, 0 deletions**,
+    which is the mechanical form of the append-only rule and was checked rather than assumed.
+  - **The checkpoint's description of the three script defects was accurate, and two of them are
+    worse than it said.** F-105: the block that would explain DE7 is not merely *after* an early
+    `return 1`, it is **unreachable on every input** — the only path that reaches it requires
+    `accepted` to be set, which requires a sign-off to exist, and the E4 branch that can pass with
+    no sign-off returns two statements earlier. F-107: the false `rest reached at <t>` line is
+    printed under **every** verdict, not only the ones that never reached rest; `active` prints it
+    too, because `rest_since` is a boundary any engagement with a moved child has. F-106 is exactly
+    as described, and `scripts/check-epic-signoff EP-003 --root fixtures/abandoned-engagement/wrong`
+    exits 0 saying *"No reply arrived and none is claimed"* over a workspace whose sign-off claims
+    one. All three confirmed by execution, not by reading the summary.
+  - **F-104 has a second locus that is in no ADR.** ADR-0011 §6 cites `next` step 3 and
+    `spec/question.md` §2. Rest itself — `scripts/lib/engagement.py`, *no question anywhere is
+    open* — is the other half: repairing step 3 alone would move the deadlock rather than remove
+    it, because `at-rest` is the orchestrator's only cue to end an engagement. Written into the
+    finding, together with what it costs **F-097's** fix at META-162: a *collect what can be asked*
+    pass still stops on the human, so META-162 must decide **which** questions stop the loop, and
+    it inherits two consequences — rest must follow the same rule, and a halt is what accrues a
+    silent round, so an elicitation that stops halting stops the E4 clock.
+  - **H-020 is an `H-`, argued rather than assumed.** The dependency, the inference and the wrong
+    label are all in `harness/run_iteration.py`; the toolkit's sentence is true; no toolkit
+    consumer reads it. Asking the toolkit to promise it would put the harness inside the contract
+    it grades (ADR-0005). The observation also turned out to be **two** findings in one, and the
+    second is the serious half: the reading is *unsound*, not merely unpromised. `silent_rounds`
+    is a trailing digest run in an append-only log that nothing resets, and ADR-0011 §7 makes E4
+    recoverable — so a recovered, delivered engagement still reports the count. Executed: with
+    `fixtures/abandoned-engagement/right`'s EP-001 changed only to `outcome: delivered`,
+    `abandonment_declared()` still returns it, and the driver would stamp a delivered run
+    `abandoned`.
+  - **The harness pin is stronger than the observation assumed and still not a contract.**
+    `test_the_real_script_is_read_the_way_the_driver_parses_it` runs the shipped script over the
+    shipped fixture, and the harness self-test is `./scripts/check`'s **last step** — so dropping
+    the sentence fails the toolkit's own gate. It `skipTest`s when the fixture is absent (exit 0),
+    it names no property, and it cannot see the unsoundness. Said in the finding in those terms.
+  - **F-105 says what it means for the assertion, because that is the part with teeth.**
+    `./scripts/check`'s termination cases assert `returncode != 0` and nothing more, so the
+    regression anchoring **F-045's** fix has been green for as long as the gate has printed
+    nothing, and would stay green if it began refusing for an unrelated reason. F-045 was filed
+    because a stakeholder was never told what was wanted of them; the test does not read what the
+    gate says.
+  - **E4's status recorded with resolving citations, and its limit stated.** A cluster-2 status
+    entry says what E4 was — a legal ending with no trigger, no verdict, no gate branch and, checked
+    rather than assumed, **no fixture** (`fixtures/ended-engagement` carries no `abandoned` ending
+    and `fixtures/abandoned-engagement` did not exist before e9f8d79) — and what it now is, citing
+    the five commits and the two `./scripts/check` steps by name, *one silence threshold, three
+    consumers (by execution)* and *the abandoned ending, end to end*. It then says plainly that
+    **no live run has produced an E4**: every execution is a fixture or a unit test, iteration 5 is
+    held out, and `meta/ROADMAP.md` §2's substance is unchanged. The ROADMAP is **not** amended by
+    a ledger entry.
+  - **F-045: still fixed**, and the fourth ending it named now executes; two of its edges are now
+    F-105 and F-106. **F-060: NOT settled**, and deliberately — ADR-0011 §6 puts it out of E4's
+    scope (*abandonment is only ever declared against an open ask*) and leaves it deferred behind
+    **F-008**, exactly where META-128 put it. Step 3(d) now tells a person where the count stands,
+    but only while one of our questions is open, which is the case F-060 is not about. One gap
+    recorded rather than fixed: ADR-0011 §6 promised F-060 a must-fail fixture that was not built
+    as such; its first half is covered incidentally by `REST_VERDICTS` over
+    `fixtures/ended-engagement`, and the parked-artifact shape is modelled nowhere.
+- **Questions raised:** none new. The three defects META-152 owed the ledger and META-153's
+  observation are now filed, and so is the `next` step 3 / elicitation contradiction that four
+  units carried.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **36 steps**, unchanged; *findings
+  citations resolve* now reports **54 cited** (49 before; the five cluster-2 shas are new, 77a5d96
+  was already cited). Ledger diff **335 insertions, 0 deletions**.
+- **Artifacts:** `meta/findings/FINDINGS.md`, `meta/journal.md`.

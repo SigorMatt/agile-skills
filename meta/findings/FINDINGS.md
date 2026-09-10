@@ -1231,6 +1231,20 @@ Definition of Ready R9's split — that neither filing had noticed.
   acknowledgment is refused by a hard gate. `fixtures/ended-engagement` EP-003 is the static
   case — at rest, nobody asked — and EP-001 is the impasse ending done right, with the
   stakeholder saying no.
+- Status update 2026-09-10 (META-153b): **still fixed, and the fourth of the four endings it
+  named now executes.** F-045's fix enumerated four legal endings (ADR-0006) and made the
+  termination gate fire at rest rather than at closure. Three of them could be reached by a run;
+  **E4 could not** — `abandoned` was a row in a table with no trigger, no verdict, no gate branch
+  and no fixture. Cluster 2 gives it one (commits 94606f5, 877ee85, 4d1b7ce, e9f8d79, b845342):
+  see the cluster's own status entry at the end of this file. Nothing in F-045's own diagnosis
+  changed, and the finding stays fixed.
+  **Two things this work says about F-045 that its status did not.** Its `fixtures/ended-engagement`
+  EP-003 case — *"the engagement nobody was ever asked about"*, the exact run that produced this
+  finding — has always failed the gate with an empty reason, and the assertion that covers it in
+  `./scripts/check` reads the exit code only. That is filed as **F-105**, with what it means for
+  the assertion. And the gate that F-045 built now has a second accepting branch, which passes a
+  sign-off claiming a reply it does not have: **F-106**. Both are the gate F-045 asked for, in
+  places F-045 did not reach
 
 ## F-046 — a bug the pipeline filed is never shown to the stakeholder
 - Severity: UX, low (largely the same gap as F-045)
@@ -1715,6 +1729,26 @@ Reproductions of already-open findings are recorded as addenda, not re-filed.
 - Status: **deferred**, gated on F-008. Triaged 2026-08-30 (META-128): it asks for a third
   human channel beside questions and requests, and inventing one before F-008 decides what the
   canonical channel *is* would be building the thing F-008 exists to replace
+- Status update 2026-09-10 (META-153b): **not settled, and deliberately not settled.** E4 by
+  silence (commits 94606f5, 877ee85, 4d1b7ce, e9f8d79, b845342) is the adjacent mechanism and it
+  is not this one. `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` §6 re-decided this
+  finding against the derived model and put it out of scope in one rule: **abandonment is only
+  ever declared against an open ask**, and F-060's case is precisely the one where nothing is
+  open. The two wants are different verbs — F-060 wants a way to *speak* when there is no ask;
+  E4 wants a way to *stop* when the ask goes unanswered. E4 adds no channel and needs none, so
+  this finding stays **deferred behind F-008**, exactly where META-128 put it.
+  **What did change, and why it is not the fix.** `next` step 3(d) now tells the person where the
+  count stands — *"round 2 of 3; at 3 this engagement is declared abandoned and closed as
+  dropped"* — but only while a question of ours is open, which is the case F-060 is not about.
+  An item parked on an artifact the stakeholder owes is still invisible to them once the sign-off
+  is answered, and there is still no way to say it again without a new engagement.
+  **One gap in the record, noted rather than fixed here:** ADR-0011 §6 promised this finding a
+  must-fail fixture — *an engagement at rest with an answered sign-off and an item parked on a
+  promised artifact, where no waiting row is ever recorded and no abandonment is ever declared*.
+  It was not built as such. Its first half is covered incidentally, because `./scripts/check`'s
+  `REST_VERDICTS` requires `at-rest` (not `abandoned`) for every epic in `fixtures/ended-engagement`,
+  which has no waiting log at all; the parked-artifact shape that is F-060's own is modelled
+  nowhere. Recorded so that a later reader does not find the ADR's fixture line and assume it ran
 
 ### Addendum to F-035 (2026-08-27, iteration 1e) — reproduced three times, with the exact message
 F-035 (`check-commit-refs` reports a merge that never happened) fired on **every** item's
@@ -3641,3 +3675,304 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   a843114); filed as a finding in META-149, with the ADR's illustration corrected.
 - **Status:** **open — known, derived and accepted.** Same standing as F-102: named at derivation,
   shipped with, filed so it is tracked
+
+---
+
+# Cluster 2 — E4 by silence (2026-09-10, META-153b)
+
+Five commits built the mechanism and this section closes its ledger: commits 94606f5 (ADR-0011),
+877ee85 (the four specs and `pipeline.yaml`), 4d1b7ce (the programs), e9f8d79 (the fixture) and
+b845342 (the harness). Every sha below was verified with `git log -1` and
+`git merge-base --is-ancestor` before it was written (F-024).
+
+## Cluster 2 status — E4 was a legal ending nothing could reach; it now executes end to end
+
+- **What it was.** ADR-0006 enumerated four endings and F-045's fix made the termination gate fire
+  at rest rather than at closure. **E4 (`abandoned`) had no route.** No trigger, because rest is
+  unreachable while a question is open and the stakeholder's silence is what leaves it open; no
+  verdict; no branch in `check-epic-signoff`; and — checked rather than assumed — **no fixture**:
+  `fixtures/ended-engagement` carries no `abandoned` ending, and `fixtures/abandoned-engagement`
+  did not exist before commit e9f8d79. `meta/ROADMAP.md` §2's stamp (2026-08-30) records E2 and
+  E4 as *fixture-only*; for E4 that was generous in one direction and exactly right in the other.
+- **What it now is.** A second route to E4 — **silence**, counted in the pipeline's own asks —
+  derived (commit 94606f5), stated in `spec/ids-and-statuses.md` §3.5a, `spec/question.md`,
+  `spec/dor-dod.md` DE7 and `spec/workspace-layout.md` §1.4 with the threshold in `pipeline.yaml`
+  (commit 877ee85), programmed as `scripts/record-halt`, the `abandoned` verdict, `next` step 3's
+  `silence-is-recorded` gate and `review-close`'s declaration (commit 4d1b7ce), executed both ways
+  by `fixtures/abandoned-engagement` (commit e9f8d79), and recognised as an ending rather than a
+  stall by the harness driver (commit b845342).
+- **Checked by execution, in `./scripts/check`**, which is green at 36 steps:
+  - *one silence threshold, three consumers (by execution)* — 18 observations. The value is moved
+    3 → 5 in a copy of `pipeline.yaml` and all three consumers move with it; stubbing the reader
+    to `return 3` names all three in the failure. The same step proves the reader leaves the log
+    byte-identical, and that an answer resets the count while our own writes do not.
+  - *the abandoned ending, end to end* — 24 observations, 2 expected codes. `right/` is a
+    **valid workspace** (`validate-workspace` exit 0) holding the three states the mechanism has
+    to reach; EP-003's trailing digest is **recomputed** from the workspace and required to match,
+    so the log cannot assert a silence that did not happen; `wrong/` is four near misses whose
+    validator codes must equal `EXPECTED-CODES.txt` as a multiset.
+  - *harness self-test* — 105 tests, including one that runs the shipped `engagement-state` over
+    the shipped fixture and requires the driver to read a declared E4 out of it.
+- **What is still not true of E4, said plainly.** **No live run has produced one.** Every
+  execution above is a fixture or a unit test; iteration 5 is a held-out calibration engagement
+  and this session did not run it. The substance of `meta/ROADMAP.md` §2's stamp — E4 is not
+  run-proven — stands unchanged, and the ROADMAP is not amended by this entry.
+- **What the build cost the ledger:** five findings, filed below. Three are defects in the
+  programs (F-105, F-106, F-107), one is a contradiction between two contracts that E4 makes
+  survivable without fixing (F-104), and one is a dependency the harness took on a sentence
+  nothing promises (H-020). None of them was bent around in the build.
+- **Existing findings re-decided:** **F-045** — still fixed; the fourth ending it named now
+  executes, and two of its edges are filed as F-105 and F-106. **F-060** — **not settled**, and
+  deliberately: ADR-0011 §6 puts it out of E4's scope and leaves it deferred behind F-008. Both
+  status updates are written at those findings above.
+
+## F-104 — `next` halts on any human-addressed question, so an unanswered elicitation deadlocks every ending
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the contract, high — two shipped rules that cannot both hold, and
+  the one that wins makes every ending unreachable
+- **Component:** `methodology/skills/next/process.md` step 3, `scripts/lib/engagement.py`
+  (`state()`, the rest condition), `spec/question.md` §2 (`kind: elicitation`)
+- **Symptom:** `next` step 3 reads every question and stops the loop where any has
+  `addressed-to: human` and `status: open` [src: methodology/skills/next/process.md]; `blocking`
+  is not consulted. `spec/question.md` §2 says of an elicitation: *"`blocking` MUST be `false`. It
+  must not stop the loop — it is not a thing anyone is waiting on"* [src: spec/question.md]. Both
+  cannot hold, and today the first wins: an elicitation nobody answers halts the whole workspace,
+  and every runnable item waits behind the one question defined as the one nobody is waiting on.
+  **It is not only step 3.** Rest, in `scripts/lib/engagement.py`, requires that *"no question
+  anywhere in the engagement — on the epic or on a child — is `open`"*, elicitations included, so
+  while one stands open `engagement-state` returns `active` and never `at-rest` — and `at-rest` is
+  the orchestrator's only cue to dispatch `review-close` on the epic. Repairing step 3 alone would
+  **move** the deadlock rather than remove it: the loop would run and the engagement would still
+  have no reachable ending. **E1 included** — the ordinary delivery is as unreachable as the rest.
+  `intake` files the elicitation at the start of an engagement, where the answers are cheapest to
+  act on [src: spec/question.md], which is also the earliest place the deadlock can be armed. DE8
+  is not a third lock: `check-epic-signoff` accepts any answered elicitation in the engagement, so
+  a second unanswered one does not block the gate [src: scripts/check-epic-signoff].
+- **What E4 changes and what it does not:** with ADR-0011 in the toolkit an engagement deadlocked
+  this way now *ends* — step 3(c) dispatches `review-close` once the threshold is reached — so the
+  deadlock is no longer permanent. That is strictly better and still not right: the engagement is
+  recorded as abandoned by a stakeholder who may never have been told anything was waiting on
+  them, in the one case where the pipeline itself declared that nothing was.
+- **Counterfactual:** every engagement, because DE8 requires an elicitation and `intake` files it
+  first. Nothing about any project's subject appears in that sentence.
+- **Recurrence:** not yet observed as a stall in a live run — iterations 1 to 4 answered their
+  elicitations. Filed on the mechanism and on the two contracts that contradict each other, both
+  of which are in the shipped toolkit today.
+- **Adjacent finding — F-097, and what this means for its fix (cluster 5, META-162):** F-097 is
+  the *cost* of the same sentence — the loop stops on the first human question, so an asynchronous
+  stakeholder is asked one item at a time — and its accepted direction is a *collect what can be
+  asked* pass before the loop stops. **That direction does not repair this one.** A pass that
+  gathers every askable question and then stops on the human still stops, and an open elicitation
+  is still among the questions it stops on. META-162 has to decide **which questions stop the
+  loop**, not only how many are asked before it does, and it inherits two consequences of that
+  decision that are not F-097's own. First, **rest**: if a non-blocking question stops halting the
+  loop it must also stop blocking rest, or the ending stays unreachable. Second, **the silence
+  clock**: a silent round is a recorded halt, so an engagement whose only open ask is an
+  elicitation would stop accruing rounds and E4 by silence would no longer be declarable over it —
+  ADR-0011 §4's rule is that abandonment is only ever declared against an open ask. Deciding F-097
+  without deciding those two is how one of them becomes the next finding.
+- **Direction:** decide which of the two sentences is the rule, and make the other follow it, in
+  one place. If `blocking: false` is to mean what `spec/question.md` §2 says, then step 3 stops on
+  blocking human questions only, `engagement.py`'s rest condition counts only those, and ADR-0011
+  §3.5a's *ask* is redefined to say whether a non-blocking question is one — with the answer
+  written down, because the silence count depends on it. If instead the pipeline is to stop on any
+  human question, then §2's sentence is false and must be struck, and an elicitation's
+  `blocking: false` becomes a label with no behaviour behind it, which is worth saying out loud
+  rather than shipping. The pair is the one thing that must not survive.
+- **Provenance:** derived in META-150 while ADR-0011 was being written and recorded there as *"a
+  contradiction this derivation surfaced, and did not fix"*, with both citations
+  [src: meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md] (commit 94606f5). Carried
+  unfiled through META-151, META-151b, META-152 and META-153, each of which named it in its unit
+  report as owed to the ledger; filed here by META-153b. The second locus — the rest condition in
+  `scripts/lib/engagement.py` — was found by reading the code for this entry and is in no ADR.
+- **Status:** open
+
+## F-105 — the termination gate refuses an epic nobody was asked about, and prints no reason at all
+
+- **Classification:** toolkit-defect
+- **Severity:** UX of a hard gate, medium — the message is empty in exactly the case F-045 was
+  filed about
+- **Component:** `scripts/check-epic-signoff` (`main`), `scripts/check` (`TERMINATION_CASES`)
+- **Symptom:** where an epic carries no `kind: sign-off` question at all, the loop over `sign_offs`
+  never runs, `problems` is empty, `accepted` and `silence` are both `None`, and the gate prints a
+  bare header with an empty bullet list and exits 1. Executed on the current scripts:
+  `scripts/check-epic-signoff EP-003 --root fixtures/ended-engagement` — F-045's own case, *"an
+  engagement nobody was ever asked about"* — prints `check-epic-signoff: FAIL — EP-003 has no
+  usable sign-off:` and nothing else; `... EP-001 --root fixtures/abandoned-engagement/wrong` does
+  the same.
+  The text that would explain it exists: an `if not sign_offs:` block naming DE7, the frontmatter
+  to write, and every child by ID. It is **unreachable**, not merely late. Reaching it requires
+  passing the `accepted is None and silence is None` return, which means `accepted` is set, which
+  means a sign-off was found — and the E4 branch, the one path that can pass with no sign-off at
+  all, returns at its own `PASS` two statements earlier. **There is no input for which that block
+  prints** [src: scripts/check-epic-signoff].
+- **It predates E4, checked rather than taken on trust:** `git show 77a5d96:scripts/check-epic-signoff`
+  (commit 77a5d96, 2026-08-29) has the same two returns in the same order, with the explanation
+  after the first, and the same argument makes it dead there. The E4 branch (commit 4d1b7ce) added
+  a second early exit in front of an already-unreachable one; it did not create this.
+- **What it means for the assertion that covers it:** `./scripts/check`'s *the termination gate at
+  every ending* runs the F-045 case and asserts `result.returncode != 0` — the exit code and
+  nothing else [src: scripts/check]. So the regression that anchors F-045's fix has been green for
+  as long as the gate has printed nothing, and would stay green if the gate began refusing for an
+  unrelated reason. F-045 exists because a stakeholder was never told what was wanted of them; the
+  test that proves it fixed does not read what the gate says. An assertion on a failing exit status
+  says that *something* refused, not that the refusal is legible — and for a gate whose entire
+  output is one message, legibility is most of what there is to check.
+- **Counterfactual:** every engagement whose first ending attempt happens before the sign-off is
+  filed, which is the ordinary order — `review-close` is dispatched at rest and files the sign-off
+  during that execution. The operator meets a hard gate that refuses with no reason at the moment
+  the pipeline is trying to tell them what to do.
+- **Recurrence:** the behaviour since 77a5d96, reproduced by two fixtures in the current tree.
+  `fixtures/abandoned-engagement/README.md` records it where it shows.
+- **Direction:** the empty-list case is the one the message exists for. Print the no-sign-off
+  explanation where the refusal is decided — `problems` empty and no sign-off found → the DE7 text
+  and the children; `problems` non-empty → the problems — and delete the block that can never run.
+  Then make the assertion read the message: give `./scripts/check`'s termination cases an expected
+  substring each, so that a refusal for the wrong reason fails. A gate that refuses without saying
+  why is F-005's shape in a different program.
+- **Provenance:** found by META-152 while building `fixtures/abandoned-engagement` (commit
+  e9f8d79), reported in its unit report rather than bent around, and recorded in that fixture's
+  README. Confirmed here by execution against both fixtures and against
+  `git show 77a5d96:scripts/check-epic-signoff`; the unreachability proof and the reading of the
+  assertion are META-153b's.
+- **Status:** open
+
+## F-106 — the termination gate passes a sign-off that says a reply arrived when its `## Answer` is empty
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of enforcement, medium — the program whose whole subject is the E3/E4
+  distinction cannot make it
+- **Component:** `scripts/check-epic-signoff` (the `problems` list, the E4 branch)
+- **Symptom:** a sign-off with `status: answered` and an empty `## Answer` is refused correctly on
+  the ordinary path: `answer_text(body)` is empty, the loop appends *"says answered but its
+  '## Answer' is empty"* to `problems`, and `accepted` stays `None`. The E4 branch then runs —
+  it runs whenever `accepted is None` and the threshold is met — and it inspects sign-offs at
+  `open` and `abandoned` only. `answered` matches neither, so no silence problem is raised,
+  `silence` is set, and `problems` is printed **only** under `if accepted is None and silence is
+  None`. The refusal is collected and then discarded [src: scripts/check-epic-signoff].
+  Executed against the fixture that carries exactly this case:
+  `scripts/check-epic-signoff EP-003 --root fixtures/abandoned-engagement/wrong` exits **0** with
+  *"PASS — EP-003 ends at E4 by silence … No reply arrived and none is claimed"* — over a
+  workspace in which a reply **is** claimed, in the sign-off's own frontmatter. The gate's own
+  output is the finding.
+  `spec/ids-and-statuses.md` §3.5 makes this gate the place the distinction is decided: *"E3 and
+  E4 are distinguishable from the record alone, and the test is one line: did the stakeholder's
+  own words arrive?"* On this input the record says both things at once, and the gate reads the
+  emptiness as evidence of silence while ignoring the `status` that contradicts it.
+  The workspace is still refused, by something else: `validate-workspace` reports
+  `question.answered.section`, and `workspace-valid` is a **hard** gate on `review-close`, so the
+  ending cannot be recorded. That is a second program catching it, not this one.
+- **Counterfactual:** any engagement whose sign-off is left `answered` with an empty body — a skill
+  that wrote the frontmatter and not the reply, or a hand-edit — in an engagement that has also
+  reached the silence threshold. Nothing about a project's subject is in it.
+- **Recurrence:** covered as a static near miss by `fixtures/abandoned-engagement/wrong` EP-003;
+  both the fixture README and `./scripts/check`'s `ABANDONED_NEAR_MISSES` table record the PASS as
+  today's expected behaviour, with an instruction to update them if the gate grows the branch. Not
+  yet seen in a run.
+- **Direction:** the E4 branch should read the sign-off's **reply**, not its `status` — the same
+  `answer_text()` the ordinary path already uses — and refuse any sign-off that claims a reply it
+  does not have, whatever status it wears. That is one condition, and it makes the gate's own
+  sentence *"none is claimed"* true. The wider version belongs with it: `problems` is a list two
+  different verdicts share, and the E4 branch's decision to drop it is silent. If a refusal
+  collected on the ordinary path is genuinely not a refusal at E4, the code should name which ones
+  and why, rather than discarding the list.
+- **Provenance:** found by META-152 while building the near misses (commit e9f8d79) and reported
+  rather than bent around; confirmed here by execution on the current scripts.
+- **Status:** open
+
+## F-107 — `engagement-state` prints `rest reached at <t>` on engagements that never reached rest
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the record, low — cosmetic in effect, and a false sentence in a
+  program's output
+- **Component:** `scripts/lib/engagement.py` (`Engagement.describe`, `rest_boundary`)
+- **Symptom:** `describe()` appends `rest reached at {rest_since}` whenever `rest_since` is set,
+  under **every** verdict. `rest_since` is `rest_boundary(children)` — the maximum over the
+  children's last history rows and their questions' reply times — and it is a **boundary** used to
+  date a sign-off against, not a statement that rest happened; any engagement with a child that
+  has ever moved has one [src: scripts/lib/engagement.py]. Executed:
+  `scripts/engagement-state --all --root fixtures/abandoned-engagement/right` prints
+  `rest reached at 2026-09-07T11:00:00Z` under EP-003's **`abandoned`** verdict, two lines below
+  that verdict's own reason saying two questions are open and unanswered — an engagement that by
+  the module's own definition of rest (every child terminal, no question open, no request open)
+  has not reached it and, until someone answers, cannot.
+- **Counterfactual:** every engagement at every verdict but the empty one. A reader of an ending's
+  record — and `next`'s report quotes this output — is given a timestamp for something that did
+  not happen.
+- **Recurrence:** pre-existing; the line has been printed for as long as `engagement-state` has
+  existed. E4 only made it conspicuous, because `abandoned` is by construction a verdict about an
+  engagement that is *not* at rest.
+- **Direction:** say what the number is. Print it under `at-rest`, and under the terminal verdicts
+  where rest did occur before the ending; elsewhere either omit it or label it as what the code
+  itself calls it — the boundary the acknowledgment is dated against — for instance
+  `last movement at <t>`. It is a one-line change and the reason to make it is not tidiness: this
+  program's output is the pipeline's answer to *is this engagement over*, and a sentence in it
+  that is false on most inputs is the class of defect the whole claims machinery exists to catch
+  (F-001).
+- **Provenance:** found by META-152 against `fixtures/abandoned-engagement` (commit e9f8d79) and
+  reported as pre-existing and cosmetic; confirmed here by execution.
+- **Status:** open
+
+## H-020 — the driver's recognition of a declared E4 rests on a display rule, not on a contract
+
+- **Classification:** harness-defect
+- **Severity:** harness, evidence integrity — this reading labels a whole run's outcome, and it
+  can be wrong in both directions
+- **Component:** `harness/run_iteration.py` (`abandonment_declared`, `SILENT_ROUNDS_RE`,
+  `engagement_terminal`), `harness/tests/test_harness.py` (`Abandonment`)
+- **Symptom:** the driver stops a run on a **declared** E4 by asking the project's own
+  `engagement-state --all` and requiring two things of one epic: a verdict of `ended` or `closed`,
+  and a silent-round count in its reasons that has reached the threshold named in the same
+  sentence (commit b845342). Refusing to re-derive either number is right and deliberate — a fifth
+  implementation of the threshold is F-045's mechanism. What is **not** stated anywhere is that an
+  ended engagement's verdict still carries that sentence. It is a consequence of one rule in
+  `scripts/lib/engagement.py` — carry the count on every verdict while it is above zero — whose
+  stated purpose points the other way in time: ADR-0011 §5 gives it so that *"the clock is visible
+  before it strikes rather than only afterwards"*. Nothing in ADR-0011, in
+  `spec/ids-and-statuses.md` §3.5a, or in the script's own contract says the sentence survives the
+  declaration, and a maintainer who removed it from the terminal verdicts as noise would be
+  conforming to every rule that is written down.
+  **And the reading is unsound even while the sentence stands.** `silent_rounds` is the trailing
+  run of equal digests in an append-only log; nothing resets it, and nothing in it says which
+  ending was recorded. ADR-0011 §7 makes E4 deliberately **recoverable** — a returning stakeholder
+  reopens the epic through `tracker/requests/` and the engagement can then deliver — after which
+  the log's trailing run is untouched and the epic is `done` with `outcome: delivered`. Executed:
+  with `fixtures/abandoned-engagement/right`'s EP-001 changed only from `outcome: dropped` to
+  `outcome: delivered`, `engagement-state` still reports `ended` with *"3 silent round(s) recorded
+  against a threshold of 3"*, and `run_iteration.abandonment_declared()` still returns it — so the
+  driver would stamp a delivered engagement's run `abandoned`. What actually says which ending
+  happened is the record the driver does not read: the epic's `outcome`, and its history reason
+  `E4 abandoned: 3 silent rounds, threshold 3`.
+- **Is the harness test enough?** More than the observation assumed, and less than a contract.
+  `test_the_real_script_is_read_the_way_the_driver_parses_it` runs the shipped
+  `scripts/engagement-state` over the shipped fixture and requires EP-001 and EP-002 to come back
+  as declared abandonments — and the harness self-test is the **last step of `./scripts/check`**,
+  so a toolkit change that dropped the sentence fails the *toolkit's* own gate today, not merely
+  the harness's. Three things it does not do. It `skipTest`s when `fixtures/abandoned-engagement`
+  is absent, and a unittest skip exits 0, so the pin disappears silently with the fixture. It is a
+  test rather than a statement: it fails a maintainer without telling them which property they
+  broke or who needs it. And it cannot catch the unsoundness above, because it only ever runs over
+  a fixture whose ending really was E4.
+- **Counterfactual:** any harness run against an engagement that reached the threshold and then
+  recovered, and any toolkit change that tidies the count out of a terminal verdict's reasons.
+- **Recurrence:** not yet observed — no live run has reached E4 at all, and iteration 5 is held
+  out. Filed on the mechanism, established by execution.
+- **Direction:** the driver should read the ending the toolkit **recorded** and keep the count as
+  the corroboration it is: the epic is `done` with `outcome: dropped` and its history reason begins
+  `E4 abandoned:` (`spec/ids-and-statuses.md` §3.5a) — facts the record states about itself, which
+  a recovered engagement no longer carries. The count belongs in the detail line, as evidence
+  rather than as the test. What should **not** happen is asking the toolkit to state a contract for
+  the harness's benefit: ADR-0005 keeps the harness out of the contract it grades, and a sentence
+  in `engagement-state`'s output that exists because a grader parses it is exactly that.
+- **Why `H-` and not `F-`:** the dependency, the inference and the wrong label all live in
+  `harness/run_iteration.py`. The toolkit's output is not false — it reports what the count is —
+  and no toolkit consumer reads that sentence at all; what happened is that the harness took a
+  display rule for a semantic one. Filing it as a toolkit defect would put a harness need on the
+  toolkit's backlog, which is the move ADR-0005 exists to refuse.
+- **Provenance:** found by META-153 while building the driver's E4 recognition (commit b845342)
+  and reported as an observation rather than as a request; that unit's journal entry states the
+  dependency in as many words. Filed here by META-153b, with the soundness half and the `H-`/`F-`
+  decision established by execution and by reading `scripts/lib/engagement.py` against ADR-0011
+  §5 and §7.
+- **Status:** open
