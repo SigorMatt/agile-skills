@@ -5952,3 +5952,116 @@ recall is a reading, not a number, and the report says which.
   `adapters/claude-code/render.py` (the rendered contract's **subject** column) and `dist/`,
   `meta/findings/FINDINGS.md` (F-085, F-086, F-061 resolved with citations), `meta/journal.md`.
   Commits `bb76d7d` and this one.
+
+## 2026-09-10 — META-160 — a criterion that counts, a gap nobody dispatches, an example that could not fail
+
+- **Unit:** META-160 (F-089, F-090, F-088 — cluster 5, part 1)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-088, F-089, F-090 in full, and F-076, F-052,
+  F-066, F-031, F-029, F-084, F-095, F-096 for context; `spec/work-item.md`, `spec/dor-dod.md`,
+  `spec/doc-header.md` §4a; `methodology/pipeline.yaml` in full — the `statuses`, `transitions`
+  and `orchestrator.steps` blocks are F-090's subject and were read rather than recalled;
+  `methodology/skills/{plan,verify,review-close,refine,answer-questions}/`; `scripts/lib/scope.py`
+  in full (META-148's fourth state), `scripts/lib/documents.py`, `scripts/lib/claims.py`,
+  `scripts/lint-documents`, `scripts/check`.
+- **Decisions:**
+  - **F-088: `scope.py`'s fourth state fits the diagnosis and not the mechanism, and the split is
+    written down rather than blurred.** The module classifies a *git window* — a repository, a
+    ref, and a `permitted` set the caller supplies. An audit row is prose: no window, no diff, no
+    paths, nothing for `constrained()` to re-read. What transfers is the **shape of the verdict**:
+    a pass that could not have failed is marked, never spelled like an ordinary pass. So the
+    labelled form META-148b gave the audit row was **extended**, as instructed — a fifth label,
+    `Falsifier:` — and not replaced by a second mechanism.
+  - **One case where the transfer is literal, and it is the only mechanical thing here.** An
+    enumeration whose `Members:` names nobody *is* out-of-scope-by-construction: the audit did not
+    come up without a counterexample, it was never able to come up with one. `lint-documents`
+    exits 0 and emits `document.enumeration.vacuous` (WARNING), following
+    `item.criteria.substituted`'s precedent, which followed `scope.py`'s. It is not an **error**
+    because a genuinely empty family makes the sentence vacuously true, and the repair for that —
+    weaken the sentence — is a read.
+  - **F-088's reach is under-claimed on purpose and stated in both specs.** The shape check runs
+    only where the labelled form was already gated: `propagated-claims-carry-their-obligation`,
+    over an answering question's `## Consequences`. Nothing mechanical reads `review.md`'s
+    `## What I examined` or `verify-report.md` — the audit rows D12 and DE6 actually name —
+    before this change or after it. There the falsifier is `[skill]`. Saying so is cheaper than
+    a gate that overstates its reach.
+  - **F-089 is `[skill]`, and the measurement is the argument.** The narrowest pattern that
+    catches this finding's own three criteria — a cardinal or `no` before an artefact noun, plus
+    *suite … unchanged* — flags **26 of the 53** acceptance criteria in the must-pass
+    `examples/toy-project`, of which **two** are true positives; a looser one reaches 51 of 53.
+    *"prints one row per file"* and *"a folder that contains no files at all"* are the tool's own
+    output, not project artefacts, and no regex separates them. So R11 names the discipline and
+    marks itself judgement, and the measurement lives in `dor-dod.md` §1 beside the criterion
+    rather than only in the ledger. **Measure before scoping, applied to a rule that was then not
+    built.**
+  - **F-089 reuses a citation form instead of inventing one.** *Measured first* needs somewhere to
+    put the measurement, and `doc-header.md` §4a's **command outcome** citation —
+    `[src: run: <command> → <outcome>]` — already exists, already resolves, and already requires
+    both halves. A criterion that states a count carries one. Nothing new was added to the
+    citation table.
+  - **F-090: the two branches of the direction are not rivals; the owner decides which applies.**
+    Derived from `pipeline.yaml` rather than restated in the rule: a question suspends its item to
+    the status the `any-suspendable → awaiting-answer` row names, and the orchestrator dispatches
+    that status's `owner` — so **a question puts `answer-questions` to work and nothing else**. An
+    item is dispatched at step 5 by its status's owner — `answer-questions`, `implement`, `plan`,
+    `refine`, `review-close`, `verify`. **`intake`, `next` and `retro` are in neither set** and a
+    gap assigned to one is inert wherever it is written; step 2 needs a stakeholder request and
+    step 7 needs an ended engagement, and `review-close` can cause neither.
+  - **"Acceptance time" is the execution that accepts the gap, before its closing transition.**
+    The gate runs on `review-close` while the item is still `in-review`; on a `done` item it
+    reports **NOT APPLICABLE** in those words rather than passing. That boundary was measured
+    first: **all 18** `review.md` files under `examples/` and `fixtures/` sit on `done` items, and
+    unscoped the rule refuses every one — six of them in the must-pass `examples/toy-project`.
+    They are free-prose gap sections written before the convention existed, which is F-084's
+    lesson arriving a second time.
+  - **`## Accepted gaps` becomes a table rather than growing a labelled bullet.** The same file
+    already carries `## Invalidation set confirmation` as a table whose every row must be
+    disposed; a second convention for the same job is two conventions that will drift.
+  - **A bump-time hazard, met and paid.** Bumping `verify` 0.5.0 → 0.5.1 dropped
+    `fixtures/broken-workspace`'s five `journal.gates.*` codes out of META-154's version-scoped
+    comparison — 108 → 103 — because that entry exists *"at the installed version so that the
+    comparison is decidable"*. The fixture entry was bumped with the contract, and
+    `fixtures/abandoned-engagement`'s `verify`/`refine` entries with it, so their coverage was not
+    silently lost either. **Standing observation, not fixed here:** `review-close`'s 18 fixture
+    entries sit at v0.9.1 and were already outside that comparison before this unit.
+  - **The brief said there was room in `review-close` and there was not.** Its `process.md` was
+    at 473 lines; the *rendered* `SKILL.md` body was at **500/500**, the contract block having
+    grown since. Step 5a, 9a's falsifier paragraph, the table in the template, a self-check
+    question and a new gate row came to 31 rendered lines, and every one was paid for by
+    compressing skill-specific narrative — the trial-merge `--detach` explanation, 6a's D7/D13
+    prose, 9a's opening, 9b, step 10's DE8 and restatement blocks, the preamble, the closing
+    failure-modes list. **No requirement moved out.** `process.md` 473 → **473**; rendered body
+    500 → **500**.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **42 steps** (new: *an accepted
+  gap the orchestrator can act on (F-090)*, 15 observations); `fixtures/broken-workspace` unmoved
+  at **108 codes** (they moved to 103 on the `verify` bump and were restored by bumping the
+  fixture entry, not by weakening a rule); *the document obligations by execution* 8 → **10
+  cases**; `scripts/lib/selftest.py` 354 → **356**; `findings citations resolve` **62**; *finding
+  numbers cited resolve* 3518 citations, 128 numbers, 0 phantoms.
+  **Non-vacuity in the strong form, eight stubs.** F-090, five: (1) `rule_accepted_gaps_are_
+  dispatchable` returning immediately → the whole step fails; (2) `dispatch_routes` widened to
+  every skill → *"a gap owned by implement, filed as a question: expected
+  document.gaps.undispatchable, got exit 0 (no code)"* and the `retro` twin; (3) the `inert`
+  branch disabled → *"a gap naming an owner and disposed no-owner: expected document.gaps.inert,
+  got exit 0"*; (4) the `done` scoping made unconditional → **8 observations** fail; (5) the
+  owner alphabet disabled → *"an owner who is neither a skill, an item, the human nor nobody:
+  expected document.gaps.owner.unknown, got exit 0"*. F-088, three: dropping `falsifier` from
+  `ENUMERATION_PARTS` → *"an enumeration that never says why the example could have failed is
+  refused (F-088): exit 0"*; `vacuous` forced `False` → *"an enumeration naming no member passes
+  with a mark, never silently: exit 0"*; `vacuous` forced `True` → *"a complete enumeration
+  discharges the claim: exit 0"*, the inverted guard that catches a mark firing everywhere.
+  **The vacuous case of this unit's own, caught by probing its own branches:** two of the new
+  rule's findings — `document.gaps.empty` and `document.gaps.row.malformed` — had **no case at
+  all** and would have shipped unexercised. Probed by hand, both fire, and the first is F-090's
+  *literal* historical shape: a `## Accepted gaps` section holding free prose that names a skill
+  and nothing a script can dispose. Both are now cases, and the step went 13 → 15 observations.
+- **Artifacts:** `spec/doc-header.md` (§4a, revision 9), `spec/dor-dod.md` (R11, D11, D12, DE6,
+  two new §-sections, revision 11), `spec/work-item.md` (§2, revision 4),
+  `methodology/skills/review-close/{skill.yaml,process.md}` (0.11.0 → **0.12.0**),
+  `methodology/skills/refine/{skill.yaml,process.md}` (0.4.0 → **0.5.0**),
+  `methodology/skills/verify/{skill.yaml,process.md}` (0.5.0 → **0.5.1**),
+  `methodology/skills/answer-questions/{skill.yaml,process.md}` (0.6.1 → **0.6.2**),
+  `scripts/lib/documents.py`, `scripts/lib/selftest.py`, `scripts/lint-documents`,
+  `scripts/check`, `fixtures/broken-workspace` and `fixtures/abandoned-engagement` journal
+  versions, `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md` (F-088, F-089, F-090
+  resolved with citations), `meta/journal.md`. Commits `5e43182` and this one.

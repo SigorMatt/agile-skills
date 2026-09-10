@@ -3374,7 +3374,37 @@ second occurrence shows the error is common rather than incidental.
   already has a "what I opened" column; what it lacks is the obligation that what was opened be
   capable of a `false`.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-4); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** **fixed** (META-160)
+- **Status update 2026-09-10 (META-160): fixed** (commit `5e43182`). The direction is taken where the finding pointed
+  — **the audit row** — by extending the labelled form META-148b already gave it rather than
+  starting a second one. `spec/doc-header.md` §4a gains a section, *The example has to be able to
+  fail*, and a **fifth label**: `Falsifier:` — what a counterexample would look like, and why the
+  thing opened could have produced one. With it, the finding's second half: an absolute about a
+  rule with a **threshold, a boundary or an exception** is checked **at** the boundary, and where
+  no falsifier can be produced at all the legal move is to weaken the sentence, which is the
+  answer §4a already gives for a family nobody can enumerate. `spec/dor-dod.md` D12 and DE6 carry
+  it; `review-close` step 9a and `verify` step 6 say it in procedure; `answer-questions`' worked
+  example shows it.
+  **`scope.py`'s fourth state fits the diagnosis and not the mechanism, and the difference is
+  recorded rather than blurred.** The module classifies a *git window* from a repository plus
+  caller-supplied permissions; an audit row is prose with no window, no diff and no paths, so
+  there is nothing for `constrained()` to re-read. What transfers is the **shape of the verdict**
+  — a pass that could not have failed is marked, never spelled like an ordinary pass — and one
+  case where the transfer is literal: an enumeration whose `Members:` names nobody is
+  out-of-scope-by-construction in the audit row, and `scripts/lint-documents` now exits 0 and
+  emits `document.enumeration.vacuous` (a WARNING) rather than passing over it.
+  **What is `[auto]` and what is not, said in both specs.** The label's presence is decided only
+  where the labelled form was already gated — `propagated-claims-carry-their-obligation`, over an
+  answering question's `## Consequences`. Nothing mechanical reads `review.md`'s
+  `## What I examined` or `verify-report.md`, before this change or after it, so the falsifier
+  there is `[skill]`, recorded the way the rest of D12's read is. Under-claiming is the correct
+  failure mode.
+  Proved by execution in `./scripts/check` — *the document obligations by execution* is now 10
+  cases: a four-part enumeration (the shape every entry in this repository had before this unit)
+  is refused with `document.enumeration.incomplete` naming `falsifier`; the five-part one passes;
+  `Members: none` passes **with the mark**. Non-vacuity in the strong form: dropping `falsifier`
+  from `ENUMERATION_PARTS` fails the first, forcing `vacuous` to `False` fails the third, and
+  forcing it to `True` fails the second — the guard bites in both directions.
 
 ## F-089 — a criterion that counts artefacts is a criterion that will be amended after the fact
 
@@ -3401,7 +3431,29 @@ second occurrence shows the error is common rather than incidental.
   engagement adopted exactly that on its last item and recorded the measurement that justified it
   [src: tracker/items/WI-0004/journal.md]; the practice is not in the toolkit.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-5); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** **fixed** (META-160)
+- **Status update 2026-09-10 (META-160): fixed** (commit `5e43182`), as a `[skill]` rule, and the measurement that
+  says why it is `[skill]` is part of the fix.** `spec/dor-dod.md` gains **R11**: every criterion
+  **names** the artefacts it constrains rather than counting them, and where it states a count of
+  something this item may move, the count was **measured before the criterion was written** and
+  the criterion carries the measurement as a command-outcome citation
+  `[src: run: <command> → <outcome>]` — a citation form that already exists and already resolves
+  (`doc-header.md` §4a), so the number acquires a provenance a later reader can repeat.
+  `spec/work-item.md` §2 carries the same rule where the criteria are; `refine`'s step 6 and its
+  `definition-of-ready` gate description carry it as procedure.
+  **No `[auto]` half is claimed, and the reason is a measurement rather than an opinion.** The
+  narrowest pattern that catches this finding's own criteria — a cardinal or `no` in front of an
+  artefact noun, plus *suite … unchanged/unmodified* — flags **26 of the 53** acceptance criteria
+  in the must-pass `examples/toy-project`: *"prints one row per file"*, *"a folder holding one
+  readable file"*, *"two files with the same count"*, *"a folder that contains no files at all"*.
+  Two of the 26 are true positives. A looser pattern reaches 51 of 53. Telling a count of project
+  artefacts from a count in the tool's own output is a read, so R11 is marked judgement and says
+  so. That measurement is written into §1 beside the criterion, not left in this ledger.
+  **Smaller than billed in one respect, and it is stated:** F-089's own evidence records that no
+  criterion was ever reshaped around what was built — every amendment was to a checking clause
+  and each execution checked that distinction explicitly. What R11 removes is the round trip, not
+  a correctness failure. No fixture accompanies it, for the reason F-086's fix records: nothing
+  in a workspace distinguishes a count that was measured first from one that was guessed.
 
 ## F-090 — work recorded in an artifact for a skill that is dispatched only by status or by an open question is inert
 
@@ -3427,7 +3479,41 @@ second occurrence shows the error is common rather than incidental.
   recorded as an open question at the moment it is accepted, or the board carries it and the
   orchestrator can see it. A to-do that only a reader can act on is not part of the pipeline.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-6); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** **fixed** (META-160)
+- **Status update 2026-09-10 (META-160): fixed** (commit `5e43182`). The direction's first branch is taken — *an
+  accepted gap that names an owner is recorded as an open question at the moment it is accepted*
+  — with the second branch (*the board carries it*) as the legal alternative rather than a
+  rival, because which of the two works is decided by **who owns the gap**.
+  `review.md`'s `## Accepted gaps` becomes a table, `| gap | owner | disposition |`, the same
+  shape as the invalidation set in the same file and for the same reason. The disposition alphabet
+  is closed: `question-filed:<ITEM>/Q-###`, `item-filed:<ID>`, `no-owner`.
+  **Which disposition is legal for which owner is read off `pipeline.yaml`, never restated.** A
+  question suspends its item to the status the `any-suspendable → awaiting-answer` row names, and
+  the orchestrator dispatches that status's `owner` — so a question puts to work
+  **`answer-questions`, and nothing else**. An item on the board is dispatched at step 5 by the
+  owner of the status it sits at — so `answer-questions`, `implement`, `plan`, `refine`,
+  `review-close` and `verify` are reachable that way. **`intake`, `next` and `retro` are in
+  neither set**: they are dispatched by a stakeholder request (step 2) and by an ended engagement
+  (step 7), neither of which `review-close` can cause, so a gap assigned to one of them is inert
+  wherever it is written and `document.gaps.undispatchable` says so.
+  **"Acceptance time" is the execution that accepts the gap, before its closing transition.**
+  `scripts/lint-documents --rule accepted-gaps-are-dispatchable` is a hard gate on `review-close`,
+  which runs it while the item is still `in-review`; on an item already `done` it reports
+  **NOT APPLICABLE** in those words. That scope was measured before it was chosen: all **18**
+  `review.md` files in `examples/` and `fixtures/` sit on `done` items, and unscoped the rule
+  refuses every one of them — six inside the must-pass `examples/toy-project` — because they are
+  free-prose gap sections written before the convention existed.
+  `spec/dor-dod.md` D11 gains the obligation and §3 gains the section *An accepted gap is
+  dispatchable or it is nothing*; `review-close` gains step 5a, the table in its `review.md`
+  template, a self-check question and an exit criterion.
+  Proved by execution in a new `./scripts/check` step, *an accepted gap the orchestrator can act
+  on (F-090)* — 15 observations, including the finding's literal shape (free prose naming a skill
+  inside the section) and the two well-formed-but-unreachable rows. Non-vacuity in the strong
+  form, five stubs: the rule body returned immediately; the two dispatch sets widened to every
+  skill; the `inert` branch disabled; the existence checks disabled; the `done` scoping made
+  unconditional — each fails exactly the observations that depend on it and no others.
+  **What it does not decide, and says so on every run:** whether the question or item named
+  actually *discharges* the gap.
 
 ## F-091 — nothing reconciles a journal entry's gate verdicts with the gate runner's output
 
