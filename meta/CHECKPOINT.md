@@ -10,31 +10,40 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at d788007 — 38 steps; 106 codes; selftest 332; 57 citations; harness 110
+## The gate is GREEN at 3ae7bcd — 39 steps; 108 codes; selftest 354; 58 citations; harness 110
 
 ## Current unit
 
-**META-157** — cluster 3's two citation-integrity fixes: **F-094** and **F-096**.
+**META-158** — **F-099**: the evidence-to-ledger citation sweep. Cluster 3's last unit.
 
-- **F-094** — a criterion cited by number keeps resolving after the number has come to mean
-  something else. Acceptance criteria are cited as `ITEM ACn`; renumber the list and every
-  standing citation silently now points at a different criterion. It is **F-077's family** (a
-  `path:line` citation resolves for ever, whatever is at the line) — read F-077's resolution
-  first and follow it if it fits, rather than inventing a second mechanism for one problem.
-- **F-096** — a criterion the environment cannot execute is ticked on a substitution, and the
-  tick carries no mark of it. The substituted verification must leave a mark. Compare with
-  `scope.py`'s *out-of-scope-by-construction*, landed this session in META-148: a pass that is
-  not the same as an ordinary pass **exits 0 and says so in its own words**. That precedent is
-  probably the right shape here too.
+**F-099** — *Citations from banked evidence into the ledger are resolved by nothing.*
+`./scripts/check` already resolves every `commit <sha>` cited **in** `meta/findings/FINDINGS.md`
+(step *findings citations resolve*, 58 today). Nothing resolves the other direction: the
+`F-###` / `H-###` numbers cited **from** `meta/harness/evidence/**` and elsewhere **into** the
+ledger. F-071 is the tombstone that proves the class — a README named three consecutive
+F-numbers 66 seconds before they were written, and the third was never filed.
 
-Both are `spec/work-item.md` / `scripts/lib/claims.py` / `validate-workspace` territory.
+Two halves, in order:
 
-- Done when: both fixed with fixtures both ways, a `./scripts/check` step proved non-vacuous in
-  the strong form, gate green, both statuses updated with resolving citations (second commit if
-  a sha must be cited), journalled, committed AND pushed.
-- Next units: **META-158** (the F-099 sweep — expect phantoms; tombstone or correct each,
-  honestly), then cluster 4 (**META-159**), cluster 5 (**META-160/161/162**), cluster 6
-  (**META-163**), staging (**META-164**), the report (**META-165**).
+1. **Mechanise it** — a check that resolves every finding-number citation in the repository
+   against the ledger, and a `./scripts/check` step. Decide the scope deliberately and say what
+   you excluded: `meta/harness/evidence/**` is **read-only history** (standing rule), so the
+   sweep must be able to *report* a phantom there without *editing* it.
+2. **Run it, and handle the yield honestly.** The mission says: *expect its first run to surface
+   more phantoms; tombstone or correct each, honestly.* A phantom in read-only evidence is
+   corrected the way F-071 was — a **tombstone entry in the ledger**, not a rewrite of the
+   evidence. A phantom in a file that is not evidence may be corrected in place. **Say which you
+   did for each, and never silently.**
+
+**Do not let the yield be zero by construction.** If the sweep finds nothing, check that it
+*would* have found F-071's mislabel had it not been tombstoned — that is the calibration case,
+and a sweep that cannot find the one known instance is not evidence of a clean ledger.
+
+- Done when: the sweep exists as a `./scripts/check` step proved non-vacuous, its first run's
+  full yield is recorded in F-099's status (every phantom listed, with its disposition), the
+  ledger stays append-only, gate green, journalled, committed AND pushed.
+- Next: cluster 4 (**META-159**), cluster 5 (**META-160/161/162**), cluster 6 (**META-163**),
+  staging (**META-164**), the report (**META-165**).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -137,4 +146,24 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   a tree whose README says *"Nothing here was written by hand."* Exactly one was repaired — a
   builder correcting its own splice — and the other seven stand, which is why the rule is scoped
   rather than retroactive.
+- **META-157** F-094/F-096 (**181e69d** + **3ae7bcd**), 39 steps, 106 → **108** codes, selftest
+  354. **F-077's mechanism did NOT generalise, and the reason is the finding's substance**:
+  F-077's fix is a *bound* (a line number against the file's length), and the equivalent bound
+  for `ITEM ACn` — does the item declare an ACn? — **was already the behaviour F-094 reports as
+  fooled**. A bound cannot distinguish a moved target from a standing one; only the target's
+  content can. So the *place* was extended, not a second mechanism added: a citation may carry
+  the criterion's own words, and an **unanchored** citation is refused only while the item is at
+  `draft`/`ready` — the statuses §2 still permits a rewrite at. **Scope measured first**: 84
+  standing `ITEM ACn` citations exist across the repo and requiring an anchor everywhere would
+  have invalidated all 84 retroactively, which §4a's own grandfathering paragraph forbids.
+  **F-096**: a third checkbox state `- [~]`, written by `verify` alone. It follows `scope.py`'s
+  exit-0-and-say-so shape, then departs from it in the harder direction — a `- [~]` **MUST** name
+  a question on this item (an ERROR), which is the finding's demand that somebody put the
+  criterion's wording to the stakeholder while the engagement can still act; the question need
+  not be answered, because an open question already holds the engagement short of rest. Also
+  unified two divergent criterion-line regexes into one, since adding a state to one would have
+  left the other reading `[~]` as unticked. **A vacuous case of its own, caught by its own
+  stub** — the second such catch in two units. **A bump-time hazard worth remembering**: the
+  `verify` and `refine` bumps silently dropped nine fixture entries out of META-154's
+  version-scoped `**Gates:**` comparison; the fixture caught it.
 
