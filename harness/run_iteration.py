@@ -424,30 +424,65 @@ def engagements_abandoned(observed):
                     if state.get("verdict") == "abandoned"])
 
 
+# `spec/ids-and-statuses.md` §3.5 and ADR-0011 §3: an epic that closed `done` carrying this
+# outcome ended at E4 and at no other ending — E1 records `delivered`, E2 `delivered-partial`,
+# and E3 leaves the epic `blocked`. It is the ending the toolkit wrote down about itself, and it
+# is *current state*, which is the property that matters here: a stakeholder who comes back
+# reopens the epic (ADR-0011 §7) and whatever the engagement does next overwrites it.
+E4_EPIC_OUTCOME = "dropped"
+E4_EPIC_STATUS = "done"
+
+
 def abandonment_declared(observed):
     """Epics whose *recorded* ending is E4 — the stop this driver was missing.
 
-    Two facts, both of them `engagement-state`'s and neither of them the driver's: the epic has
-    ended (`ended`, or `closed` once the retro is written), and the silent-round count it
-    reports has reached the threshold it reports. The count survives the declaration because it
-    is derived from the waiting log, which is append-only — so "this engagement ended because
-    nobody came back" is still readable afterwards, which is what makes this stop possible at
-    all. The driver holds no threshold of its own: both numbers come out of the same sentence.
+    Two readings, in their proper roles (H-020).
+
+    The **test** is the ending the toolkit recorded: `engagement-state` says the engagement has
+    ended (`ended`, or `closed` once the retro is written), and the epic it ended is `done` with
+    `outcome: dropped`. The first half stays the toolkit's judgement — the driver does not decide
+    when an engagement is over — and the second is the record stating which of the four endings
+    happened, read off the same frontmatter every other branch here reads.
+
+    The silent-round count is **corroboration**, and it moved out of the test on purpose. It is
+    the trailing run of equal digests in an append-only log that nothing resets, so it outlives
+    the engagement it describes: E4 is deliberately recoverable (ADR-0011 §7), and an engagement
+    that went silent, was recovered through `tracker/requests/` and then *delivered* still
+    reports "3 silent round(s) recorded against a threshold of 3" under a verdict of `ended`.
+    The old reading — that verdict and that count, and nothing about the record — stamped such a
+    run `abandoned`. The count says the clock struck, never which ending was written afterwards.
+    Requiring it also missed the other route to E4 entirely: a withdrawal (§3.5) is an act the
+    stakeholder performs, so it ends the engagement at E4 with no silent round behind it at all.
+
+    The driver still holds no threshold of its own. Where a count is reported, both numbers come
+    out of one sentence of `engagement-state`'s, and they are quoted in the detail line as the
+    evidence they are.
     """
     found = []
+    items = observed.get("items") or {}
     for epic, state in sorted((observed.get("engagements") or {}).items()):
         if state.get("verdict") not in ("ended", "closed"):
             continue
+        record = items.get(epic) or {}
+        if record.get("status") != E4_EPIC_STATUS:
+            continue
+        if record.get("outcome") != E4_EPIC_OUTCOME:
+            continue
         threshold = state.get("threshold")
-        if threshold and (state.get("silent-rounds") or 0) >= threshold:
-            found.append((epic, state["silent-rounds"], threshold))
+        found.append((epic, state.get("silent-rounds") or 0, threshold))
     return found
 
 
 def abandonment_detail(declared):
-    return "; ".join(f"{epic}: the stakeholder was silent for {rounds} round(s) against a "
-                     f"threshold of {threshold}, and the ending recorded is E4"
-                     for epic, rounds, threshold in declared)
+    said = []
+    for epic, rounds, threshold in declared:
+        line = (f"{epic}: the ending recorded is E4 — the epic is {E4_EPIC_STATUS!r} with "
+                f"outcome {E4_EPIC_OUTCOME!r}")
+        if threshold and rounds >= threshold:
+            line += (f", and the stakeholder was silent for {rounds} round(s) against a "
+                     f"threshold of {threshold}")
+        said.append(line)
+    return "; ".join(said)
 
 
 def engagement_terminal(observed):
@@ -464,6 +499,10 @@ def engagement_terminal(observed):
     # an answered board reads as `epic-done`; one ended by silence over orphaned children reads
     # as `blocked-no-recourse`, "an impasse with nothing left to ask" — and there was plenty left
     # to ask. Nobody answered.
+    #
+    # H-020: "most specific" is only safe while the reading is exact. This branch reads the
+    # ending the epic records about itself, so an engagement that went silent and then recovered
+    # and delivered falls through to `epic-done` below, where it belongs.
     declared = abandonment_declared(observed)
     if declared:
         return True, "abandoned", abandonment_detail(declared)

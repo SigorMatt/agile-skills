@@ -1031,6 +1031,20 @@ class Abandonment(unittest.TestCase):
     TICKING = ("engagement-state: EP-001 active\n"
                "  - 2 silent round(s) recorded against a threshold of 3\n"
                "  - WI-0001 is in flight\n")
+    # E4 by withdrawal (`spec/ids-and-statuses.md` §3.5): an act the stakeholder performs, so it
+    # brings the engagement to rest like any other reply and no silent round is ever recorded.
+    WITHDRAWN = ("engagement-state: EP-001 ended\n"
+                 "  - the epic is 'done'; the engagement has ended and the retrospective has "
+                 "not been written\n")
+
+    # The two records an `ended` verdict can sit on top of. `engagement-state` prints the same
+    # sentences over both, which is the whole of H-020: the count is derived from a log nothing
+    # resets, so it outlives the silence it describes and cannot say which ending was written.
+    E4_RECORD = {"EP-001": {"type": "epic", "status": "done", "outcome": "dropped"},
+                 "WI-0001": {"type": "work-item", "status": "blocked", "outcome": None}}
+    RECOVERED_RECORD = {"EP-001": {"type": "epic", "status": "done", "outcome": "delivered"},
+                        "WI-0001": {"type": "work-item", "status": "done",
+                                    "outcome": "delivered"}}
 
     @staticmethod
     def observed(text, **overrides):
@@ -1090,31 +1104,46 @@ class Abandonment(unittest.TestCase):
         self.assertEqual(parsed["EP-001"]["verdict"], "ended")
         self.assertEqual(run_iteration.engagements_abandoned(
             {"engagements": parsed}), ["EP-003"])
+        # And the other half of the reading, off the same fixture: the endings the epics record
+        # about themselves. `scan_project` reads exactly these three fields (H-020).
+        record = {}
+        for name in sorted(os.listdir(os.path.join(fixture, "tracker", "items"))):
+            fields = audit.frontmatter(
+                open(os.path.join(fixture, "tracker", "items", name, "item.md"),
+                     encoding="utf-8").read())
+            record[name] = {"type": fields.get("type"), "status": fields.get("status"),
+                            "outcome": fields.get("outcome")}
+        self.assertEqual(record["EP-001"]["outcome"], "dropped")
+        self.assertEqual(record["EP-002"]["outcome"], "dropped")
         self.assertEqual([epic for epic, _, _ in run_iteration.abandonment_declared(
-            {"engagements": parsed})], ["EP-001", "EP-002"])
+            {"engagements": parsed, "items": record})], ["EP-001", "EP-002"])
 
     # -- the ending is terminal, and it is not the other endings -------------------------
 
     def test_a_declared_abandonment_is_terminal_and_named_as_itself(self):
-        terminal, reason, detail = run_iteration.engagement_terminal(self.observed(self.DECLARED))
+        terminal, reason, detail = run_iteration.engagement_terminal(
+            self.observed(self.DECLARED, items=self.E4_RECORD))
         self.assertTrue(terminal)
         self.assertEqual(reason, "abandoned")
         self.assertIn("silent for 3 round(s)", detail)
+        self.assertIn("'dropped'", detail)
 
     def test_e4_over_a_finished_board_is_not_reported_as_epic_done(self):
         """H-014's shape: the most specific true thing wins. Every item done and the sign-off
-        never answered is an abandonment, not a delivery."""
+        never answered is an abandonment, not a delivery. The child delivered — ADR-0011 §2.2's
+        first class — and the epic still recorded E4."""
         finished = self.observed(self.DECLARED, items={
-            "EP-001": {"type": "epic", "status": "done"},
-            "WI-0001": {"type": "work-item", "status": "done"}})
+            "EP-001": {"type": "epic", "status": "done", "outcome": "dropped"},
+            "WI-0001": {"type": "work-item", "status": "done", "outcome": "delivered"}})
         self.assertTrue(run_iteration.epic_complete(finished))
         _, reason, _ = run_iteration.engagement_terminal(finished)
         self.assertEqual(reason, "abandoned")
 
     def test_e4_over_orphaned_children_is_not_reported_as_an_impasse(self):
         orphaned = self.observed(self.DECLARED, items={
-            "EP-001": {"type": "epic", "status": "done"},
-            "WI-0001": {"type": "work-item", "status": "blocked"}}, blocked=["WI-0001"])
+            "EP-001": {"type": "epic", "status": "done", "outcome": "dropped"},
+            "WI-0001": {"type": "work-item", "status": "blocked", "outcome": None}},
+            blocked=["WI-0001"])
         _, reason, _ = run_iteration.engagement_terminal(orphaned)
         self.assertEqual(reason, "abandoned")
 
@@ -1137,7 +1166,58 @@ class Abandonment(unittest.TestCase):
 
     def test_a_budget_spent_on_an_abandoned_engagement_is_the_ending_not_the_budget(self):
         self.assertFalse(run_iteration.stop_is_resumable(
-            "turn-budget", self.observed(self.DECLARED)))
+            "turn-budget", self.observed(self.DECLARED, items=self.E4_RECORD)))
+
+    # -- H-020: which ending was recorded, and what the count can and cannot say -----------
+
+    def test_the_declaration_is_read_off_the_record_not_off_the_count(self):
+        """H-020, at the smallest scale it can be shown. One `engagement-state` output, two
+        workspaces: the count is the trailing run of equal digests in an append-only log that
+        nothing resets, so a recovered engagement (ADR-0011 §7) still reports it under a verdict
+        of `ended`. What differs is the ending the epic records about itself."""
+        declared = self.observed(self.DECLARED, items=self.E4_RECORD)
+        recovered = self.observed(self.DECLARED, items=self.RECOVERED_RECORD)
+        self.assertEqual(declared["engagements"], recovered["engagements"])
+        self.assertEqual([epic for epic, _, _
+                          in run_iteration.abandonment_declared(declared)], ["EP-001"])
+        self.assertEqual(run_iteration.abandonment_declared(recovered), [])
+
+    def test_a_recovered_engagement_that_delivered_is_a_delivery(self):
+        """The whole path, not just the predicate: silence past the threshold, a stakeholder who
+        came back through `tracker/requests/`, and a delivery. The run ended `epic-done`."""
+        recovered = self.observed(self.DECLARED, items=self.RECOVERED_RECORD)
+        terminal, reason, _ = run_iteration.engagement_terminal(recovered)
+        self.assertTrue(terminal)
+        self.assertEqual(reason, "epic-done")
+
+    def test_a_recovered_delivery_still_gets_its_closing_sim_turn(self):
+        """And the sim is not locked out of it. E4 skips the closing turn because there is
+        nobody to show the ending to (H-007); a delivery has somebody, and mislabelling one as
+        the other took that turn away as well as the label."""
+        decision = self.decide(self.observed(self.DECLARED, items=self.RECOVERED_RECORD),
+                               self.STUCK)
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-role"], "sim")
+        self.assertEqual(decision["next-job"], "closing")
+
+    def test_e4_by_withdrawal_is_recognised_with_no_silence_behind_it(self):
+        """`spec/ids-and-statuses.md` §3.5 gives E4 two routes. A withdrawal is an act the
+        stakeholder performs, so it arrives as an answer or a request and the waiting log never
+        gets a row. Requiring the count missed this ending entirely."""
+        withdrawn = self.observed(self.WITHDRAWN, items=self.E4_RECORD)
+        self.assertEqual(withdrawn["engagements"]["EP-001"]["silent-rounds"], 0)
+        terminal, reason, detail = run_iteration.engagement_terminal(withdrawn)
+        self.assertTrue(terminal)
+        self.assertEqual(reason, "abandoned")
+        self.assertNotIn("silent for", detail)
+
+    def test_an_epic_still_open_under_an_ended_verdict_is_not_a_declaration(self):
+        """The record has to agree that the ending happened. `ended` over an epic that is not
+        `done` is a reading of two different moments, and the driver takes neither."""
+        mid = self.observed(self.DECLARED, items={
+            "EP-001": {"type": "epic", "status": "open", "outcome": None},
+            "WI-0001": {"type": "work-item", "status": "blocked", "outcome": None}})
+        self.assertEqual(run_iteration.abandonment_declared(mid), [])
 
     # -- and the asymmetry, decided by running `decide` ----------------------------------
 
@@ -1152,7 +1232,7 @@ class Abandonment(unittest.TestCase):
         """The case that used to lie. Three turns changed nothing AND the engagement ended by
         silence: the old driver said `stalled`, "three turns changed nothing", which is true of
         the run and says nothing about what happened — the person left."""
-        decision = self.decide(self.observed(self.DECLARED), self.STUCK)
+        decision = self.decide(self.observed(self.DECLARED, items=self.E4_RECORD), self.STUCK)
         self.assertTrue(decision["stop"])
         self.assertEqual(decision["reason"], "abandoned")
         self.assertIn("This is not a stall", decision["detail"])
@@ -1202,7 +1282,7 @@ class Abandonment(unittest.TestCase):
         self.assertEqual(decision["next-role"], "worker")
 
     def test_a_broken_workspace_is_still_the_first_thing_reported(self):
-        observed = self.observed(self.DECLARED)
+        observed = self.observed(self.DECLARED, items=self.E4_RECORD)
         observed["validator-exit"] = 1
         observed["validator-tail"] = ["nope"]
         decision = self.decide(observed, self.STUCK)
