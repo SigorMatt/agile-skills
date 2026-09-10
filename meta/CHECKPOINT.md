@@ -10,41 +10,54 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at aee1c88 — 44 steps; 108 codes; selftest 356; harness 110
+## The gate is GREEN at 8e61fdb — 44 steps; 108 codes; selftest 356; harness 110
 
-**CLUSTERS 1–5 ARE COMPLETE.** Remaining: staging verification, cluster 6's triage, the report.
+**CLUSTERS 1–5 COMPLETE. STAGING VERIFIED.** Remaining: cluster 6's triage, then the report.
 
 ## Current unit
 
-**META-164** — provision-verify the two staged regressions, then tear them down.
-**Brought forward ahead of cluster 6** because it is a hard acceptance item and independent of
-the triage.
+**META-163** — cluster 6: **every remaining open finding gets a decision.** No status left
+stale. Fix here only if small and adjacent; otherwise defer behind a **named** gate, or reject
+with a reason.
 
-**READ THIS FIRST — the held-out rule.** `iteration-5-envel` is a **HELD-OUT CALIBRATION
-ENGAGEMENT**. Its trail must be reviewed by the owner before anyone reads the retro's report on
-it. This session:
-- **does NOT run** iteration 5 or 5b — the runs are the owner's to launch;
-- **does NOT read** `harness/skills/simulated-human/probes/iteration-5-envel.md` beyond what
-  provision verification strictly requires (which is: nothing — provisioning does not read
-  probes);
-- says so explicitly in the final report.
+### A trap in this ledger, found while preparing this unit — read it first
 
-Verifying **runnability**, not running: provision each into a throwaway path, validate what
-provisioning produced, tear it down, leave nothing behind.
+`meta/findings/FINDINGS.md` is **append-only**, so a resolved finding still carries its
+**original** `Status:` line and the new one is appended **below**. A naive grep for
+`Status: open` therefore returns findings that were fixed this session — F-076, F-080, F-085,
+F-086, F-087, F-091, F-092, F-093, F-094, F-095, F-096 and F-099 all still show `open` on their
+first status line and are all resolved. **Read the LAST status bullet of each entry, not the
+first.** That the ledger cannot be read correctly by the obvious command is itself worth a
+finding — decide whether to file it.
 
-`harness/provision.py --iteration <id> [--root DIR] [--dry-run]`. `HARNESS_THROWAWAY_ROOT`
-defaults to `~/agile-skills-throwaway`. Use a scratch root **outside the repo**, and confirm the
-repo tree is untouched afterwards (`git status` clean, no stray `harness/runs/` entries).
+### Genuinely undecided, as of 8e61fdb
+- **Filed this session, never triaged:** F-100, F-101, F-102, F-103, F-105, F-106, F-107,
+  F-108, F-109, F-110, H-020. (F-102 and F-103 already carry *known, derived and accepted*;
+  confirm that is still the right standing rather than restating it.)
+- **Open from before and untouched this session:** F-098 (the toolkit's own ADRs and a
+  consumer's share one citation form and one number space).
+- **Standing deferrals whose gates must be re-confirmed, not assumed:** F-008, F-010, F-030,
+  F-036, F-043, F-051, F-053, F-060, F-068. Several gates moved this session — ADR-0010 consumed
+  F-053's class as input, ADR-0012 settled the halt question next door to F-008/F-060, and the
+  *document-as-deliverable* class closed. **A deferral whose gate has been met and not noticed
+  is how a backlog rots** — META-149 said so about F-057/F-058 and was right.
+- **From META-164, journalled but not filed, awaiting an F-number decision:** `install.py:174`
+  copies `adapters/claude-code/hooks/` wholesale with `shutil.copytree`, and that directory
+  carries a **git-ignored** `__pycache__/*.pyc` left by this repo's own gate. Every consumer
+  install therefore receives a `.pyc` compiled on the builder's machine. Established, not
+  assumed: `git ls-files` lists two files, `git check-ignore -v` → `.gitignore:1:__pycache__/`,
+  and a fresh install into an empty temp dir reproduces it. **Severity low** — the project's own
+  `.gitignore` covers it, so what git tracks in a provisioned project is unaffected; what is
+  affected is that **a fresh install's contents depend on untracked local state**, so
+  `--uninstall`'s "remove exactly what was installed" varies by machine. Also: a second
+  provision always reprints `wrote .gitignore` because `provision.py` step 2 and
+  `workspace-init` step 4 each write it; it converges (md5-proved) but the order is load-bearing
+  and undocumented.
 
-`meta/OPS-CONVENTIONS.md` governs — read it. In particular: verify before any destructive
-action and look at the target first, every time; never append `2>/dev/null` to a command whose
-empty output decides a verdict; a command that returns nothing is not evidence until its exit
-status and stderr have been seen; quote outputs verbatim; report what was skipped and why.
-
-- Done when: both configs provision, both validate, both are removed, the repo is clean, and the
-  evidence is recorded — journalled, committed AND pushed. **No iteration run.**
-- Next: **META-163** (cluster 6 — every remaining open finding gets a decision), then
-  **META-165** (`meta/FINAL-REPORT-5.md` + the ROADMAP §4 stamp).
+- Done when: **every** finding's last status is current and dated; each undecided one is fixed,
+  deferred behind a named gate, or rejected with a reason; gate green; journalled, committed
+  AND pushed.
+- Next: **META-165** — `meta/FINAL-REPORT-5.md` + the ROADMAP §4 stamp.
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -279,4 +292,21 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   `"R-001" in line` could never fail, because every one of those messages cites **`ADR-0012`**,
   which contains the substring `R-001` — on a branch that had no case at all until it wrote one.
   Seventh unit running.
+
+### Staging — VERIFIED, nothing run
+- **META-164** both regressions provision-verified and torn down (**8e61fdb**). Scratch root
+  outside the repo, both projects removed, root `rmdir`'d and confirmed absent; `harness/runs/`
+  `diff`-identical to its 19-entry baseline; the default `~/agile-skills-throwaway` checked
+  first and still empty. **10 rules, both configs, 10/10 each** — including that the install
+  matches what the repo renders (`diff -r` clean but for `hooks/`, which `install.py`'s docstring
+  names), `validate-workspace` passes fresh, the allow-list equals `USAGE.md` §4 in order, all
+  **18** shipped scripts import **from the install** (F-072's check run one layer further out),
+  and this session's new material ships — `record-halt`, `record-merge`, `lint-documents`,
+  `tracker/waiting/.gitkeep`, all nine contracts at source versions. **Idempotence was tested,
+  not repeated from the docstring**: second run exits 0, HEAD unchanged, md5 manifest
+  byte-identical. **`--trust` deliberately not used** (it writes `~/.claude.json`, outside both
+  the repo and the throwaway root), so the allow-list is *installed and checked*, not
+  *exercised* — stated honestly rather than glossed. **Neither iteration was run**;
+  `run_iteration.py` was never invoked in any mode; the held-out probe was **not read**, its
+  existence established by `os.path.isfile` + `getsize` only.
 
