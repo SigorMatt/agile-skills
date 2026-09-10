@@ -10,53 +10,60 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 4d1b7ce — 35 steps, 97 codes, selftest 307, 49 findings citations
+## The gate is GREEN at e9f8d79 — 36 steps, 97 codes, selftest 307, 49 findings citations
+
+E4 now executes end to end in fixtures. What remains of cluster 2 is the **harness** half.
 
 ## Current unit
 
-**META-152** — `fixtures/abandoned-engagement/`: the E4 rows exercised **end to end**.
+**META-153** — the harness side of E4. **A SEPARATE COMMIT from the toolkit** (standing rule).
 
-What is already proved: the threshold's single source, by execution (step 14b, 18
-observations); the must-fail shapes (15 new codes in `fixtures/broken-workspace`). What is
-**not** proved is an actual E4 **ending** — the thing the mission's acceptance asks for.
+Two halves, both named in the mission:
 
-Model it on `fixtures/ended-engagement/`, which step 10 (*the termination gate*) already drives
-with **one epic per verdict the gate has to reach**. Add the abandoned case:
+1. **A sim job that legitimately declines to answer** — scripted silence, logged. The persona is
+   already staged: `harness/skills/simulated-human/personas/ghosting-founder.md` phase 2 says
+   *take the turn, read the board, write no `## Answer`, log the withholding tagged
+   `[PLANTED: ghosting]`*. The harness must treat that as a **successful turn that answered
+   nothing**, not as a failed or empty turn.
+2. **The driver recognising the ending.** `harness/run_iteration.py` knows three terminal
+   stops — `epic-done`, `blocked-no-recourse`, `stalled` — and E4 falls through to **`stalled`**,
+   which is a lie about what happened. It must recognise *"human silent past threshold, E4
+   declared"* as a terminal **epic-done-class** stop. H-008's lesson applies directly: a stall is
+   a fact about the driver's own progress, an ending is a fact about the **engagement**, and the
+   two coincided until they didn't.
 
-- an engagement whose stakeholder went silent past the threshold — a `tracker/waiting/<EP-ID>.md`
-  with ≥ threshold trailing rows at one `inbound` digest;
-- `review-close`'s declaration: `## Ending statement` in `review.md`, mirrored in the epic's
-  `## Notes`, naming **every child by ID** in its class (delivered / dropped earlier / blocked
-  earlier / orphaned in flight / orphaned never started);
-- orphans at `blocked`, reason prefixed `orphaned by E4:`, and **no `outcome` at all**;
-- open questions closed `abandoned` with an **empty** `## Answer`;
-- the epic `done`, `outcome: dropped`;
-- `scripts/check-epic-signoff` **passing** it, and `scripts/engagement-state` reporting it.
+Note the asymmetry the driver must respect: a run can be genuinely stalled *and* the engagement
+not abandoned, and vice versa. `scripts/engagement-state` is the authority on the second
+(`abandoned` is now one of its verdicts) — the driver should ask it rather than infer.
 
-**A near-miss E4 must fail**: one round short of the threshold, or an orphan carrying an
-`outcome`, or a question closed `answered` with an empty body. A fixture that only shows the
-happy path proves the gate can say yes, not that it can say no.
+- Done when: `harness/tests/test_harness.py` green with new cases covering both halves, the
+  E4 stop distinguished from `stalled` **by execution** in a test rather than by reading,
+  journalled, committed AND pushed as a **harness commit**.
+- Next unit: **META-153b** — cluster 2's findings pass (the four items below).
 
-- Done when: the fixture exists both ways, a `./scripts/check` step drives it, the step is
-  **proved non-vacuous** against the pre-change behaviour, gate green, journalled, committed
-  AND pushed.
-- Next unit: **META-153** — the harness side, in a **separate commit**: a sim job that
-  legitimately declines to answer (scripted silence, logged), and the driver recognising
-  *"human silent past threshold, E4 declared"* as a terminal **epic-done-class** stop rather
-  than a stall. `harness/run_iteration.py` today knows only `epic-done`,
-  `blocked-no-recourse` and `stalled`.
-
-## Owed to the next findings pass — do not lose these
+## Owed to the findings ledger — META-153b files these
 
 1. **The elicitation deadlock.** `next` step 3 halts on **any** open human-addressed question,
    while `spec/question.md` §2 says an elicitation *"must not stop the loop"*. Both cannot hold;
    today the first wins, so an unanswered elicitation makes **every** ending unreachable, **E1
-   included**. Recorded in ADR-0011 §6 with both citations, deliberately unfiled by META-150 and
-   META-151. Adjacent to **F-097** (cluster 5, META-162). Needs an F-number.
-2. ~~The registry's one-triple shape~~ — **resolved in META-151b**: the shape grew and
-   `epic.closed-with-active-children` is registered. Nothing owed.
+   included**. Recorded in ADR-0011 §6 with both citations; deliberately unfiled three times now.
+   Adjacent to **F-097** (cluster 5, META-162).
+2. **`check-epic-signoff` refuses an epic with no sign-off and prints no reason at all** — the
+   bare header with an empty bullet list, because the block that would explain DE7 and list the
+   children sits after an early `return 1` and is **unreachable**. **Predates E4**:
+   `git show 77a5d96:scripts/check-epic-signoff` has the same shape, and
+   `fixtures/ended-engagement`'s `EP-003` — the F-045 case, *"the engagement nobody was ever
+   asked about"* — has always failed this way under an assertion that reads only the exit code.
+3. **The gate accepts a sign-off that claims a reply it does not have.** It collects the refusal
+   (*says answered but its `## Answer` is empty*) into `problems`, then discards it — `problems`
+   is printed only when `silence` is also `None`. The program whose whole subject is the E3/E4
+   distinction passes it; only `validate-workspace` catches it.
+4. **`engagement-state` prints `rest reached at <t>` under verdicts that never reached rest** —
+   `rest_since` is a boundary derived from children's timestamps, not a statement that rest
+   happened. Pre-existing, cosmetic in effect, but a false sentence in a program's output.
 
 ## Done this session
+
 
 
 - **META-144** Phase VI planned (2c4b0b7, 0deafc0).
@@ -140,6 +147,18 @@ happy path proves the gate can say yes, not that it can say no.
     the move, so the rule would fail correct work: F-014's shape.
     `review-close`'s procedure hit the **500-line rendered body limit**; what was cut is material
     already in `spec/ids-and-statuses.md` §3.5a, replaced by a citation.
+  - **META-152** `fixtures/abandoned-engagement/`, both ways (**e9f8d79**), 36 steps, 97 codes
+    unchanged. `right/` is a **valid workspace** holding the three states E4 has to reach:
+    **EP-001** silence *before* rest, six children — one per §3.5a class — three orphans at
+    `blocked` with no `outcome`, two questions `abandoned` with empty `## Answer`, epic
+    `done`/`dropped`; **EP-002** silence *after* rest, the epic taking the new
+    `awaiting-answer → done` row; **EP-003** the moment *before* the declaration, verdict
+    `abandoned` and the gate correctly failing. All digests **computed**, not invented; EP-003's
+    is recomputed inside `./scripts/check` and required to match. Must-fail: a round short, an
+    orphan carrying an `outcome`, a sign-off `answered` with an empty body, an ending statement
+    omitting a child. **Non-vacuity proved in the strong form** — five deciding function bodies
+    stubbed, five distinct failures. It also surfaced **three defects in the mechanism, reported
+    and not bent around** — see *Owed to the findings ledger* above.
 
 ## Standing instructions (still in force)
 
