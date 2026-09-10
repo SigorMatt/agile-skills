@@ -32,4 +32,4 @@ See EXPECTED-CODES.txt.
 ## Acceptance criteria
 
 - [ ] AC1 — the defects above are each reported
-- [ ] AC2 — a regression test covers this fixture
+- [~] AC2 — a regression test covers this fixture

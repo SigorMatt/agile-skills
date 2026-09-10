@@ -13,11 +13,14 @@ import os
 import re
 import subprocess
 
+import frontmatter  # noqa: E402
 from record import FENCE_RE  # noqa: E402
 from textio import read_text  # noqa: E402
 
 __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
-           "looks_like_code", "mask_code", "masked_lines"]
+           "AC_LINE_RE", "AC_RENUMBERABLE_STATUSES", "ac_state", "criteria_in",
+           "normalise_anchor",
+           "looks_like_code", "mask_code", "masked_lines", "split_sources"]
 
 CITATION_RE = re.compile(r"\[src:\s*(?P<body>[^\]]+)\]")
 # The `:NNN` suffix of a workspace-path citation, and nothing else after it.
@@ -38,12 +41,77 @@ CODE_TOKEN_RE = re.compile(r"`([^`]+)`")
 PATH_RE = re.compile(r"^[\w.\-/]+\.(py|md|yaml|yml|json|toml|txt|sh|js|ts|rs|go|c|h|cpp)$")
 
 ITEM_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})$")
-ITEM_AC_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})\s+(AC\d+)$")
+# An acceptance criterion, optionally anchored to the criterion's own words (F-094). The anchor
+# is what a renumbering cannot move; the number, on its own, is a position in a list.
+ITEM_AC_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})\s+(AC\d+)"
+                        r"(?:\s+[\"\u201c](?P<anchor>[^\"\u201d]+)[\"\u201d])?$")
 ITEM_QUESTION_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})/(Q-\d{3})$")
 ADR_RE = re.compile(r"^ADR-(\d{4})$")
 COMMIT_RE = re.compile(r"^commit\s+([0-9a-f]{7,40})$")
 RUN_RE = re.compile(r"^run:\s*(?P<command>.+?)\s*(?:→|->)\s*(?P<outcome>.+)$")
-AC_LINE_RE = re.compile(r"^\s*-\s+\[( |x|X)\]\s+(AC\d+)\b")
+# The acceptance-criterion line, in one place. `workspace.py` imports it rather than keeping a
+# second copy: two regexes for one line disagree the first time a state is added to it, and one
+# just was. The three states are `[ ]` not settled, `[x]` settled by the observation the
+# criterion names, and `[~]` settled by a **substitution** — the environment could not perform
+# that observation and something else was observed in its place (F-096, spec/work-item.md §2).
+AC_LINE_RE = re.compile(r"^\s*-\s+\[(?P<state>[ x~X])\]\s+(?P<label>AC\d+)"
+                        r"\s*(?:—|-|:)?\s*(?P<text>.*)$")
+
+# The statuses at which `spec/work-item.md` §2 still permits the criteria to be rewritten, so a
+# criterion's *number* is a position in a list rather than a name for it (F-094).
+AC_RENUMBERABLE_STATUSES = ("draft", "ready")
+
+
+def ac_state(mark: str) -> str:
+    """`unticked` | `ticked` | `substituted`, from the character between the brackets."""
+    mark = mark.strip().lower()
+    if mark == "x":
+        return "ticked"
+    if mark == "~":
+        return "substituted"
+    return "unticked"
+
+
+def criteria_in(text: str):
+    """Every acceptance criterion in `text`, as `{label, state, text, offset}`.
+
+    `text` is the criterion's whole list item, continuation lines included — a criterion long
+    enough to need a citation is usually long enough to wrap, and a rule that reads only the
+    first line would be satisfied or defeated by where the author pressed return. `offset` is the
+    0-based line index of the criterion's **first** line, which is where a finding points.
+    """
+    found = []
+    lines = text.split("\n")
+    index = 0
+    while index < len(lines):
+        match = AC_LINE_RE.match(lines[index])
+        if not match:
+            index += 1
+            continue
+        parts = [match.group("text").strip()]
+        offset, index = index, index + 1
+        while index < len(lines):
+            following = lines[index]
+            if not following.strip() or not following[:1].isspace() \
+                    or AC_LINE_RE.match(following):
+                break
+            parts.append(following.strip())
+            index += 1
+        found.append({"label": match.group("label"),
+                      "state": ac_state(match.group("state")),
+                      "text": " ".join(part for part in parts if part).strip(),
+                      "offset": offset})
+    return found
+
+
+def normalise_anchor(text: str) -> str:
+    """Compare an anchor with a criterion the way a reader would: words, not whitespace.
+
+    Backticks are dropped from both sides — this repository's prose writes every path and every
+    identifier in them, and whether the quoting author kept them is not a fact about the
+    criterion.
+    """
+    return " ".join(text.replace("`", " ").split()).casefold()
 
 
 
@@ -88,6 +156,12 @@ def looks_like_code(token: str) -> bool:
     return False
 
 
+def _shorten(text: str, words: int = 12) -> str:
+    """The opening words of a criterion, for a message that has to quote it back."""
+    parts = text.split()
+    return " ".join(parts[:words]) + ("…" if len(parts) > words else "")
+
+
 def split_sources(body: str):
     """The separate sources inside one `[src: ...]` marker.
 
@@ -128,6 +202,12 @@ class CitationResolver:
         self.items = self._load_items()
 
     def _load_items(self) -> dict:
+        """`{ID: {"body": text, "status": str or None}}`.
+
+        The status is read because it decides whether a criterion's *number* is an identity yet
+        (F-094), and it is read tolerantly: a malformed item.md is somebody else's finding, not a
+        traceback out of the citation resolver.
+        """
         base = os.path.join(self.root, "tracker", "items")
         found = {}
         if not os.path.isdir(base):
@@ -135,7 +215,15 @@ class CitationResolver:
         for name in sorted(os.listdir(base)):
             path = os.path.join(base, name, "item.md")
             if os.path.isfile(path):
-                found[name] = read_text(path)[0]
+                text = read_text(path)[0]
+                status = None
+                try:
+                    fields, _body, _line = frontmatter.split(text, name=path)
+                    value = fields.get("status")
+                    status = value if isinstance(value, str) else None
+                except Exception:
+                    status = None
+                found[name] = {"body": text, "status": status}
         return found
 
     def git(self, args: list):
@@ -189,14 +277,8 @@ class CitationResolver:
 
         match = ITEM_AC_RE.match(citation)
         if match:
-            body = self.items.get(match.group(1))
-            if body is None:
-                return f"{match.group(1)} is not an item in this workspace"
-            for line in body.split("\n"):
-                found = AC_LINE_RE.match(line)
-                if found and found.group(2) == match.group(2):
-                    return ""
-            return f"{match.group(1)} has no {match.group(2)}"
+            return self._resolve_criterion(match.group(1), match.group(2),
+                                           match.group("anchor"))
 
         if ITEM_RE.match(citation):
             return "" if citation in self.items \
@@ -234,6 +316,56 @@ class CitationResolver:
 
         return (f"{citation!r} is not a citation form this gate can check "
                 f"(spec/doc-header.md, the citation forms table)")
+
+    def _resolve_criterion(self, item_id: str, label: str, anchor) -> str:
+        """`ITEM ACn`, and what makes it point at the same criterion tomorrow (F-094).
+
+        The number is a **position in a list**, not a name. Criteria may legally be renumbered
+        while an item is being refined, and when they are, every standing `ITEM ACn` citation
+        goes on resolving against whatever has moved into that position — a citation that still
+        resolves is worse than one that fails, because the gate reports success.
+
+        This is F-077's disease and **not** F-077's cure. There the fix was a bound: a
+        `path:line` citation is checked against the file's length, so a pointer past the end
+        stops resolving. The equivalent bound here — *does the item declare an ACn?* — is the
+        check that was already in place, and it is exactly the one being fooled. A bound cannot
+        tell a moved target from a standing one; only the target's own content can. So the
+        citation may carry that content, quoted, and two rules follow:
+
+          * an **anchored** citation is checked against the criterion's words, at any status —
+            renumber, and it fails loudly instead of resolving quietly;
+          * an **unanchored** citation is refused while the cited item is at a status where the
+            list may still be rewritten, because there the number has not yet become an identity.
+
+        Past that point an unanchored citation still resolves, and the residue is stated where
+        the rule is (`spec/doc-header.md` §4a) rather than left for a reader to discover: a
+        criterion edited by `answer-questions` propagating an answer can still move under an
+        unanchored citation, and nothing here detects it.
+        """
+        record = self.items.get(item_id)
+        if record is None:
+            return f"{item_id} is not an item in this workspace"
+        criterion = None
+        for found in criteria_in(record["body"]):
+            if found["label"] == label:
+                criterion = found["text"]
+                break
+        if criterion is None:
+            return f"{item_id} has no {label}"
+
+        if anchor is not None:
+            if normalise_anchor(anchor) in normalise_anchor(criterion):
+                return ""
+            return (f"{item_id} {label} does not say {anchor.strip()!r} — it reads "
+                    f"{_shorten(criterion)!r}. A criterion cited by number moves when the list "
+                    f"is renumbered; the quoted words are the part that does not move")
+
+        status = record["status"]
+        if status in AC_RENUMBERABLE_STATUSES:
+            return (f"{item_id} is at {status}, where its criteria may still be renumbered, so "
+                    f"{label!r} does not yet name one — quote the criterion's words too, as "
+                    f"[src: {item_id} {label} \"{_shorten(criterion, words=6)}\"]")
+        return ""
 
     def problems_in(self, text: str):
         """(line, message) for every citation in `text` that does not resolve.

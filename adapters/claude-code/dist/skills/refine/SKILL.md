@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.3.1
+  methodology-version: 0.4.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -165,6 +165,17 @@ acted on. Then write down exactly what was said.
    Include the negative and boundary cases the human implied but did not say: empty input, a
    path that does not exist, a tie, the largest reasonable size. These are where implementations
    diverge from intent, and they are nearly free to specify now.
+
+   **Renumbering is not free, and it is you who does it.** Inserting or dropping a criterion
+   shifts every number after it, and a citation elsewhere that says `AC7` goes on resolving
+   against whatever moved into that position — silently, with the gate green. It has happened
+   here twice in one engagement (F-094). Two obligations follow, both small:
+   - When you rewrite the list, `grep` the workspace for citations naming this item's criteria
+     and re-read each one against the criterion it now points at.
+   - When **you** cite another item's criterion, quote its words:
+     `[src: WI-0002 AC7 "sorted by descending line count"]`. That citation fails loudly when the
+     list moves under it, where the bare number does not (`spec/doc-header.md` §4a). While the
+     cited item is still at `draft` or `ready`, the bare number is refused outright.
 
 6a. **A criterion whose subject is other criteria is written so it can be read, not run.** "Every
    acceptance criterion of WI-0001..0003 still holds" was satisfied in a real run by observing

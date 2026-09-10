@@ -36,6 +36,8 @@ item.arose-from.missing
 item.arose-from.unresolved
 item.branch.missing
 item.criteria.numbering
+item.criteria.substituted
+item.criteria.substitution.unasked
 item.epic.dangling
 item.field.missing
 item.field.unknown

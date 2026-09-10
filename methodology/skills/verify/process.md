@@ -43,11 +43,36 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
 3. **Take each acceptance criterion in turn, in order.** For each:
    - Decide what would settle it — a command, an inspection, a file to look at.
    - Run it. Record the exact command and its **actual output**, quoted.
-   - Give a verdict: `pass`, `fail`, or `ambiguous`.
-   - Only if the verdict is `pass`, tick the checkbox in `item.md`.
+   - Give a verdict: `pass`, `fail`, `substituted`, or `ambiguous`.
+   - Only if the verdict is `pass`, tick the checkbox `- [x]` in `item.md`.
 
    Never tick a box you did not personally demonstrate. The tick is what `review-close` relies
    on to close the item, and it is the single place where an unearned pass becomes invisible.
+
+3b. **`substituted` — the observation this environment cannot make.** Some criteria name
+   something no run here can do: restart the machine, use a second device, let a year pass. You
+   have evidence, it is good evidence, and it is **not** the observation the criterion names.
+   Do not spell that `- [x]`. A real run did, declared the substitution in four artifacts, and
+   every later reader — two sibling closes and the ending — had to re-derive the qualification
+   from prose, while the person who could have reworded the criterion heard about it at sign-off
+   (F-096).
+
+   The verdict is `substituted`, and it costs you three things, all of them cheap:
+
+   1. Mark the criterion `- [~]` in `item.md`, not `- [x]` (`spec/work-item.md` §2).
+   2. **File a question on this item** — non-blocking, addressed to the stakeholder — quoting the
+      criterion's wording, what you observed instead, and asking whether that settles it or the
+      criterion should be reworded. Cite that question **on the criterion line**, as
+      `[src: <ITEM>/Q-nnn]`. The validator requires it, and the point of the requirement is the
+      timing: the wording goes back while the engagement can still act on the answer.
+   3. Record in `verify-report.md` what the criterion names, what you did instead, and why the
+      first was impossible here — not why the second is good enough.
+
+   You are not waiting for the answer. `- [~]` is settled: the item closes on it, and
+   `validate-workspace` says on every run that it was not settled by the observation it names.
+   Reach for `substituted` only when the observation is genuinely unavailable in this
+   environment. "It would be slow" and "the test suite already covers it" are not that, and the
+   second is the sentence step 3a exists to catch.
 
 3a. **A criterion about other criteria is read, not run.** Some criteria have criteria as their
    subject: *"every acceptance criterion of WI-0001..0003 still holds, named tests pass

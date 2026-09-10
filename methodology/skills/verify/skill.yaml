@@ -1,5 +1,5 @@
 name: verify
-version: 0.4.1
+version: 0.5.0
 persona: qa-engineer
 purpose: Independently decide whether an item meets its acceptance criteria, with evidence, and file bugs for what is wrong.
 

@@ -23,6 +23,9 @@ creation-authority table is enforceable rather than advisory.
   ended and is not a work item's to claim
 - [ ] AC4 — `artifact.refinement-qa.not-recorded` fires: the item reached `ready` on an agenda
   for a conversation that never happened
+- [~] AC5 — `item.criteria.substituted` fires and nothing else does: a criterion settled by a
+  substitution, naming the question that put its wording back to the stakeholder
+  [src: WI-0003/Q-001]
 
 ## Out of scope
 

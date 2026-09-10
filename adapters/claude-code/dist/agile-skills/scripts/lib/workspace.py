@@ -18,6 +18,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import frontmatter  # noqa: E402
+# One definition of the acceptance-criterion line, shared with the citation resolver: a second
+# copy here disagreed with that one the moment a third checkbox state was added (F-096).
+from claims import criteria_in  # noqa: E402
 import miniyaml  # noqa: E402
 from record import (JOURNAL_HEADING_RE, blocks, entries, gate_rows,  # noqa: E402
                     sections as split_sections, table_rows)
@@ -82,7 +85,6 @@ ID_PATTERNS = {
 }
 QUESTION_ID_RE = re.compile(r"^Q-\d{3}$")
 ADR_FILE_RE = re.compile(r"^ADR-\d{4}-[a-z0-9]+(-[a-z0-9]+)*\.md$")
-AC_RE = re.compile(r"^\s*-\s+\[( |x|X)\]\s+(AC\d+)\s*(?:—|-|:)?\s*(.*)$")
 # What a journal bullet *looks like* is this module's rule — a bolded label at the left margin.
 # Where it *ends* is `record.py`'s (F-073). The two questions are separate and were being
 # answered in one regex.
@@ -207,17 +209,18 @@ class Item:
         if not section:
             return []
         found = []
-        line = section["line"]
-        for raw in section["text"].split("\n"):
-            line += 1
-            match = AC_RE.match(raw)
-            if match:
-                found.append({
-                    "label": match.group(2),
-                    "checked": match.group(1).lower() == "x",
-                    "text": match.group(3).strip(),
-                    "line": line,
-                })
+        for criterion in criteria_in(section["text"]):
+            found.append({
+                "label": criterion["label"],
+                # `checked` answers "is this criterion settled?", which is what D1 and
+                # `review-close` ask. A substitution is settled — by something other than the
+                # observation the criterion names, which is what `state` carries and what the
+                # validator says out loud on every run (F-096).
+                "checked": criterion["state"] != "unticked",
+                "state": criterion["state"],
+                "text": criterion["text"],
+                "line": section["line"] + criterion["offset"] + 1,
+            })
         return found
 
     def statuses_reached(self) -> set:

@@ -274,7 +274,7 @@ So absolutes get sources.
 |------|---------|---------------|
 | workspace path | `[src: src/store.py]`, `[src: src/store.py:42]` | the file exists in the workspace |
 | item | `[src: WI-0007]` | the item exists |
-| acceptance criterion | `[src: WI-0007 AC3]` | the item exists and declares that AC |
+| acceptance criterion | `[src: WI-0007 AC3]`, `[src: WI-0007 AC3 "sorted by descending line count"]` | the item declares that AC — and, when the citation quotes words, that AC still says them |
 | question | `[src: WI-0007/Q-002]` | the question file exists |
 | ADR | `[src: ADR-0004]` | an ADR with that number exists |
 | commit | `[src: commit a1b2c3d]` | the commit is in this repository |
@@ -283,6 +283,44 @@ So absolutes get sources.
 Several sources are separated by `;` inside one marker. `scripts/lint-claims` enforces both
 rules and is a hard gate on `plan`, `implement` and `review-close`; `scripts/validate-workspace`
 enforces the resolution rule over the whole workspace, at any time.
+
+### A criterion's number is a position, not a name
+
+`AC7` is where a criterion sits in a list. Renumbering that list is legal and cheap while an item
+is being refined, and when it happens every standing `ITEM AC7` elsewhere silently starts pointing
+at a different criterion. It still **resolves**, which is worse than failing: the gate reports
+success. It has happened — one item's criteria were renumbered twice at `draft`, and two citations
+in a sibling item were left naming criteria nobody had written when they were filed (F-094).
+
+So the citation may carry the criterion's own **words**, quoted, and that is what a renumbering
+cannot move:
+
+- an **anchored** citation — `[src: WI-0002 AC7 "sorted by descending line count"]` — resolves
+  only while AC7 still says those words. Comparison ignores whitespace, case and backticks, and
+  the quoted text may be any run of the criterion, so quoting the distinctive half is enough. It
+  fails loudly the moment the list moves under it.
+- an **unanchored** citation is **refused** while the cited item is at `draft` or `ready` — the
+  statuses at which `work-item.md` §2 still permits the criteria to be rewritten. There the number
+  has not yet become an identity, and the message says so and quotes the criterion's opening words
+  back so the anchor can be pasted in.
+
+The quoted text lives inside the marker, so it may contain neither `]` nor `;` — the first ends
+the marker and the second separates sources. Quote a run of the criterion that has neither; there
+is always one.
+
+What this does **not** catch, said here rather than left to be discovered: an unanchored citation
+to an item past `ready` still resolves by number alone, so a criterion edited later by
+`answer-questions` propagating an answer can still move under it. Requiring an anchor everywhere
+was measured and rejected — 84 existing citations across the examples, the fixtures and the banked
+run evidence would have been invalidated retroactively, which §4a's own paragraph above forbids.
+The anchor is how an author makes a citation durable; the refusal at `draft` and `ready` is where
+the number is provably not one yet.
+
+This is **F-077's disease and not F-077's cure.** There, a `path:line` citation resolved for ever
+because the resolver asked whether the *file* existed; the fix bounds the line number by the
+file's length. The same bound here — *does the item declare an AC7?* — was already in place, and
+it is precisely the check being fooled. A bound cannot tell a moved target from a standing one;
+only the target's own content can, which is why the citation has to carry some of it.
 
 The absolute-claim rule is checked against **what an execution touched, or what its plan named**
 — its branch diff plus the invalidation set and deliverable documents its plan declared
@@ -464,3 +502,4 @@ wholesale and so excludes the delivered thing on an item whose deliverable is a 
 | 5 | 2026-09-10 | §5's absolute — "`implement` and `verify` do **not** write to `docs/`" — is replaced by a rule scoped to the record half: `verify` writes no document (now **derived**, not asserted), `implement` writes only inside the invalidation set and deliverable documents its plan declared (F-076, F-057; the freshness gate's `docs/` exemption is the same directory-as-proxy error, F-058). §4a: the citation is one obligation of three — a **quantified** claim is discharged by member enumeration recorded in the audit row, never by opening what it cites (F-095), and **engagement-state** sentences live in a delimited `## Engagement state` section owned by the ending (F-093). Derived in ADR-0010. |
 | 6 | 2026-09-10 | §4a: the four parts of a quantified claim's enumeration are written as labelled entries — `Enumeration:` carrying `Set:`, `Enumerated by:`, `Members:` and `Verdict:` — because a shape check needs the parts to be findable, and without a label nothing mechanical distinguishes opening what a claim cites from enumerating what it quantifies over. `scripts/lint-documents` decides that shape and the eight obligations of ADR-0010's enforcement table that had no implementation. |
 | 7 | 2026-09-10 | §3: `journal-and-history.md` §0 reaches the change log — the top row and the header must agree, `by` and `for` must resolve, `when` must be a time a clock could have produced, and the row is matched against the journal of the item it names while that item is not yet `done`. The `[auto]`/`[skill]` table says plainly which half of a version row is decidable: the version number and the description of the change are not (F-084). |
+| 8 | 2026-09-10 | §4a: a criterion's number is a position, not a name. An `ITEM ACn` citation may quote the criterion's own words, and an anchored citation is checked against them; an unanchored one is refused while the cited item is at `draft` or `ready`, the statuses at which the list may still be rewritten. What it does not catch, and why an anchor is not required everywhere, is stated with it. F-077's disease, not F-077's cure — the bound it added was already in place here and is the check being fooled (F-094). |

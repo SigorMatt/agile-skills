@@ -124,6 +124,17 @@ Steps, in order:
                                                the journal of the item it names, both ways, plus
                                                the boundary — the same offending row on a closed
                                                item is history and is not reported (F-084)
+ 15c. a criterion's identity                 — F-094 and F-096 in one throwaway workspace. The
+                                               citation: an `ITEM ACn` may quote the criterion's
+                                               words, and the list is then renumbered under two
+                                               standing citations — the bare number follows it
+                                               silently, the anchored one fails; a bare number is
+                                               refused at `draft` and at `ready` and resolves
+                                               past them. The tick: `- [~]` names a question on
+                                               its own item or is refused, a question elsewhere
+                                               or a missing one does not count, and a done item
+                                               settled entirely by substitution closes D1 while
+                                               the same item unticked does not
  16. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
@@ -2975,6 +2986,190 @@ def check_harness(runner: Runner) -> None:
     runner.run("harness self-test", [sys.executable, tests])
 
 
+def check_criterion_identity(runner: Runner) -> None:
+    """A citation that keeps resolving, and a tick that hides what settled it (F-094, F-096).
+
+    One throwaway workspace, both findings, both directions of every rule that moved.
+
+    **F-094.** `ITEM ACn` is a position in a list. The list is renumbered here, under two
+    standing citations, and the point of the block is the pair: the bare number goes on
+    resolving against a criterion nobody meant, and the anchored one fails. The refusal window —
+    `draft` and `ready`, where `work-item.md` §2 still permits the rewrite — is exercised at its
+    two edges, because a rule scoped to a status is a rule that stops at the next one.
+
+    **F-096.** The `- [~]` mark and the two rules that hold it up. The shape follows
+    `scripts/lib/scope.py`'s out-of-scope-by-construction: a pass that is not an ordinary pass
+    **exits 0 and says so in its own words**. So the cases assert both halves — that a done item
+    settled entirely by substitution does **not** report `item.criteria.unticked` (D1 holds, and
+    the same item with the box unticked does report it), and that the warning is there saying
+    what settled it.
+    """
+    import tempfile
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "validate-workspace")}
+    if not all(os.path.isfile(path) for path in tools.values()):
+        runner.skip("a criterion's identity (F-094, F-096)", "one of the scripts is absent")
+        return
+
+    settled = ("- [ ] AC1 — the tool prints one row per regular file\n"
+               "- [ ] AC2 — rows are sorted by descending line count, ties broken by\n"
+               "  filename ascending\n")
+    renumbered = ("- [ ] AC1 — a path that does not exist prints an error and exits 2\n"
+                  "- [ ] AC2 — the tool prints one row per regular file\n"
+                  "- [ ] AC3 — rows are sorted by descending line count, ties broken by\n"
+                  "  filename ascending\n")
+
+    def item_text(identifier, status, criteria, outcome=None):
+        return ("---\n"
+                f"id: {identifier}\ntype: work-item\ntitle: An item under citation\n"
+                f"status: {status}\npriority: high\nepic: EP-001\n"
+                "created: 2026-08-16T09:00:00Z\nupdated: 2026-08-16T09:00:00Z\n"
+                + (f"outcome: {outcome}\n" if outcome else "")
+                + "---\n\n## Story\n\nAs a reader, I want rows, so that I can see them.\n\n"
+                "## Acceptance criteria\n\n" + criteria
+                + "\n## Out of scope\n\n- Everything else.\n")
+
+    question = ("---\nid: Q-004\nitem: WI-0001\nfrom-skill: verify\n"
+                "addressed-to: stakeholder\nblocking: false\nstatus: open\n"
+                "created: 2026-08-16T09:00:00Z\n---\n\n## Context\n\nAC2 names a restart.\n\n"
+                "## Question\n\nDoes the syscall trace settle it, or should AC2 be reworded?\n\n"
+                "## Options considered\n\n- **A —** reword. Consequence: a round trip.\n"
+                "- **Recommendation:** none, insufficient basis.\n\n## Answer\n\n"
+                "## Consequences\n\n")
+
+    problems, observations = [], 0
+
+    with tempfile.TemporaryDirectory() as root:
+        subprocess.run([sys.executable, tools["workspace-init"], root],
+                       capture_output=True, text=True, cwd=ROOT)
+
+        def note(ok, message):
+            nonlocal observations
+            observations += 1
+            if not ok:
+                problems.append(message)
+
+        def validate():
+            result = subprocess.run([sys.executable, tools["validate-workspace"], root],
+                                    capture_output=True, text=True, cwd=ROOT)
+            return result.stdout + result.stderr
+
+        def lines_for(output, code):
+            return [line for line in output.split("\n") if f"[{code}]" in line]
+
+        def put(identifier, status, criteria, outcome=None):
+            path = os.path.join(root, "tracker", "items", identifier)
+            os.makedirs(path, exist_ok=True)
+            write(os.path.join(path, "item.md"),
+                  item_text(identifier, status, criteria, outcome))
+
+        def cite(*citations):
+            body = "# Notes\n\n"
+            for index, citation in enumerate(citations, start=1):
+                body += f"Sentence {index} is only ever true [src: {citation}].\n\n"
+            write(os.path.join(root, "docs", "product", "notes.md"), body)
+
+        # ---- F-094 -----------------------------------------------------------------
+        put("WI-0002", "draft", settled)
+        cite("WI-0002 AC2")
+        output = validate()
+        refusals = lines_for(output, "claim.citation.unresolved")
+        note(len(refusals) == 1 and "may still be renumbered" in refusals[0],
+             "a bare ACn citation to an item at draft should be refused, and say why; got: "
+             + "; ".join(refusals or ["nothing"]))
+        note(any("sorted by descending" in line for line in refusals),
+             "the refusal should quote the criterion's words back so the anchor can be pasted in")
+
+        # The anchor quotes the criterion's *second* line: a criterion long enough to be worth
+        # citing is usually long enough to wrap, and a rule that read only the first line would
+        # be satisfied or defeated by where the author pressed return.
+        cite('WI-0002 AC2 "ties broken by filename ascending"')
+        note(not lines_for(validate(), "claim.citation.unresolved"),
+             "an anchored citation should resolve at draft, where a bare number may not — and "
+             "the anchor may quote any part of the criterion, wrap included")
+
+        put("WI-0002", "ready", settled)
+        cite("WI-0002 AC2")
+        note(len(lines_for(validate(), "claim.citation.unresolved")) == 1,
+             "`ready` is inside the window: the criteria may still be rewritten there")
+
+        put("WI-0002", "verifying", settled)
+        cite("WI-0002 AC2")
+        note(not lines_for(validate(), "claim.citation.unresolved"),
+             "past `ready` a bare number resolves; requiring an anchor everywhere would "
+             "invalidate 84 standing citations, and §4a forbids that")
+
+        # The finding itself: one insertion at the top of the list, two standing citations.
+        cite("WI-0002 AC2", 'WI-0002 AC2 "ties broken by filename ascending"')
+        note(not lines_for(validate(), "claim.citation.unresolved"),
+             "both citations should resolve before the renumbering")
+        put("WI-0002", "verifying", renumbered)
+        broken = lines_for(validate(), "claim.citation.unresolved")
+        note(len(broken) == 1 and "does not say" in broken[0],
+             "after the renumbering exactly one of the two should fail — the anchored one; got: "
+             + "; ".join(broken or ["nothing"]))
+        note(all("Sentence 1" not in line for line in broken)
+             and any(":5:" in line or line.strip().startswith("docs/") for line in broken),
+             "the bare number is the one that silently follows the renumbering")
+
+        # ---- F-096 -----------------------------------------------------------------
+        cite("WI-0002 AC1")
+        os.makedirs(os.path.join(root, "tracker", "items", "WI-0001", "questions"),
+                    exist_ok=True)
+        write(os.path.join(root, "tracker", "items", "WI-0001", "questions", "Q-004.md"),
+              question)
+
+        # The question is cited on the criterion's continuation line — where a real one lands.
+        unasked = ("- [x] AC1 — the tool prints one row per regular file\n"
+                   "- [~] AC2 — the machine has been restarted and the deck\n"
+                   "  survives\n")
+        put("WI-0001", "in-review", unasked)
+        output = validate()
+        note(len(lines_for(output, "item.criteria.substitution.unasked")) == 1,
+             "a substituted tick naming no question should be refused")
+        note(not lines_for(output, "item.criteria.substituted"),
+             "the warning is the mark on a legal substitution, not on an unasked one")
+
+        elsewhere = unasked.replace("  survives\n", "  survives [src: WI-0002/Q-004]\n")
+        put("WI-0001", "in-review", elsewhere)
+        output = validate()
+        note(len(lines_for(output, "item.criteria.substitution.unasked")) == 1,
+             "a question on another item is not this criterion's wording going back")
+
+        absent = unasked.replace("  survives\n", "  survives [src: WI-0001/Q-009]\n")
+        put("WI-0001", "in-review", absent)
+        output = validate()
+        note(not lines_for(output, "item.criteria.substitution.unasked")
+             and any("Q-009" in line
+                     for line in lines_for(output, "claim.citation.unresolved")),
+             "a named question that does not exist is the citation rule's finding, not a "
+             "second copy of it here")
+
+        legal = unasked.replace("  survives\n", "  survives [src: WI-0001/Q-004]\n")
+        put("WI-0001", "in-review", legal)
+        output = validate()
+        marks = lines_for(output, "item.criteria.substituted")
+        note(not lines_for(output, "item.criteria.substitution.unasked")
+             and len(marks) == 1,
+             "a substitution that names a question on this item is legal, and marked")
+        note("WARNING" in (marks[0] if marks else "")
+             and "not by the observation it names" in (marks[0] if marks else ""),
+             "the mark is a warning in its own words — a pass that is not an ordinary pass may "
+             "not be spelled the same as one (scope.py's precedent)")
+
+        # D1 holds on a substitution, and only on a substitution.
+        put("WI-0001", "done", legal, outcome="delivered")
+        note(not lines_for(validate(), "item.criteria.unticked"),
+             "a substituted criterion is settled: D1 must close on it")
+        put("WI-0001", "done", legal.replace("- [~] AC2", "- [ ] AC2"), outcome="delivered")
+        note(len(lines_for(validate(), "item.criteria.unticked")) == 1,
+             "and the same item with the box unticked must still be refused, or the case above "
+             "proves nothing")
+
+    label = f"a criterion's identity: citation and tick (F-094, F-096) ({observations} cases)"
+    runner.emit(label, not problems, detail="\n".join(problems))
+
+
 def main() -> int:
     runner = Runner()
     runner.run("library self-test", [sys.executable, os.path.join(SCRIPTS, "lib", "selftest.py")])
@@ -2999,6 +3194,7 @@ def main() -> int:
     check_gate_verdicts(runner)
     check_trial_merge(runner)
     check_record_catches_up(runner)
+    check_criterion_identity(runner)
     check_silence_threshold(runner)
     check_process_gate_names(runner)
     check_shipped_scripts(runner)

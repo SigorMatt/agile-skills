@@ -105,6 +105,41 @@ As a <role>, I want <capability>, so that <outcome>.
   - `verify` ticks a box only when it has evidence for it, and cites that evidence in
     `artifacts/verify-report.md`.
   - `review-close` MUST NOT close an item with an unticked box.
+  - A criterion is in one of **three** states, and the third is the point of this paragraph:
+
+    | Mark | Means |
+    |------|-------|
+    | `- [ ]` | not settled |
+    | `- [x]` | settled **by the observation the criterion names** |
+    | `- [~]` | settled by a **substitution** — the environment could not perform that observation, so something else was observed in its place |
+
+    Some criteria name an observation no execution here can make: a machine restart, a second
+    device, a year elapsing. The skill's honest choices are a tick with the substitution declared,
+    or an `ambiguous` that costs a round trip on a criterion whose content is decidable — and a
+    real run took the tick, declared the substitution in four artifacts, and spelled the box
+    `- [x]`, identically to the seven settled directly. Every reader downstream then had to
+    re-derive the qualification from prose (F-096). `- [~]` is that mark, where the criterion is.
+
+    A `- [~]` is **settled**: it satisfies D1, `review-close` closes on it, and
+    `validate-workspace` exits 0 — and says so in a warning of its own
+    (`item.criteria.substituted`) on every run, because a pass that is not an ordinary pass must
+    not be spelled the same as one.
+
+    A `- [~]` MUST name, on the criterion itself, a question **on this item**, as
+    `[src: <ITEM>/Q-nnn]` (`item.criteria.substitution.unasked`). A criterion the environment
+    cannot execute is still the stakeholder's wording, and the substitution is the moment to put
+    that wording back to them — while the engagement can still act on the answer, rather than
+    disclosing it at sign-off. The question need not be **answered**: the obligation is to ask in
+    time, and an open question already holds the engagement short of rest
+    (`ids-and-statuses.md` §3.5).
+
+    `verify` writes `- [~]`, and no other skill does — it is the skill that decides a criterion
+    against evidence, and the mark is one of its verdicts (`verify`'s step 3). That is a
+    `[skill]` rule: nothing here decides *which* skill edited a line.
+  - A criterion's **number is not its name**. `AC7` is a position in a list, and the list may
+    legally be renumbered while the item is being refined — so a citation elsewhere that says
+    `AC7` goes on resolving against whatever moved into that position. `doc-header.md` §4a says
+    what a citation must carry to survive that, and what the gate can and cannot tell (F-094).
   - Once an item is past `ready`, criteria MUST NOT be edited except by `answer-questions`
     propagating an answer, or by `refine` on an item that was sent back. Every such edit is
     journaled with the reason. Silently loosening a criterion to make verification pass is the
@@ -220,3 +255,4 @@ trailing newline still counts — see `questions` on this item and `artifacts/re
 |---|------|--------|
 | 1 | 2026-08-27 | §1: `arose-from` provenance for items a skill other than `intake` created (F-029); `outcome: delivered-partial` for an epic that ended at E2 (F-045). Derived in ADR-0006. |
 | 2 | 2026-09-10 | §1: `merge-commit` — the sanctioned home for a sha the closing entry could not name, written by `scripts/record-merge` after the merge and re-checked against git on every validation (F-081, F-035). |
+| 3 | 2026-09-10 | §2: a criterion's number is a position, not a name — the anchored citation form and its limits are in `doc-header.md` §4a (F-094). The third criterion state `- [~]` — settled by a **substitution**, not by the observation the criterion names. It is a legal close that says so in its own words, and it owes the stakeholder a question on this item while the engagement can still act on the answer (F-096). |

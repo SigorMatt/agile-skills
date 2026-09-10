@@ -815,6 +815,108 @@ def run_citations(results) -> None:
                       "does not exist" in resolver.resolve("gone.md:2"), True)
 
 
+def run_criterion_citations(results) -> None:
+    """`ITEM ACn` — a number is a position in a list, and lists get renumbered (F-094).
+
+    F-077's cure does not reach this. There the fix was a bound (a line number against the file's
+    length); the same bound here — *does the item declare an ACn?* — was already in place and is
+    the check being fooled. So the cases below are about the criterion's **words**, and about the
+    one status window where a bare number is refused outright.
+    """
+    import tempfile
+
+    def item(status, criteria):
+        return ("---\nid: WI-0002\ntype: work-item\ntitle: A thing\n"
+                f"status: {status}\npriority: high\nepic: EP-001\n"
+                "created: 2026-08-16T09:00:00Z\nupdated: 2026-08-16T09:00:00Z\n---\n\n"
+                "## Story\n\nAs a reader, I want rows, so that I can see them.\n\n"
+                "## Acceptance criteria\n\n" + criteria + "\n")
+
+    settled = ("- [ ] AC1 — the tool prints one row per regular file\n"
+               "- [ ] AC2 — rows are sorted by descending line count, ties broken by\n"
+               "  filename ascending\n")
+    # The renumbering: a criterion inserted at the top, so AC2 now means what AC1 meant.
+    renumbered = ("- [ ] AC1 — the tool refuses a path that does not exist\n"
+                  "- [ ] AC2 — the tool prints one row per regular file\n"
+                  "- [ ] AC3 — rows are sorted by descending line count, ties broken by\n"
+                  "  filename ascending\n")
+
+    with tempfile.TemporaryDirectory() as root:
+        path = os.path.join(root, "tracker", "items", "WI-0002")
+        os.makedirs(path)
+
+        def resolver_for(status, criteria):
+            with open(os.path.join(path, "item.md"), "w", encoding="utf-8") as handle:
+                handle.write(item(status, criteria))
+            return claims_lib.CitationResolver(root)
+
+        resolver = resolver_for("done", settled)
+        results.check("criteria/a bare number resolves once the list is settled",
+                      resolver.resolve("WI-0002 AC2"), "")
+        results.check("criteria/an anchor that matches resolves",
+                      resolver.resolve('WI-0002 AC2 "sorted by descending line count"'), "")
+        results.check("criteria/the anchor may span the wrap",
+                      resolver.resolve('WI-0002 AC2 "ties broken by filename ascending"'), "")
+        results.check("criteria/whitespace, case and backticks are not the criterion",
+                      resolver.resolve('WI-0002 AC1 "the `tool`   PRINTS one row"'), "")
+        results.check("criteria/a criterion that does not exist still reports plainly",
+                      resolver.resolve("WI-0002 AC9"), "WI-0002 has no AC9")
+        missed = resolver.resolve('WI-0002 AC2 "prints one row per regular file"')
+        results.check("criteria/an anchor naming another criterion does not resolve",
+                      bool(missed), True)
+        results.check("criteria/the message quotes what the criterion now reads",
+                      "does not say" in missed and "sorted by descending" in missed, True)
+
+        # The finding itself: the list is renumbered under two standing citations.
+        resolver = resolver_for("done", renumbered)
+        results.check("criteria/the bare number silently follows the renumbering",
+                      resolver.resolve("WI-0002 AC2"), "")
+        results.check("criteria/the anchored citation refuses to",
+                      bool(resolver.resolve('WI-0002 AC2 "sorted by descending line count"')),
+                      True)
+        results.check("criteria/and the anchor is right about where it moved to",
+                      resolver.resolve('WI-0002 AC3 "sorted by descending line count"'), "")
+
+        for status in ("draft", "ready"):
+            resolver = resolver_for(status, settled)
+            refused = resolver.resolve("WI-0002 AC2")
+            results.check(f"criteria/a bare number is refused at {status}", bool(refused), True)
+            results.check(f"criteria/the refusal at {status} says why and offers the anchor",
+                          "may still be renumbered" in refused
+                          and "sorted by descending" in refused, True)
+            results.check(f"criteria/an anchor is enough at {status}",
+                          resolver.resolve('WI-0002 AC2 "sorted by descending"'), "")
+
+        resolver = resolver_for("verifying", settled)
+        results.check("criteria/past ready a bare number resolves again",
+                      resolver.resolve("WI-0002 AC2"), "")
+
+
+def run_criterion_states(results) -> None:
+    """Three checkbox states, read by one regex, wrapping and all (F-096)."""
+    text = ("- [ ] AC1 — not settled\n"
+            "- [x] AC2 — settled by the observation it names\n"
+            "- [~] AC3 — settled by a substitution, and the question is\n"
+            "  cited here [src: WI-0001/Q-004]\n"
+            "\n"
+            "- [X] AC4 — an upper-case tick is a tick\n")
+    found = claims_lib.criteria_in(text)
+    results.check("criteria/every criterion is found once",
+                  [entry["label"] for entry in found], ["AC1", "AC2", "AC3", "AC4"])
+    results.check("criteria/the three states are distinguished",
+                  [entry["state"] for entry in found],
+                  ["unticked", "ticked", "substituted", "ticked"])
+    results.check("criteria/a wrapped criterion is one criterion",
+                  found[2]["text"],
+                  "settled by a substitution, and the question is cited here "
+                  "[src: WI-0001/Q-004]")
+    results.check("criteria/the offset points at the criterion's first line",
+                  [entry["offset"] for entry in found], [0, 1, 2, 5])
+    results.check("criteria/a blank line ends a criterion",
+                  claims_lib.criteria_in("- [ ] AC1 — one\n\n  stray prose\n")[0]["text"],
+                  "one")
+
+
 def run_plan_documents(results) -> None:
     """The plan's two document sections, read the way three gates will read them (ADR-0010 §5.1).
 
@@ -1047,6 +1149,8 @@ def main() -> int:
     run_report(results)
     run_record(results)
     run_citations(results)
+    run_criterion_citations(results)
+    run_criterion_states(results)
     run_workspace(results)
     run_root_resolution(results)
     run_escaping(results)

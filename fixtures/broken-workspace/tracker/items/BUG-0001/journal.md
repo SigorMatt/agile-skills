@@ -28,7 +28,7 @@
   `transition` call that was chained after a failed `cd` never ran, so history.md has no such
   row and the item never left `in-progress`.
 
-## 2026-08-16T12:45:00Z — verify v0.4.1 — qa-engineer
+## 2026-08-16T12:45:00Z — verify v0.5.0 — qa-engineer
 
 - **Item:** BUG-0001
 - **Trigger:** status `verifying`, dispatched by `next`

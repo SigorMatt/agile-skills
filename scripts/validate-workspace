@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 
 import board as board_lib  # noqa: E402
 import engagement as engagement_lib  # noqa: E402
-from claims import CITATION_RE, CitationResolver  # noqa: E402
+from claims import CITATION_RE, CitationResolver, split_sources  # noqa: E402
 from textio import read_text  # noqa: E402
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
@@ -71,6 +71,7 @@ STATUS_RULE_CODES = ("question.deferred.not-blocked", "question.blocking.not-sus
 # into a shape the count cannot be derived from.
 WAITING_FILE_RE = re.compile(r"^EP-\d{3}\.md$")
 DIGEST_RE = re.compile(r"^[0-9a-f]{8}$")
+QUESTION_CITATION_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})/(Q-\d{3})$")
 SURFACED_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})/Q-\d{3}$")
 
 DOC_FIELDS_REQUIRED = ["title", "version", "status", "updated", "updated-by", "updated-for"]
@@ -675,6 +676,8 @@ class Validator:
             if not criterion["text"]:
                 self.report.error(path, criterion["line"], "item.criteria.empty",
                                   f"{criterion['label']} has no text")
+            if criterion["state"] == "substituted":
+                self.check_substituted_criterion(path, item, criterion)
         if item.status == "done" and item.fields.get("outcome") == "delivered":
             unticked = [c["label"] for c in criteria if not c["checked"]]
             if unticked:
@@ -682,6 +685,55 @@ class Validator:
                                   f"item is done and delivered but {', '.join(unticked)} "
                                   f"remain unticked",
                                   hint="Definition of Done D1")
+
+    def check_substituted_criterion(self, path, item, criterion) -> None:
+        """A criterion settled by something other than the observation it names (F-096).
+
+        A run cannot restart a machine, wait a year, or reach a second device, and a criterion
+        that asks for one of those still has to be settled. The honest move is to observe
+        something else and say so — but in `item.md` that tick was spelled `- [x]`, exactly like
+        the seven settled by the observation they name, and every later reader had to re-derive
+        the qualification from prose in four other files.
+
+        So the mark lives **on the criterion**, and two things follow from it.
+
+        First, the mark is not a failure. `scripts/lib/scope.py`'s
+        out-of-scope-by-construction is the precedent this follows: a pass that is not an
+        ordinary pass **exits 0 and says so in its own words**, because a gate that fails on
+        legitimate work is one somebody switches off. A `[~]` is settled for D1 and
+        `review-close` closes on it — and the validator says, on every run, in a warning nobody
+        has to go looking for, that it was not settled by the observation it names.
+
+        Second, the substitution owes the stakeholder a question, while the engagement can still
+        act on the answer. In the run this was filed from, the person who could have reworded the
+        criterion heard about it at sign-off, after the work was done. Naming a question on this
+        item is decidable, so it is required; that the question was *answered* is not required,
+        because the obligation is to ask in time, and an open question already holds the ending
+        (`ids-and-statuses.md` §3.5, rest condition 2). That the named question exists is not
+        re-checked here — `check_claim_citations` walks `item.md` like every other document and
+        reports an unresolvable citation wherever it stands.
+        """
+        cited = [body.strip().strip("`")
+                 for match in CITATION_RE.finditer(criterion["text"])
+                 for body in split_sources(match.group("body"))]
+        asked = [part for part in cited
+                 if QUESTION_CITATION_RE.match(part)
+                 and QUESTION_CITATION_RE.match(part).group(1) == item.identifier]
+        if not asked:
+            self.report.error(path, criterion["line"], "item.criteria.substitution.unasked",
+                              f"{criterion['label']} is settled by a substitution and names no "
+                              f"question on this item",
+                              hint="a criterion the environment cannot execute is still the "
+                                   "stakeholder's wording; put it back to them while the "
+                                   "engagement can act on the answer, and cite that question on "
+                                   "this line as [src: <ITEM>/Q-nnn] (spec/work-item.md §2)")
+            return
+        self.report.warn(path, criterion["line"], "item.criteria.substituted",
+                         f"{criterion['label']} is ticked, and not by the observation it names: "
+                         f"it was settled by a substitution declared at "
+                         f"{', '.join(asked)}",
+                         hint="this is a legal close, not a defect — it is said here so that no "
+                              "reader downstream has to re-derive it from prose (F-096)")
 
     # ---- history -------------------------------------------------------------------
 

@@ -21,7 +21,7 @@ Append-only. One entry per skill execution, per spec/journal-and-history.md sect
 - **Status:** created at `draft`
 - **Result:** refined from the idea
 
-## 2026-09-06T09:45:00Z — refine v0.3.1 — product-analyst
+## 2026-09-06T09:45:00Z — refine v0.4.0 — product-analyst
 
 - **Item:** WI-0004
 - **Trigger:** the orchestrator dispatched refine on WI-0004

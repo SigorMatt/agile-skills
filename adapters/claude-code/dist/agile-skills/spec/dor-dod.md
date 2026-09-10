@@ -75,7 +75,7 @@ time and records the result in the filing journal entry.
 
 | # | Criterion | Check |
 |---|-----------|-------|
-| D1 | Every acceptance criterion checkbox in `item.md` is ticked | [auto] |
+| D1 | Every acceptance criterion checkbox in `item.md` is settled — `- [x]`, or `- [~]` for one settled by a **substitution**, which is a legal close that names the question putting the criterion's wording back to the stakeholder (`work-item.md` §2, F-096) | [auto] |
 | D2 | Every ticked criterion cites its evidence in `artifacts/verify-report.md` | [skill] |
 | D3 | All of the item's declared quality gates passed on the final state of the code, not on an earlier one | [skill] |
 | D4 | No open blocking question remains on the item | [auto] |
@@ -316,3 +316,4 @@ derivation, and where the two texts differ ADR-0011's is the later and governing
 | 6 | 2026-08-29 | A criterion whose subject is other criteria is read against their **text**, with the suite as evidence rather than as the definition, and non-intersection stated or waived by name (F-065). DE8 added: an engagement is asked at least one open question that is not about the team's agenda (F-064). |
 | 7 | 2026-09-10 | D7 becomes a **confirmation** against the invalidation set `plan` emits: every entry disposed, plus "did this change falsify a document the set does not name?", scoped to what the change touched **or its plan named** (F-087). D12 and DE6 gain the member enumeration a **quantified** claim owes and exclude **engagement-state** sentences; DE4 gains the ending's restatement of every delimited `## Engagement state` section, after the sign-off answer (F-095, F-093). D13 added: the plan's `binding-adrs` list is complete, `review-close`'s to check, each ADR's conformance verdict `verify`'s to decide (F-092). Derived in ADR-0010. |
 | 8 | 2026-09-10 | DE7 and DE8 gain their **E4 by silence** form — *asked, and the ask stood unanswered for the threshold* — the one ending where *answered* cannot hold, bounded by three named compensating controls. **DE4's trigger is amended from *after the sign-off answer arrived* to *after the ending is determined***, because at E4 no answer arrives and the old trigger could never fire; **this amends ADR-0010 §4.3**, and ADR-0011 §2.4 is the governing derivation. Derived in ADR-0011 (F-060, F-022, F-033). |
+| 9 | 2026-09-10 | D1 takes the third criterion state: `- [~]` is settled, so an item whose environment could not perform an observation still closes — and the close is spelled differently from one settled directly, and owes the stakeholder a question in time (F-096). |
