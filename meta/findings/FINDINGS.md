@@ -5109,3 +5109,81 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   whose first entry has no status, so a reader that stopped seeing a missing status would fail the
   step rather than pass it silently. The three status-less entries now carry one, saying what they
   are.
+
+## F-113 — A history row that mentions a citation form is read as a citation and refused
+- Severity: correctness of enforcement, medium-high — F-075's pathology (mention read as
+  use) on a new record surface, this time with a terminal cost
+- Component: scripts/validate-workspace (citation scraping over history rows),
+  spec/doc-header.md (the forms table), authoring guidance
+- Symptom: iteration 5 stopped terminal at turn 11 on exactly one error: a history row's
+  reason prose named the form `path:line` while explaining a citation, and the gate
+  scraped the mention as a citation instance — "'path:line' is not a citation form this
+  gate can check". The worker's actual citations all resolve, including twelve
+  [src: .claude/agile-skills/...] toolkit paths ("Both citations resolve to files in the
+  workspace", Q-004:215); the only refusal in the engagement was prose ABOUT citations.
+  The escape — backticks mark mention, not use — exists but is documented only in a
+  validator source comment (there cited to F-037), nowhere a writer reads. F-075 was this
+  defect's first appearance (a worker rewording prose to satisfy the scraper); this is
+  its second, and it ended the run.
+- Evidence: meta/harness/evidence/iteration-5-envel-abandoned/ — run/state.json
+  (validator-failed, turn 11, "1 error"); validate-workspace re-run on the banked
+  workspace (the single history.md:14 error, verbatim in the ops capture);
+  tracker/items/WI-0002/questions/Q-004.md:215.
+- Direction: two halves. The scraper distinguishes mention from use by the documented
+  convention (backticked = mention) uniformly across every record surface it scans, with
+  a must-fail fixture per surface; and the convention itself moves out of the source
+  comment into the forms table and the authoring guidance (F-114's placement fix carries
+  it). Cross-reference F-075; consider them one class when fixing.
+- Status: open
+
+## F-114 — Citation forms are enforced at validation but may not be surfaced at authoring
+- Severity: UX/methodology (the general case F-113 is one instance of)
+- Component: methodology skill contracts (answer-questions, implement, plan),
+  spec/doc-header.md
+- Symptom: the worker learned the citation-resolution rule by tripping it at
+  validate-workspace, having authored in good faith. Whether the `path:line` /
+  workspace-relative restriction is stated anywhere the authoring worker reads, versus
+  living only in the validator's spec, is the fix boundary: "the rule exists but not
+  where the writer looks" (surface it) differs from "the rule is validation-only"
+  (author-time check). The grep was run over the abandoned workspace's installed skills
+  and the answer is mixed: resolvability IS stated at authoring, but well-formedness is
+  validation-only. The claim-kinds table tells the worker, verbatim —
+  "| cited fact | an absolute about something named as code — an identifier, a call, a
+  path | a citation, written `[src: ...]`, that resolves |" — and `implement` gives one
+  concrete form, `[src: <ITEM>/Q-nnn>]`. No skill states which forms exist or what makes
+  one legal: grep -rniE "workspace-relative|citation forms|forms table" over all nine
+  installed skills returns nothing, exit 1. The forms table lives only at
+  spec/doc-header.md:271 and no skill names it — `verify`'s four pointers into that file
+  name §5 and §4a. So the boundary is "surface it" for the obligation and
+  "validation-only" for the grammar.
+- Evidence: meta/harness/evidence/iteration-5-envel-abandoned/ — the WI-0002 authoring
+  trail; the installed-skill grep quoted in the Symptom above, run over
+  .claude/skills/ in the abandoned workspace.
+- Direction: The forms table should additionally state whether installed-toolkit paths
+  ([src: .claude/agile-skills/...]) are a legal form: twelve resolve in the abandoned
+  workspace today by bare existence, with nothing pinning the toolkit version they
+  referenced — legal-and-pinned, or illegal-and-quoted, but not accidental.
+- Status: open
+
+## H-022 — Should a fixable citation error halt the whole engagement? (question-shaped)
+- Severity: harness / consumer-modeling, genuinely open
+- Component: scripts/validate-workspace (exit semantics), harness/run_iteration.py
+  (validator-failed stop), the pipeline's mid-work validation contract
+- Symptom: A single fixable record defect — one prose mention scraped as a citation
+  instance (F-113) — halted the whole engagement at turn 11. A real consumer would fix
+  the line and continue. Two readings both plausible and possibly both true: correct-for-the-harness (fail hard,
+  surface the defect for study — which is exactly what happened, and it worked) and
+  wrong-for-consumer-modeling (a real engagement wouldn't die of it). Do not resolve
+  now; the answer likely interacts with F-113's fix (once toolkit-source citations are
+  legal, this specific trip disappears, but the halt-vs-continue question outlives it).
+- Evidence: meta/harness/evidence/iteration-5-envel-abandoned/run/state.json
+  (stopped/validator-failed/turn 11).
+- Status: open (question)
+
+---
+
+### Note (2026-09-10) — held-out calibration still owed
+The abandoned run produced no ending and no retro (stopped turn 11, before any dispatch);
+ROADMAP §4 step 1's held-out recall number remains unmeasured. Restored by a fresh envel
+re-run after F-113's fix — the re-run is builder-6's regression gate, and it re-serves as
+the calibration engagement on an uncontaminated project.
