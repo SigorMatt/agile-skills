@@ -10,31 +10,32 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 83541cf — 41 steps; 108 codes; selftest 354; 62 citations; harness 110
-
-**CLUSTERS 1–4 ARE COMPLETE.** Cluster 5 — planning/criteria and the stakeholder protocol —
-opens now.
+## The gate is GREEN at 4bdcbf1 — 42 steps; 108 codes; selftest 356; 63 citations; harness 110
 
 ## Current unit
 
-**META-160** — cluster 5, part 1: **F-089, F-090, F-088**.
+**META-161** — cluster 5, part 2: **F-082**.
 
-- **F-089** — a criterion that **counts** artefacts is a criterion that will be amended after
-  the fact. Criteria must **name** artifacts rather than count them, and a wanted count is
-  **measured first**. (This session has twice been saved by measuring before scoping — the same
-  discipline, now written into a contract.)
-- **F-090** — work recorded in an artifact for a skill that is dispatched only by status or by
-  an open question is **inert**. An accepted gap naming an owner must become **dispatchable** —
-  an open question at acceptance time.
-- **F-088** — a claim audit is passed by an example that **could not have falsified** the claim.
-  An audit example must be able to falsify; the audit row records **why** it could. This is the
-  same disease as F-076 (*a window empty by construction*) and F-052/F-066 (*a gate reporting a
-  scope it did not have*) — read META-148's `scope.py` fourth state before designing it, and
-  reuse rather than reinvent if it fits.
+**F-082** — a standing delegation has unbounded scope and no route back to the person who gave
+it. A stakeholder says *"you decide the technical details"*, and from then on every assumption
+taken under that delegation is invisible: nothing records **what category** a given delegation
+was taken to cover, and the sign-off never surfaces what was assumed on the stakeholder's
+behalf. Two halves, both named in the mission:
 
-Note F-088 lands on the **audit row**, which META-146 defined in `spec/doc-header.md` §4a and
-META-148b gave a labelled form (`Enumeration:` / `Set:` / `Enumerated by:` / `Members:` /
-`Verdict:`). Extend that form; do not start a second one.
+1. **A consumed delegation records the category it is taken to cover.**
+2. **The sign-off surfaces the assumptions taken under delegations** — so the person who gave
+   the blank cheque sees what was spent before they accept.
+
+Read F-082 in full, plus **ADR-0008** (cross-answer consistency — what a recorded human answer
+*is*, and its `Checked against:` labelled form, which is the house precedent for a labelled
+line a lint can read), **F-062**, **F-028** (a deferral is a reply), **F-023**, **F-063**,
+**F-064** (refinement's elicitation defects — the same protocol). `scripts/lint-answers` is the
+lint that already reads answers; `spec/question.md` is the protocol.
+
+Design against the grain of over-claiming: whether a delegation *really* covers an assumption is
+judgement. What is mechanisable is that the category was **recorded**, that the sign-off
+**lists** them, and that a delegation's consumption is **traceable to the answer that granted
+it**. Mark honestly.
 
 ## Discipline reminders that have paid off this session
 - Must-fail fixtures both ways; a `./scripts/check` step **proved non-vacuous in the strong
@@ -47,10 +48,14 @@ META-148b gave a labelled form (`Enumeration:` / `Set:` / `Enumerated by:` / `Me
 - A contract bump silently changes which journal entries META-154's **version-scoped** `Gates:`
   comparison reads. Expect it; the fixtures catch it.
 
-- Done when: three fixed, fixtures where a rule changed, gate green, three statuses updated with
-  resolving citations, journalled, committed AND pushed.
-- Next: **META-161** (F-082), **META-162** (F-097 + F-104's deadlock), cluster 6
-  (**META-163**), staging (**META-164**), the report (**META-165**).
+- **The rendered body limit is on the RENDERED file, not `process.md`.** META-160 was told
+  "473/500, there is room" by this checkpoint and found the rendered body was at **500/500**.
+  Check the rendered artefact, not the source.
+- Done when: F-082 fixed, fixtures where a rule changed, gate green, its status updated with a
+  resolving citation, journalled, committed AND pushed.
+- Next: **META-162** (F-097 + F-104's deadlock — design carefully against the one-action rule;
+  ADR the resolution), cluster 6 (**META-163**), staging (**META-164**), the report
+  (**META-165**).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -220,4 +225,29 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   unit and is recorded, not re-claimed. Fourth unit running to catch a vacuous case of its own:
   inverting the scoping to fire everywhere failed 5 observations, including *"it skips everywhere
   and checks nothing"*.
+
+### Cluster 5 — planning/criteria and stakeholder protocol — in progress
+- **META-160** F-089/F-090/F-088 (**5e43182** + **4bdcbf1**), 42 steps, 108 codes (delta 0, **but
+  not trivially** — bumping `verify` dropped five `journal.gates.*` codes out of META-154's
+  version-scoped comparison, 108 → 103, so the fixture entries were bumped with the contract;
+  this is the third time a bump has moved that comparison). **F-089** lands as DoR **R11** and is
+  marked **`[skill]` with evidence, not opinion**: the narrowest regex catching its own three
+  criteria flags **26 of 53** criteria in the must-pass toy project for **2 true positives** —
+  and that measurement is written into `dor-dod.md` §1 beside the rule, not left in the ledger.
+  A wanted count is measured first and carried as a `[src: run: … → …]` citation, a form that
+  already existed. **F-089 is smaller than billed and says so**: its own evidence shows no
+  criterion was ever reshaped around what was built, so R11 removes a round trip, not a
+  correctness failure. **F-090**: acceptance time = the execution that accepts the gap, **before
+  its closing transition**; on a `done` item the gate reports NOT APPLICABLE in those words.
+  Dispatch sets were **derived from `pipeline.yaml`, not restated** — `intake`, `next` and `retro`
+  are reachable by neither route, so a gap owned by one is inert wherever it is written.
+  **F-088: the diagnosis transferred from `scope.py`'s fourth state, the mechanism did not** —
+  `constrained()` re-reads a git window from a repo, a ref and a permitted set, and an audit row
+  is prose with no window to re-read. What transferred is the **shape of the verdict**: a pass
+  that could not have failed is marked, never spelled like an ordinary pass. The existing
+  labelled form gained a fifth label `Falsifier:`; **reach under-claimed on purpose and stated in
+  both specs** — nothing mechanical reads `review.md`'s `## What I examined` or
+  `verify-report.md`, before this change or after it. **The vacuous case of its own**: two new
+  findings had **no case at all** and would have shipped unexercised; both now fire, and one is
+  F-090's *literal* historical shape. Fifth unit running to catch one.
 
