@@ -10,32 +10,43 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 4bdcbf1 — 42 steps; 108 codes; selftest 356; 63 citations; harness 110
+## The gate is GREEN at bf1caa9 — 43 steps; 108 codes; selftest 356; 64 citations; harness 110
 
 ## Current unit
 
-**META-161** — cluster 5, part 2: **F-082**.
+**META-162** — cluster 5, part 3: **F-097**, and **F-104**'s deadlock with it. **ADR the
+resolution** — the mission says so explicitly, because this one has to be designed against the
+one-action rule rather than patched.
 
-**F-082** — a standing delegation has unbounded scope and no route back to the person who gave
-it. A stakeholder says *"you decide the technical details"*, and from then on every assumption
-taken under that delegation is invisible: nothing records **what category** a given delegation
-was taken to cover, and the sign-off never surfaces what was assumed on the stakeholder's
-behalf. Two halves, both named in the mission:
+**F-097** — the loop stops on the **first** human question, so an asynchronous stakeholder is
+asked one item at a time. A collect-askable-questions pass before the loop stops on the human.
 
-1. **A consumed delegation records the category it is taken to cover.**
-2. **The sign-off surfaces the assumptions taken under delegations** — so the person who gave
-   the blank cheque sees what was spent before they accept.
+**F-104** (filed this session by META-153b) — `next` step 3 halts on **any** open
+human-addressed question, while `spec/question.md` §2 says an elicitation *"must not stop the
+loop"*. Both cannot hold; today the first wins, so an unanswered elicitation makes **every**
+ending unreachable, **E1 included**. And META-153b established a locus that is in **no ADR**:
+**rest itself** (`scripts/lib/engagement.py`, *no question anywhere is open*) counts
+elicitations — so **repairing step 3 alone moves the deadlock rather than removing it.** That
+sentence is the design constraint; do not lose it.
 
-Read F-082 in full, plus **ADR-0008** (cross-answer consistency — what a recorded human answer
-*is*, and its `Checked against:` labelled form, which is the house precedent for a labelled
-line a lint can read), **F-062**, **F-028** (a deferral is a reply), **F-023**, **F-063**,
-**F-064** (refinement's elicitation defects — the same protocol). `scripts/lint-answers` is the
-lint that already reads answers; `spec/question.md` is the protocol.
+These are one problem. F-097 asks the loop to gather more before it stops; F-104 says the
+current stopping rule is contradictory *and* has a second site. Solve them together.
 
-Design against the grain of over-claiming: whether a delegation *really* covers an assumption is
-judgement. What is mechanisable is that the category was **recorded**, that the sign-off
-**lists** them, and that a delegation's consumption is **traceable to the answer that granted
-it**. Mark honestly.
+**The one-action rule is the hard constraint.** `next` dispatches one action. A
+collect-askable-questions pass that walks the board looking for what else could be asked is,
+naively, several actions — and the pipeline's determinism and auditability rest on the one-action
+property. Derive a resolution that does not quietly break it, or derive an explicit, argued
+amendment to it. Either is acceptable; an unacknowledged breach is not.
+
+Interacts with ADR-0011's silence threshold: a *silent round* is one halt at *waiting on the
+human* with no inbound change. If the loop gathers more questions before halting, the shape of a
+round changes. **Reconcile the two or the threshold's meaning drifts.** ADR-0011 §1 is explicit
+that the count is defined against **the halt**, not the question set, precisely so it survives
+this — check that claim rather than assuming it.
+
+Also relevant: **F-008** (asynchronous file-based interaction, deferred), **F-060** (the pipeline
+cannot say what it is waiting for, deferred behind F-008), **F-013**, **F-020** (refine files
+several separate questions for one item in one round), **F-021**, **F-028**.
 
 ## Discipline reminders that have paid off this session
 - Must-fail fixtures both ways; a `./scripts/check` step **proved non-vacuous in the strong
@@ -51,11 +62,14 @@ it**. Mark honestly.
 - **The rendered body limit is on the RENDERED file, not `process.md`.** META-160 was told
   "473/500, there is room" by this checkpoint and found the rendered body was at **500/500**.
   Check the rendered artefact, not the source.
-- Done when: F-082 fixed, fixtures where a rule changed, gate green, its status updated with a
-  resolving citation, journalled, committed AND pushed.
-- Next: **META-162** (F-097 + F-104's deadlock — design carefully against the one-action rule;
-  ADR the resolution), cluster 6 (**META-163**), staging (**META-164**), the report
-  (**META-165**).
+- **The rendered body limit is on the RENDERED file, not `process.md`** — `review-close` has hit
+  exactly 500/500 three times and been compressed each time.
+- Done when: the ADR exists, the mechanism (if any) lands with fixtures, the one-action rule is
+  either preserved or explicitly amended, the ADR-0011 reconciliation is **checked** not assumed,
+  F-097 and F-104 statuses updated with resolving citations, gate green, journalled, committed
+  AND pushed.
+- Next: cluster 6 (**META-163** — triage every remaining open finding), staging (**META-164** —
+  provision-verify both regressions and tear down), the report (**META-165**).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -250,4 +264,21 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   `verify-report.md`, before this change or after it. **The vacuous case of its own**: two new
   findings had **no case at all** and would have shipped unexercised; both now fire, and one is
   F-090's *literal* historical shape. Fifth unit running to catch one.
+- **META-161** F-082 (**cb344f4** + **bf1caa9**), 43 steps, 108 codes (delta 0; `crossed-answers`
+  5 → **8**). A consumed delegation records one labelled line in ADR-0008's `Checked against:`
+  shape — ID, category, what was assumed — read by the same `record.blocks()`, and read both as
+  a block **and nested inside another block**, because `plan.md`'s natural home for it is under
+  the assumption bullet it belongs to and the first draft passed silently over exactly those.
+  The sign-off gains a **sixth rule** naming every answer spent under delegation; at **E4**, where
+  there is nobody to address, the same list goes into the `## Ending statement`. Enforced at
+  `review-close`'s **existing** `cross-answer-consistency` gate — nothing new dispatched.
+  **The `[skill]` mark is justified by measurement, in the spec beside the rule**: `[assumed]` is
+  not a usable proxy — the toy project records **eight** assumed answers, six confirmed by the
+  human, one taken under *no* licence, and exactly **one** a real delegation quoted in prose with
+  no ID; eight fires, one true positive. What the lint **cannot** see is stated ADR-0008-§5 style,
+  the largest being **a delegation relied on and never written down at all**. **Half 1 was partly
+  there and is recorded, not re-claimed** — `refine` step 3 already said to name the deferral;
+  missing were the category, the ID, and anything that read the line. **The vacuous case of its
+  own**: the fixture exercised only the sign-off branch — the E4 branch, the deliberately-silent
+  branch and the citing-an-existing-request path had **no cases at all**. Sixth unit running.
 
