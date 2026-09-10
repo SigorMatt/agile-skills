@@ -5122,3 +5122,106 @@ recall is a reading, not a number, and the report says which.
   `methodology/skills/review-close/` 0.8.0 → **0.9.0**, `spec/workspace-layout.md` (revision 6),
   `spec/ids-and-statuses.md` (revision 7), `fixtures/broken-workspace/`,
   `adapters/claude-code/render.py`, `adapters/claude-code/dist/`, `meta/journal.md`.
+
+## 2026-09-10 — META-152 — E4 executes: an abandoned engagement, both ways
+
+- **Unit:** META-152
+- **Inputs read:** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` §2, §3, §5, §6 (the
+  `ghosting-founder` walkthrough is what this fixture is built from) and the enforcement boundary;
+  `spec/ids-and-statuses.md` §3.4, §3.5, §3.5a; `spec/workspace-layout.md` §1.4;
+  `spec/question.md` §2–§3; `spec/dor-dod.md` §4 (DE1–DE8); `methodology/pipeline.yaml`
+  (`statuses`, `transitions`, `rule_obligations`); `methodology/skills/review-close/process.md`
+  step 10 and `skill.yaml`; `scripts/check-epic-signoff`, `scripts/engagement-state`,
+  `scripts/record-halt`, `scripts/lib/engagement.py`, `scripts/validate-workspace`,
+  `scripts/run-gate`, `scripts/transition`, `scripts/check` (`check_termination`,
+  `check_document_obligations`, `check_retro`, `check_silence_threshold`);
+  `fixtures/ended-engagement/`, `fixtures/document-obligations/`, `fixtures/crossed-answers/`,
+  `examples/toy-project/`. **Iteration 5's probe was not opened.**
+- **Decisions:**
+  - **`right/` is a valid workspace, not a gate fixture.** `fixtures/ended-engagement` is
+    deliberately thinner than a real workspace and the validator never sees it; that is right for
+    a fixture testing one gate's verdicts, and wrong here. An *ending* is a claim about a whole
+    workspace, and half of what E4 asserts is enforced by `validate-workspace` rather than by the
+    termination gate: `blocked` orphans carrying no `outcome`, `abandoned` questions with empty
+    answers, a halt log whose rows parse and whose `round` column agrees with its digests. So
+    `right/` carries full history chains, journals, artifacts and a generated board, and
+    `scripts/check` requires `validate-workspace` to exit 0 over it.
+  - **Three epics, because E4 has three states and not one.** `EP-001` is the silence that began
+    **before** rest — no sign-off was ever filed, so the ending statement is the whole of what
+    the stakeholder would have been shown — and its six children are one per class from §3.5a's
+    table, including **both** kinds of orphan: `WI-0003` in flight from `in-progress`, `WI-0004`
+    in flight from `awaiting-answer` by the row ADR-0011 §5 added for exactly that, `WI-0005`
+    never started from `draft`. `EP-002` is the other entry point, the one the ADR named as
+    missing from the walkthrough: silence **after** rest, a sign-off filed after rest naming
+    every child, closed `abandoned` with an empty `## Answer`, and the epic leaving
+    `awaiting-answer` by the new gated row. `EP-003` is the moment **before** the declaration —
+    `engagement-state` reports `abandoned`, `review-close` has not run — which is the state
+    `next` step 3 actually dispatches on, and the only one a fixture can hold whose trailing
+    digest is still recomputable.
+  - **Every digest in every waiting log was computed by `scripts/lib/engagement.py`, never
+    typed.** The log records the state observed **at the halt**, and by the time the ending is
+    recorded those questions are closed, so the digest cannot be recomputed from the finished
+    fixture. The builder therefore reconstructed each observed state and asked the library for
+    the digest exactly as `record-halt` would have. Where it *can* still be recomputed — `EP-003`
+    has not moved since its last halt — `scripts/check` recomputes it and requires the trailing
+    row to match. A typed digest would make the log assert a silence that never happened, which
+    is the one thing this fixture exists to be evidence of.
+  - **`EP-001`'s log holds four rows, not three.** The stakeholder answered exactly once, between
+    rows 1 and 2, and the answer is visible as a change of digest. The trailing run is three. That
+    is ADR-0011 §1.2's claim — that a reset is auditable rather than remembered — reduced to a
+    file, and `scripts/check` asserts the shape rather than the row count alone.
+  - **Two of the four near misses are not caught by the termination gate, and the fixture says so
+    rather than implying a coverage it does not have.** `check-epic-signoff` reads no `outcome`,
+    and its E4 branch inspects sign-offs at `open` and `abandoned` only — so an orphan carrying
+    `outcome: dropped` (`wrong/EP-002`) and a sign-off marked `answered` over an empty
+    `## Answer` (`wrong/EP-003`, E4 wearing E3's clothes) both **pass** it. They are still
+    refused, and refused before the ending can be recorded, because `workspace-valid` is a
+    **hard** gate on `review-close`: `scripts/check` proves that by running
+    `run-gate --skill review-close --gate workspace-valid`, which fails over `wrong/` and passes
+    over `right/`. Recording the refusal where it actually lives is the honest form; asserting
+    the gate refuses what it does not read would have been a fixture agreeing with itself.
+  - **The two remaining near misses are the gate's:** one round short of the threshold
+    (`wrong/EP-001`, exit 1) and an ending statement omitting a child (`wrong/EP-004`, exit 1,
+    naming `WI-0005`). The validator is silent on both, which is correct — neither is a shape
+    defect, and only the gate holds the threshold and the child list.
+  - **The orphans' two invariants are asserted directly, because no rule anywhere holds them.**
+    `item.outcome.premature` catches an orphan's `outcome` only because `blocked` is not `done`,
+    and **nothing at all** checks the `orphaned by E4:` prefix — the one thing distinguishing an
+    orphan from an item blocked on its own impasse. So the step reads all three orphans' last
+    history rows and requires the actor, the from-status and the prefix.
+  - **Non-vacuity was proved in the strong form**, by stubbing deciding function bodies with the
+    fixture and the step unchanged. Five stubs, five distinct failures, quoted in the unit report:
+    `silent_rounds()` → `return 0` (both endings refused, `EP-003` reported `active`);
+    `inbound_digest()` → a constant (the recomputation caught it by name);
+    `check-epic-signoff`'s every-child containment neutered (`wrong/EP-004` passed and named
+    nobody); `item.outcome.premature` disabled; `question.answered.section` disabled (both caught
+    by the multiset).
+- **Discoveries about the mechanism, not the fixture:**
+  - **`check-epic-signoff` refuses an epic with no sign-off at all and prints no reason.** When
+    `sign_offs` is empty the `problems` list is empty too, so the output is the bare header
+    `FAIL — <EP> has no usable sign-off:`. The block that explains DE7 and lists the children sits
+    **after** the early `return 1` and is therefore unreachable whenever `accepted is None` —
+    which is the only way to reach it. It predates E4: `git show 77a5d96:scripts/check-epic-signoff`
+    has the same shape, and `fixtures/ended-engagement`'s `EP-003`, the F-045 case, has always
+    failed this way with an assertion that only reads the exit code. Owed to the findings ledger.
+  - **The gate accepts a sign-off that claims a reply it does not have.** `wrong/EP-003` is
+    exactly §3's confusion — `status: answered`, `## Answer` empty — and the gate collects the
+    refusal (*"says answered but its '## Answer' is empty"*) into `problems` and then discards it,
+    because `problems` is only printed when `silence` is also `None`. Caught by the validator, so
+    the ending cannot be recorded; not caught by the gate whose whole subject is that
+    distinction. Owed to the findings ledger.
+  - **`engagement-state` prints `rest reached at <t>` under verdicts that never reached rest.**
+    `Engagement.describe()` emits the line whenever `rest_since` is set, and `rest_since` is a
+    boundary computed from the children's timestamps rather than a statement that rest happened.
+    `EP-003` is `abandoned` with a child at `awaiting-answer` and still reports
+    `rest reached at 2026-09-07T11:00:00Z`. Pre-existing (`active` verdicts print it too) and
+    cosmetic in effect, but it is a false sentence in a program's output. Owed to the ledger.
+- **Questions raised:** none new. The `next` step 3 / elicitation contradiction (ADR-0011 §6)
+  remains unfiled and is still owed.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **36 steps** (step 10b is new).
+  `must-fail fixture (97 codes)` **unchanged** — nothing in this unit touches
+  `fixtures/broken-workspace`. `findings citations resolve (49 cited)` unchanged. Library
+  self-test 307, pipeline faults 8, shipped scripts 17, all unchanged. `harness/` and
+  `meta/findings/FINDINGS.md` untouched.
+- **Artifacts:** `fixtures/abandoned-engagement/` (new — `README.md`, `EXPECTED-CODES.txt`,
+  `right/` and `wrong/`), `scripts/check` (step 10b, `check_abandoned`), `meta/journal.md`.

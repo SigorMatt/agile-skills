@@ -1,0 +1,11 @@
+project:
+  name: abandoned-engagement-wrong
+  trunk-branch: main
+  description: Four near-miss E4 endings that must be refused.
+commands:
+  test: "true"
+  lint: "true"
+  build: "true"
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

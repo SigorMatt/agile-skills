@@ -1,0 +1,11 @@
+project:
+  name: abandoned-engagement
+  trunk-branch: main
+  description: A workspace whose stakeholder stopped answering.
+commands:
+  test: "true"
+  lint: "true"
+  build: "true"
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"
