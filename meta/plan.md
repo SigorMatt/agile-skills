@@ -605,3 +605,61 @@ Recorded here so the plan tells the truth rather than the intention (META-165):
 - **META-164 executed before META-163.** Staging verification was brought forward when it became
   clear it was an acceptance item that gated nothing else, so the journal's last two session
   entries read out of numeric order.
+
+---
+
+## Phase VII — builder session six: the citation grammar, and what happens when it bites
+
+Mission: `meta/BUILDER-6-PROMPT.md`. Compact session between iteration 5's abandonment and its
+re-run. Clusters 1–3 are one theme; cluster 4 yields first under quota pressure.
+
+Execution model (builder five, binding): each unit runs in a dedicated sub-agent that commits
+AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
+
+### Cluster 1 — mention is not use (F-113 + F-075, one class)
+
+- [ ] **META-167** — enumerate every record surface the citation vocabulary is scraped on, and
+      fix the scraping once at the shared layer: a *presence* check reads masked text like a
+      *resolution* check does, so a quoted example can no longer satisfy a rule that wants a
+      real citation. Per-surface fixtures.
+      Gate: `./scripts/check` green; a mention and a real unresolved citation on each surface.
+- [ ] **META-168** — severity follows knowledge: a marker the resolver *recognises* and cannot
+      resolve stays an ERROR; a marker matching no form at all is a mention or a typo, the gate
+      cannot tell which, and it says so as a WARNING under its own code. The mention convention
+      (backticked = mention) moves out of the validator source comment into the forms table.
+      F-113 and F-075 statuses updated together, as one class.
+      Gate: the proof-case over a scratch copy of the banked iteration-5 workspace — zero errors
+      from `history.md:14`, a planted genuinely-bad citation in the same copy still failing.
+
+### Cluster 2 — the grammar goes where the writer writes (F-114), and toolkit paths get a ruling
+
+- [ ] **META-169** — the ruling: are `[src: .claude/agile-skills/...]` installed-toolkit paths a
+      legal form? ADR + forms table + validator enforcement + a fixture in both directions. The
+      twelve citations in the banked evidence stay untouched; the ruling governs future writing.
+- [ ] **META-170** — placement: the authoring skills whose contract obliges "a citation that
+      resolves" state or directly point at the citation forms table — which forms exist, what
+      makes one well-formed, workspace-relativity, and the mention convention. Short in the
+      skills; the table stays the single source. Re-render. F-114 status updated.
+      Gate: `./scripts/check` green; the grep that returned nothing in the abandoned workspace
+      now returns hits in the installed skills.
+
+### Cluster 3 — stop semantics (H-022)
+
+- [ ] **META-171** — decide and implement whether a fixable record defect is terminal. ADR-worthy
+      reasoning; harness tests for both the recovery and the exhaustion path; H-022 status
+      updated with the decision. Harness commit separate.
+
+### Cluster 4 — small batch and triage
+
+- [ ] **META-172** — sweep the open-findings set: anything trivially adjacent to clusters 1–3 may
+      be taken (said so per finding); everything else gets a dated triage line. No status stale.
+      (The H-022 correction of cluster 4's first bullet was already appended by the owner's
+      staging pass at 9d31ce1.)
+
+### Staging and close
+
+- [ ] **META-173** — `harness/iterations/iteration-5r-envel.json` as a copy of
+      `iteration-5-envel.json` with id `iteration-5r-envel` and project `envel-2`, nothing else
+      changed. Provision-verify in a throwaway path, tear down. **Not run; probe not read.**
+- [ ] **META-174** — `meta/FINAL-REPORT-6.md` + checkpoint close.
+      Gate: the acceptance checklist answered line by line.
