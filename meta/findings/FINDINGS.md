@@ -5180,6 +5180,8 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   (stopped/validator-failed/turn 11).
 - Status: open (question)
 
+### Correction (2026-09-11): the Symptom's closing parenthesis presupposed toolkit-source citations are currently illegal; twelve resolve in the abandoned workspace today (see F-114's Direction), and the halt-vs-continue question stands independently of F-113's fix.
+
 ---
 
 ### Note (2026-09-10) — held-out calibration still owed
