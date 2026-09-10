@@ -10,38 +10,27 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at e9f8d79 — 36 steps, 97 codes, selftest 307, 49 findings citations
+## The gate is GREEN at b845342 — 36 steps; harness self-test 105 tests
 
-E4 now executes end to end in fixtures. What remains of cluster 2 is the **harness** half.
+**CLUSTER 2 IS BUILT.** E4 is derived, specified, programmed, fixtured end to end, and the
+driver recognises it. What remains is its ledger.
 
 ## Current unit
 
-**META-153** — the harness side of E4. **A SEPARATE COMMIT from the toolkit** (standing rule).
+**META-153b** — cluster 2's findings pass.
 
-Two halves, both named in the mission:
+File the five items below with F-numbers (next free is F-104; the ledger's convention is
+sequential, never reused; F-071 is a burned tombstone). Match F-080..F-103's format exactly,
+including a `**Provenance:**` line naming the unit that found each. `meta/findings/FINDINGS.md`
+is **appended to, never rewritten**. Every citation must resolve — `./scripts/check` has a step
+for it and F-024 exists because a session once cited commits that did not exist, every one.
 
-1. **A sim job that legitimately declines to answer** — scripted silence, logged. The persona is
-   already staged: `harness/skills/simulated-human/personas/ghosting-founder.md` phase 2 says
-   *take the turn, read the board, write no `## Answer`, log the withholding tagged
-   `[PLANTED: ghosting]`*. The harness must treat that as a **successful turn that answered
-   nothing**, not as a failed or empty turn.
-2. **The driver recognising the ending.** `harness/run_iteration.py` knows three terminal
-   stops — `epic-done`, `blocked-no-recourse`, `stalled` — and E4 falls through to **`stalled`**,
-   which is a lie about what happened. It must recognise *"human silent past threshold, E4
-   declared"* as a terminal **epic-done-class** stop. H-008's lesson applies directly: a stall is
-   a fact about the driver's own progress, an ending is a fact about the **engagement**, and the
-   two coincided until they didn't.
+Then record the E4 work's own statuses: ADR-0011 and its commits settle nothing that was open
+except by adding a mechanism, so say what E4 now is and cite it — 94606f5, 877ee85, 4d1b7ce,
+e9f8d79, b845342.
 
-Note the asymmetry the driver must respect: a run can be genuinely stalled *and* the engagement
-not abandoned, and vice versa. `scripts/engagement-state` is the authority on the second
-(`abandoned` is now one of its verdicts) — the driver should ask it rather than infer.
+### The five
 
-- Done when: `harness/tests/test_harness.py` green with new cases covering both halves, the
-  E4 stop distinguished from `stalled` **by execution** in a test rather than by reading,
-  journalled, committed AND pushed as a **harness commit**.
-- Next unit: **META-153b** — cluster 2's findings pass (the four items below).
-
-## Owed to the findings ledger — META-153b files these
 
 1. **The elicitation deadlock.** `next` step 3 halts on **any** open human-addressed question,
    while `spec/question.md` §2 says an elicitation *"must not stop the loop"*. Both cannot hold;
@@ -62,7 +51,21 @@ not abandoned, and vice versa. `scripts/engagement-state` is the authority on th
    `rest_since` is a boundary derived from children's timestamps, not a statement that rest
    happened. Pre-existing, cosmetic in effect, but a false sentence in a program's output.
 
+5. **A contract that exists only as a side effect.** The driver's recognition of a *declared*
+   E4 depends on `scripts/engagement-state` continuing to print its silence sentence under the
+   `ended`/`closed` verdicts — the E4-declared reading has **no other source**. That is currently
+   a side effect of the "carry the count while it is above zero" rule, not a stated contract.
+   Found by META-153, reported as an observation rather than a request.
+
+- Done when: five findings filed, E4's statuses recorded with resolving citations,
+  `./scripts/check` green including *findings citations resolve*, journalled, committed AND
+  pushed.
+- Next unit: **META-154** — cluster 3 opens with F-091, the anchor: `transition` owns the
+  **Gates:** verdicts the way it owns **Status:** — the runner writes what ran, the worker
+  supplies the evidence sentences.
+
 ## Done this session
+
 
 
 
@@ -159,6 +162,29 @@ not abandoned, and vice versa. `scripts/engagement-state` is the authority on th
     omitting a child. **Non-vacuity proved in the strong form** — five deciding function bodies
     stubbed, five distinct failures. It also surfaced **three defects in the mechanism, reported
     and not bent around** — see *Owed to the findings ledger* above.
+  - **META-153** the harness half (**b845342**, a harness-only commit), self-test 74 → **105**
+    tests. The driver **asks** rather than infers: it runs the project's own `engagement-state
+    --all` and parses the verdict plus the two numbers in its silence sentence, so *"the
+    threshold was reached"* stays the toolkit's judgement. A test reads the driver's own source
+    with comments stripped and **requires `threshold_rounds`, `tracker/waiting` and
+    `pipeline.yaml` to be absent from it** — F-045's mechanism, refused structurally. The enabler
+    is that the silent-round count **survives the declaration**, being derived from the
+    append-only log. New terminal stop **`abandoned`**, checked **first** in
+    `engagement_terminal()`, because an E4 workspace otherwise reads as an impasse (orphaned
+    children) or as a delivery (a finished board whose sign-off nobody answered) — H-014's shape,
+    the most specific true thing wins. **Two moments, opposite handling:** verdict `abandoned`
+    but undeclared is **not a stop** — the ending is owed, and the turn goes to the **worker**,
+    never the sim, or the loop reproduces ADR-0011's Context (b) verbatim; verdict `ended` with
+    the threshold reached **is** the stop, with **no closing sim turn** — the one place E4
+    departs from H-007, because this ending *is* the recorded finding that there is nobody to
+    show it to. Scripted silence is classified from the **questions, not the exit code**, and
+    `scripted-silence` requires a `Withheld:` line **and** a `[PLANTED: …]` tag in that turn's own
+    SIM-LOG — silence without both is `unexplained-silence`, flagged as possibly a broken sim.
+    The sim skill's own checklist contradicted the persona (*"an open question whose `## Answer`
+    is still empty? Then you are not finished"*) and was outranked: skill 1.1.0 → 1.2.0, sim-turn
+    prompt 2 → 3. Non-vacuity proved **in both directions**: stubbing the recognition to return
+    nothing gives `'stalled' != 'abandoned'`; stubbing it to return everything gives
+    `'abandoned' != 'stalled'`.
 
 ## Standing instructions (still in force)
 
