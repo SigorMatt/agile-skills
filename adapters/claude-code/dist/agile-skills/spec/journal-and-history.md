@@ -154,7 +154,7 @@ and the entry MUST contain these bullets, with these exact labels:
 | `**Decisions:**` | each decision with its rationale. Empty is legal only as the literal `none` |
 | `**Questions raised:**` | question IDs filed by this execution, or `none` |
 | `**Commands:**` | every command run, with its exit code or outcome. `none` is legal |
-| `**Gates:**` | every gate in the contract, each `pass` / `fail` / `skipped`, with the evidence |
+| `**Gates:**` | every gate in the contract, in contract order, each `pass` / `fail` / `skipped` / `pending`, with the evidence |
 | `**Artifacts:**` | every file created or updated, and any commit produced |
 | `**Status:**` | `from` → `to`, matching the history row this execution appended |
 | `**Result:**` | one or two sentences a reader can stop at |
@@ -182,6 +182,53 @@ Rules:
   cost six failed transitions in one run, across four skills, because every skill's prose said
   the tool wrote it (F-049). Standalone `journal-entry` still requires it: there, nothing else
   would write it.
+
+### 2.2a The verdicts, and who owns them
+
+The verdict vocabulary is exactly four words:
+
+| Verdict | Means |
+|---------|-------|
+| `pass` | the gate ran and its check held |
+| `fail` | the gate ran and its check did not hold |
+| `skipped` | the gate could not run — a placeholder with no value, an input that does not exist — and therefore checked nothing. It is never a pass (`skill-contract.md` §1.4) |
+| `pending` | **no verdict is owed by this entry**, because the acting skill is dispatched again on this item and decides the gate at a later transition of the same execution |
+
+`pending` is legal in exactly one place, and the place is derived rather than named: an entry
+whose `**Status:**` records a move into a status the acting skill's own `dispatch.on_status`
+contains. That is a skill handing work to itself — `implement` opens at `planned` → `in-progress`
+and both are its own dispatch statuses — and it is the only moment at which the record has
+nothing to say about a gate yet. Anywhere else, including an execution that changed no status,
+the entry owes a real verdict; `pending` there claims a future that nothing will bring about.
+
+Before the word existed, eleven opening entries in one engagement used three vocabularies for
+this situation — `skipped`, `not yet run`, `not run` — and 44 of 540 gate lines carried a
+verdict the format did not admit. `skipped` was the worst of the three, because it is the word
+for a gate that checked nothing *and never will* (F-080).
+
+**`**Gates:**` is the transition tool's bullet in the same way `**Status:**` is, and the split
+runs between the verdict and the evidence.** The tool that runs the gates writes one line per
+gate in the acting skill's contract, in contract order, carrying the verdict *that run*
+produced; the caller supplies the evidence sentence for each gate, and it is kept. A verdict the
+caller wrote that the run contradicted is replaced and the contradiction is reported to the
+caller — two entries in one engagement recorded a verdict the program had printed the opposite
+of, and one entry listed six gates where its sixteen siblings listed seven, because the bullet
+was composed before the run and nothing compared the two (F-091).
+
+Two things stay the caller's, because no program decided them:
+
+- a `manual_check` gate's verdict — there is no command behind it, and a tool that invented one
+  would be reporting a check nobody carried out;
+- the whole bullet when the gates were forced (`transition --force`), because then nothing ran
+  at all. The override is of the gates, not of the record.
+
+Either way the gate **names** are read against the contract of the skill in the entry's heading,
+by the tool that writes the entry and again by the validator: a gate the contract declares and
+the entry omits is `journal.gates.missing`, and a gate the entry names and the contract does not
+is `journal.gates.unknown`. The validator applies this only to an entry whose heading names the
+**installed** contract version — an entry records an execution under the contract of its own
+time, and holding it to a later gate list would report the skill's history as a defect in the
+record.
 
 ### 2.3 Journals on epics
 
@@ -213,3 +260,4 @@ That is the test `examples/toy-project/AUDIT.md` applies to a real run.
 | 1 | 2026-08-17 | Initial. |
 | 2 | 2026-08-22 | §0 added: every self-reported header field comes from a machine, timestamps are read from a clock and never estimated, and the restamp exception now covers `journal.md` as well as `history.md` (F-017). |
 | 3 | 2026-08-27 | §2.2: `**Status:**` is the transition tool's bullet — a body passed to it need not carry one, and every other bullet is still required of the caller (F-049). |
+| 4 | 2026-09-10 | §2.2a added: a fourth verdict `pending`, legal only on a move into a status the acting skill is itself dispatched on; `**Gates:**` is the transition tool's bullet for the verdict and the caller's for the evidence; the gate names are read against the contract of the skill in the entry's heading (F-080, F-091). |

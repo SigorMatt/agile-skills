@@ -5476,3 +5476,99 @@ recall is a reading, not a number, and the report says which.
   **46 insertions, 0 deletions**.
 - **Artifacts:** `harness/run_iteration.py`, `harness/tests/test_harness.py`,
   `meta/findings/FINDINGS.md`, `meta/journal.md`.
+
+## 2026-09-10 — META-154 — the `**Gates:**` bullet gets an owner, and its fourth verdict
+
+- **Unit:** META-154 (F-091 and F-080 — one bullet seen from two sides)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-091 and F-080 in full, plus F-049, F-039,
+  F-019, F-014, F-059; `spec/journal-and-history.md` §2.2; `spec/skill-contract.md` §1.3 and
+  §1.4; `scripts/transition`, `scripts/journal-entry`, `scripts/run-gate`,
+  `scripts/lib/record.py`, `scripts/lib/workspace.py`, `scripts/validate-workspace`'s
+  `journal.bullet.missing`; `./scripts/check` step 14 and `check_process_gate_names`;
+  every `methodology/skills/*/skill.yaml` gate list and `dispatch.on_status`; the `**Gates:**`
+  bullet of all 67 entries of `fixtures/abandoned-engagement` and of all 55 of
+  `examples/toy-project`.
+- **Decisions:**
+  - **The verdict is the runner's, the evidence is the worker's, and the names come from the
+    contract.** `transition` now runs `run-gate --verdicts <path>`, reads back one
+    `name<TAB>PASS|FAIL|SKIP|MANUAL<TAB>detail` record per gate, and composes the `**Gates:**`
+    bullet from the acting skill's contract: one line per gate, in contract order, verdict from
+    the run, evidence from the sentence the caller wrote for that gate. Completeness stops being
+    a property of the caller's memory — the entry that listed six gates where its sixteen
+    siblings listed seven cannot now be written. `--verdicts` is a file rather than a parse of
+    the human report: scraping stdout would make the report's layout a wire format.
+  - **A contradicted verdict is replaced *and named*.** Overwriting alone would hide exactly the
+    two mistakes F-091 was filed for. `compose_gates` returns the contradictions it found and
+    `transition` prints one line per gate: what the body claimed, what the run reported, which
+    one the entry carries. The caller's evidence sentence is kept beside the corrected verdict,
+    so the disagreement is readable rather than erased.
+  - **Two things stay the caller's, on the same principle.** A `manual_check` gate has no command
+    behind it, so no run decided it and the tool refuses to invent one — a body that omits its
+    verdict is refused rather than filled in. And under `--force` nothing ran at all, so the
+    whole bullet stands as written: the override is of the gates, not of the record. The gate
+    *names* are still checked either way, because that needs no run.
+  - **The fourth verdict is `pending`, and its legality is derived, not named.** It is legal in an
+    entry whose `**Status:**` records a move **into a status the acting skill's own
+    `dispatch.on_status` contains** — a skill handing work to itself, which today is
+    `implement`'s `planned → in-progress` and nothing else in the pipeline. Nothing in the code
+    knows the skill is called `implement`. Two alternatives were considered and rejected:
+    *pending iff the move is not gated* would put every `answer-questions` entry permanently at
+    `pending`, since that skill has `next_status: null` and so never makes a gating move — nine
+    hard gates that would never be decided anywhere; and *pending iff the skill has a
+    `next_status` it has not reached* would legalise it on `verify`'s send-back, where no later
+    transition of that execution follows.
+  - **F-080's open question, answered: the gate belongs in the entry.** Three readings, all
+    pointing the same way, and it is now `spec/skill-contract.md` §1.3. Omitting it makes the
+    entry silent about a check, which is the one failure the bullet exists to prevent and is
+    indistinguishable from an execution that forgot. Deciding *which* gates "cannot hold" is a
+    judgement made per gate per skill — the branch-on-a-name a contract-driven gate runner exists
+    to avoid. And the fact is worth recording: `commits-reference-the-item` inspects a commit
+    range that is empty by construction at `implement`'s opening move, so an entry saying it was
+    **not decided here, and is decided at the completion transition** is a stronger record than
+    one that leaves it out — it is evidence that nobody was surprised. What was wrong was never
+    the gate's presence; it was that the format had no word for "not owed yet", so eleven entries
+    invented three and one recorded a hard gate as *fail, not blocking* on a move that proceeded.
+  - **The comparison is version-scoped, and that is the whole of it.** `validate-workspace` now
+    reads the `**Gates:**` bullet against the contract of the skill in the entry's heading —
+    `journal.gates.missing`, `.unknown`, `.verdict`, `.unreadable`, `.pending` — but only when
+    the entry's heading names the **installed** version. An entry records an execution under the
+    contract of its own time; holding a `v0.1.1` entry to a `v0.6.1` gate list reports the
+    skill's history as a defect in the record. `journal.version.impossible` already refuses the
+    one version relation that cannot be true; this refuses to guess about the rest. Measured
+    before deciding: all 55 `examples/toy-project` entries are one to five minor versions back
+    and are now out of scope; all 67 `fixtures/abandoned-engagement` entries were at the
+    installed versions and were completed rather than exempted.
+  - **`journal.bullet.missing`'s hint stopped claiming what it did not check** — F-080 named that
+    exactly. It now says every §2.2 bullet is required and points at `journal.gates.*` for what
+    the bullet then has to say.
+  - **`record.py` owns the gate line, and only its direct children are gates.** `gate_line()` and
+    `gate_rows()` join `split_label`/`entries` as rules about a record's structure implemented
+    once. Reading the `**Gates:**` subtree flat was wrong on real data: `refine`'s entry breaks
+    `definition-of-ready` out criterion by criterion, R1 to R8, and the flat read turned eight
+    pieces of one gate's evidence into eight gates that do not exist (26 "gates" on a four-gate
+    contract). Direct children only.
+  - **`transition` and `journal-entry` ended up with the same ownership story as F-049 gave
+    `**Status:**`.** The tool writes what it knows; standalone `journal-entry` requires of the
+    caller what nothing else would write. For `**Gates:**` the line falls between verdict and
+    name rather than between tool and caller: standalone, the verdicts stay the caller's because
+    no run stands behind the entry, and the names are read against the same contract in both
+    tools. `transition` says so to `journal-entry` with `--gates-checked`, the way it already
+    says the move with `--status`.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **37 steps**;
+  `fixtures/broken-workspace` **97 → 102 codes**, the five new `journal.gates.*` rules, one
+  entry added to `BUG-0001/journal.md` at the installed `verify` version carrying all five
+  defects at once, `EXPECTED-CODES.txt` updated in the same commit. `scripts/lib/selftest.py`
+  **307 → 320**. New step 14c, *the gate verdicts belong to the runner*, **18 observations**.
+  Non-vacuity proved in the strong form: each of five deciding function bodies stubbed in turn
+  — `record.gate_rows`, `journal-entry.check_gate_bullet`, `journal-entry.force_gates_bullet`,
+  `transition`'s `pending_move`, `validate-workspace.check_entry_gates` — gives a distinct
+  failure set (13, 4, 5, 4 and 5 observations), all five at once gives 14, and the step passes
+  again unstubbed.
+- **Artifacts:** `scripts/lib/record.py`, `scripts/lib/workspace.py`, `scripts/lib/selftest.py`,
+  `scripts/run-gate`, `scripts/journal-entry`, `scripts/transition`,
+  `scripts/validate-workspace`, `scripts/check`, `spec/journal-and-history.md` (rev 4),
+  `spec/skill-contract.md` (rev 6), all seven `## Journaling` sections and their version bumps
+  (`implement` 0.5.0 → **0.6.0**, the rest patch), `fixtures/broken-workspace`,
+  `fixtures/abandoned-engagement/{right,wrong}` (67 gate bullets completed),
+  `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md`, `meta/journal.md`.

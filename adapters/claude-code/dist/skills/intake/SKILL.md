@@ -3,7 +3,7 @@ name: intake
 description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: The orchestrator routed an open stakeholder request under tracker/requests/; A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.5.0
+  methodology-version: 0.5.1
   persona: product-analyst
   human-interaction: direct
 ---
@@ -227,7 +227,10 @@ scripts/journal-entry <ITEM-ID> --skill intake --body-file <path>
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
 bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
-is inserted:
+is inserted. It rewrites the **verdicts** in `**Gates:**` the same way, from the run it just did
+— one line per contract gate, so the entry can neither contradict the run nor omit a gate. What
+you write is the **evidence** for each gate, and it is kept, including where the two disagreed
+(`spec/journal-and-history.md` §2.2a):
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor intake --reason "..." \

@@ -27,7 +27,12 @@ What it does, in order:
      scripts/journal-entry — which stamps the heading from the clock and the actor's installed
      contract, and writes the `**Status:**` bullet from the move just made — supply one and it
      is replaced, omit one and it is inserted, so the entry cannot claim a transition that did
-     not happen (F-017, F-019, F-049). The history row is written first on
+     not happen (F-017, F-019, F-049). The `**Gates:**` bullet is written the same way, from the
+     run in step 2: one line per gate in the contract, in contract order, each carrying the
+     verdict THIS run produced and the evidence sentence the caller wrote for it. Two entries in
+     one real engagement recorded a verdict the program had contradicted, and one listed six
+     gates where its sixteen siblings listed seven, because the bullet was composed before the
+     run and nothing compared the two (F-091). The history row is written first on
      purpose: a row with no entry is caught by `journal.execution.missing`, while an entry with
      no row is the direction the record used to be blind to;
   6. regenerates the board;
@@ -38,7 +43,10 @@ rather than of an agent's discipline. Editing `history.md` by hand bypasses ever
 which is why the adapter's hook denies exactly that.
 
 `--force` skips step 2 and records `[gates forced]` in the reason, so an override is visible in
-the record forever rather than being indistinguishable from a clean pass.
+the record forever rather than being indistinguishable from a clean pass. Nothing ran, so nothing
+of the `**Gates:**` bullet is this tool's to write: the caller's own list stands, and it is held
+to the contract's gate names and to the verdict vocabulary exactly as a standalone entry is. The
+override is of the gates, not of the record.
 
 `--restamp-last` is the **only** sanctioned repair of an already-written history row, and it
 changes exactly one thing: the `when` of the last row. It exists for one situation — an earlier
@@ -381,13 +389,25 @@ def main(argv: list) -> int:
     #     that is failing traps the item: the skill cannot even file a question about it.
     # Escaping downward is never the thing a gate should prevent. Declaring success is.
     contract_path = find_contract(actor)
-    completion_status = None
+    contract = {}
     if contract_path:
         try:
-            completion_status = (miniyaml.load_file(contract_path) or {}).get("next_status")
+            contract = miniyaml.load_file(contract_path) or {}
         except miniyaml.YamlError:
-            completion_status = None
+            contract = {}
+    completion_status = contract.get("next_status")
     gating = completion_status is not None and to_status == completion_status
+
+    # A move INTO a status this same skill is dispatched on is the skill handing work to itself:
+    # `implement` opens at `planned -> in-progress` and both are in its own `dispatch.on_status`,
+    # so the very next thing that runs on this item is `implement` again, and it is that later
+    # transition — its completion one — that decides the gates. This is the only situation in
+    # which the record has nothing to report for a gate yet, and the only one in which the
+    # verdict `pending` is legal (F-080). It is derived from the contract rather than named:
+    # nothing here knows that the skill is called `implement`.
+    dispatch_statuses = ((contract.get("dispatch") or {}).get("on_status") or [])
+    pending_move = (not gating and from_status != to_status
+                    and to_status in dispatch_statuses)
 
     # ...and any transition pipeline.yaml marks `gated`. `next_status` is one status per skill,
     # which is enough while every completion move is the skill's own happy path. It is not
@@ -414,9 +434,22 @@ def main(argv: list) -> int:
                 print(f"transition: cannot read {source}: {exc.strerror}", file=sys.stderr)
                 return 1
         # The `**Status:**` bullet is this tool's to write, so it is not required of the
-        # caller: the move that was actually made replaces whatever the body says (F-049).
-        problems = journal_entry_module().check_body(entry_body, item_id,
-                                                     status_supplied=True)
+        # caller: the move that was actually made replaces whatever the body says (F-049). The
+        # `**Gates:**` bullet is the same, with one boundary: `--force` means step 2 never runs,
+        # so there is no verdict of ours to write and the caller's own list has to stand up on
+        # its own. What is checked either way is the gate *names* against the contract — that
+        # needs no run at all, and it is the half nothing checked before (F-091).
+        forced = "force" in flags
+        journal_entry = journal_entry_module()
+        problems = journal_entry.check_body(entry_body, item_id, status_supplied=True)
+        gates, gate_message = journal_entry.contract_gates(actor)
+        if gates is None:
+            print(f"transition: {gate_message}", file=sys.stderr)
+            return 1
+        if not problems:
+            problems = journal_entry.check_gate_bullet(
+                entry_body, gates, verdicts_owned=not forced,
+                pending_ok=pending_move, manual_owned=pending_move and not forced)
         if problems:
             for problem in problems:
                 print(f"transition: the journal body is not a legal entry — {problem}",
@@ -426,15 +459,35 @@ def main(argv: list) -> int:
             return 1
 
     reason = options["reason"]
+    verdicts = {}
     if "force" in flags:
         reason = f"{reason} [gates forced]"
+        if entry_body is not None:
+            print("transition: --force skipped the gates, so the '**Gates:**' bullet you wrote "
+                  "is the one that is recorded; nothing here can vouch for it.")
     else:
+        import tempfile
+        verdict_handle, verdict_path = tempfile.mkstemp(prefix="transition-verdicts-")
+        os.close(verdict_handle)
         gate_result = subprocess.run(
             [sys.executable, os.path.join(HERE, "run-gate"), "--skill", actor,
-             "--item", item_id, "--all", "--root", root,
+             "--item", item_id, "--all", "--root", root, "--verdicts", verdict_path,
              "--resolving", f"{item_id}:{from_status or ''}->{to_status}"
              + ("+journal" if options.get("journal-body-file") else "")],
             capture_output=True, text=True)
+        try:
+            with open(verdict_path, "r", encoding="utf-8") as handle:
+                for line in handle:
+                    cells = line.rstrip("\n").split("\t")
+                    if len(cells) >= 2:
+                        verdicts[cells[0]] = (cells[1], cells[2] if len(cells) > 2 else "")
+        except OSError:
+            pass
+        finally:
+            try:
+                os.unlink(verdict_path)
+            except OSError:
+                pass
         print(gate_result.stdout.rstrip())
         if gate_result.stderr.strip():
             print(gate_result.stderr.rstrip(), file=sys.stderr)
@@ -493,10 +546,28 @@ def main(argv: list) -> int:
         handle.write(row)
 
     if entry_body is not None:
+        # The verdicts go in here, after the run and before the entry is appended: the bullet
+        # the file receives is the one the program produced, gate for gate, in contract order.
+        # The caller's evidence sentence survives; the pass or fail does not (F-091).
+        if "force" not in flags:
+            supplied, _ = journal_entry.supplied_gates(entry_body)
+            reason_text = ""
+            if pending_move:
+                reason_text = (f"not decided by this move — `{actor}` is dispatched again at "
+                               f"`{to_status}` and this gate is decided there")
+            composed, contradictions = journal_entry.compose_gates(
+                gates, supplied, verdicts, reason_text)
+            for name, claimed, actual in contradictions:
+                print(f"transition: the body recorded {name!r} as {claimed!r}; the run this "
+                      f"command just did reported {actual!r}, and that is what the entry says. "
+                      f"The evidence sentence you wrote is kept beside it.")
+            entry_body = journal_entry.force_gates_bullet(entry_body, composed)
         argv = [sys.executable, os.path.join(HERE, "journal-entry"), item_id,
                 "--skill", actor, "--root", root,
                 "--status", f"`{from_status or '—'}` → `{to_status}`",
                 "--body-file", "-"]
+        if "force" not in flags:
+            argv.append("--gates-checked")
         entry = subprocess.run(argv, input=entry_body, capture_output=True, text=True)
         print(entry.stdout.rstrip())
         if entry.stderr.strip():

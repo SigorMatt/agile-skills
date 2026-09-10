@@ -52,6 +52,11 @@ item.updated.before-created
 item.updated.stale
 journal.bullet.missing
 journal.execution.missing
+journal.gates.missing
+journal.gates.pending
+journal.gates.unknown
+journal.gates.unreadable
+journal.gates.verdict
 journal.item
 journal.order
 journal.status.unmatched

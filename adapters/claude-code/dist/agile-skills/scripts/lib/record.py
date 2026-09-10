@@ -40,7 +40,7 @@ __all__ = [
     "blocks", "paragraphs", "sections", "duplicate_headings", "table_rows", "entries",
     "labelled", "subtree", "split_row", "is_prose",
     "BULLET_RE", "HEADING_RE", "FENCE_RE", "TABLE_ROW_RE", "JOURNAL_HEADING_RE",
-    "split_label",
+    "split_label", "GATE_VERDICTS", "GATE_LINE_RE", "gate_line", "gate_rows",
 ]
 
 # A list marker: `-`, `*`, or `1.` / `1)`. The marker set is deliberately small — a record whose
@@ -63,6 +63,70 @@ JOURNAL_HEADING_RE = re.compile(
 LABEL_CHARS_RE = re.compile(r"^[A-Za-z][A-Za-z0-9 '/\-\u2014&()]*$")
 LABEL_MAX = 60
 _BOLD_RE = re.compile(r"\*\*|__")
+
+# The verdict vocabulary of a `**Gates:**` line (spec/journal-and-history.md §2.2). `pending` is
+# the fourth word and the newest: a gate whose verdict is not owed by *this* entry, because the
+# acting skill will be dispatched again on this item and will decide it then. Before it existed,
+# eleven opening `implement` entries in one engagement invented three vocabularies for the same
+# situation — `skipped`, `not yet run`, `not run` — and one recorded a hard gate as
+# **fail, not blocking** on a move that proceeded (F-080).
+GATE_VERDICTS = ("pass", "fail", "skipped", "pending")
+# One line of a `**Gates:**` bullet, in the shapes the record actually writes:
+#     - tests-pass → **pass** (pytest, exit 0)
+#     - `lint-clean` (hard) → **skipped** — {{commands.lint}} is null
+# The name may be backticked, an enforcement parenthetical may follow it, the arrow may be a
+# real one or ASCII, and the verdict may or may not be bolded. Everything after the verdict is
+# evidence and is returned verbatim.
+GATE_LINE_RE = re.compile(
+    r"^\s*(?:[-*]|\d+[.)])\s+`?(?P<name>[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`?\s*"
+    r"(?:\([^)]*\)\s*)?(?:\u2192|->)\s*"
+    r"(?:\*\*|__)?(?P<verdict>[A-Za-z][A-Za-z-]*)(?:\*\*|__)?\s*(?P<evidence>.*)$"
+)
+
+
+def gate_line(text: str):
+    """`(name, verdict, evidence)` for one line of a `**Gates:**` bullet, else three Nones.
+
+    The verdict is lowercased because the record writes it bolded and the eye reads `**pass**`
+    and `**Pass**` as the same word; whether it is one of `GATE_VERDICTS` is the caller's rule,
+    not this module's. The evidence is whatever follows, with a leading dash or em-dash of the
+    `name → verdict — evidence` form dropped and surrounding brackets left alone.
+    """
+    match = GATE_LINE_RE.match(text or "")
+    if not match:
+        return None, None, None
+    evidence = match.group("evidence").strip()
+    if evidence[:1] in ("\u2014", "-", ":"):
+        evidence = evidence[1:].strip()
+    return match.group("name"), match.group("verdict").lower(), evidence
+
+
+def gate_rows(block_list: list, label: str = "Gates"):
+    """`(name, verdict, evidence, line)` for every gate line under a `**Gates:**` bullet.
+
+    The gate list is a *nested* list: the labelled bullet carries no value of its own and every
+    gate is a block beneath it, so reading the label's own line answers nothing — `subtree()` is
+    what puts the pair back together. A sub-block that is not a gate line at all is returned with
+    a `None` name so a caller can report it rather than silently skipping it, which is the shape
+    of the omission the `**Gates:**` bullet exists to prevent.
+
+    Only the bullet's **direct** children are gate lines. A real entry breaks one gate's evidence
+    out into a list of its own — the Definition of Ready decided criterion by criterion, R1 to
+    R8, under `definition-of-ready` — and reading the whole subtree flat turns eight pieces of
+    one gate's evidence into eight gates that do not exist.
+    """
+    wanted = label.strip().lower()
+    for position, block in enumerate(block_list):
+        if not block.label or block.label.strip().lower() != wanted or block.indent != 0:
+            continue
+        children = [child for child in subtree(block_list, position)[1:]
+                    if child.kind == "bullet"]
+        if not children:
+            return []
+        depth = min(child.indent for child in children)
+        return [gate_line(child.joined) + (child.start,)
+                for child in children if child.indent == depth]
+    return []
 
 
 def split_label(line: str):

@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.3.0
+  methodology-version: 0.3.1
   persona: product-analyst
   human-interaction: direct
 ---
@@ -252,7 +252,10 @@ scripts/journal-entry <ITEM-ID> --skill refine --body-file <path>
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
 bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
-is inserted:
+is inserted. It rewrites the **verdicts** in `**Gates:**` the same way, from the run it just did
+— one line per contract gate, so the entry can neither contradict the run nor omit a gate. What
+you write is the **evidence** for each gate, and it is kept, including where the two disagreed
+(`spec/journal-and-history.md` §2.2a):
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor refine --reason "..." \

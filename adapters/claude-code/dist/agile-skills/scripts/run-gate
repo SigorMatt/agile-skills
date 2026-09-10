@@ -5,6 +5,7 @@ Usage:
   scripts/run-gate --skill implement --item WI-0001 --gate tests-pass [--root .]
   scripts/run-gate --skill implement --item WI-0001 --all [--root .]
   scripts/run-gate --skill implement --item WI-0001 --all --resolving WI-0001:planned->in-progress
+  scripts/run-gate --skill implement --item WI-0001 --all --verdicts <path>
 
 `--resolving <ITEM>:<from>-><to>` says a transition is pending. `workspace-valid` then judges the
 state that move produces rather than the one it is leaving — otherwise every `answer-questions`
@@ -18,6 +19,13 @@ A gate whose command contains a placeholder that resolves to null is **SKIPPED**
 is printed. It is never reported as a pass — `spec/skill-contract.md` §1.4. A gate whose check
 is a `manual_check` cannot be run here; it is printed so a worker can carry it out, and it is
 reported as MANUAL rather than as either outcome.
+
+`--verdicts <path>` writes the same outcomes a second time, as one tab-separated
+`name<TAB>PASS|FAIL|SKIP|MANUAL<TAB>one-line detail` record per gate, in contract order. It
+exists so that `scripts/transition` can put the verdicts *this run produced* into the journal
+entry it appends, rather than trusting the ones the caller typed before the run (F-091). The
+human report on stdout is unchanged and is still the thing a person reads; scraping it would
+make the report's layout a wire format, which is the mistake this flag avoids.
 
 Standard library only (ADR-0002).
 """
@@ -194,13 +202,25 @@ def main(argv: list) -> int:
 
     resolver = Resolver(root, options["item"])
     failures = []
+    recorded = []
     for gate in selected:
         outcome, detail = run_one(gate, resolver, root, options.get("resolving"))
         print(f"{outcome:6} {gate['name']}  ({gate['enforcement']})")
         for line in detail.split("\n"):
             print(f"       {line.strip() if not line.startswith('      ') else line}")
+        recorded.append((gate["name"], outcome, detail.split("\n")[0].strip()))
         if outcome == "FAIL" and gate["enforcement"] == "hard":
             failures.append(gate["name"])
+
+    if options.get("verdicts"):
+        try:
+            with open(options["verdicts"], "w", encoding="utf-8") as handle:
+                for name, outcome, detail in recorded:
+                    handle.write(f"{name}\t{outcome}\t{detail}\n")
+        except OSError as exc:
+            print(f"run-gate: cannot write {options['verdicts']}: {exc.strerror}",
+                  file=sys.stderr)
+            return 2
 
     manual = [gate["name"] for gate in selected if gate.get("manual_check")]
 

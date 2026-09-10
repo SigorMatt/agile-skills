@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.6.0
+  methodology-version: 0.6.1
   persona: architect
   human-interaction: direct
 ---
@@ -260,7 +260,10 @@ scripts/journal-entry <ITEM-ID> --skill plan --body-file <path>
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
 bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
-is inserted:
+is inserted. It rewrites the **verdicts** in `**Gates:**` the same way, from the run it just did
+— one line per contract gate, so the entry can neither contradict the run nor omit a gate. What
+you write is the **evidence** for each gate, and it is kept, including where the two disagreed
+(`spec/journal-and-history.md` §2.2a):
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor plan --reason "..." \

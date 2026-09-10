@@ -85,6 +85,15 @@ Steps, in order:
                                                that was made; standalone journal-entry still
                                                requires it, and a body missing a bullet the tool
                                                does not write is still refused (F-049)
+ 14c. the gate verdicts belong to the runner — the `**Gates:**` bullet the entry carries is
+                                               composed from the run `transition` just did: one
+                                               line per contract gate, the runner's verdict, the
+                                               worker's evidence sentence, a named contradiction
+                                               when the two disagreed, `pending` on the one move
+                                               a skill hands work to itself, and the validator's
+                                               comparison of the bullet against the contract of
+                                               the skill in the entry's own heading (F-091,
+                                               F-080)
  14b. one silence threshold, three consumers — `termination.silence.threshold_rounds` moved from
                                                3 to 5 over one unchanged workspace, and each of
                                                `record-halt`, `engagement-state` and
@@ -1850,23 +1859,46 @@ def check_derived_model(runner: Runner) -> None:
     runner.emit("the derived model, by execution (14 cases)", True)
 
 
-JOURNAL_BODY = "\n".join([
-    "- **Item:** WI-0001",
-    "- **Trigger:** draft, dispatched by next",
-    "- **Inputs read:**",
-    "  - item.md",
-    "- **Decisions:**",
-    "  - none",
-    "- **Questions raised:** none",
-    "- **Commands:**",
-    "  - none",
-    "- **Gates:**",
-    "  - definition-of-ready → **pass** (checked by hand)",
-    "- **Artifacts:**",
-    "  - item.md",
-    "- **Result:** the item meets the Definition of Ready.",
-    "",
-])
+def contract_gate_names(skill: str) -> list:
+    """The gate names `skill` declares, read out of its own contract.
+
+    A body written for one of these tools has to answer for every gate the contract lists
+    (F-080), so the fixture bodies below are generated from the contract rather than typed —
+    a hand-typed list would go stale the next time a skill gains a gate, and the step would
+    then fail for a reason that has nothing to do with what it checks.
+    """
+    sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
+    import miniyaml
+    path = os.path.join(ROOT, "methodology", "skills", skill, "skill.yaml")
+    if not os.path.isfile(path):
+        return []
+    contract = miniyaml.load_file(path) or {}
+    return [gate["name"] for gate in (contract.get("quality_gates") or [])
+            if isinstance(gate, dict) and gate.get("name")]
+
+
+def journal_body(skill: str, item: str = "WI-0001", gates=None, result="done.") -> str:
+    """A legal entry body for `skill`, with one `**Gates:**` line per contract gate."""
+    lines = [f"- **Item:** {item}",
+             "- **Trigger:** dispatched by next",
+             "- **Inputs read:**",
+             "  - item.md",
+             "- **Decisions:**",
+             "  - none",
+             "- **Questions raised:** none",
+             "- **Commands:**",
+             "  - none",
+             "- **Gates:**"]
+    for name in (contract_gate_names(skill) if gates is None else gates):
+        lines.append(f"  - {name} → **pass** (checked by hand)")
+    lines += ["- **Artifacts:**",
+              "  - item.md",
+              f"- **Result:** {result}",
+              ""]
+    return "\n".join(lines)
+
+
+JOURNAL_BODY = journal_body("refine", result="the item meets the Definition of Ready.")
 
 
 def check_journal_body(runner: Runner) -> None:
@@ -1933,8 +1965,9 @@ def check_journal_body(runner: Runner) -> None:
                             "else to write it")
 
         partial = os.path.join(root, "partial.md")
+        plan_body = journal_body("plan", result="the plan is written.")
         with open(partial, "w", encoding="utf-8") as handle:
-            handle.write("\n".join(line for line in JOURNAL_BODY.split("\n")
+            handle.write("\n".join(line for line in plan_body.split("\n")
                                    if not line.startswith("- **Gates:**")))
         refused = tool("transition", "WI-0001", "--to", "planned", "--actor", "plan",
                        "--reason", "planned", "--journal-body-file", partial,
@@ -1948,6 +1981,214 @@ def check_journal_body(runner: Runner) -> None:
                     detail="\n".join(f"  - {problem}" for problem in problems))
         return
     runner.emit("a journal body needs no Status bullet (F-049, 4 cases)", True)
+
+def check_gate_verdicts(runner: Runner) -> None:
+    """The `**Gates:**` bullet's verdicts belong to the program that ran the gates (F-091, F-080).
+
+    `transition` ran the gates, printed a report and appended the body the caller had written
+    before the run. Two entries in one engagement recorded a verdict the program had
+    contradicted — `epic-sign-off` **pass** where the gate printed FAIL, and
+    `tests-pass-on-the-merge-result` **skipped** where the runner printed PASS — and a third
+    listed six gates where its sixteen siblings listed seven. Both were caught by unusually
+    careful workers, which is the thing the format exists not to depend on.
+
+    Ten cases, in one throwaway workspace, covering both directions of every rule that moved:
+    the verdict is rewritten and the contradiction is named; the caller's evidence sentence
+    survives; completeness comes from the contract rather than from the caller's memory; a gate
+    the contract does not declare is refused and nothing is written; `pending` is written by the
+    tool on the one move that earns it and refused by the validator everywhere else; a manual
+    gate's verdict stays the caller's, because no program decided it; the validator's comparison
+    reports each way the bullet can disagree with the contract; and an entry written under an
+    older contract version is left alone, because it records an execution under that contract
+    rather than under this one.
+    """
+    import tempfile
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "new-item", "transition", "journal-entry",
+                          "validate-workspace")}
+    label = "the gate verdicts belong to the runner (F-091, F-080)"
+    if not all(os.path.isfile(path) for path in tools.values()):
+        runner.skip(label, "one of the scripts is absent")
+        return
+
+    problems = []
+    observations = 0
+    with tempfile.TemporaryDirectory() as root:
+        def tool(name, *args):
+            return subprocess.run([sys.executable, tools[name], *args],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        def note(ok, message):
+            nonlocal observations
+            observations += 1
+            if not ok:
+                problems.append(message)
+
+        def body_file(name, text):
+            path = os.path.join(root, name)
+            write(path, text)
+            return path
+
+        def journal_of(item):
+            path = os.path.join(root, "tracker", "items", item, "journal.md")
+            return read(path) if os.path.isfile(path) else ""
+
+        tool("workspace-init", root)
+        tool("new-item", "--root", root, "--id", "EP-001", "--type", "epic", "--title", "A goal",
+             "--status", "open", "--actor", "intake", "--reason", "from the raw idea")
+        tool("new-item", "--root", root, "--id", "WI-0001", "--type", "work-item",
+             "--epic", "EP-001", "--title", "Do the thing", "--status", "draft",
+             "--actor", "intake", "--reason", "refined from the idea")
+        tool("transition", "WI-0001", "--to", "ready", "--actor", "refine", "--force",
+             "--reason", "the Definition of Ready passes", "--root", root,
+             "--journal-body-file", body_file("refine.md", journal_body("refine")))
+        tool("transition", "WI-0001", "--to", "planned", "--actor", "plan", "--force",
+             "--reason", "plan.md written", "--root", root,
+             "--journal-body-file", body_file("plan.md", journal_body("plan")))
+
+        # 1-3. The opening `implement` move: every gate `pending`, because the same skill is
+        # dispatched again at `in-progress` and decides them there. The caller wrote one gate;
+        # the entry carries all nine, in contract order, and the caller's sentence survives.
+        opening = journal_body("implement", gates=[], result="implementation has started.")
+        opening = opening.replace("- **Gates:**",
+                                  "- **Gates:**\n  - tests-pass → **pass** (I say so)")
+        opened = tool("transition", "WI-0001", "--to", "in-progress", "--actor", "implement",
+                      "--reason", "branch created", "--root", root, "--branch", "wi/WI-0001",
+                      "--journal-body-file", body_file("open.md", opening))
+        entry = journal_of("WI-0001")
+        declared = contract_gate_names("implement")
+        note(all(f"`{name}` → **pending**" in entry for name in declared),
+             "the opening implement entry does not record every contract gate as 'pending'; "
+             "that move is the one the fourth verdict exists for (F-080)")
+        note(entry.count("→ **pending**") == len(declared),
+             f"the opening entry lists {entry.count('→ **pending**')} pending gates where the "
+             f"contract declares {len(declared)}; completeness is the tool's, not the caller's")
+        note("I say so" in entry,
+             "the caller's evidence sentence did not survive; the verdict is the runner's and "
+             "the evidence is the worker's, not the other way round")
+        note("dispatched again at `in-progress`" in entry,
+             "a 'pending' line does not say where the gate is decided, so the record cannot be "
+             "read without the contract beside it")
+        note(opened.returncode in (0, 1) and "not a legal entry" not in opened.stdout,
+             "the opening transition refused a body that omitted eight of nine gates; the tool "
+             "writes those lines from the run it just did")
+
+        # 4-5. A non-pending move: the runner's verdict replaces a contradicted one, and the
+        # contradiction is named rather than silently corrected.
+        suspend = journal_body("implement", gates=[], result="a question blocks the work.")
+        suspend = suspend.replace(
+            "- **Gates:**",
+            "- **Gates:**\n"
+            "  - workspace-valid → **pass** (I ran it and it was fine)\n"
+            "  - every-criterion-has-a-test → **pass** (AC1 maps to test_one)\n"
+            "  - no-unplanned-scope → **pass** (nothing beyond the plan)")
+        moved = tool("transition", "WI-0001", "--to", "awaiting-answer", "--resume-to",
+                     "in-progress", "--actor", "implement", "--reason", "Q-001 blocking",
+                     "--root", root,
+                     "--journal-body-file", body_file("suspend.md", suspend))
+        entry = journal_of("WI-0001")
+        note("`workspace-valid` → **fail**" in entry,
+             "a verdict the run contradicted survived into the entry; the runner's verdict is "
+             "the one the record keeps (F-091)")
+        note("the body recorded 'workspace-valid' as 'pass'" in moved.stdout,
+             "the contradiction was corrected silently; a worker who wrote the wrong verdict "
+             "has to be told, or the correction is invisible")
+        note("I ran it and it was fine" in entry,
+             "the contradicted line dropped the caller's evidence; both halves belong in the "
+             "record, which is what makes the disagreement readable")
+
+        # 6. A gate the contract does not declare is refused, and nothing is written.
+        bogus = journal_body("implement", gates=[], result="unknown gate.")
+        bogus = bogus.replace("- **Gates:**",
+                              "- **Gates:**\n  - tests-are-green → **pass** (a gate that is "
+                              "not in the contract)")
+        before = journal_of("WI-0001")
+        refused = tool("transition", "WI-0001", "--to", "in-progress", "--actor",
+                       "answer-questions", "--reason", "Q-001 answered", "--root", root,
+                       "--journal-body-file", body_file("bogus.md", bogus))
+        note(refused.returncode != 0
+             and "does not declare" in (refused.stdout + refused.stderr),
+             "a '**Gates:**' bullet naming a gate the contract does not have was accepted")
+        note(journal_of("WI-0001") == before,
+             "the refusal happened after something was written; the body is checked before a "
+             "single byte lands (F-039)")
+
+        # 7. A manual gate has no program behind it, so its verdict stays the caller's — and an
+        # entry that leaves it out is refused rather than filled in with a guess.
+        silent = journal_body("answer-questions", gates=[], result="resumed.")
+        silent = silent.replace(
+            "- **Gates:**",
+            "- **Gates:**\n  - answer-is-propagated → **pass** (checked file by file)")
+        manual = tool("transition", "WI-0001", "--to", "in-progress", "--actor",
+                      "answer-questions", "--reason", "Q-001 answered", "--root", root,
+                      "--journal-body-file", body_file("manual.md", silent))
+        note(manual.returncode != 0
+             and "answered-from-the-record" in (manual.stdout + manual.stderr),
+             "a manual gate with no verdict was accepted; nothing ran, so there is no verdict "
+             "for the tool to write and the caller still owes one")
+
+        # 8-9. The validator's comparison, in each direction it can fail, at the installed
+        # version — and silent one version back, because an entry records an execution under the
+        # contract named in its own heading.
+        item_dir = os.path.join(root, "tracker", "items", "WI-0001")
+        keep = read(os.path.join(item_dir, "journal.md"))
+        broken = ("\n## 2030-01-01T00:00:00Z — implement v{version} — developer\n\n"
+                  "- **Item:** WI-0001\n"
+                  "- **Trigger:** status `in-progress`, dispatched by `next`\n"
+                  "- **Inputs read:** item.md\n"
+                  "- **Decisions:** none\n"
+                  "- **Questions raised:** none\n"
+                  "- **Commands:** none\n"
+                  "- **Gates:**\n"
+                  "  - `tests-pass` → **not yet run** (a word outside the vocabulary)\n"
+                  "  - `lint-clean` → **pending** (no later implement move follows this one)\n"
+                  "  - `tests-are-green` → **pass** (not a gate this contract declares)\n"
+                  "  - and the rest were fine\n"
+                  "- **Artifacts:** none\n"
+                  "- **Status:** `in-progress` → `in-progress` (unchanged)\n"
+                  "- **Result:** every way the bullet can disagree with its own contract.\n")
+        installed = contract_version("implement")
+        write(os.path.join(item_dir, "journal.md"), keep + broken.format(version=installed))
+        found = codes_from(tool("validate-workspace", root).stdout)
+        for code in ("journal.gates.verdict", "journal.gates.pending", "journal.gates.unknown",
+                     "journal.gates.unreadable", "journal.gates.missing"):
+            note(code in found,
+                 f"the validator did not report {code} for an entry whose '**Gates:**' bullet "
+                 f"disagrees with the contract of the skill in its own heading (F-080)")
+        write(os.path.join(item_dir, "journal.md"), keep + broken.format(version="0.0.1"))
+        stale = codes_from(tool("validate-workspace", root).stdout)
+        note(not [code for code in stale if code.startswith("journal.gates.")],
+             "the same entry one contract version back was still compared to today's gate list; "
+             "an entry records an execution under the contract named in its own heading")
+        write(os.path.join(item_dir, "journal.md"), keep)
+
+        # 10. Standalone `journal-entry` runs no gates, so the verdicts stay the caller's — but
+        # the gate *names* come from the same contract either way. The F-049 division, one
+        # bullet to the left.
+        solo = journal_body("implement", gates=["tests-pass"], result="one gate only.")
+        solo = solo.replace("- **Result:**",
+                            "- **Status:** `in-progress` → `in-progress` (unchanged)\n"
+                            "- **Result:**")
+        standalone = tool("journal-entry", "WI-0001", "--skill", "implement", "--root", root,
+                          "--body-file", body_file("solo.md", solo))
+        note(standalone.returncode != 0
+             and "does not report 'lint-clean'" in (standalone.stdout + standalone.stderr),
+             "standalone journal-entry accepted a body that omits a contract gate; there is no "
+             "run behind the entry, so the caller owes every line of it")
+
+    if problems:
+        runner.emit(label, False, detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit(f"{label} ({observations} observations)", True)
+
+
+def contract_version(skill: str) -> str:
+    sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
+    import miniyaml
+    path = os.path.join(ROOT, "methodology", "skills", skill, "skill.yaml")
+    contract = miniyaml.load_file(path) or {}
+    return str(contract.get("version", ""))
+
 
 def trial_merge_commands() -> list:
     """The trial-merge sequence, read out of `review-close`'s own procedure.
@@ -2440,6 +2681,7 @@ def main() -> int:
     check_obligation_binding(runner)
     check_derived_model(runner)
     check_journal_body(runner)
+    check_gate_verdicts(runner)
     check_trial_merge(runner)
     check_silence_threshold(runner)
     check_process_gate_names(runner)

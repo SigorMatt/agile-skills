@@ -351,12 +351,10 @@ On the item's `journal.md`:
 - `**Cross-answer check:**` — the human answers this execution consumed, the prior answers each
   was checked against by ID, and the verdict for each; `none` with the reason when there were
   none (ADR-0008 §4).
-- `**Gates:**` — every one, with the per-criterion Definition of Done table as the evidence for
-  `definition-of-done`, the list of restated sections as the evidence for
-  `engagement-state-is-restated` (or `not applicable - an item close`, never `passed`),
-  `scripts/engagement-state`'s verdict as the evidence for the epic
-  decision, and — for `claims-are-sourced` — the **scope** the gate actually examined, quoted
-  from its own output. A gate whose scope you did not read is a gate you cannot report (F-066).
+- `**Gates:**` — evidence for every one: the Definition of Done table for `definition-of-done`;
+  the restated sections for `engagement-state-is-restated` (`not applicable - an item close`,
+  never `passed`); `scripts/engagement-state`'s verdict for the epic decision; and for
+  `claims-are-sourced` the **scope** it examined, quoted from its own output (F-066).
 - `**Artifacts:**` — `review.md`, the merge commit, any bug you filed, the sign-off question, and
   the epic if the engagement ended.
 
@@ -375,7 +373,10 @@ scripts/journal-entry <ITEM-ID> --skill review-close --body-file <path>
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
 bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
-is inserted:
+is inserted. It rewrites the **verdicts** in `**Gates:**` the same way, from the run it just did
+— one line per contract gate, so the entry can neither contradict the run nor omit a gate. What
+you write is the **evidence** for each gate, and it is kept, including where the two disagreed
+(`spec/journal-and-history.md` §2.2a):
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor review-close --reason "..." \

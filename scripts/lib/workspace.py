@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
-from record import (JOURNAL_HEADING_RE, blocks, entries,  # noqa: E402
+from record import (JOURNAL_HEADING_RE, blocks, entries, gate_rows,  # noqa: E402
                     sections as split_sections, table_rows)
 
 __all__ = [
@@ -113,7 +113,7 @@ class HistoryRow:
 
 
 class JournalEntry:
-    __slots__ = ("when", "skill", "version", "persona", "bullets", "line")
+    __slots__ = ("when", "skill", "version", "persona", "bullets", "gates", "line")
 
     def __init__(self, when, skill, version, persona, line) -> None:
         self.when = when
@@ -121,6 +121,11 @@ class JournalEntry:
         self.version = version
         self.persona = persona
         self.bullets = {}
+        # `(name, verdict, evidence, line)` per line of the `**Gates:**` bullet. The bullet's own
+        # value is empty — every gate is a block nested under it — so `bullets["Gates"]` answers
+        # nothing about which gates were reported, which is how the record went eleven entries
+        # with a verdict outside the vocabulary and nothing noticed (F-080).
+        self.gates = []
         self.line = line
 
 
@@ -332,6 +337,7 @@ class Workspace:
                                    match.group("version"), match.group("persona").strip(),
                                    entry.line)
             item.journal.append(current)
+            current.gates = gate_rows(entry.blocks)
             for block in entry.blocks:
                 if block.kind != "bullet" or block.indent != 0:
                     continue

@@ -3,7 +3,8 @@
 
 Usage:
   scripts/journal-entry <ITEM-ID> --skill <name> --body-file <path|-> [--root .]
-                        [--status "`from` → `to`"] [--dry-run]
+                        [--status "`from` → `to`"]
+                        [--gates-checked] [--dry-run]
   scripts/journal-entry <ITEM-ID> --restamp-last <UTC-timestamp> --reason "..." [--root .]
   scripts/journal-entry --template --skill <name> [--item <ITEM-ID>]
 
@@ -22,6 +23,12 @@ reported a skill version two patches below the one that was installed. An invent
 the single kind of record entry that cannot be audited against anything — every other claim has
 an artifact behind it — so a timeline audit of a journal would have "proved" that work happened
 while nothing at all was running.
+
+The `**Gates:**` bullet is read against the acting skill's own contract, not merely required to
+exist: a line naming a gate the contract does not declare, and a contract gate with no line, are
+both refused. Standalone, the *verdicts* in it stay the caller's, because standalone nothing ran
+— the same division `**Status:**` has. `scripts/transition` runs the gates, so there the verdicts
+are the tool's and it passes `--gates-checked` to say it has already written them (F-080, F-091).
 
 `--restamp-last` is the journal's counterpart of `transition --restamp-last`, and exists for the
 identical deadlock: entries must be non-decreasing, an earlier entry was stamped with a wrong
@@ -42,6 +49,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
 import miniyaml  # noqa: E402
+from record import GATE_VERDICTS, blocks, gate_rows  # noqa: E402
 from workspace import resolve_root  # noqa: E402
 
 TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
@@ -50,6 +58,7 @@ HEADING_RE = re.compile(r"^##\s+(?P<when>\S+)\s+—\s+(?P<skill>[a-z0-9-]+)\s+v(
 
 REQUIRED_BULLETS = ["Item", "Trigger", "Inputs read", "Decisions", "Questions raised",
                     "Commands", "Gates", "Artifacts", "Status", "Result"]
+GATES_RE = re.compile(r"^-\s+\*\*Gates:\*\*", re.MULTILINE)
 
 
 def now() -> str:
@@ -121,7 +130,9 @@ def template(skill: str, item_id: str) -> str:
         "- **Commands:**",
         "  - <command> → <exit code / outcome>",
         "- **Gates:**",
-        "  - <gate> → **pass|fail|skipped** (<evidence>)",
+        "  - <gate> → **pass|fail|skipped|pending** (<evidence>)",
+        "  #   one line per gate in this skill's contract, by name. The transition rewrites the",
+        "  #   verdicts from the run it just did; what you write is the evidence sentence.",
         "- **Artifacts:**",
         "  - <every file created or updated, and any commit produced>",
         "- **Status:** `<from>` → `<to>`",
@@ -130,6 +141,181 @@ def template(skill: str, item_id: str) -> str:
         f"# heading is written by scripts/journal-entry --skill {skill or '<skill>'}; do not "
         f"write one yourself",
     ]) + "\n"
+
+
+def contract_gates(skill: str):
+    """The acting skill's gate list, in contract order, or (None, message).
+
+    The list is the schema of the `**Gates:**` bullet. `spec/journal-and-history.md` §2.2 has
+    always said a contract gate MUST appear there even when it was skipped; until this read the
+    contract, the only thing anything checked was that the label existed — and the validator's
+    own hint claimed otherwise (F-080).
+    """
+    path = find_contract(skill)
+    if not path:
+        return None, f"cannot find the contract for {skill!r}, so its gate list is unknowable"
+    try:
+        contract = miniyaml.load_file(path) or {}
+    except miniyaml.YamlError as exc:
+        return None, f"{path} does not parse at line {exc.line}: {exc.message}"
+    return [gate for gate in (contract.get("quality_gates") or [])
+            if isinstance(gate, dict) and gate.get("name")], ""
+
+
+def supplied_gates(body: str):
+    """`({name: (verdict, evidence)}, [unparsable lines])` read off the body's `**Gates:**` bullet."""
+    named, unreadable = {}, []
+    for name, verdict, evidence, line in gate_rows(blocks(body, 1)):
+        if name is None:
+            unreadable.append(line)
+            continue
+        named[name] = (verdict, evidence)
+    return named, unreadable
+
+
+def check_gate_bullet(body: str, gates, verdicts_owned: bool = False, pending_ok: bool = False,
+                      manual_owned: bool = False):
+    """Reject a `**Gates:**` bullet that does not answer for the contract it belongs to.
+
+    Two directions, and both matter here — unlike `lint-skills`' one-directional check on a
+    procedure, where a contract gate the prose does not name by its id is ordinary. An entry is
+    the *record of an execution*: a gate the contract declares and the entry omits is precisely
+    the failure §2.2 exists to prevent, and a gate the entry names and the contract does not is
+    a verdict about something that did not run.
+
+    `verdicts_owned` says a transition ran the gates and will write the verdicts itself, so the
+    caller need not supply one — the `**Status:**` division, one bullet to the left (F-049).
+    What it may never supply is a verdict for a gate the contract does not have. A
+    `manual_check` gate is the exception the exception needs: no command stands behind it, so
+    nothing the runner did decides it and its verdict is still owed by the caller —
+    `manual_owned` lifts that too, and only the pending move, where nothing is owed by anyone
+    yet, sets it.
+    """
+    if gates is None:
+        return []
+    problems = []
+    named, unreadable = supplied_gates(body)
+    declared = [gate["name"] for gate in gates]
+    for line in unreadable:
+        problems.append(f"the '**Gates:**' bullet has a line at {line} that names no gate; "
+                        f"each line reads `<gate> → **verdict** (evidence)`")
+    for name in named:
+        if name not in declared:
+            problems.append(f"the '**Gates:**' bullet reports {name!r}, which this skill's "
+                            f"contract does not declare; its gates are: "
+                            f"{', '.join(declared) or '(none)'}")
+    for gate in gates:
+        name = gate["name"]
+        tool_writes = verdicts_owned and (manual_owned or not gate.get("manual_check"))
+        if name not in named:
+            if tool_writes:
+                continue      # the transition writes the missing line from the run it just did
+            problems.append(f"the '**Gates:**' bullet does not report {name!r}, which this "
+                            f"skill's contract declares; a silently omitted gate is the failure "
+                            f"this bullet exists to prevent")
+            continue
+        verdict = named[name][0]
+        if tool_writes:
+            continue          # the runner's verdict replaces whatever is here
+        if verdict not in GATE_VERDICTS:
+            problems.append(f"{name!r} is recorded as {verdict!r}; the verdicts are "
+                            f"{', '.join(GATE_VERDICTS)}")
+        elif verdict == "pending" and not pending_ok:
+            problems.append(f"{name!r} is recorded as 'pending', which is legal only on a move "
+                            f"into a status this same skill is dispatched on — the move after "
+                            f"which it runs the gate and records a real verdict")
+    return problems
+
+
+def unbracketed(evidence: str) -> str:
+    """Evidence with the brackets the caller may or may not have put round it removed."""
+    text = " ".join((evidence or "").split()).strip()
+    while text.startswith("(") and text.endswith(")"):
+        text = text[1:-1].strip()
+    return text
+
+
+def bracketed(evidence: str) -> str:
+    """Evidence as the bullet writes it: one pair of brackets, never two, never none."""
+    text = unbracketed(evidence)
+    return f"({text})" if text else "(no evidence recorded)"
+
+
+def compose_gates(gates, supplied, verdicts, pending_reason=""):
+    """The `**Gates:**` bullet's lines: the runner's verdicts, the worker's evidence.
+
+    One line per gate in the contract, in contract order — so completeness is a property of the
+    program rather than of the caller's memory. The verdict comes from `verdicts`, which is what
+    `run-gate` recorded on this run; the evidence is the sentence the caller wrote for that gate,
+    and the runner's own one-line detail only when the caller wrote none.
+
+    Two verdicts are not the runner's to give. A `manual_check` gate has no command behind it, so
+    its verdict stays the caller's word — this tool will not invent one. And when
+    `pending_reason` is set, every gate is `pending`: the move is one the same skill is
+    dispatched again after, so no verdict is owed by this entry at all (F-080).
+
+    Returns `(lines, contradictions)`. A contradiction is a gate the caller wrote a verdict for
+    that the run disagreed with — `epic-sign-off` → **pass** where the gate printed FAIL, and
+    `tests-pass-on-the-merge-result` → **skipped** where the runner printed PASS, both real, both
+    in one engagement, both caught by the workers who wrote them rather than by anything here.
+    The overwrite alone would hide them; naming them is the point (F-091).
+    """
+    outcome_word = {"PASS": "pass", "FAIL": "fail", "SKIP": "skipped"}
+    lines = ["- **Gates:**"]
+    contradictions = []
+    for gate in gates:
+        name = gate["name"]
+        given_verdict, given_evidence = supplied.get(name, (None, ""))
+        given_evidence = unbracketed(given_evidence)
+        observed, detail = verdicts.get(name, (None, ""))
+        if pending_reason:
+            verdict = "pending"
+            note = pending_reason
+            if observed:
+                note += f"; run-gate reported {observed} here, which decides nothing"
+            evidence = f"{given_evidence}; {note}" if given_evidence else note
+        elif gate.get("manual_check"):
+            verdict = given_verdict or "fail"
+            evidence = given_evidence or "no evidence recorded for a manual check"
+        else:
+            verdict = outcome_word.get(observed, given_verdict or "fail")
+            evidence = given_evidence or detail
+        if (given_verdict is not None and given_verdict != verdict
+                and given_verdict in GATE_VERDICTS):
+            contradictions.append((name, given_verdict, verdict))
+            if given_evidence and detail:
+                evidence = f"{given_evidence}; the run reported {observed}: {detail}"
+        lines.append(f"  - `{name}` → **{verdict}** {bracketed(evidence)}")
+    return lines, contradictions
+
+
+def force_gates_bullet(body: str, lines) -> str:
+    """Replace the body's `**Gates:**` bullet with `lines`, keeping everything around it.
+
+    The bullet is the label plus every line indented under it, so the replacement takes the whole
+    subtree — a caller who wrote three gate lines and a paragraph of prose gets one composed list
+    back, in contract order. A body with no such bullet has one inserted where the schema puts
+    it, before `**Artifacts:**`; the shape `force_status_bullet` uses for the same reason.
+    """
+    source = body.split("\n")
+    out, index, replaced = [], 0, False
+    while index < len(source):
+        line = source[index]
+        if not replaced and GATES_RE.match(line):
+            out.extend(lines)
+            replaced = True
+            index += 1
+            while index < len(source) and source[index][:1] in (" ", "\t"):
+                index += 1
+            continue
+        out.append(line)
+        index += 1
+    if replaced:
+        return "\n".join(out)
+    for position, line in enumerate(source):
+        if re.match(r"^-\s+\*\*Artifacts:\*\*", line):
+            return "\n".join(source[:position] + lines + source[position:])
+    return body.rstrip("\n") + "\n" + "\n".join(lines) + "\n"
 
 
 def check_body(body: str, item_id: str, status_supplied: bool = False):
@@ -179,7 +365,7 @@ def force_status_bullet(body: str, status_line: str) -> str:
 
 
 def append_entry(root: str, item_id: str, skill: str, body: str, status_line=None,
-                 dry_run=False, quiet=False) -> int:
+                 dry_run=False, quiet=False, gates_checked=False) -> int:
     """Write one entry. Returns a process exit code."""
     path = os.path.join(root, "tracker", "items", item_id, "journal.md")
     if not os.path.isfile(path):
@@ -194,7 +380,17 @@ def append_entry(root: str, item_id: str, skill: str, body: str, status_line=Non
 
     if status_line is not None:
         body = force_status_bullet(body, status_line)
+    gates, gate_message = contract_gates(skill)
+    if gates is None:
+        print(f"journal-entry: {gate_message}", file=sys.stderr)
+        return 1
     problems = check_body(body, item_id)
+    # The gate bullet is read against the contract only once the schema check has passed: an
+    # entry with no `**Gates:**` bullet at all has one problem, not one plus every gate in the
+    # contract, and a caller drowned in findings fixes the wrong thing first.
+    if not problems:
+        problems = check_gate_bullet(body, gates, verdicts_owned=gates_checked,
+                                     pending_ok=gates_checked, manual_owned=gates_checked)
     if problems:
         for problem in problems:
             print(f"journal-entry: {problem}", file=sys.stderr)
@@ -264,7 +460,7 @@ def parse_args(argv: list):
     index = 1
     while index < len(argv):
         token = argv[index]
-        if token in ("--dry-run", "--template", "--quiet"):
+        if token in ("--dry-run", "--template", "--quiet", "--gates-checked"):
             flags.add(token[2:])
             index += 1
             continue
@@ -323,7 +519,8 @@ def main(argv: list) -> int:
 
     return append_entry(root, item_id, options["skill"], body,
                         status_line=options.get("status"),
-                        dry_run="dry-run" in flags, quiet="quiet" in flags)
+                        dry_run="dry-run" in flags, quiet="quiet" in flags,
+                        gates_checked="gates-checked" in flags)
 
 
 if __name__ == "__main__":

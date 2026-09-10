@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question - or deferred it - and the reply must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.6.0
+  methodology-version: 0.6.1
   persona: architect
   human-interaction: direct
 ---
@@ -341,7 +341,10 @@ scripts/journal-entry <ITEM-ID> --skill answer-questions --body-file <path>
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
 bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
-is inserted:
+is inserted. It rewrites the **verdicts** in `**Gates:**` the same way, from the run it just did
+— one line per contract gate, so the entry can neither contradict the run nor omit a gate. What
+you write is the **evidence** for each gate, and it is kept, including where the two disagreed
+(`spec/journal-and-history.md` §2.2a):
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor answer-questions --reason "..." \

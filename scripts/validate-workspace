@@ -32,7 +32,8 @@ import miniyaml  # noqa: E402
 from report import Report  # noqa: E402
 from workspace import (BOARD_MARKER, ADR_FILE_RE, QUESTION_ID_RE, TIMESTAMP_RE,  # noqa: E402
                        Workspace, id_kind, resolve_root)
-from record import duplicate_headings, sections as split_sections  # noqa: E402
+from record import (GATE_VERDICTS, duplicate_headings,  # noqa: E402
+                    sections as split_sections)
 
 ITEM_ID_IN_TEXT_RE = re.compile(r"\b(?:EP-\d{3}|WI-\d{4}|BUG-\d{4})\b")
 ITEM_FIELDS_REQUIRED = ["id", "type", "title", "status", "priority", "created", "updated"]
@@ -156,15 +157,20 @@ def git_activity_window(root: str):
     return (stamps[0], stamps[-1]) if stamps else None
 
 
-def find_installed_versions():
-    """skill -> version, read off the contracts shipped beside the scripts. Mirrors transition."""
+def find_installed_contracts():
+    """skill -> its whole `skill.yaml`, read off the contracts shipped beside the scripts.
+
+    Mirrors transition. The version was all this used to return; the gate list is needed for the
+    same reason and from the same file, and reading the contract twice invites the two reads
+    disagreeing about where it lives.
+    """
     here = os.path.dirname(os.path.abspath(__file__))
     for base in (os.path.join(here, "skills"),
                  os.path.join(here, "..", "skills"),
                  os.path.join(here, "..", "methodology", "skills")):
         if not os.path.isdir(base):
             continue
-        versions = {}
+        contracts = {}
         for name in sorted(os.listdir(base)):
             path = os.path.join(base, name, "skill.yaml")
             if not os.path.isfile(path):
@@ -174,9 +180,9 @@ def find_installed_versions():
             except miniyaml.YamlError:
                 continue
             if contract.get("version"):
-                versions[name] = str(contract["version"])
-        if versions:
-            return versions
+                contracts[name] = contract
+        if contracts:
+            return contracts
     return {}
 
 
@@ -262,7 +268,9 @@ class Validator:
         self.obligations_reported = set()
         self.window = git_activity_window(self.workspace.root)
         self.citations = CitationResolver(self.workspace.root)
-        self.installed_versions = find_installed_versions()
+        self.installed_contracts = find_installed_contracts()
+        self.installed_versions = {name: str(contract["version"])
+                                   for name, contract in self.installed_contracts.items()}
         self.latest_stamp = datetime.datetime.now(datetime.timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ")
         self.resolving = None      # (item-id, from, to) when a transition is about to be made
@@ -763,8 +771,11 @@ class Validator:
                 if label not in entry.bullets:
                     self.report.error(path, entry.line, "journal.bullet.missing",
                                       f"entry is missing the '**{label}:**' bullet",
-                                      hint="a declared gate that is silently omitted is the "
-                                           "failure this format exists to prevent")
+                                      hint="every bullet in spec/journal-and-history.md §2.2 is "
+                                           "required, `none` included; what the '**Gates:**' "
+                                           "bullet then says is read against the contract by "
+                                           "journal.gates.*")
+            self.check_entry_gates(path, item, entry)
             named = entry.bullets.get("Item", "")
             if named.strip():
                 # The rule is "the entry names this item", so the ID is read out of the bullet
@@ -793,6 +804,82 @@ class Validator:
                                    "command")
 
     # ---- questions -----------------------------------------------------------------
+
+    def check_entry_gates(self, path, item, entry) -> None:
+        """The `**Gates:**` bullet, read against the contract of the skill in the heading.
+
+        F-080. The bullet was required to exist and never read: eleven opening entries in one
+        engagement invented three vocabularies for "not yet run", 44 of 540 gate lines carried a
+        verdict outside the three the spec admitted, one `implement` entry listed six gates where
+        its sixteen siblings listed seven, and one hard gate was recorded as *fail, not blocking*
+        on a move that proceeded. Nothing reported any of it, while this rule's own hint claimed
+        it did.
+
+        **Scoped to entries written under the installed contract**, and that is the whole of it:
+        an entry records an execution under the version named in its own heading, so holding a
+        `v0.1.1` entry to a `v0.6.0` gate list compares two different contracts and reports the
+        skill's history as a defect in the record. `journal.version.impossible` already refuses
+        the one version relation that cannot be true; this refuses to guess about the rest.
+        """
+        contract = self.installed_contracts.get(entry.skill)
+        if not contract or str(contract.get("version")) != str(entry.version):
+            return
+        declared = [gate.get("name") for gate in (contract.get("quality_gates") or [])
+                    if isinstance(gate, dict) and gate.get("name")]
+        if not declared:
+            return
+        reported = {}
+        for name, verdict, _evidence, line in entry.gates:
+            if name is None:
+                self.report.error(path, line, "journal.gates.unreadable",
+                                  "a line under '**Gates:**' names no gate",
+                                  hint="each line reads `<gate> \u2192 **verdict** (evidence)`; "
+                                       "evidence that runs to several lines nests under its own "
+                                       "gate")
+                continue
+            reported[name] = (verdict, line)
+            if name not in declared:
+                self.report.error(path, line, "journal.gates.unknown",
+                                  f"the entry reports a gate {name!r} that {entry.skill} "
+                                  f"v{entry.version} does not declare",
+                                  hint=f"its gates are: {', '.join(declared)}")
+            elif verdict not in GATE_VERDICTS:
+                self.report.error(path, line, "journal.gates.verdict",
+                                  f"{name!r} is recorded as {verdict!r}",
+                                  hint=f"the verdicts are {', '.join(GATE_VERDICTS)} "
+                                       f"(spec/journal-and-history.md §2.2)")
+        for name in declared:
+            if name not in reported:
+                self.report.error(path, entry.line, "journal.gates.missing",
+                                  f"the entry reports no verdict for {name!r}, which "
+                                  f"{entry.skill} v{entry.version} declares",
+                                  hint="a gate listed in the contract must appear even when it "
+                                       "was skipped, with the reason; a silently omitted gate "
+                                       "is an execution reporting success over a check it "
+                                       "never ran")
+
+        # `pending` is legal only where a later transition of this same execution will decide the
+        # gate: a move INTO a status this skill is itself dispatched on. That is derived from the
+        # contract, not named — nothing here knows the skill is called `implement`.
+        pending = [(name, line) for name, (verdict, line) in reported.items()
+                   if verdict == "pending"]
+        if not pending:
+            return
+        dispatched_on = ((contract.get("dispatch") or {}).get("on_status") or [])
+        legal = False
+        for from_status, to_status in status_claims(entry.bullets.get("Status", ""),
+                                                    item.identifier):
+            if from_status != to_status and to_status in dispatched_on:
+                legal = True
+        if legal:
+            return
+        for name, line in pending:
+            self.report.error(path, line, "journal.gates.pending",
+                              f"{name!r} is recorded as 'pending', but this entry's move is not "
+                              f"one {entry.skill} is dispatched again after",
+                              hint="'pending' says the same skill decides this gate at a later "
+                                   "transition of the same execution; where no such transition "
+                                   "follows, the entry owes a real verdict")
 
     def check_journal_against_history(self, item, path) -> None:
         """Every transition a journal entry claims must exist as a row in history.md.

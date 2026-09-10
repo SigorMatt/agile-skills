@@ -161,6 +161,20 @@ Rules:
   depend on a variable that only the current session knows.
 - Every gate appears in the journal for every execution of the skill, including gates that were
   skipped, with the reason. See `journal-and-history.md` §2.2.
+- **A gate that cannot hold at a skill's opening transition still belongs in that entry**, and
+  the entry records it as `pending`. The question was asked the other way round — whether such a
+  gate should be listed there at all — and the answer is no on all three readings. Omitting it
+  makes the entry silent about a check, which is the single failure the bullet exists to prevent
+  and is indistinguishable, to a reader, from an execution that forgot. Deciding *which* gates
+  "cannot hold" is a judgement, and a judgement made per gate per skill is the branch-on-a-name
+  that a contract-driven gate runner exists to avoid. And the fact is worth recording: at
+  `implement`'s opening move `commits-reference-the-item` inspects a commit range that is empty
+  by construction, so an entry saying it was **not decided here, and will be decided at the
+  completion transition** is a stronger record than one that leaves it out — it is evidence that
+  nobody was surprised. What was actually wrong was the vocabulary: the format had no word for
+  "not owed yet", so eleven entries said `skipped` or invented one, and one recorded a hard gate
+  as *fail, not blocking* on a move that proceeded (F-080). `journal-and-history.md` §2.2a is
+  that word.
 
 ### 1.4 Placeholders
 
@@ -303,3 +317,4 @@ what makes "the toy run used skill X v0.1.0, and it went wrong here" an actionab
 | 3 | 2026-08-22 | §2.2: the journal entry is written in the same command as the transition, not before it (F-017, F-019). |
 | 4 | 2026-08-27 | §2.3: the window in which the tracker is committed-invalid after a transition, and the rule that a skill does not end an execution inside it (F-038). |
 | 5 | 2026-08-30 | §1.1: `process-analyst` added to the persona enum. Every other role was on the team; the retro's standing rests on not having been (ADR-0009 §9). |
+| 6 | 2026-09-10 | §1.3: a gate that cannot hold at a skill's opening transition still appears in that entry, recorded `pending` — F-080's open question, answered (F-080). |

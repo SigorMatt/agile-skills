@@ -4,7 +4,7 @@ description: "Execute the recorded plan on a branch, with tests, and report whic
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: implement
-  methodology-version: 0.5.0
+  methodology-version: 0.6.0
   persona: developer
   human-interaction: via-questions
 ---
@@ -85,8 +85,9 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    guaranteed that finding on every single run. A validator that is legitimately red in the
    middle of every execution stops meaning anything (F-015).
 
-   The opening entry is short and honest: what you read, the branch you created, `**Gates:**`
-   recording that the completion gates have not run yet, and a `**Result:**` saying
+   The opening entry is short and honest: what you read, the branch you created, a `**Gates:**`
+   bullet the transition fills in with `pending` for every gate — the word for a gate this same
+   skill decides at a later transition of the same execution — and a `**Result:**` saying
    implementation has started. Step 9's entry is the one that reports the work.
 
 4. **Work the plan's steps in order.** For each:
@@ -221,22 +222,24 @@ On the item's `journal.md`:
 - `**Cross-answer check:**` — any claim in `docs/` sourced to a human answer that this execution
   edited, the answer's ID, and why the edit was an ordinary repair rather than a decision that
   was theirs to make. `none` when this execution touched no such sentence (ADR-0008 §4).
-- `**Cross-answer check:**` — any claim in `docs/` sourced to a human answer that this execution
-  edited, the answer's ID, and why the edit was an ordinary repair rather than a decision that was
-  theirs to make. `none` when this execution touched no such sentence (ADR-0008 §4).
 - `**Questions raised:**` — IDs and whether blocking, or `none`.
 - `**Commands:**` — every command, with exit codes. The test command, at minimum, with its
   final result.
-- `**Gates:**` — all nine by name, each pass/fail/skipped with evidence, and for
-  `claims-are-sourced` the **scope** the run printed: this branch's diff plus the documents the
-  plan named. A window that could contain nothing is not a pass (F-076). A gate whose command
-  resolved to null is `skipped` **with the reason**, never passed.
+- `**Gates:**` — all nine by name, each `pass` / `fail` / `skipped` / `pending` with evidence,
+  and for `claims-are-sourced` the **scope** the run printed: this branch's diff plus the
+  documents the plan named. A window that could contain nothing is not a pass (F-076). A gate
+  whose command resolved to null is `skipped` **with the reason**, never passed. You write the
+  evidence; the transition writes the verdict from the run it just did.
 - `**Artifacts:**` — `impl-report.md`, the branch, and the commit range.
 
 This skill writes **two** entries, because it makes two transitions. The opening one, at step 3,
 records the branch and says the work has started; its `**Gates:**` bullet lists every gate as
-not-yet-run, which is the truth at that moment. The closing one, at step 9, is the report. Both
-go through the transition that causes them, so neither move can exist without its entry.
+`pending` — this skill is dispatched again at `in-progress`, and it is the closing transition
+that decides them. That is the only move in the pipeline where `pending` is legal, and it is why
+the word exists: `commits-reference-the-item` inspects a commit range that is empty at that
+moment, and recording it as a `fail` that did not block, or leaving it out, were the two things
+runs actually did (F-080). The closing entry, at step 9, is the report. Both go through the
+transition that causes them, so neither move can exist without its entry.
 
 
 **How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
@@ -250,7 +253,10 @@ scripts/journal-entry <ITEM-ID> --skill implement --body-file <path>
 When the entry accompanies a status change, do not run two commands. Pass the same file to the
 transition, which appends the history row and the entry together and writes the `**Status:**`
 bullet itself from the move it actually made — supply one and it is replaced, leave it out and it
-is inserted:
+is inserted. It rewrites the **verdicts** in `**Gates:**` the same way, from the run it just did
+— one line per contract gate, so the entry can neither contradict the run nor omit a gate. What
+you write is the **evidence** for each gate, and it is kept, including where the two disagreed
+(`spec/journal-and-history.md` §2.2a):
 
 ```
 scripts/transition <ITEM-ID> --to <status> --actor implement --reason "..." \

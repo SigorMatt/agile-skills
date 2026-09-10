@@ -715,6 +715,46 @@ def run_record(results) -> None:
                   record_lib.split_row("| a | str \\| None | b |"),
                   ["a", "str | None", "b"])
 
+    # A `**Gates:**` line, in the shapes the record actually writes (F-080, F-091). The verdict
+    # is the word a reader audits the run by, so reading it is a rule about the record's
+    # structure and belongs here rather than in each of the three tools that needs it.
+    results.check("record/gate-line-plain",
+                  record_lib.gate_line("  - tests-pass \u2192 **pass** (exit 0)"),
+                  ("tests-pass", "pass", "(exit 0)"))
+    results.check("record/gate-line-backticked-with-enforcement",
+                  record_lib.gate_line("- `lint-clean` (hard) \u2192 **skipped** \u2014 null"),
+                  ("lint-clean", "skipped", "null"))
+    results.check("record/gate-line-ascii-arrow-and-bare-verdict",
+                  record_lib.gate_line("  - commits-reference-the-item -> pending"),
+                  ("commits-reference-the-item", "pending", ""))
+    results.check("record/gate-line-verdict-is-lowercased",
+                  record_lib.gate_line("  - tests-pass \u2192 **PASS**")[1], "pass")
+    results.check("record/gate-line-that-is-not-one",
+                  record_lib.gate_line("  - all four gates ran and passed"),
+                  (None, None, None))
+    results.check("record/gate-verdicts-are-four",
+                  list(record_lib.GATE_VERDICTS), ["pass", "fail", "skipped", "pending"])
+
+    gates_body = ("- **Commands:**\n"
+                  "  - none\n"
+                  "- **Gates:**\n"
+                  "  - tests-pass \u2192 **pass** (exit 0)\n"
+                  "  - lint-clean \u2192 **skipped** \u2014 the command is null\n"
+                  "    and the reason wrapped onto a second line\n"
+                  "  - all four of the others were fine\n"
+                  "- **Artifacts:**\n"
+                  "  - none\n")
+    rows = record_lib.gate_rows(record_lib.blocks(gates_body, 1))
+    results.check("record/gate-rows-reads-the-nested-list",
+                  [row[0] for row in rows], ["tests-pass", "lint-clean", None])
+    results.check("record/gate-rows-folds-a-wrapped-line",
+                  rows[1][2].endswith("onto a second line"), True)
+    results.check("record/gate-rows-carries-the-line", rows[0][3], 4)
+    results.check("record/gate-rows-stops-at-the-next-bullet",
+                  len(rows), 3)
+    results.check("record/gate-rows-when-there-is-no-such-bullet",
+                  record_lib.gate_rows(record_lib.blocks("- **Item:** WI-0001\n", 1)), [])
+
 
 def run_citations(results) -> None:
     """`path:line` is the most precise citation form, and it was the least checked (F-077)."""
