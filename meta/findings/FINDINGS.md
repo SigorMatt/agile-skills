@@ -2874,6 +2874,53 @@ second occurrence shows the error is common rather than incidental.
   that entry at all.
 - **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-1); accepted at owner triage 2026-08-31.
 - **Status:** open
+- Status update 2026-09-10 (META-154): **fixed** (commit 1ebba5a), all three halves, and the
+  question it declined to answer is answered.
+  **The fourth verdict is `pending`** — `spec/journal-and-history.md` §2.2a, revision 4 — and it
+  means *no verdict is owed by this entry, because the acting skill is dispatched again on this
+  item and decides the gate at a later transition of the same execution*. Its legality is
+  **derived, not named**: an entry whose `**Status:**` records a move into a status the acting
+  skill's own `dispatch.on_status` contains. Today that is `implement`'s `planned → in-progress`
+  and nothing else in the pipeline, and nothing in the code knows the skill is called
+  `implement`. Two other rules were tried against the whole transition table and rejected:
+  *pending iff the move is not gated* leaves every `answer-questions` entry permanently pending,
+  because that skill has `next_status: null` and so never makes a gating move — nine hard gates
+  that would then be decided nowhere; and *pending iff the skill has a `next_status` it has not
+  reached* legalises it on `verify`'s send-back, after which no transition of that execution
+  follows. `skipped` was the worst of the three vocabularies the engagement invented, because it
+  is the word for a gate that checked nothing **and never will**.
+  **The comparison** is `scripts/validate-workspace`'s new `check_entry_gates`:
+  `journal.gates.missing` (a contract gate the entry omits), `.unknown` (a gate the entry names
+  and the contract does not), `.verdict` (a word outside the four), `.unreadable` (a line under
+  the bullet that names no gate) and `.pending` (the fourth verdict where no later transition
+  follows). It is **scoped to entries whose heading names the installed contract version**: an
+  entry records an execution under the contract of its own time, and holding a `v0.1.1` entry to
+  a `v0.6.1` gate list would report the skill's history as a defect in the record.
+  `journal.version.impossible` already refuses the one version relation that cannot be true;
+  this refuses to guess about the rest. The scope was measured before it was chosen — all 55
+  `examples/toy-project` entries are one to five minor versions back, and all 67
+  `fixtures/abandoned-engagement` entries were at the installed versions and were **completed**
+  rather than exempted, which makes them the must-pass side of the fixture pair.
+  **The hint this finding caught lying now tells the truth.** `journal.bullet.missing` says every
+  §2.2 bullet is required and points at `journal.gates.*` for what the bullet then has to say.
+  **The question, answered** — `spec/skill-contract.md` §1.3, revision 6: *a gate that cannot
+  hold at a skill's opening transition still belongs in that entry*, recorded `pending`. Three
+  readings, one answer. Omitting it makes the entry silent about a check, which is the single
+  failure the bullet exists to prevent and is indistinguishable, to a reader, from an execution
+  that forgot. Deciding **which** gates cannot hold is a judgement made per gate per skill — the
+  branch-on-a-name that a contract-driven gate runner exists to avoid. And the fact is worth
+  having: `commits-reference-the-item` inspects a commit range that is empty **by construction**
+  at that move, so an entry recording that it was not decided there, and naming where it is
+  decided, is a stronger record than one that leaves it out — it is evidence that nobody was
+  surprised. Nothing was wrong with the gate's presence; what was wrong was that the format had
+  no word for *not owed yet*, so eleven entries invented three and one recorded a hard gate as
+  *fail, not blocking* on a move that proceeded.
+  **The advisory-gate asymmetry this finding also noted** — `no-unplanned-scope` in all six bug
+  items' opening entries and in none of the five work items' — is fixed by the same mechanism
+  and not separately: the bullet is composed from the contract, so every gate appears in every
+  entry whether or not the worker remembered it.
+  Proved by execution in `./scripts/check` step 14c (18 observations, non-vacuity in the strong
+  form) and by `fixtures/broken-workspace`, 97 → 102 codes.
 
 ## F-081 — the close-before-merge order leaves the merge unrecordable in the entry that reports it
 
@@ -3195,6 +3242,33 @@ second occurrence shows the error is common rather than incidental.
   the contract does not list, or omits one it does.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-7); accepted at owner triage 2026-08-31.
 - **Status:** open
+- Status update 2026-09-10 (META-154): **fixed** (commit 1ebba5a) — the direction on file, taken
+  whole rather than the "short of that" fallback. `scripts/run-gate` gains `--verdicts <path>`,
+  writing one `name<TAB>PASS|FAIL|SKIP|MANUAL<TAB>detail` record per gate in contract order;
+  `scripts/transition` reads it back and **composes** the `**Gates:**` bullet from the acting
+  skill's contract — one line per gate, in contract order, the verdict from the run it just did,
+  the evidence sentence from the caller. That fixes the third symptom for free: completeness is
+  no longer a property of the caller's memory, so the entry that listed six gates where its
+  sixteen siblings listed seven cannot be written. The verdicts arrive by file rather than by
+  parsing the human report — scraping stdout would make the report's layout a wire format.
+  **A contradicted verdict is replaced and named.** `compose_gates` returns the disagreements it
+  found and `transition` prints, per gate, what the body claimed, what the run reported, and
+  which one the entry carries; the caller's evidence sentence is kept beside the corrected
+  verdict, so the disagreement stays readable instead of being silently erased. Overwriting
+  alone would have hidden exactly the two mistakes this finding is made of.
+  **Two things stay the caller's, and the reason is the same one:** a `manual_check` gate has no
+  command behind it, so nothing the runner did decides it and the tool refuses to invent a
+  verdict — a body omitting it is refused rather than filled in; and under `--force` nothing ran
+  at all, so the whole bullet stands as written. The override is of the gates, not of the record.
+  The gate **names** are checked either way, in both tools, because that needs no run.
+  **The ownership story matches F-049's**, and the tools agree with each other: the tool writes
+  what it knows, and standalone `journal-entry` requires of the caller what nothing else would
+  write. For this bullet the line falls between verdict and name rather than between tool and
+  caller — standalone there is no run, so the verdicts stay the caller's, while the names are
+  read against the same contract in both places. `transition` says so to `journal-entry` with
+  `--gates-checked`, the way it already says the move with `--status`.
+  Proved by execution in `./scripts/check` step 14c (18 observations) and by
+  `fixtures/broken-workspace`, 97 → 102 codes.
 
 ## F-092 — no criterion asks whether a change conforms to the decisions already recorded
 
