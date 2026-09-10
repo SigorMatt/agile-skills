@@ -2947,7 +2947,32 @@ second occurrence shows the error is common rather than incidental.
   second, tiny entry appended after the merge, or a named field the transition tool fills in on a
   later invocation — so that the honest answer is not "edit the entry and say so".
 - **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-4); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** fixed (commit 8804bd7) — **a named field, written by a program of its own, and
+  checked twice.** `item.md` gains `merge-commit` (`spec/work-item.md` §1), written after the
+  merge by `scripts/record-merge` and by nothing else; `spec/journal-and-history.md` §2.2b states
+  the general rule the field is an instance of. The three options in the Direction were weighed
+  and two were rejected for reasons that hold beyond this case. **A second journal entry** would
+  claim a second execution of a skill that ran once — §2 is one entry per *execution* — and the
+  entry format would force the tool to invent `**Inputs read:**`, `**Decisions:**` and
+  `**Gates:**` in order to record an anti-fabrication fact. **An amendment convention** is a
+  second in-place exception to append-only, and §0 already says that wanting one is wanting a
+  journal entry instead. What is left is the field, and a later invocation to fill it: the same
+  *the record catches up in a second write* shape META-153c and META-154 used where a commit
+  cannot cite its own sha.
+  **F-035 is not reintroduced, and the reason is structural rather than careful.**
+  `record-merge` writes nothing git has not confirmed — that the sha resolves, that it has two
+  or more parents, that it is an ancestor of the trunk, and that it contains the item's branch —
+  and `validate-workspace` asks the same four questions again on every run through the **same
+  function** (`scripts/lib/vcs.py:merge_problems`), so a field somebody typed is held to exactly
+  what a field the program wrote is held to: `item.merge.unresolved`, `.not-a-merge`,
+  `.unmerged`, `.other-branch`, `.malformed`, `.unexpected`. The other direction is covered too —
+  `item.merge.missing` reports a branch that is on the trunk with no sha recorded — and where git
+  cannot be asked at all (not a repository, no such branch) nothing is reported, because a check
+  that could not look must not claim a pass.
+  Proved by execution in `./scripts/check` step 15b, in a throwaway repository that is also a
+  workspace: five refusals, each read for the code it gave, each followed by an assertion that
+  **no field was written**; the real merge accepted; the field then hand-edited two ways and
+  removed once, and the validator catching all three.
 
 ## F-082 — a standing delegation has unbounded scope and no route back to the person who gave it
 
@@ -3002,7 +3027,25 @@ second occurrence shows the error is common rather than incidental.
   `item.outcome.premature` to the codes `--resolving` downgrades for the move that resolves it.
   The skill should not have to discover that its own written order is illegal.
 - **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-6); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** fixed (commit 8804bd7) — **in the order. The gate is right, and it was deliberately
+  not touched.** The Direction offered both; taking both would have been the worse of the two,
+  and here is the argument. F-014's downgrade is for a state the move *forces*: a resumed item's
+  question is already `answered` while the item is still `awaiting-answer`, and no order of
+  operations avoids it. `item.outcome.premature` is not that. A legal order exists and always
+  did — `transition --outcome` writes `status` and `outcome` into `item.md` in one act, in step
+  3, after the gates of step 2 have run against a workspace where neither field has moved. The
+  workspace the procedure produced was invalid because the procedure said to edit `item.md`
+  first, not because the validator was wrong; downgrading the code would have legalised the one
+  order that leaves a committable, invalid workspace behind (F-038's window, for a field nothing
+  had to leave open).
+  So `review-close` step 9 no longer reads as an edit: the outcome is the closing transition's
+  `--outcome`, named as such, with the reason. And `transition` now refuses to be used the other
+  way at all — `--outcome` on a move that does not end at `done`, and a move to `done` carrying
+  no outcome, are both refused **before anything is written**, so the illegal order cannot be
+  reached through the tool either. `item.outcome.premature`'s hint names the fix.
+  Both halves are asserted in `./scripts/check` step 15b, and the refusals are read for the
+  *reason they give*: the first draft of the case asserted only that the tool refused, and it
+  passed with the guards stubbed out, because the move it used was refused by a gate instead.
 
 ## F-084 — a document's version row is a self-reported field with nothing behind it
 
@@ -3031,7 +3074,32 @@ second occurrence shows the error is common rather than incidental.
   change-log row against the journal of the item it names, reporting a row whose actor was not
   executing then.
 - **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-7); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** fixed (commit 8804bd7) — as filed, with the boundary written down rather than
+  assumed. `spec/journal-and-history.md` §0 now reaches a document's header and change log, and
+  `spec/doc-header.md` §3 carries the rules **and** an `[auto]` / `[skill]` table, because the
+  row is not uniformly decidable and pretending otherwise is this repository's own failure mode.
+  `[auto]`, in `validate-workspace`: the top row and the header agree (`doc.changelog.header`);
+  `when` is a UTC timestamp a clock could have produced (`doc.changelog.when`,
+  `doc.changelog.timestamp.*`); `by` is a skill this pipeline has (`doc.changelog.actor`); `for`
+  is an item in this workspace (`doc.changelog.for`); and the row falls inside an **execution**
+  of that skill on that item, matched against its `journal.md` (`doc.changelog.no-execution`).
+  `[skill]`, and said so: whether the version *number* is the right one — a change may deserve
+  one bump or none, and no program can say which; whether `what changed` describes the change —
+  "Updated" passes every mechanical test there is; and whether the named skill made *this* edit
+  — the check establishes that an execution of it was running, not that this edit was its work.
+  **The execution match is asked only while the item the row names is not yet `done`**, which is
+  the line `check_claim_citations`' docstring already draws: a row on a closed item is history,
+  and demanding its repair is a demand to rewrite a record rather than to improve one. It costs
+  nothing that matters — every skill runs the validator, a row is written during the item's life,
+  and the next gate run after it is written is inside the window; the row this finding was filed
+  for (`implement`, twelve minutes after its closing entry, the item at `awaiting-answer`) is
+  inside it. `./scripts/check` step 15b asserts the boundary as its own case, so moving it fails
+  loudly rather than silently widening the rule.
+  `scripts/lib/record.py` gains `execution_windows()` and `executed_at()` — an entry is written
+  when an execution *finishes*, so its stamp is the upper bound and the entry before it on the
+  same item is the lower one; the first entry has no floor at all. Eleven selftest cases,
+  including the twelve-minutes-late row this finding names.
+  It found a real defect on its first run, which is recorded as **F-108**.
 
 ## F-085 — one contract serves two subjects, and at an engagement's ending half of it is undefined
 
@@ -4096,3 +4164,38 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   when `fixtures/abandoned-engagement` is absent. Neither can now
   mislabel a run; both are unpromised dependencies of a detail line, which is the standing this
   finding leaves them in.
+
+## F-108 — `examples/toy-project`'s change-log rows were typed, not stamped
+
+- **Classification:** artifact-defect, in this repository's own shipped example
+- **Severity:** correctness of the record, low — and the evidence for F-084
+- **Component:** `examples/toy-project/docs/`
+- **Symptom:** the check F-084 asked for, run over the example, reports **six** rows in the
+  imported run whose named skill was not executing on the named item at the row's stated time,
+  and **two** rows whose `when` is out of order with their own version number:
+  `docs/architecture/overview.md` has v5 at `00:05:00Z`, v4 at `01:36:00Z` and v3 at `01:50:00Z`,
+  so the record says v3 happened after v5. Nine of the twenty-two rows in the example carry the
+  timestamp `2026-08-17T00:05:00Z` exactly, across four documents and three skills, which is what
+  a batch of doc writes stamped once by hand looks like. Four more rows are **builder-authored**
+  — `ADR-0010-counting-lines-with-a-generator.md` was created whole by META-129 and
+  `ADR-0005`'s v2 row by META-122 — with times typed to look plausible; `ADR-0005`'s header still
+  said `updated-by: plan` for a row that says `review-close`, which is the one defect of the eight
+  that was repaired (commit 8804bd7), because a builder correcting its own splice is not the same
+  act as editing a run's evidence.
+- **Why it is filed rather than fixed:** `examples/toy-project/README.md` says *"Nothing here was
+  written by hand. Every file under `tracker/` and `docs/` was produced by a skill during the
+  run"*, and for the six imported rows that is true. Rewriting their timestamps to satisfy a check
+  written afterwards would falsify a record in order to make a gate green, which is the act this
+  whole repository exists to make impossible. They stay as they are, and the rule that would
+  condemn them is scoped so that it does not: `doc.changelog.no-execution` is asked only while the
+  item a row names is not yet `done`, and every item in the example is closed.
+- **Counterfactual:** none needed — this is not about the product the example builds. It is the
+  same defect F-084 filed, at a rate of 6 in 22 rather than 1 in 46, in a run nobody was checking.
+- **Direction:** two halves, neither urgent. The README's claim is worth narrowing to what is
+  true — the tracker and the run's own documents were produced by skills; four ADR rows were
+  spliced in later by builder units and say so. And the next re-import of a toy run, if there is
+  one, is produced under a validator that now checks the rows while the items are open, so the
+  defect cannot survive to the closed state again.
+- **Provenance:** found by META-156's new `doc.changelog.*` rules on their first run over the
+  example, 2026-09-10.
+- **Status:** open

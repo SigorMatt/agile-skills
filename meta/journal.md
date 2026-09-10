@@ -5572,3 +5572,92 @@ recall is a reading, not a number, and the report says which.
   (`implement` 0.5.0 → **0.6.0**, the rest patch), `fixtures/broken-workspace`,
   `fixtures/abandoned-engagement/{right,wrong}` (67 gate bullets completed),
   `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md`, `meta/journal.md`.
+
+## 2026-09-10 — META-156 — three fields the record could not hold when it was written
+
+- **Unit:** META-156 (F-081, F-083, F-084 — cluster 3's record-shape findings)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-081, F-083, F-084 in full, plus F-035, F-014,
+  F-019, F-055, F-038, F-037's `check_claim_citations` argument, F-036, F-029/F-042's
+  grandfathering; `scripts/transition`, `scripts/check-commit-refs`, `scripts/validate-workspace`,
+  `scripts/lib/record.py`, `scripts/lib/workspace.py`, `scripts/record-halt`;
+  `spec/journal-and-history.md`, `spec/doc-header.md` §2/§3, `spec/work-item.md` §1;
+  `methodology/skills/review-close/{process.md,skill.yaml}`; `./scripts/check` steps 15 and 13;
+  every change-log row in `examples/` and `fixtures/` (measured before deciding anything);
+  `examples/toy-project/README.md` and the git history of the four ADRs it names.
+- **Decisions:**
+  - **F-081 — the sha goes in a field, not in the journal, and a program of its own writes it.**
+    The three candidates were weighed rather than picked. A *second entry* claims a second
+    execution of a skill that ran once, and the entry format would make the tool invent
+    `**Inputs read:**`, `**Decisions:**` and `**Gates:**` in order to record an
+    anti-fabrication fact. An *amendment convention* is a second in-place exception to
+    append-only, and §0 already says wanting one is wanting a journal entry instead. What
+    survives is `item.md`'s `merge-commit`, filled in afterwards — the same *the record catches
+    up in a second write* shape META-153c and META-154 used. `scripts/record-merge` is a script
+    of its own for the `record-halt` reason: there is **no status change to hang it on**, and a
+    `transition` invocation with no transition would give the one command whose value is that it
+    means one thing a second meaning.
+  - **F-035 stays fixed because the tool and the validator share a function, not a habit.**
+    `scripts/lib/vcs.py:merge_problems` answers the four questions once — resolves, two or more
+    parents, ancestor of the trunk, contains the branch — and `record-merge` refuses on it while
+    `validate-workspace` re-asks it on every run, so a typed field is held to exactly what a
+    written one is. `merged_into()` covers the other direction (a merge nobody recorded), and
+    both return `None` where git cannot be asked, because a check that could not look must not
+    claim a pass.
+  - **F-083 — the order, not the gate, and explicitly not both.** F-014's downgrade is for a
+    state the move *forces*; `item.outcome.premature` is not that. `transition --outcome` writes
+    both fields in one act after the gates have run, so a legal order existed all along and the
+    procedure simply did not name it. Downgrading the code would have legalised the one order
+    that leaves a committable, invalid workspace behind — F-038's window, for a field nothing had
+    to leave open. `transition` now refuses `--outcome` on a move that does not end at `done`,
+    and refuses a move to `done` carrying none, **before it writes anything**.
+  - **F-084 — the honest half is bigger than the decidable half, so both are written down.**
+    `spec/doc-header.md` §3 carries an `[auto]`/`[skill]` table. `[auto]`: header/top-row
+    agreement, a clock-producible `when`, `by` a skill, `for` an item, and the row matched
+    against an execution in the named item's journal. `[skill]`, and named as such: the version
+    *number*, the truth of `what changed`, and whether the named skill made *this* edit rather
+    than merely being the one that was running.
+  - **The boundary that made F-084 implementable at all: the match is asked only while the item
+    the row names is not yet `done`.** This was not a convenience. Measured first: applied to
+    every workspace in the repository, the unrestricted rule reports **ten** rows in
+    `examples/toy-project` — the must-pass example, which is an imported real run. Six of those
+    are run-produced, and repairing them would mean rewriting a record to make a gate green.
+    `check_claim_citations`' docstring already draws exactly this line for rule 2 of claim
+    provenance, and `item.arose-from` grandfathers on the same principle. With the boundary the
+    rule reports nothing in the example, everything in the must-fail fixture, and — this is the
+    part that matters — the row F-084 was actually filed for, which was written while its item
+    sat at `awaiting-answer`. Coverage does not suffer: every skill runs the validator and a row
+    is written during its item's life, so the next gate run after the row is written is inside
+    the window.
+  - **What the boundary costs is recorded as a finding rather than hidden.** F-108: six imported
+    rows and two out-of-order versions in the repository's own example, plus four rows two
+    builder units typed by hand into a file whose README says nothing here was written by hand.
+    One of the eight — `ADR-0005`'s header saying `updated-by: plan` for a row that says
+    `review-close` — was repaired, because a builder correcting its own splice is not the same
+    act as editing a run's evidence. The other seven stand.
+  - **`review-close` 0.9.1 → 0.10.0, and its rendered body was at exactly 500 of 500 lines.**
+    Every line added was paid for by compressing skill-specific prose — the `--detach`
+    paragraph, the trial-discard note, step 8.3, and step 9a's F-066 story — and no requirement
+    left the contract. The body is back at exactly 500.
+  - **The first draft of the F-083 case was vacuous and the stub found it.** It asserted only
+    that `transition` refused, and it passed with both guards disabled, because the move it used
+    was refused by a gate instead. It now walks WI-0003 to `in-review` with the gates forced —
+    the gates are not what is under test — makes only legal moves, and reads each refusal for
+    the reason it gives.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **38 steps**;
+  `fixtures/broken-workspace` **102 → 106 codes** (`doc.changelog.header`,
+  `doc.changelog.no-execution`, `doc.changelog.timestamp.outside-activity`,
+  `item.merge.unexpected`), `EXPECTED-CODES.txt` updated in the same commit.
+  `scripts/lib/selftest.py` **320 → 332**. New step 15b, *the record catches up*, **30
+  observations**. Non-vacuity proved in the strong form, six deciding bodies stubbed one at a
+  time: `vcs.merge_problems` → 8 failures; `vcs.merged_into` → 1; `transition`'s two `--outcome`
+  guards → 5; `Validator.check_changelog_rows` → 4; `record.executed_at` → 1; the done-item
+  boundary removed → 1. Every one distinct, and the step green again unstubbed.
+- **Artifacts:** `scripts/lib/vcs.py` (new), `scripts/record-merge` (new),
+  `scripts/lib/record.py`, `scripts/lib/selftest.py`, `scripts/transition`,
+  `scripts/validate-workspace`, `scripts/check` (step 15b), `spec/work-item.md` (rev 2),
+  `spec/journal-and-history.md` (rev 5), `spec/doc-header.md` (rev 7),
+  `methodology/skills/review-close/{process.md,skill.yaml}` (0.10.0),
+  `fixtures/broken-workspace`, `examples/toy-project/docs/architecture/adr/ADR-0005-*`,
+  `adapters/claude-code/{render.py,dist/}`, `meta/findings/FINDINGS.md` (F-081, F-083, F-084
+  resolved; **F-108** filed), `meta/journal.md`. Commit `8804bd7`.
