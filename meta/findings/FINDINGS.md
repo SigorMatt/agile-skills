@@ -3462,6 +3462,40 @@ second occurrence shows the error is common rather than incidental.
   stale citation from a live one should say so where the rule is stated.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-10); accepted at owner triage 2026-08-31.
 - **Status:** open
+- **Status update 2026-09-10 (META-157): fixed.** The first branch of the direction was taken —
+  *a criterion carries an identity that renumbering does not move* — and it is the criterion's own
+  words, quoted inside the citation.
+  **F-077's mechanism did not generalise, and the reason is exact.** F-077's fix is a **bound**: a
+  `path:line` citation is checked against the file's length. The equivalent bound here — *does the
+  item declare an ACn?* — was already `CitationResolver`'s behaviour, and it is precisely the
+  check this finding reports as fooled. A bound cannot distinguish a moved target from a standing
+  one; only the target's content can. What is extended is F-077's **place**: the same resolver,
+  the same convention line, one mechanism rather than two
+  [src: .claude/agile-skills/scripts/lib/claims.py] [src: spec/doc-header.md].
+  **The form.** `[src: WI-0002 AC7 "sorted by descending line count"]` resolves only while AC7
+  still says those words — whitespace, case and backticks ignored, any run of the criterion
+  accepted, wrap included. An **unanchored** citation is refused outright while the cited item is
+  at `draft` or `ready`, the statuses at which `spec/work-item.md` §2 still permits the criteria to
+  be rewritten; the message says why and quotes the criterion's opening words back so the anchor
+  can be pasted in.
+  **Scoped by measurement, not by taste.** 84 standing `ITEM ACn` citations exist across
+  `examples/`, `fixtures/` and the banked run evidence, and **not one** newly fails; requiring an
+  anchor everywhere would have invalidated all 84 retroactively, which §4a's own grandfathering
+  paragraph forbids. The new rule reports **0** rows over `examples/toy-project` and **0** over
+  `fixtures/sourced-claims`, measured before the scope was chosen.
+  **What it does not catch is stated where the rule is**, per this finding's third direction:
+  past `ready` an unanchored citation still resolves by number alone, so a criterion later edited
+  by `answer-questions` propagating an answer can still move under it (`spec/doc-header.md` §4a,
+  revision 8).
+  **The second branch was not taken as a gate.** *The skill that renumbers rewrites the citations
+  that name it* is not decidable from a tree; it is an instruction in `refine` 0.4.0 step 6 and is
+  marked instruction-shaped rather than claimed as enforcement.
+  **Fixtures both ways:** ten cases in `scripts/lib/selftest.py` (`run_criterion_citations`),
+  including the finding itself — one insertion at the top of a list, under two standing citations,
+  where the bare number goes on resolving and the anchored one fails — and step 15c of
+  `./scripts/check` runs the same pair through `validate-workspace` over a real workspace, at both
+  edges of the status window. Six deciding bodies stubbed one at a time; every stub failed cases
+  it should. Implemented in commit 181e69d.
 
 ## F-095 — a claim quantified over a family is audited by opening the family's shared fixture, and the exception lives in a member
 
@@ -3553,6 +3587,36 @@ second occurrence shows the error is common rather than incidental.
   rather than disclosing it at sign-off.
 - **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-3); accepted at owner triage 2026-08-31.
 - **Status:** open
+- **Status update 2026-09-10 (META-157): fixed**, both halves of the direction.
+  **The mark is a distinct tick state, where the criterion is.** `spec/work-item.md` §2 (revision
+  3) now defines three: `- [ ]` not settled, `- [x]` settled by the observation the criterion
+  names, `- [~]` settled by a **substitution** — the environment could not perform that
+  observation, so something else was observed in its place. `verify` 0.5.0 step 3b writes it as a
+  fourth verdict, `substituted`, and no other skill does (a `[skill]` rule: nothing here decides
+  which skill edited a line).
+  **It follows `scripts/lib/scope.py`'s out-of-scope-by-construction shape, deliberately.** A
+  `- [~]` is **settled**: D1 holds (`spec/dor-dod.md` revision 9), `review-close` closes on it,
+  `validate-workspace` **exits 0** — and says so in its own words on every run, a WARNING
+  `item.criteria.substituted` naming the criterion and what settled it. What was missing was never
+  a refusal; it was a different spelling. A gate that fails on legitimate work is one somebody
+  switches off, and the honesty lives in the wording.
+  **The second half — asking in time — is mechanical.** A `- [~]` MUST name, on the criterion
+  itself, a question **on this item** (`item.criteria.substitution.unasked`). The question need
+  not be *answered*: the obligation is to ask while the engagement can still act, and an open
+  question already holds the engagement short of rest (`spec/ids-and-statuses.md` §3.5), so the
+  ending cannot arrive before the answer does — which is exactly what failed here, where the
+  person who could have reworded AC2 heard about it at sign-off. That the named question *exists*
+  is not re-checked by the new rule: `check_claim_citations` walks `item.md` like every other
+  document, so a missing question is already `claim.citation.unresolved`, and a step case asserts
+  the division.
+  **Fixtures both ways:** `fixtures/broken-workspace` carries the defect (`BUG-0001` AC2,
+  substituted, naming no question) **and** the legal substitution (`WI-0003` AC5, citing
+  `WI-0003/Q-001`), whose only output is the warning — so the exact-set comparison catches an
+  error appearing on a legal one, which a wrong-only fixture cannot prove. 106 → 108 codes. Step
+  15c of `./scripts/check` adds the cases a set comparison cannot make: a question on *another*
+  item does not count, a named question that does not exist is the citation rule's finding rather
+  than a second copy of it, and a done-and-delivered item settled entirely by substitution closes
+  D1 while the same item with the box unticked still does not. Implemented in commit 181e69d.
 
 ## F-097 — the loop stops on the first human question, so an asynchronous stakeholder is asked one item at a time
 

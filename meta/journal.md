@@ -5661,3 +5661,103 @@ recall is a reading, not a number, and the report says which.
   `fixtures/broken-workspace`, `examples/toy-project/docs/architecture/adr/ADR-0005-*`,
   `adapters/claude-code/{render.py,dist/}`, `meta/findings/FINDINGS.md` (F-081, F-083, F-084
   resolved; **F-108** filed), `meta/journal.md`. Commit `8804bd7`.
+
+## 2026-09-10 — META-157 — two citations that keep resolving after the thing moved
+
+- **Unit:** META-157 (F-094, F-096 — cluster 3's citation-integrity findings)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-094, F-096, F-077 and F-001 in full, plus F-070,
+  F-054, F-052, F-037, F-069, F-013; `spec/work-item.md` §1/§2, `spec/doc-header.md` §4a,
+  `spec/dor-dod.md` D1, `spec/ids-and-statuses.md` §3/§3.5, `spec/question.md` §1/§2;
+  `scripts/lib/claims.py`, `scripts/lib/workspace.py`, `scripts/lib/scope.py` (the
+  out-of-scope-by-construction precedent), `scripts/validate-workspace`'s criteria and
+  `check_claim_citations` blocks, `scripts/lint-claims`, `scripts/check`;
+  `methodology/skills/verify/process.md` steps 3–3a, `methodology/skills/refine/process.md` step
+  6; every `[src: ITEM ACn]` citation in `examples/`, `fixtures/` and
+  `meta/harness/evidence/iteration-4b` (measured before deciding anything).
+- **Decisions:**
+  - **F-094 — F-077's mechanism does not generalise, and the reason is exact.** F-077's fix is a
+    **bound**: a `path:line` citation is checked against the file's length, so a pointer past the
+    end stops resolving. The equivalent bound for `ITEM ACn` — *does the item declare an ACn?* —
+    was **already the resolver's behaviour**, and it is precisely the check F-094 reports as
+    fooled. Transplanting F-077 changes nothing. A bound cannot tell a moved target from a
+    standing one; only the target's own content can, so the citation has to carry some of it.
+    What is extended instead is F-077's *place*: one resolver, one convention line, in the same
+    function.
+  - **The identity is the criterion's words, quoted, and the citation may carry them.**
+    `[src: WI-0002 AC7 "sorted by descending line count"]` resolves only while AC7 still says
+    them; renumber and it fails loudly. Comparison ignores whitespace, case and backticks, and
+    the anchor may quote any run of the criterion, wrap included.
+  - **Requiring an anchor everywhere was measured and rejected.** 84 standing `ITEM ACn`
+    citations exist across the examples, the fixtures and the banked run evidence, and **not one
+    of them** newly fails; requiring an anchor would have invalidated all 84 retroactively, which
+    `doc-header.md` §4a's own paragraph forbids. So the refusal is scoped to where the number is
+    **provably** not an identity: `draft` and `ready`, the statuses at which `work-item.md` §2
+    still permits the criteria to be rewritten. Over `examples/toy-project` the new rule reports
+    **0** rows and over `fixtures/sourced-claims` **0**, measured before the scope was chosen.
+  - **What it does not catch is written where the rule is.** Past `ready`, an unanchored citation
+    still resolves by number alone, so a criterion edited later by `answer-questions` propagating
+    an answer can still move under it. That sentence is in §4a, not in this journal only, because
+    a resolver that cannot tell a stale citation from a live one should say so where the rule is
+    stated — F-094's own third direction.
+  - **The second branch of F-094's direction was not taken as a gate.** *The skill that renumbers
+    rewrites the citations that name it* is not decidable from a tree, so it is an instruction in
+    `refine` step 6 (re-read every citation naming this item's criteria; when you cite another
+    item's criterion, anchor it) and is marked as instruction-shaped rather than claimed as
+    enforcement.
+  - **F-096 — the mark is a third checkbox state, `- [~]`, and it lives on the criterion.**
+    `- [ ]` not settled, `- [x]` settled by the observation the criterion names, `- [~]` settled
+    by a **substitution**. It follows `scope.py`'s shape exactly and deliberately: a `- [~]` is
+    settled — D1 holds, `review-close` closes on it, `validate-workspace` **exits 0** — and says
+    so in its own words, `item.criteria.substituted`, a WARNING carrying the criterion and what
+    settled it, on every run. A gate that fails on legitimate work is one somebody switches off;
+    what was missing was never a refusal, it was a *different spelling*.
+  - **The substitution owes the stakeholder a question, and that half is mechanical.** A `- [~]`
+    MUST name, on the criterion itself, a question **on this item**
+    (`item.criteria.substitution.unasked`). The question need not be answered: the obligation is
+    to ask **in time**, and an open question already holds the engagement short of rest, so the
+    ending cannot arrive before the answer does — which is the whole of F-096's complaint, where
+    the person who could have reworded the criterion heard about it at sign-off. That the named
+    question *exists* is not re-checked in the new rule: `check_claim_citations` walks `item.md`
+    like every other document, so a missing `Q-009` is already `claim.citation.unresolved`. Two
+    rules, one job each, proved by a case that asserts the first is silent while the second
+    fires.
+  - **`verify` writes `- [~]` and nothing else does**, as a fourth verdict `substituted` in step
+    3b — with the honest limit stated: nothing here decides *which* skill edited a line, so that
+    half is `[skill]`.
+  - **One regex for the criterion line, not two.** `claims.py` and `workspace.py` each had their
+    own, and adding a third state to one would have left the other reading `[~]` as unticked.
+    `workspace.py` now imports `criteria_in` from `claims.py`, which also joins a criterion's
+    continuation lines — a criterion worth citing is usually long enough to wrap, and a rule that
+    read only the first line would be satisfied or defeated by where the author pressed return.
+  - **The fixture carries both directions on purpose.** `fixtures/broken-workspace` gets the
+    defect (`BUG-0001` AC2, substituted, naming no question) **and** the legal substitution
+    (`WI-0003` AC5, citing `WI-0003/Q-001` on its wrapped line), whose only output is the
+    warning. Exact-set comparison then catches an error appearing on the legal one, which a
+    wrong-only fixture cannot prove.
+  - **`verify` 0.4.1 → 0.5.0 and `refine` 0.3.1 → 0.4.0 moved the fixtures' journal headings
+    too.** The `**Gates:**` comparison is version-scoped (META-154), so leaving nine fixture
+    entries at the old versions would have silently dropped them out of scope — five
+    `journal.gates.*` codes stopped firing the moment the versions were bumped, and the fixture
+    caught it. The headings were bumped with the contracts; no gate list changed.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **39 steps**;
+  `fixtures/broken-workspace` **106 → 108 codes** (`item.criteria.substituted`,
+  `item.criteria.substitution.unasked`), `EXPECTED-CODES.txt` and the fixture README updated in
+  the same commit. `scripts/lib/selftest.py` **332 → 354**. New step 15c, *a criterion's
+  identity*, **16 cases**. Non-vacuity proved in the strong form, seven deciding bodies stubbed
+  one at a time: `CitationResolver._resolve_criterion` → 8 selftest failures + 5 step cases;
+  `ac_state` collapsing `~` into `x` → 1 + 2 fixture codes + 4 step cases;
+  `check_substituted_criterion` → 2 fixture codes + 4 step cases; `criteria_in`'s continuation
+  loop → 2 + 1 fixture code + 4 step cases; `AC_RENUMBERABLE_STATUSES` emptied → 4 + 3 step
+  cases; the anchor comparison → 3 + 2 step cases; the *question is on this item* test → 1 step
+  case. **A vacuous case of my own was caught by the fourth stub**: the step's anchored citation
+  and its `[~]` question citation both sat on a criterion's first line, so removing the
+  continuation-line join left the step green. Both were rewritten to sit on the wrapped line,
+  where a real one lands, and the stub then failed the step.
+- **Artifacts:** `scripts/lib/claims.py`, `scripts/lib/workspace.py`, `scripts/lib/selftest.py`,
+  `scripts/validate-workspace`, `scripts/check` (step 15c), `spec/work-item.md` (rev 3),
+  `spec/doc-header.md` (rev 8), `spec/dor-dod.md` (rev 9),
+  `methodology/skills/verify/{process.md,skill.yaml}` (0.5.0),
+  `methodology/skills/refine/{process.md,skill.yaml}` (0.4.0), `fixtures/broken-workspace`,
+  `fixtures/abandoned-engagement`, `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md`
+  (F-094, F-096 resolved), `meta/journal.md`. Commit `181e69d`.
