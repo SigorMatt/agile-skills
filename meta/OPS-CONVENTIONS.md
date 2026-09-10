@@ -3,6 +3,29 @@
 Rules earned the hard way. Each line is a rule plus the incident in this project that
 taught it. An ops session reads this before driving a harness run.
 
+## Mechanics, and what stays with the session
+
+The measuring is code now. `harness/ops/status.py` is the one-shot probe — run state, head sha
+and current unit, process liveness, file activity, board summary — and `harness/ops/watch.py` is
+the single-report loop, with the arm-time baseline, the terminal-at-arm exclusion, the
+parse-failure rule and the one-report discipline built in rather than remembered. Both print a
+machine block and then a human block, both name the rule each observation matched, and both are
+covered by `harness/tests/test_harness.py`. Read a script's `--help` before retyping its job.
+
+**The judgment is not in the scripts and is not going there.** They report observations and the
+table they were matched against; the **verdict prose**, the **deviation flags** and the
+**retraction when evidence contradicts an earlier inference** remain the session's, every time.
+`status.py`'s exit code is a hint — the evidence lines are the report. A tool that returned a
+verdict would be a tool the owner could not disagree with.
+
+- **Loudly full is the same failure as silently empty.** `meta/CHECKPOINT.md` declares the
+  session's *range* in its preamble — `META-144 .. META-165` — while the unit in flight lives in
+  the `## Current unit` section. A whole-file scan for `META-###` therefore never looks empty
+  enough to doubt: it answered confidently with META-164, a unit that had already executed, as
+  the one in flight. The anchored-pattern rule below catches the read that finds nothing; this is
+  its converse, and it is the more dangerous of the two, because nothing about the output invites
+  a second look. **Read the section, not the file.** `status.py` does; a grep does not.
+
 ## Instruments
 
 - `find` on this machine is `bfs`, not GNU find — check the tool before trusting a flag.
@@ -16,7 +39,8 @@ taught it. An ops session reads this before driving a harness run.
   discarded, and both then failed *toward* the wrong verdict — silence read as success.
 - Anchored name patterns fail silently-empty; anchor on both ends or not at all.
   *Example:* `retro*.md` matched nothing and was read as 'no retro exists', while the
-  file on disk was `<x>-retro.md`.
+  file on disk was `<x>-retro.md`. Its converse — a scan that is loudly full and confidently
+  wrong — is above, under Mechanics.
 - Paste commands exactly as given; do not retype them from memory.
   *Example:* four separate commands lost their `cd` prefix in retyping and ran against
   the wrong directory.

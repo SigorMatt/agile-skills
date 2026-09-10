@@ -15,10 +15,13 @@ Standard library only (ADR-0002).
 
 from __future__ import annotations
 
+import argparse
+import io
 import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -32,6 +35,8 @@ sys.path.insert(0, HARNESS)
 import audit  # noqa: E402
 import provision  # noqa: E402
 import run_iteration  # noqa: E402
+from ops import status as ops_status  # noqa: E402
+from ops import watch as ops_watch  # noqa: E402
 
 PROJECT = "/home/someone/agile-skills-throwaway/expenses"
 HOME = "/home/someone"
@@ -1298,6 +1303,601 @@ class Abandonment(unittest.TestCase):
         self.assertIn("engagements_abandoned(reading)", body)
         self.assertLess(body.index("if pending and gone:"), body.index("elif pending:"))
 
+
+# =============================================================================================
+# harness/ops — the mechanics layer (status.py, watch.py)
+#
+# The traps these cover are the ones meta/OPS-CONVENTIONS.md was written from. Each is paired
+# with its non-vacuity case, because a rule that cannot be seen failing is not being tested.
+
+
+def ops_args(**overrides):
+    """The argparse.Namespace the ops entry points expect, with every field defaulted."""
+    fields = {"iteration": [], "builder": False, "builder_pid_file": None,
+              "window_minutes": 20, "on_stop": False, "on_file_complete": [],
+              "on_unit_gte": None, "on_new_rundir": False, "poll_minutes": 15,
+              "timeout_hours": 6, "report_file": None}
+    fields.update(overrides)
+    return argparse.Namespace(**fields)
+
+
+def ops_run_dir(root, iteration, **state):
+    directory = os.path.join(root, "runs", iteration)
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, "state.json"), "w", encoding="utf-8") as handle:
+        json.dump(state, handle, sort_keys=True)
+    return directory
+
+
+# The checkpoint that produced the false positive, in the shape the real file had at bd5e392:
+# a preamble that declares the session's RANGE, a `## Current unit` section naming the unit
+# actually in flight, a `###` subheading inside it, and a later `##` section naming other units.
+CHECKPOINT_WITH_A_RANGE = """# CHECKPOINT
+
+## Session: builder five (`meta/BUILDER-5-PROMPT.md`). Phase VI, in flight.
+
+Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
+
+## The gate is GREEN at 8e61fdb — 44 steps; 108 codes
+
+**CLUSTERS 1-5 COMPLETE.** Remaining: cluster 6's triage, then the report.
+
+## Current unit
+
+**META-163** — cluster 6: every remaining open finding gets a decision.
+
+### A trap in this ledger, found while preparing this unit
+
+The ledger is append-only, so read the LAST status bullet of each entry, not the first.
+
+## What comes after
+
+META-164 stages the two regression configs and META-165 writes the report.
+"""
+
+
+class OpsCurrentUnit(unittest.TestCase):
+    """The current unit is read from one section, and the rest of the file is not evidence.
+
+    The converse of the silently-empty trap in `meta/OPS-CONVENTIONS.md`: this file is *loudly
+    full* of `META-###`, so a whole-file scan never looks empty enough to doubt and answers
+    confidently with the wrong number.
+    """
+
+    def test_a_range_declaration_does_not_become_the_current_unit(self):
+        found = ops_status.current_unit(CHECKPOINT_WITH_A_RANGE)
+        self.assertEqual(found["unit"], "META-163")
+        self.assertEqual(found["number"], 163)
+        self.assertIsNone(found["error"])
+
+    def test_the_naive_reads_this_fixture_defeats_really_are_wrong(self):
+        """Non-vacuity: without this, the test above passes on a file with no trap in it.
+
+        Both obvious whole-file reads are computed here and both must miss — first match gives
+        the low end of the declared range, largest gives the high end, and the unit in flight is
+        neither.
+        """
+        numbers = [int(match) for match in
+                   re.findall(r"\bMETA-([0-9]+)\b", CHECKPOINT_WITH_A_RANGE)]
+        self.assertEqual(numbers[0], 144, "the fixture must open with the range's low end")
+        self.assertEqual(max(numbers), 165, "the fixture must carry a higher number elsewhere")
+        self.assertNotIn(163, (numbers[0], max(numbers)))
+
+    def test_a_checkpoint_with_no_current_unit_section_reads_as_none(self):
+        """The state the repository is actually in between sessions. `None`, with the reason —
+        not the largest number lying around in the prose."""
+        text = CHECKPOINT_WITH_A_RANGE.replace("## Current unit\n", "## Nothing in flight\n")
+        found = ops_status.current_unit(text)
+        self.assertIsNone(found["unit"])
+        self.assertIn("no '## Current unit' section", found["error"])
+
+    def test_the_heading_may_carry_trailing_prose(self):
+        """The real file has read `## Current unit — the last`."""
+        text = CHECKPOINT_WITH_A_RANGE.replace("## Current unit\n",
+                                               "## Current unit — the last\n")
+        found = ops_status.current_unit(text)
+        self.assertEqual(found["unit"], "META-163")
+        self.assertEqual(found["heading"], "## Current unit — the last")
+
+    def test_the_section_ends_at_the_next_top_level_heading(self):
+        """`META-164` and `META-165` live in a later `##` section and must stay out of it."""
+        text = CHECKPOINT_WITH_A_RANGE.replace("**META-163** — cluster 6: every remaining "
+                                               "open finding gets a decision.\n", "")
+        found = ops_status.current_unit(text)
+        self.assertIsNone(found["unit"])
+        self.assertIn("names no META-### unit", found["error"])
+
+    def test_a_subheading_stays_inside_the_section(self):
+        text = CHECKPOINT_WITH_A_RANGE.replace(
+            "**META-163** — cluster 6: every remaining open finding gets a decision.",
+            "The unit's notes follow.").replace(
+            "### A trap in this ledger, found while preparing this unit",
+            "### META-163 — a trap found while preparing this unit")
+        self.assertEqual(ops_status.current_unit(text)["unit"], "META-163")
+
+
+class OpsRunState(unittest.TestCase):
+    """Three ways to have no state, reported as three different sentences."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+
+    def test_a_stopped_run_reports_its_reason_and_turn(self):
+        ops_run_dir(self.root, "it", status="stopped", **{"stop-reason": "epic-done"},
+                    turn=12, project="/tmp/p")
+        record = ops_status.run_record(self.root, "it")
+        self.assertEqual((record["status"], record["stop-reason"], record["turn"]),
+                         ("stopped", "epic-done", 12))
+        self.assertTrue(record["terminal"])
+        self.assertIsNone(record["error"])
+
+    def test_a_missing_directory_a_missing_file_and_a_corrupt_file_differ(self):
+        missing = ops_status.run_record(self.root, "absent")["error"]
+        os.makedirs(os.path.join(self.root, "runs", "bare"))
+        bare = ops_status.run_record(self.root, "bare")["error"]
+        directory = os.path.join(self.root, "runs", "corrupt")
+        os.makedirs(directory)
+        with open(os.path.join(directory, "state.json"), "w", encoding="utf-8") as handle:
+            handle.write("{not json")
+        corrupt = ops_status.run_record(self.root, "corrupt")["error"]
+        self.assertIn("no run directory", missing)
+        self.assertIn("no state.json", bare)
+        self.assertIn("unreadable", corrupt)
+        self.assertEqual(len({missing, bare, corrupt}), 3)
+
+
+class OpsClassification(unittest.TestCase):
+    """The decision table, one case per row, plus the worst-wins order."""
+
+    RUNNING = {"status": "running", "stop-reason": None, "turn": 4, "error": None}
+    TERMINAL = {"status": "stopped", "stop-reason": "turn-budget", "turn": 9, "error": None}
+
+    def test_running_owned_and_moving_is_progressing(self):
+        self.assertEqual(ops_status.classify_run(self.RUNNING, 1, 3)[:2], (0, "progressing"))
+
+    def test_terminal_is_stopped_with_reason(self):
+        code, name, why = ops_status.classify_run(self.TERMINAL, 0, 0)
+        self.assertEqual((code, name), (1, "stopped-with-reason"))
+        self.assertIn("turn-budget", why)
+
+    def test_running_with_nothing_owning_it_is_the_dead_process_state(self):
+        self.assertEqual(ops_status.classify_run(self.RUNNING, 0, 0)[:2],
+                         (2, "process-dead-state-running"))
+
+    def test_running_and_owned_but_idle_is_a_stall_candidate(self):
+        self.assertEqual(ops_status.classify_run(self.RUNNING, 1, 0)[:2],
+                         (3, "stalled-candidate"))
+
+    def test_an_unreadable_state_is_a_stall_candidate_not_a_stop(self):
+        """A state that could not be read is not a run that finished. The distinction is the
+        conventions' rule that empty output has at least two causes."""
+        broken = dict(self.RUNNING, error="state.json unreadable")
+        code, _, why = ops_status.classify_run(broken, 1, 5)
+        self.assertEqual(code, 3)
+        self.assertIn("could not be read", why)
+
+    def test_a_terminal_stop_with_no_recorded_reason_still_says_so(self):
+        record = dict(self.TERMINAL, **{"stop-reason": None})
+        self.assertIn("(none recorded)", ops_status.classify_run(record, 0, 0)[2])
+
+    def test_the_worst_code_wins_in_the_stated_order(self):
+        self.assertEqual(ops_status.worst([0, 1, 3, 2]), 2)
+        self.assertEqual(ops_status.worst([0, 1, 3]), 3)
+        self.assertEqual(ops_status.worst([0, 1]), 1)
+        self.assertEqual(ops_status.worst([0]), 0)
+        self.assertEqual(ops_status.worst([]), 0)
+
+    def test_a_live_builder_outranks_a_recent_transcript(self):
+        self.assertEqual(ops_status.classify_builder(1, 0.5, 20)[:2], (0, "progressing"))
+
+    def test_a_gone_builder_with_a_warm_transcript_is_the_dead_process_state(self):
+        self.assertEqual(ops_status.classify_builder(0, 2.0, 20)[:2],
+                         (2, "process-dead-state-running"))
+
+    def test_a_gone_builder_with_a_cold_transcript_is_only_a_stall_candidate(self):
+        self.assertEqual(ops_status.classify_builder(0, 90.0, 20)[:2], (3, "stalled-candidate"))
+
+
+class OpsProcesses(unittest.TestCase):
+    """Who counts as a driver — and, more to the point, who does not."""
+
+    PROCESSES = [
+        (11, ["python3", "harness/run_iteration.py", "--iteration", "iteration-5-envel"]),
+        (12, ["python3", "/tmp/claude-1000/x/scratchpad/probe.py", "iteration-5-envel"]),
+        (13, ["python3", "harness/ops/status.py", "--iteration", "iteration-5-envel"]),
+        (14, ["python3", "harness/ops/watch.py", "--iteration", "iteration-5-envel"]),
+        (15, ["bash", "-c", "echo unrelated"]),
+    ]
+
+    def test_the_driver_is_found(self):
+        found = ops_status.driver_processes(["iteration-5-envel"], processes=self.PROCESSES,
+                                            self_pid=99)
+        self.assertEqual([record["pid"] for record in found], [11])
+
+    def test_a_scratchpad_process_that_names_the_iteration_is_not_a_driver(self):
+        found = ops_status.driver_processes(["iteration-5-envel"],
+                                            processes=[self.PROCESSES[1]], self_pid=99)
+        self.assertEqual(found, [])
+
+    def test_the_ops_tools_do_not_count_themselves_as_the_driver(self):
+        """`status.py --iteration X` carries X in its own argv. Without this exclusion the
+        probe reports the run as alive whenever the probe itself is running."""
+        found = ops_status.driver_processes(["iteration-5-envel"],
+                                            processes=self.PROCESSES[2:4], self_pid=99)
+        self.assertEqual(found, [])
+
+    def test_our_own_pid_is_excluded(self):
+        found = ops_status.driver_processes(["iteration-5-envel"], processes=self.PROCESSES,
+                                            self_pid=11)
+        self.assertEqual(found, [])
+
+    def test_cpu_ticks_survive_a_comm_containing_parentheses(self):
+        """Splitting on the first `)` reports a field that is not CPU time at all."""
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, ignore_errors=True)
+        fields = [str(index) for index in range(1, 21)]
+        fields[1] = "(od)d (name)"   # a comm with spaces AND parentheses
+        fields[13] = "500"           # utime, field 14
+        fields[14] = "40"            # stime, field 15
+        with mock.patch("builtins.open",
+                        mock.mock_open(read_data=" ".join(fields) + "\n")):
+            self.assertEqual(ops_status.cpu_ticks(7), 540)
+
+    def test_the_transcript_directory_is_the_project_path_with_slashes_flattened(self):
+        self.assertTrue(ops_status.transcript_dir("/home/msi/git/agile-skills", home="/h")
+                        .endswith("-home-msi-git-agile-skills"))
+
+
+class OpsFileActivity(unittest.TestCase):
+    """The `find` probe: an absolute stamp, and a stderr that is never thrown away."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+
+    def test_the_stamp_is_absolute(self):
+        """Relative `-newermt` arguments fail on this machine — the conventions' first rule."""
+        stamp = ops_status.activity_stamp(1757520000.0, 20)
+        self.assertRegex(stamp, r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+        self.assertNotIn("-", stamp.split(" ")[1])
+
+    def test_the_stamp_reaches_find_as_the_newermt_argument(self):
+        seen = {}
+
+        def fake(argv, **kwargs):
+            seen["argv"] = argv
+            return subprocess.CompletedProcess(argv, 0, "one\ntwo\n", "")
+
+        record = ops_status.file_activity(self.root, 20, 1757520000.0, binary="/usr/bin/find",
+                                          run=fake)
+        self.assertIn("-newermt", seen["argv"])
+        self.assertEqual(seen["argv"][seen["argv"].index("-newermt") + 1], record["stamp"])
+        self.assertEqual(record["count"], 2)
+
+    def test_a_find_that_errored_reports_its_stderr_rather_than_an_empty_result(self):
+        """Empty output has at least two causes. A probe that discards stderr fails toward the
+        wrong verdict, which is exactly how the `bfs` trap was missed."""
+        def fake(argv, **kwargs):
+            return subprocess.CompletedProcess(argv, 1, "", "find: bad -newermt argument\n")
+
+        record = ops_status.file_activity(self.root, 20, 1757520000.0, binary="/usr/bin/find",
+                                          run=fake)
+        self.assertEqual(record["count"], 0)
+        self.assertEqual(record["returncode"], 1)
+        self.assertIn("bad -newermt argument", record["stderr"])
+
+
+class OpsBoard(unittest.TestCase):
+    def setUp(self):
+        self.project = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.project, ignore_errors=True)
+        os.makedirs(os.path.join(self.project, "tracker"))
+
+    def write_board(self, text):
+        with open(os.path.join(self.project, "tracker", "board.md"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(text)
+
+    def test_the_summary_section_is_read_and_stops_at_the_next_heading(self):
+        self.write_board("# Board\n\n## EP-001 — a thing  (done)\n\nrows\n\n## Summary\n\n"
+                         "- 6 item(s): 6 done\n- blocked: none\n\n## After\n\n- not this\n")
+        summary, error = ops_status.board_summary(self.project)
+        self.assertIsNone(error)
+        self.assertEqual(summary["lines"], ["- 6 item(s): 6 done", "- blocked: none"])
+
+    def test_a_missing_board_is_an_error_not_an_empty_summary(self):
+        summary, error = ops_status.board_summary(self.project)
+        self.assertIsNone(summary)
+        self.assertIn("no board at", error)
+
+    def test_no_project_path_says_so(self):
+        self.assertIn("no project path", ops_status.board_summary(None)[1])
+
+
+class OpsWatchArming(unittest.TestCase):
+    """What the watch refuses to arm, and why."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.repo = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
+        os.makedirs(os.path.join(self.repo, "meta"))
+
+    def checkpoint(self, text):
+        with open(os.path.join(self.repo, "meta", "CHECKPOINT.md"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(text)
+
+    def arm(self, args):
+        tracker = ops_watch.Tracker()
+        armed, skipped, lines = ops_watch.arm_triggers(args, tracker, self.root, self.repo)
+        return tracker, armed, skipped, lines
+
+    def test_a_run_terminal_at_arm_is_announced_and_never_armed(self):
+        """A run that stopped before the watch started is history. Arming it would let the watch
+        'fire' on a stop that happened yesterday."""
+        ops_run_dir(self.root, "it", status="stopped", **{"stop-reason": "epic-done"}, turn=9)
+        _, armed, skipped, lines = self.arm(ops_args(iteration=["it"], on_stop=True))
+        self.assertEqual([trigger for trigger in armed if trigger["kind"] == "stop"], [])
+        self.assertEqual(len(skipped), 1)
+        self.assertIn("terminal at arm", skipped[0])
+        self.assertIn("epic-done", skipped[0])
+        self.assertTrue(any("status='stopped'" in line for line in lines))
+
+    def test_a_running_run_is_armed(self):
+        """Non-vacuity for the exclusion above: without it, nothing proves the skip is
+        conditional rather than a watch that never arms anything."""
+        ops_run_dir(self.root, "it", status="running", turn=3)
+        _, armed, skipped, _ = self.arm(ops_args(iteration=["it"], on_stop=True))
+        self.assertEqual([trigger["kind"] for trigger in armed], ["stop"])
+        self.assertEqual(skipped, [])
+
+    def test_an_unreadable_state_at_arm_is_armed_rather_than_skipped(self):
+        """A state that could not be read is not a run known to be terminal. Skipping it would
+        turn an instrument failure into a decision."""
+        _, armed, skipped, lines = self.arm(ops_args(iteration=["gone"], on_stop=True))
+        self.assertEqual([trigger["kind"] for trigger in armed], ["stop"])
+        self.assertEqual(skipped, [])
+        self.assertTrue(any("UNREADABLE" in line for line in lines))
+
+    def test_a_file_already_complete_at_arm_is_skipped(self):
+        path = os.path.join(self.root, "report.md")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("# Report\n\nAll done.\n")
+        _, armed, skipped, _ = self.arm(ops_args(on_file_complete=[path]))
+        self.assertEqual(armed, [])
+        self.assertIn("already complete at arm", skipped[0])
+
+    def test_a_file_that_still_says_pending_is_armed(self):
+        path = os.path.join(self.root, "report.md")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("# Report\n\n## Verdict\n\n*Pending*\n")
+        _, armed, skipped, _ = self.arm(ops_args(on_file_complete=[path]))
+        self.assertEqual([trigger["kind"] for trigger in armed], ["file-complete"])
+        self.assertEqual(skipped, [])
+
+    def test_a_unit_threshold_already_met_at_arm_is_skipped(self):
+        self.checkpoint(CHECKPOINT_WITH_A_RANGE)
+        _, armed, skipped, _ = self.arm(ops_args(on_unit_gte=160))
+        self.assertEqual(armed, [])
+        self.assertIn("already satisfied at arm", skipped[0])
+        self.assertIn("META-163", skipped[0])
+
+    def test_a_unit_threshold_not_yet_met_is_armed_against_the_section_not_the_file(self):
+        """META-165 appears in this checkpoint's prose. If the threshold were read from the
+        whole file, `--on-unit-gte 165` would be satisfied at arm and could never fire."""
+        self.checkpoint(CHECKPOINT_WITH_A_RANGE)
+        _, armed, skipped, lines = self.arm(ops_args(on_unit_gte=165))
+        self.assertEqual([trigger["kind"] for trigger in armed], ["unit-gte"])
+        self.assertEqual(skipped, [])
+        self.assertTrue(any("META-163" in line for line in lines))
+
+    def test_a_checkpoint_with_no_section_arms_rather_than_guessing(self):
+        self.checkpoint("# CHECKPOINT\n\nNothing in flight. META-165 closed the session.\n")
+        _, armed, skipped, lines = self.arm(ops_args(on_unit_gte=165))
+        self.assertEqual([trigger["kind"] for trigger in armed], ["unit-gte"])
+        self.assertTrue(any("UNREADABLE" in line for line in lines))
+
+
+class OpsWatchBaseline(unittest.TestCase):
+    """The rule that keeps a watch able to see anything: a parse failure updates nothing."""
+
+    def test_a_parse_failure_keeps_the_baseline_and_the_last_good_observation(self):
+        tracker = ops_watch.Tracker()
+        tracker.arm("run:it", True, {"status": "running", "turn": 3})
+        moved = tracker.observe("run:it", True, {"status": "running", "turn": 4})
+        self.assertTrue(moved["changed"])
+
+        failed = tracker.observe("run:it", False, None, "state.json unreadable")
+        self.assertTrue(failed["kept"])
+        self.assertFalse(failed["changed"])
+        self.assertEqual(failed["error"], "state.json unreadable")
+        # Neither store moved: the baseline is still what arm saw, and the current observation
+        # is still the last one that parsed.
+        self.assertEqual(tracker.baseline["run:it"]["value"], {"status": "running", "turn": 3})
+        self.assertEqual(tracker.current["run:it"], {"status": "running", "turn": 4})
+
+    def test_the_next_good_observation_is_still_compared_against_the_kept_value(self):
+        """The consequence the rule exists for. Folding the failure in would make this
+        comparison run against `None`, and the watch would report a change that is really just
+        the instrument recovering."""
+        tracker = ops_watch.Tracker()
+        tracker.arm("run:it", True, {"turn": 4})
+        tracker.observe("run:it", False, None, "unreadable")
+        again = tracker.observe("run:it", True, {"turn": 4})
+        self.assertFalse(again["changed"])
+        self.assertEqual(again["previous"], {"turn": 4})
+
+    def test_an_arm_that_failed_to_parse_holds_no_current_value(self):
+        tracker = ops_watch.Tracker()
+        tracker.arm("unit", False, None, "no '## Current unit' section")
+        self.assertNotIn("unit", tracker.current)
+        self.assertFalse(tracker.baseline["unit"]["ok"])
+
+
+class OpsNewRunDir(unittest.TestCase):
+    """Terminal-at-arm directories are history, not events."""
+
+    ARM = {"old": {"status": "stopped", "terminal": True, "started": "A", "error": None},
+           "live": {"status": "running", "terminal": False, "started": "B", "error": None}}
+
+    def test_a_terminal_directory_that_is_still_terminal_fires_nothing(self):
+        events, errors = ops_watch.new_rundir_events(self.ARM, dict(self.ARM))
+        self.assertEqual(events, [])
+        self.assertEqual(errors, [])
+
+    def test_a_directory_absent_at_arm_is_an_event(self):
+        observed = dict(self.ARM)
+        observed["new"] = {"status": "running", "terminal": False, "started": "C", "error": None}
+        events, _ = ops_watch.new_rundir_events(self.ARM, observed)
+        self.assertEqual([event["name"] for event in events], ["new"])
+        self.assertIn("absent at arm", events[0]["evidence"])
+
+    def test_a_terminal_directory_that_came_back_to_life_is_an_event(self):
+        """What `--fresh` reusing the same path looks like from outside: the name was in the
+        baseline, so a name-only comparison would miss the new run entirely."""
+        observed = dict(self.ARM)
+        observed["old"] = {"status": "running", "terminal": False, "started": "D", "error": None}
+        events, _ = ops_watch.new_rundir_events(self.ARM, observed)
+        self.assertEqual([event["name"] for event in events], ["old"])
+        self.assertIn("the path was reused", events[0]["evidence"])
+
+    def test_a_restarted_run_in_a_live_directory_is_an_event(self):
+        observed = dict(self.ARM)
+        observed["live"] = {"status": "running", "terminal": False, "started": "Z", "error": None}
+        events, _ = ops_watch.new_rundir_events(self.ARM, observed)
+        self.assertEqual([event["name"] for event in events], ["live"])
+        self.assertIn("a different run in the same path", events[0]["evidence"])
+
+    def test_an_unreadable_directory_is_a_probe_error_and_not_a_new_run(self):
+        """A run mid-write must not be announced as a new run — and the read that failed must
+        not vanish either."""
+        observed = dict(self.ARM)
+        observed["half"] = {"status": None, "terminal": None, "started": None,
+                            "error": "state.json unreadable"}
+        events, errors = ops_watch.new_rundir_events(self.ARM, observed)
+        self.assertEqual(events, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("half", errors[0])
+
+
+class OpsWatchLoop(unittest.TestCase):
+    """One report per invocation, and the trigger's evidence verbatim inside it."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.repo = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
+        os.makedirs(os.path.join(self.repo, "meta"))
+
+    def drive(self, args, steps):
+        """Run the loop over a fake clock; `steps` runs before each poll."""
+        ticks = iter(range(0, 100000, 60))
+        state = {"n": 0}
+
+        def clock():
+            return float(next(ticks))
+
+        def sleeper(_):
+            if state["n"] < len(steps):
+                steps[state["n"]]()
+            state["n"] += 1
+
+        out, err = io.StringIO(), io.StringIO()
+        code = ops_watch.run_watch(args, out=out, err=err, clock=clock, sleeper=sleeper,
+                                   harness=self.root, repo=self.repo)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_a_stop_fires_once_with_its_evidence_and_writes_one_report(self):
+        ops_run_dir(self.root, "it", status="running", turn=3)
+        report_file = os.path.join(self.root, "watch-report.txt")
+
+        def stop_it():
+            ops_run_dir(self.root, "it", status="stopped",
+                        **{"stop-reason": "epic-done"}, turn=7)
+
+        code, out, _ = self.drive(
+            ops_args(iteration=["it"], on_stop=True, poll_minutes=1, timeout_hours=1,
+                     report_file=report_file),
+            [lambda: None, stop_it])
+        self.assertEqual(code, 0)
+        self.assertEqual(out.count("# watch report"), 1)
+        self.assertIn("TRIGGER         stop it", out)
+        self.assertIn("stop-reason='epic-done'", out)
+        self.assertIn("at arm: {'status': 'running'", out)
+        with open(report_file, encoding="utf-8") as handle:
+            self.assertIn("stop-reason='epic-done'", handle.read())
+
+    def test_a_timeout_with_no_trigger_still_writes_exactly_one_report(self):
+        ops_run_dir(self.root, "it", status="running", turn=3)
+        code, out, _ = self.drive(
+            ops_args(iteration=["it"], on_stop=True, poll_minutes=1, timeout_hours=0.05), [])
+        self.assertEqual(code, 3)
+        self.assertEqual(out.count("# watch report"), 1)
+        self.assertIn("TRIGGER         none — the timeout was reached", out)
+        self.assertIn("elapsed", out)
+
+    def test_a_probe_error_is_printed_and_carried_into_the_report_not_read_as_silence(self):
+        ops_run_dir(self.root, "it", status="running", turn=3)
+
+        def corrupt():
+            with open(os.path.join(self.root, "runs", "it", "state.json"), "w",
+                      encoding="utf-8") as handle:
+                handle.write("{broken")
+
+        code, out, err = self.drive(
+            ops_args(iteration=["it"], on_stop=True, poll_minutes=1, timeout_hours=0.05),
+            [corrupt])
+        self.assertEqual(code, 3)
+        self.assertIn("probe error", err)
+        self.assertIn("probe error", out)
+        self.assertIn("unreadable", out)
+
+    def test_a_new_run_directory_notes_and_the_watch_keeps_going(self):
+        """`--on-new-rundir` is note-and-continue: a run STARTING is not the thing a watch of a
+        run is waiting for, so the report is still written by the timeout."""
+        ops_run_dir(self.root, "old", status="stopped", **{"stop-reason": "epic-done"}, turn=2)
+
+        def start():
+            ops_run_dir(self.root, "fresh", status="running", turn=1, started="now")
+
+        code, out, err = self.drive(
+            ops_args(on_new_rundir=True, poll_minutes=1, timeout_hours=0.08), [start])
+        self.assertEqual(code, 3)
+        self.assertIn("note — new-rundir", err)
+        self.assertIn("fresh: absent at arm", out)
+        self.assertIn("TRIGGER         none", out)
+
+    def test_a_watch_with_nothing_left_to_arm_says_so_at_arm(self):
+        ops_run_dir(self.root, "it", status="stopped", **{"stop-reason": "epic-done"}, turn=2)
+        code, out, _ = self.drive(
+            ops_args(iteration=["it"], on_stop=True, poll_minutes=1, timeout_hours=0.05), [])
+        self.assertEqual(code, 3)
+        self.assertIn("this watch can only time out", out)
+
+
+class OpsWatchArguments(unittest.TestCase):
+    def test_a_watch_with_no_trigger_is_refused(self):
+        with self.assertRaises(SystemExit):
+            with mock.patch("sys.stderr", io.StringIO()):
+                ops_watch.parse_args(["--iteration", "it"])
+
+    def test_on_stop_without_an_iteration_is_refused(self):
+        with self.assertRaises(SystemExit):
+            with mock.patch("sys.stderr", io.StringIO()):
+                ops_watch.parse_args(["--on-stop"])
+
+    def test_the_defaults_are_the_documented_ones(self):
+        args = ops_watch.parse_args(["--iteration", "it", "--on-stop"])
+        self.assertEqual((args.poll_minutes, args.timeout_hours), (15, 6))
+
+    def test_status_needs_a_subject(self):
+        with self.assertRaises(SystemExit):
+            with mock.patch("sys.stderr", io.StringIO()):
+                ops_status.parse_args([])
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
