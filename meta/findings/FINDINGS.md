@@ -524,6 +524,26 @@ Convention: F-### sequential, never reused. Every finding cites evidence in
   is, and the last says that is all of them for now. `refine` step 4 carries it. One
   conversation, three artifacts.
 
+## H-001 — number never filed (tombstone, 2026-09-10)
+- This number was skipped. `meta/harness/evidence/iteration-1-mini/README.md:27` says a defect
+  in the harness's own worker prompt was *"recorded as H-001 in `meta/findings/FINDINGS.md`"*,
+  and `meta/journal.md:2030` (META-080) says the same — *"Both recorded as H-001; fixed in
+  META-081, not mid-run."* No such entry exists and none ever did: `H-001` appears in no
+  committed version of this file, and the H-numbering itself begins at H-002, filed together
+  with H-003 to H-006 in the iteration-1 harvest (commit 5bc2454) — after both citations were
+  already written. What happened is the mirror of F-071: there a number was named 66 seconds
+  before the batch that would have filed it, here a defect was **fixed instead of filed**.
+  The defect was real and the fix is in the tree: META-081 (commit e7d3c43) took
+  `harness/prompts/worker-turn.md` to version 2 so that "batch every question before you stop"
+  and "stop when a human question is open" no longer contradict each other, and added the
+  `turn-budget-exhausted` stop reason to that prompt and to `harness/run_iteration.py`, so a
+  turn ending at its spend cap stops having to report `error`. Only the finding was never
+  written. The number is burned, not reused.
+- Found by the first run of the F-099 sweep (META-158), which is the whole point of that
+  finding: both citing files are read-only history — banked evidence and an append-only
+  journal — and **neither is edited**. This entry is what makes their citations resolve, the
+  same correction the F-071 tombstone makes for `iteration-3b/README.md:27`.
+
 ## H-002 — turn-failed is terminal in code; USAGE §9 promises resume; --fresh destroys the run
 - Severity: harness, correctness + doc contradiction (sharpest harness defect of iteration 1)
 - Component: harness/run_iteration.py (stop handling, line ~529), harness/USAGE.md §9
@@ -3704,6 +3724,55 @@ Recall against the planted ground truth remains 0.1.0's reading: **1 full hit an
   (and meta/**.md generally) for F-###/H-### references and requires each to resolve to a
   ledger heading; a tombstone counts as resolving.
 - Status: open
+- **Status update 2026-09-10 (META-158): fixed**, and wider than the direction asked.
+  `./scripts/check` step **17b, `finding numbers cited resolve`**: every **git-tracked file** is
+  read and every three-digit `F-###`/`H-###` in it must match a `## ` heading in this file. A
+  phantom is reported as `path:line`. Implemented in commit f61ce10.
+  **Scope, and what it excludes.** Not `meta/**.md` as the direction proposed — **no path is
+  excluded**. A phantom in `adapters/claude-code/dist/` reaches a user, one in `fixtures/`
+  teaches a wrong number, one in `harness/` is in the instrument. What is *not* read: files that
+  are not tracked (they are not the record), numbers that are only implied (`F-080..F-098` cites
+  two numbers, not nineteen), and citations written in some other form (`F-71`, `F-0071`) — none
+  exists: `git ls-files -z | xargs -0 grep -ohE '\b[FH]-[0-9]{1,5}\b' | sort -u` returns
+  three-digit forms and nothing else. One tracked path cannot be read as text and is **named on
+  stdout every run rather than passed over**: `meta/harness/evidence/iteration-1-full/project` is
+  a gitlink (mode 160000, an embedded repository); its 129 files were checked by hand and cite no
+  finding number at all.
+  **How it reports a phantom in read-only evidence without editing it.** The sweep only reads.
+  The correction for a phantom banked in evidence is a **tombstone entry here**, which makes the
+  standing citation resolve while the evidence stays byte-identical — F-071's precedent,
+  mechanised. A tombstone counts as filed by construction: it is a `## ` heading like any other.
+  This is also what makes *reporting* a phantom possible at all, which is a real hazard rather
+  than a nicety: the report of a phantom has to quote the phantom, so with the H-001 tombstone's
+  heading removed the sweep flags that tombstone's own body (`FINDINGS.md:529-531`) alongside the
+  citations it corrects.
+  **The first run's full yield, over the tree at 8bd792a: 3276 citations, 128 distinct numbers,
+  127 filed, across 1662 tracked files — one phantom.**
+  * **H-001**, cited at `meta/harness/evidence/iteration-1-mini/README.md:27` and
+    `meta/journal.md:2030`. Never filed; the H-numbering begins at H-002 (commit 5bc2454) and the
+    defect those two lines describe was **fixed instead of filed**, in META-081 (commit e7d3c43).
+    **Disposition: a tombstone, `## H-001` above. Neither citing file is edited** — one is banked
+    evidence, the other an append-only journal. Nothing else in the tree is a phantom; that is
+    the whole yield, and it is not zero.
+  **The calibration, because a yield of one has to be earned.** The sweep as committed was run
+  against a detached worktree at **ff8be8a^ (dda3975)** — the tree exactly as it stood the moment
+  before the F-071 tombstone was written, with `iteration-3b/README.md:27` unchanged. It reports
+  three phantoms and the first is the known one:
+  `F-071 -> meta/harness/evidence/iteration-3b/README.md:27`, at the exact line the tombstone
+  names. The other two are `H-001` (same two sites) and `F-101`, then cited by
+  `fixtures/retro/README.md:17` and `fixtures/retro/tracker/items/EP-002/artifacts/retro.md:40`
+  ahead of its filing in META-149 — a fixture citing a number the ledger does not yet contain is
+  the one recurring false-positive shape, and the answer is that the gate is a standing invariant:
+  it holds again the moment the filing lands, as it does today.
+  **Non-vacuity, in the strong form.** With the resolution stubbed
+  (`if cited_number not in filed:` → `if False:`) and H-001 still unfiled, the step reported
+  *"PASS finding numbers cited resolve (3342 citations, 128 numbers, 127 filed, over 1662 tracked
+  files)"* and the whole gate reported *"check: all steps passed"* — so nothing else in
+  `./scripts/check` catches a phantom citation, and this step's body is what decides. With the
+  file walk stubbed (`tracked = []`) it reported **SKIP**, *"no file in this repository cites a
+  finding number"*, named in the run's closing summary rather than dressed as a pass. Against its
+  own new case: removing the `## H-001` heading from this file puts the step back to FAIL on both
+  standing citation sites, so the tombstone is load-bearing rather than decorative.
 
 ## F-100 — a document the plan hands `implement` to read is one `implement` may be forbidden to repair
 

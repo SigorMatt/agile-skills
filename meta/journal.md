@@ -5761,3 +5761,89 @@ recall is a reading, not a number, and the report says which.
   `methodology/skills/refine/{process.md,skill.yaml}` (0.4.0), `fixtures/broken-workspace`,
   `fixtures/abandoned-engagement`, `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md`
   (F-094, F-096 resolved), `meta/journal.md`. Commit `181e69d`.
+
+---
+
+## 2026-09-10 — META-158 — the citations nobody resolved, and the one number they pointed at
+
+- **Unit:** META-158 (F-099 — cluster 3's last unit)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-099 and the F-071 tombstone in full, plus F-024
+  (the direction this mirrors), F-001, H-016, H-002; `scripts/check`'s *findings citations
+  resolve* step and its `FOREIGN_SHAS` precedent; `scripts/lib/record.py`; commit `ff8be8a`'s
+  diff (how F-071 was corrected — a ledger tombstone **and** an appended README note); commits
+  `e7d3c43` and `5bc2454`; `meta/harness/evidence/iteration-1-mini/README.md`,
+  `meta/journal.md:2020-2032`; every `[FH]-[0-9]+` occurrence in the tree, measured before the
+  pattern was chosen.
+- **Decisions:**
+  - **The scope is every git-tracked file, and no path is excluded.** F-099's own direction
+    proposed `meta/harness/evidence/**/README.md` and "`meta/**.md` generally". That is too
+    narrow for the reason the finding gives: a phantom in `adapters/claude-code/dist/` reaches a
+    user, one in `fixtures/` teaches a wrong number, one in `harness/` sits in the instrument.
+    Reading everything costs 0.4s over 1662 files, so narrowing would have bought nothing and
+    lost three classes.
+  - **`meta/harness/evidence/**` is swept and never written, and that is the mechanism, not a
+    compromise.** The sweep only reads and reports `path:line`. What corrects a phantom banked
+    there is a **tombstone in the ledger**: it makes the standing citation resolve while the
+    evidence stays byte-identical. A tombstone counts as filed by construction — it is a `## `
+    heading like any other — which is F-071's precedent turned into a rule.
+  - **The tombstone mechanism is what makes reporting possible at all.** The report of a phantom
+    has to quote the phantom. With the new `## H-001` heading removed, the sweep flags that
+    tombstone's own body alongside the citations it corrects. A design without tombstones would
+    have made the ledger unable to describe its own gaps — F-037's shape in a new place.
+  - **A heading files a number; it does not cite one.** Heading lines in `FINDINGS.md` are
+    skipped so the count is citations rather than definitions. Every other occurrence in the
+    ledger — a finding naming itself, a tombstone quoting the number it burns — is resolved like
+    any other.
+  - **False-positive classes, looked for before the pattern was chosen rather than met by luck.**
+    (a) *Implied ranges*: `F-080..F-098` cites two numbers, not nineteen — the seventeen between
+    are not written and are not checked. (b) *Malformed forms*: `git ls-files -z | xargs -0 grep
+    -ohE '\b[FH]-[0-9]{1,5}\b' | sort -u` returns three-digit forms and nothing else, so the
+    pattern is exactly the ledger's own heading form and the limit is stated in the code.
+    (c) *A fixture that deliberately cites a bad finding number*: searched for, and none exists —
+    `fixtures/`' wrong citations name items, files and questions. So there is **no allowlist**;
+    `FOREIGN_SHAS` exists above it because a finding legitimately cites a foreign repository's
+    commit, and nothing legitimately cites a number that was never filed. (d) *A fixture citing a
+    number filed later*: real, historically — at `ff8be8a^`, `fixtures/retro` cited `F-101`
+    before META-149 filed it. The gate is a standing invariant, so it holds again the moment the
+    filing lands. (e) *A number quoted inside a report of its own absence*: handled by (the
+    tombstone mechanism) above. (f) *A tracked path that is not readable text*:
+    `meta/harness/evidence/iteration-1-full/project` is a gitlink, so its 129 files are outside
+    `git ls-files` here — checked by hand (they cite no finding number) and **named on stdout on
+    every run** rather than passed over, which is H-016's lesson.
+  - **The yield is one phantom and it is not zero: `H-001`.** Cited at
+    `meta/harness/evidence/iteration-1-mini/README.md:27` and `meta/journal.md:2030`, both of
+    which say a defect in the harness's own worker prompt was "recorded as H-001". It never was:
+    the H-numbering begins at H-002 (commit `5bc2454`), and the defect was **fixed instead of
+    filed** — META-081 (commit `e7d3c43`) took `worker-turn.md` to version 2 and added the
+    `turn-budget-exhausted` stop reason. F-071 is a number named 66 seconds too early; H-001 is
+    its mirror, a fix that outran its own record.
+  - **Disposition: a tombstone, and neither citing file edited.** One is banked evidence and the
+    other an append-only journal. I did **not** follow the second half of `ff8be8a`'s precedent —
+    it also appended a dated correction note to `iteration-3b/README.md` — because this unit's
+    scope forbids touching `meta/harness/evidence/**` and because the tombstone alone already
+    discharges the correction: the citation resolves, and a reader who follows it lands on an
+    entry that explains itself. Appending the parity note to `iteration-1-mini/README.md` is a
+    move an owner can still make; it is not one I made silently.
+  - **The commit order leaves the gate red once, deliberately.** `f61ce10` ships the step and its
+    first run *is* the finding, so the gate is RED at that commit and green at the next, where
+    the ledger answers it. Doing it the other way round would have meant filing the tombstone
+    before the instrument that found it, and citing an implementing sha that did not exist yet —
+    F-024's trap.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **40 steps** (new 17b, *finding
+  numbers cited resolve*): **3342 citations, 128 numbers, 128 filed, over 1662 tracked files**,
+  **0 phantoms**; `findings citations resolve` 58 → **61**; `fixtures/broken-workspace` unmoved
+  at **108 codes**; `scripts/lib/selftest.py` unmoved at **354**. Non-vacuity in the strong form,
+  two deciding bodies stubbed one at a time, while H-001 was still unfiled: the resolution
+  (`if cited_number not in filed:` → `if False:`) → step **PASS** and `check: all steps passed`,
+  proving nothing else in the gate catches a phantom citation; the file walk (`tracked = []`) →
+  **SKIP**, named in the closing summary rather than dressed as a pass. Against my own new case:
+  removing the `## H-001` heading puts the step back to FAIL on both standing sites, so the
+  tombstone is load-bearing. **Calibration against F-071**, because a yield of one has to be
+  earned: the step as committed, run over a detached worktree at `ff8be8a^` (`dda3975`) — the
+  tree the instant before the F-071 tombstone was written — reports
+  `F-071 -> meta/harness/evidence/iteration-3b/README.md:27`, the exact line the tombstone names,
+  plus `H-001` and `F-101`.
+- **Artifacts:** `scripts/check` (step 17b, `sweep_finding_refs` + `check_finding_refs`),
+  `meta/findings/FINDINGS.md` (the `H-001` tombstone; F-099 resolved with its full first-run
+  yield), `meta/journal.md`, `meta/CHECKPOINT.md`. Commits `f61ce10` and this one.
