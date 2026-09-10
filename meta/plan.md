@@ -527,6 +527,11 @@ Format of each line: **unit** — scope — the gate that closes it.
       (scripted silence, logged), and the driver recognising "human silent past threshold, E4
       declared" as a terminal epic-done-class stop rather than a stall.
       Gate: `harness/tests/test_harness.py` green with new cases.
+- [ ] **META-153c** — H-020's fix, promoted ahead of cluster 3: the driver's declared-E4
+      reading is **unsound**, not merely unpromised — a delivered run whose log carries a
+      trailing silence run is stamped `abandoned`, proved by execution in META-153b. It would
+      mislabel any iteration, 5b included, so it is fixed before the regressions are
+      provision-verified. Harness commit. Gate: a test that fails on the old reading.
 - [ ] **META-153b** — cluster 2's findings pass: the elicitation deadlock ADR-0011 §6 recorded
       and declined to file, and the three defects `fixtures/abandoned-engagement/` surfaced in
       `check-epic-signoff` and `engagement-state`. Statuses for the E4 work.

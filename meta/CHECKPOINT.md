@@ -10,61 +10,44 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at b845342 — 36 steps; harness self-test 105 tests
+## The gate is GREEN at bc21bce — 36 steps; 54 findings citations; harness self-test 105
 
-**CLUSTER 2 IS BUILT.** E4 is derived, specified, programmed, fixtured end to end, and the
-driver recognises it. What remains is its ledger.
+**CLUSTER 2 IS COMPLETE** — derived, specified, programmed, fixtured, driven and filed.
 
 ## Current unit
 
-**META-153b** — cluster 2's findings pass.
+**META-153c** — H-020's fix. **A HARNESS commit.** Promoted ahead of cluster 3 on purpose.
 
-File the five items below with F-numbers (next free is F-104; the ledger's convention is
-sequential, never reused; F-071 is a burned tombstone). Match F-080..F-103's format exactly,
-including a `**Provenance:**` line naming the unit that found each. `meta/findings/FINDINGS.md`
-is **appended to, never rewritten**. Every citation must resolve — `./scripts/check` has a step
-for it and F-024 exists because a session once cited commits that did not exist, every one.
+META-153b filed H-020 and, in doing so, proved the defect is worse than the observation that
+prompted it: the driver's declared-E4 reading is **unsound**, not merely unpromised.
 
-Then record the E4 work's own statuses: ADR-0011 and its commits settle nothing that was open
-except by adding a mechanism, so say what E4 now is and cite it — 94606f5, 877ee85, 4d1b7ce,
-e9f8d79, b845342.
+`abandonment_declared()` takes verdict ∈ (`ended`, `closed`) **and** reported silent rounds ≥
+reported threshold. But `silent_rounds` is the trailing run of equal digests in an **append-only
+log that nothing resets**, and ADR-0011 §7 makes E4 **recoverable** — a stakeholder can come
+back. So an engagement that went silent, was recovered, and then **delivered** still satisfies
+both conjuncts. **Proved by execution in META-153b**: `fixtures/abandoned-engagement/right`'s
+EP-001 with only `outcome: delivered` changed is still returned by `abandonment_declared()`.
 
-### The five
+Consequence: the driver would stamp a **delivered** run `abandoned`. That mislabels any
+iteration whose stakeholder ever went quiet — **iteration 5b included** — so it is fixed before
+META-164 provision-verifies the regressions, not after.
 
+The fix must read something that actually distinguishes the two. Candidates to weigh, not a
+prescription: the epic's `outcome` (`dropped` is E4's, `delivered`/`delivered-partial` are not);
+the history reason prefix `orphaned by E4:`; the presence of an `## Ending statement`. Whatever
+is chosen, **keep the driver asking rather than re-deriving** — the META-153 test that forbids
+`threshold_rounds`, `tracker/waiting` and `pipeline.yaml` from appearing in the driver's source
+must stay green, because that is F-045's mechanism refused structurally.
 
-1. **The elicitation deadlock.** `next` step 3 halts on **any** open human-addressed question,
-   while `spec/question.md` §2 says an elicitation *"must not stop the loop"*. Both cannot hold;
-   today the first wins, so an unanswered elicitation makes **every** ending unreachable, **E1
-   included**. Recorded in ADR-0011 §6 with both citations; deliberately unfiled three times now.
-   Adjacent to **F-097** (cluster 5, META-162).
-2. **`check-epic-signoff` refuses an epic with no sign-off and prints no reason at all** — the
-   bare header with an empty bullet list, because the block that would explain DE7 and list the
-   children sits after an early `return 1` and is **unreachable**. **Predates E4**:
-   `git show 77a5d96:scripts/check-epic-signoff` has the same shape, and
-   `fixtures/ended-engagement`'s `EP-003` — the F-045 case, *"the engagement nobody was ever
-   asked about"* — has always failed this way under an assertion that reads only the exit code.
-3. **The gate accepts a sign-off that claims a reply it does not have.** It collects the refusal
-   (*says answered but its `## Answer` is empty*) into `problems`, then discards it — `problems`
-   is printed only when `silence` is also `None`. The program whose whole subject is the E3/E4
-   distinction passes it; only `validate-workspace` catches it.
-4. **`engagement-state` prints `rest reached at <t>` under verdicts that never reached rest** —
-   `rest_since` is a boundary derived from children's timestamps, not a statement that rest
-   happened. Pre-existing, cosmetic in effect, but a false sentence in a program's output.
-
-5. **A contract that exists only as a side effect.** The driver's recognition of a *declared*
-   E4 depends on `scripts/engagement-state` continuing to print its silence sentence under the
-   `ended`/`closed` verdicts — the E4-declared reading has **no other source**. That is currently
-   a side effect of the "carry the count while it is above zero" rule, not a stated contract.
-   Found by META-153, reported as an observation rather than a request.
-
-- Done when: five findings filed, E4's statuses recorded with resolving citations,
-  `./scripts/check` green including *findings citations resolve*, journalled, committed AND
-  pushed.
-- Next unit: **META-154** — cluster 3 opens with F-091, the anchor: `transition` owns the
-  **Gates:** verdicts the way it owns **Status:** — the runner writes what ran, the worker
-  supplies the evidence sentences.
+- Done when: the reading is sound, a test **fails on the old reading** and passes on the new,
+  the recovered-then-delivered case is a test case in its own right, harness self-test green,
+  `./scripts/check` green, H-020's status updated with its resolving citation, journalled,
+  committed AND pushed as a harness commit (the H-020 status edit may ride with it — it is
+  ledger, not toolkit).
+- Next unit: **META-154** — cluster 3 opens with F-091, the anchor.
 
 ## Done this session
+
 
 
 
@@ -185,6 +168,24 @@ e9f8d79, b845342.
     prompt 2 → 3. Non-vacuity proved **in both directions**: stubbing the recognition to return
     nothing gives `'stalled' != 'abandoned'`; stubbing it to return everything gives
     `'abandoned' != 'stalled'`.
+  - **META-153b** cluster 2's ledger (**bc21bce**), append-only proved (335 insertions, **0
+    deletions**), citations 49 → **54**, every sha checked with `git log -1` **and**
+    `git merge-base --is-ancestor`. Filed **F-104** (the elicitation deadlock), **F-105**
+    (`check-epic-signoff` refuses with a bare header), **F-106** (the gate passes a sign-off
+    claiming a reply it does not have), **F-107** (`rest reached at` printed under every
+    verdict), **H-020** (the driver's declared-E4 reading). It **corrected the orchestrator's
+    summary in three places by reading the code**: F-105's explanatory block is unreachable on
+    **every** input, not merely late — and the regression anchoring **F-045** asserts only
+    `returncode != 0`, so it has been green for as long as the gate has printed nothing and would
+    stay green if it began refusing for an unrelated reason; F-107 prints under **every** verdict
+    including `active`; and F-104 has a locus in no ADR — **rest itself** counts elicitations, so
+    repairing step 3 alone moves the deadlock rather than removing it, which is a cost META-162
+    now knows about. **F-060 not settled**, deliberately, still deferred behind F-008 — with one
+    gap recorded: ADR-0011 §6 promised it a must-fail fixture that was never built. **F-045 stays
+    fixed**; two of its edges are now filed as F-105 and F-106. E4's status says plainly that
+    **no live run has produced an E4** — everything is fixture or unit test — and records a
+    verified correction to the ROADMAP §2 stamp's implication: at that stamp E4 was not even
+    fixture-covered.
 
 ## Standing instructions (still in force)
 
