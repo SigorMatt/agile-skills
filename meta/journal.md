@@ -5225,3 +5225,93 @@ recall is a reading, not a number, and the report says which.
   `meta/findings/FINDINGS.md` untouched.
 - **Artifacts:** `fixtures/abandoned-engagement/` (new — `README.md`, `EXPECTED-CODES.txt`,
   `right/` and `wrong/`), `scripts/check` (step 10b, `check_abandoned`), `meta/journal.md`.
+
+## 2026-09-10 — META-153 — the harness side of E4: a silence that succeeds, and an ending that is not a stall
+
+- **Unit:** META-153
+- **Inputs read:** `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` §1 (the silent
+  round), §2, §5 (the orchestrator branch) and §6 (the `ghosting-founder` walkthrough, and the
+  Context (b) paragraph naming exactly what the driver does wrong today); `meta/harness/DESIGN.md`
+  §2–§4; `harness/USAGE.md`; `harness/run_iteration.py`; `harness/audit.py`;
+  `harness/skills/simulated-human/SKILL.md`, `personas/ghosting-founder.md`,
+  `probes/iteration-5b-droll.md`; `harness/prompts/sim-turn.md`; `harness/tests/test_harness.py`;
+  `scripts/engagement-state`, `scripts/lib/engagement.py` (`Engagement.describe`, `state`);
+  `fixtures/abandoned-engagement/right/`; H-007, H-008, H-014 as cited in the code they produced.
+  **Iteration 5's probe was not opened.** No harness run was started.
+- **Decisions:**
+  - **The driver asks; it does not derive.** It runs the *project's own*
+    `.claude/agile-skills/scripts/engagement-state --all` after every turn and parses the verdict
+    line and the silence sentence. It holds no threshold, no waiting-log path and no notion of
+    what a silent round is — a test asserts that by reading the driver's own source with comments
+    stripped and requiring `threshold_rounds`, `tracker/waiting` and `pipeline.yaml` to be absent
+    from it. ADR-0011 §1.3 names three consumers of the threshold; the driver is a fourth reader
+    and a *fifth implementation* is F-045's mechanism exactly.
+  - **The verdict alone is not enough, and the log is what makes the second reading possible.**
+    `abandoned` is the state *before* the declaration; once `review-close` records E4 the verdict
+    is `ended`, which is what an ordinary delivery also reports. What distinguishes them is that
+    the silent-round count **survives the declaration** — it is derived from an append-only log,
+    so `engagement-state` still prints *"3 silent round(s) recorded against a threshold of 3"*
+    under the `ended` verdict. Both numbers come out of that one sentence, so "the threshold was
+    reached" remains the toolkit's judgement rather than becoming the driver's. Confirmed by
+    execution against `fixtures/abandoned-engagement/right/`, which is what a test now runs.
+  - **Two branches, because there are two moments and they need opposite handling.**
+    `abandoned` (undeclared) is **not** a stop: it is `at-rest`'s twin (§5), the ending is owed,
+    and the worker's next turn is the one that records it — F-045's branch in a second place, and
+    stopping there would stop one turn before the thing the run exists to observe. `ended` with
+    the threshold reached **is** the stop, `abandoned`, terminal and epic-done-class.
+  - **The E4 recognition goes first in `engagement_terminal`, ahead of every other ending.** An
+    E4 workspace is indistinguishable from two other endings if you read only item statuses:
+    orphaned children read as `blocked-no-recourse`, *"an impasse with nothing left to ask"* —
+    and there was plenty left to ask, nobody answered — while a finished board whose sign-off went
+    unanswered reads as `epic-done`, a delivery. H-014's shape: the most specific true thing wins.
+  - **No closing sim turn for E4, and that is the one place it departs from H-007.** The closing
+    turn exists so the stakeholder sees the ending of every run. This ending *is* the recorded
+    finding that there is nobody to show it to, established over the threshold's worth of halts.
+  - **The loop's H-004 reschedule is guarded by the same verdict.** It hands a worker turn to the
+    sim whenever human questions are open and unanswered — which, under an abandonment, is true by
+    definition of the verdict. Unguarded, that is ADR-0011 Context (b)'s loop verbatim: ask someone
+    who is gone, get nothing, repeat until the budget is spent.
+  - **`stalled` now says what it is not.** It is reached only with no epic abandoned and no E4
+    declared, so its detail names every epic's verdict and states plainly that it is a fact about
+    this run's progress rather than about the engagement. Each turn's `observed` slice in
+    `iteration-log.jsonl` carries `engagements` and `abandoned-epics`, so the clock is legible
+    while it ticks rather than only once it strikes.
+  - **A sim turn is classified from the questions, not from its exit code.** Four outcomes:
+    `answered`, `scripted-silence`, `unexplained-silence`, `nothing-to-answer` — computed from a
+    before/after snapshot of every question addressed to the human plus the requests filed.
+    Nothing previously called a silent sim turn a failure; nothing called it anything at all,
+    which is the defect. A silent stakeholder and a broken sim produced **identical evidence**.
+  - **What separates them is the persona's own log, and only that.** `scripted-silence` requires
+    a `Withheld:` line *and* a `[PLANTED: …]` tag in the turn's own SIM-LOG section — the two
+    things `ghosting-founder` phase 2 already commits to writing. Silence without them is reported
+    as `unexplained-silence` with a `!` on the console: the driver saying it cannot tell, rather
+    than picking. Neither is a contamination and neither stops the run.
+  - **The sim's own instructions had to change, or the persona and the skill contradicted each
+    other.** `SKILL.md` §4's checklist said *"Is there an open question addressed to you whose
+    `## Answer` is still empty? Then you are not finished"*, and the sim-turn prompt said *answer
+    every one*. Both are now explicitly outranked by a persona that says to stop replying, with a
+    new §2.2a stating what a scripted silence owes instead. Skill 1.1.0 → **1.2.0**, sim-turn
+    prompt version 2 → **3**. A test reads both files and requires the permission to be there.
+  - **`answer_body()` was factored into `audit.py`** because the driver's scan and the new
+    snapshot must not be two slightly different questions about whether a question got an answer.
+- **Non-vacuity, proved by stubbing four deciding bodies with the tests unchanged:**
+  - `abandonment_declared()` → `return []`: **6 failures**, and the pair's first half is
+    `test_abandoned_not_stalled` — `AssertionError: 'stalled' != 'abandoned'`. That is precisely
+    the old driver's behaviour, and it is what this unit fixes.
+  - `abandonment_declared()` → return every epic, threshold unconsulted: **7 failures**, and the
+    pair's second half is `test_stalled_not_abandoned` — `AssertionError: 'abandoned' != 'stalled'`.
+    Neither test passes without the other's branch, so the distinction is decided by execution.
+  - the `Withheld:`/`[PLANTED:]` conjunction → `True`: 3 failures, all of them the cases that
+    separate scripted silence from a sim that broke.
+  - "answered nothing" → treated as answered: 5 failures, including the scripted-silence case
+    itself and the `nothing-to-answer` case that must not be reported as a withholding.
+- **Questions raised:** none new. Nothing in the toolkit needed changing for this unit; the three
+  defects `META-152` found remain owed to the ledger, as does the `next` step 3 / elicitation
+  contradiction.
+- **Gates:** `harness/tests/test_harness.py` **105 tests** (74 before), `OK (skipped=1)` — the
+  skip is iteration 2's turn-6 transcript, which is not in this checkout. `./scripts/check` green
+  — `check: all steps passed`, **36 steps**, unchanged; the harness self-test is its last step.
+  No toolkit file was touched: this is a **harness commit**.
+- **Artifacts:** `harness/run_iteration.py`, `harness/audit.py`, `harness/tests/test_harness.py`,
+  `harness/skills/simulated-human/SKILL.md`, `harness/prompts/sim-turn.md`, `harness/USAGE.md`,
+  `meta/journal.md`.

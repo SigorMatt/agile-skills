@@ -501,7 +501,7 @@ class StopClassification(unittest.TestCase):
 
     def test_a_verdict_is_not_resumable(self):
         for reason in ("epic-done", "blocked-no-recourse", "contamination",
-                       "validator-failed", "stalled"):
+                       "validator-failed", "stalled", "abandoned"):
             self.assertFalse(run_iteration.stop_is_resumable(reason), reason)
 
     def test_a_budget_stop_is_resumable_unless_the_engagement_ended(self):
@@ -858,6 +858,365 @@ class SimChannel(unittest.TestCase):
 
     def test_a_misnamed_request_is_refused(self):
         self.assertEqual(self.violations("/tmp/proj/tracker/requests/notes.md"), ["S1"])
+
+
+class ScriptedSilence(unittest.TestCase):
+    """ADR-0011 §6: a persona that stops replying takes its turn and answers nothing.
+
+    That is a turn which SUCCEEDED and answered nothing. Nothing in the audit ever called it a
+    failure — it called it nothing at all, which is the defect: a silent stakeholder and a broken
+    sim produced identical evidence. The `Withheld:` line tagged with the probe that scripted it
+    is what separates them, and these cases are the check that it still does.
+    """
+
+    QUESTION = ("---\nid: {qid}\nitem: {item}\naddressed-to: {to}\nstatus: {status}\n---\n\n"
+                "## Question\n\nWhat should it do?\n\n## Answer\n\n{answer}\n")
+
+    def workspace(self, *questions):
+        root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, root, True)
+        for item, qid, to, status, answer in questions:
+            directory = os.path.join(root, "tracker", "items", item, "questions")
+            os.makedirs(directory, exist_ok=True)
+            with open(os.path.join(directory, f"{qid}.md"), "w", encoding="utf-8") as handle:
+                handle.write(self.QUESTION.format(qid=qid, item=item, to=to, status=status,
+                                                  answer=answer))
+        return root
+
+    def answer(self, root, item, qid, text):
+        path = os.path.join(root, "tracker", "items", item, "questions", f"{qid}.md")
+        with open(path, encoding="utf-8") as handle:
+            body = handle.read()
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(body.replace("## Answer\n\n\n", f"## Answer\n\n{text}\n"))
+
+    def log(self, text):
+        handle = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
+        handle.write(text)
+        handle.close()
+        self.addCleanup(os.unlink, handle.name)
+        return handle.name
+
+    GHOSTED = ("## Turn 4 — 2026-09-10T10:00:00Z — persona: ghosting-founder\n\n"
+               "- **Found:** a board with 3 items, 2 questions waiting on me\n"
+               "- **Read:** tracker/board.md; WI-0001/Q-001; WI-0002/Q-001\n"
+               "- **Withheld:** WI-0001/Q-001 — [PLANTED: ghosting] scripted silence — this "
+               "persona does not return\n"
+               "- **Withheld:** WI-0002/Q-001 — [PLANTED: ghosting] scripted silence — this "
+               "persona does not return\n")
+
+    def test_a_scripted_silence_is_a_successful_turn_that_answered_nothing(self):
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root),
+                                         self.GHOSTED)
+        self.assertEqual(outcome["outcome"], "scripted-silence")
+        self.assertEqual(outcome["asked"], ["WI-0001/Q-001"])
+        self.assertEqual(outcome["withheld"], ["WI-0001/Q-001"])
+        self.assertEqual(outcome["answered"], [])
+        self.assertTrue(outcome["withholding-logged"])
+
+    def test_the_same_silence_with_no_log_entry_is_not_scripted_silence(self):
+        """The non-vacuity of the whole distinction: only the log entry separates the two."""
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root), "")
+        self.assertEqual(outcome["outcome"], "unexplained-silence")
+        self.assertEqual(outcome["withheld"], ["WI-0001/Q-001"])
+        self.assertFalse(outcome["log-entry"])
+        self.assertIn("broken sim", outcome["note"])
+
+    def test_a_log_entry_that_mentions_no_withholding_is_not_scripted_silence(self):
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        entry = ("## Turn 4 — 2026-09-10T10:00:00Z — persona: ghosting-founder\n\n"
+                 "- **Found:** a board with 3 items\n- **Read:** tracker/board.md\n")
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root), entry)
+        self.assertEqual(outcome["outcome"], "unexplained-silence")
+        self.assertTrue(outcome["log-entry"])
+
+    def test_a_withholding_with_no_probe_tag_is_not_scripted_silence(self):
+        """`[PLANTED: ...]` is what makes it scripted rather than merely reported (SKILL §3.1)."""
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        entry = ("## Turn 4\n\n- **Withheld:** WI-0001/Q-001 — did not feel like answering\n")
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root), entry)
+        self.assertEqual(outcome["outcome"], "unexplained-silence")
+
+    def test_an_answer_is_still_an_answer(self):
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        self.answer(root, "WI-0001", "Q-001", "[human] Yes, that is fine.")
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root),
+                                         "## Turn 4\n\n- **Answered:** WI-0001/Q-001\n")
+        self.assertEqual(outcome["outcome"], "answered")
+        self.assertEqual(outcome["answered"], ["WI-0001/Q-001"])
+        self.assertEqual(outcome["withheld"], [])
+
+    def test_a_partial_answer_names_both_halves(self):
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""),
+                              ("WI-0002", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        self.answer(root, "WI-0001", "Q-001", "[human] Yes.")
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root),
+                                         self.GHOSTED)
+        self.assertEqual(outcome["outcome"], "answered")
+        self.assertEqual(outcome["answered"], ["WI-0001/Q-001"])
+        self.assertEqual(outcome["withheld"], ["WI-0002/Q-001"])
+
+    def test_a_turn_with_nothing_addressed_to_the_human_is_not_silence(self):
+        """An `open` turn, or a turn where only the architect was asked. Answering nothing
+        there is not a withholding and must not be reported as one."""
+        root = self.workspace(("WI-0001", "Q-001", "architect", "open", ""),
+                              ("WI-0002", "Q-001", "human", "answered", "[human] Done."))
+        before = audit.question_answer_snapshot(root)
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root), "")
+        self.assertEqual(outcome["outcome"], "nothing-to-answer")
+        self.assertEqual(outcome["asked"], [])
+
+    def test_filing_a_request_counts_as_speaking(self):
+        root = self.workspace(("WI-0001", "Q-001", "human", "open", ""))
+        before = audit.question_answer_snapshot(root)
+        outcome = audit.sim_turn_outcome(before, audit.question_answer_snapshot(root),
+                                         self.GHOSTED, [], ["R-001"])
+        self.assertEqual(outcome["outcome"], "answered")
+        self.assertEqual(outcome["requests-filed"], ["R-001"])
+
+    def test_the_log_entry_for_this_turn_is_the_one_read(self):
+        log = self.log("## Turn 3 — persona: x\n\n- **Answered:** WI-0001/Q-001\n\n"
+                       + self.GHOSTED + "\n## Turn 5 — persona: x\n\n- **Found:** nothing\n")
+        self.assertIn("Withheld", audit.sim_log_entry(log, 4))
+        self.assertNotIn("Turn 5", audit.sim_log_entry(log, 4))
+        self.assertIn("Answered", audit.sim_log_entry(log, 3))
+        self.assertEqual(audit.sim_log_entry(log, 9), "")
+
+    def test_writing_no_answer_is_still_not_a_contamination(self):
+        """A silent turn touches nothing, so the boundary rules must stay quiet about it."""
+        self.assertEqual(audit.audit_sim([], PROJECT, HARNESS, "/tmp/SIM-LOG.md"), [])
+
+    def test_the_sim_skill_and_the_prompt_both_permit_a_scripted_silence(self):
+        """The persona says answer nothing; the skill's checklist used to say you are not
+        finished until you have. Both cannot hold, and the persona is the one being tested."""
+        skill = open(os.path.join(HARNESS, "skills", "simulated-human", "SKILL.md"),
+                     encoding="utf-8").read()
+        self.assertIn("2.2a", skill)
+        self.assertIn("stop replying", skill)
+        self.assertIn("Withheld:", skill)
+        prompt, _ = run_iteration.prompt_text("sim-turn")
+        self.assertIn("stop replying", prompt)
+        self.assertIn("PLANTED:", prompt)
+
+
+class Abandonment(unittest.TestCase):
+    """The E4 half: the driver stops on the ending, not on a stall.
+
+    H-008 again, one level out. A stall is a fact about this driver's own progress; an ending is
+    a fact about the engagement. They coincided for four iterations and stop coinciding exactly
+    here: a ghosting stakeholder leaves the workspace unchanged turn after turn, so the
+    fingerprint check fires and calls a finished engagement "three turns changed nothing".
+    """
+
+    ABANDONED = ("engagement-state: EP-001 abandoned\n"
+                 "  - 3 silent round(s) against a threshold of 3: the last 3 halts on the human "
+                 "share one inbound digest (ee47bf97), so nothing the stakeholder could have "
+                 "changed has changed\n"
+                 "  - still open and unanswered: EP-001/Q-001, WI-0002/Q-001\n"
+                 "  - the ending is E4 by silence and it is not recorded; review-close declares "
+                 "it\n"
+                 "  rest reached at 2026-09-07T11:00:00Z\n")
+    DECLARED = ("engagement-state: EP-001 ended\n"
+                "  - 3 silent round(s) recorded against a threshold of 3\n"
+                "  - the epic is 'done'; the engagement has ended and the retrospective has not "
+                "been written\n")
+    TICKING = ("engagement-state: EP-001 active\n"
+               "  - 2 silent round(s) recorded against a threshold of 3\n"
+               "  - WI-0001 is in flight\n")
+
+    @staticmethod
+    def observed(text, **overrides):
+        reading = {"items": {"EP-001": {"type": "epic", "status": "open"},
+                             "WI-0001": {"type": "work-item", "status": "awaiting-answer"}},
+                   "questions": [], "open-human-questions": [], "open-requests": [],
+                   "unanswered-human-questions": [], "blocked-items": [],
+                   "validator-exit": 0, "validator-tail": [], "head": "abc123",
+                   "engagements": run_iteration.parse_engagement_state(text)}
+        reading["abandoned-epics"] = [epic for epic, state
+                                      in sorted(reading["engagements"].items())
+                                      if state["verdict"] == "abandoned"]
+        reading.update(overrides)
+        return reading
+
+    # -- what the driver asks, and what it refuses to work out for itself -----------------
+
+    def test_the_verdict_and_both_numbers_come_from_the_script(self):
+        parsed = run_iteration.parse_engagement_state(self.ABANDONED)
+        self.assertEqual(parsed["EP-001"]["verdict"], "abandoned")
+        self.assertEqual(parsed["EP-001"]["silent-rounds"], 3)
+        self.assertEqual(parsed["EP-001"]["threshold"], 3)
+
+    def test_a_declared_ending_still_carries_the_count_that_caused_it(self):
+        parsed = run_iteration.parse_engagement_state(self.DECLARED)
+        self.assertEqual(parsed["EP-001"]["verdict"], "ended")
+        self.assertEqual((parsed["EP-001"]["silent-rounds"], parsed["EP-001"]["threshold"]),
+                         (3, 3))
+
+    def test_the_driver_holds_no_threshold_of_its_own(self):
+        """F-045's mechanism is two programs with two opinions about one number. The driver's
+        source may not contain the threshold, the waiting log, or the word for a silent round."""
+        source = open(os.path.join(HARNESS, "run_iteration.py"), encoding="utf-8").read()
+        code = "\n".join(line for line in source.split("\n")
+                         if not line.lstrip().startswith("#"))
+        self.assertNotIn("threshold_rounds", code)
+        self.assertNotIn("tracker/waiting", code)
+        self.assertNotIn("pipeline.yaml", code)
+
+    def test_a_project_with_no_toolkit_installed_yields_no_verdicts(self):
+        root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, root, True)
+        self.assertEqual(run_iteration.engagement_states(root), {})
+
+    def test_the_real_script_is_read_the_way_the_driver_parses_it(self):
+        """Against the fixture the toolkit ships, so a change to either side fails here."""
+        fixture = os.path.join(REPO, "fixtures", "abandoned-engagement", "right")
+        if not os.path.isdir(fixture):
+            self.skipTest("fixtures/abandoned-engagement is not present")
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, os.path.join(REPO, "scripts", "engagement-state"),
+             "--all", "--root", fixture], capture_output=True, text=True)
+        parsed = run_iteration.parse_engagement_state(result.stdout)
+        self.assertEqual(parsed["EP-003"]["verdict"], "abandoned")
+        self.assertGreaterEqual(parsed["EP-003"]["silent-rounds"], parsed["EP-003"]["threshold"])
+        self.assertEqual(parsed["EP-001"]["verdict"], "ended")
+        self.assertEqual(run_iteration.engagements_abandoned(
+            {"engagements": parsed}), ["EP-003"])
+        self.assertEqual([epic for epic, _, _ in run_iteration.abandonment_declared(
+            {"engagements": parsed})], ["EP-001", "EP-002"])
+
+    # -- the ending is terminal, and it is not the other endings -------------------------
+
+    def test_a_declared_abandonment_is_terminal_and_named_as_itself(self):
+        terminal, reason, detail = run_iteration.engagement_terminal(self.observed(self.DECLARED))
+        self.assertTrue(terminal)
+        self.assertEqual(reason, "abandoned")
+        self.assertIn("silent for 3 round(s)", detail)
+
+    def test_e4_over_a_finished_board_is_not_reported_as_epic_done(self):
+        """H-014's shape: the most specific true thing wins. Every item done and the sign-off
+        never answered is an abandonment, not a delivery."""
+        finished = self.observed(self.DECLARED, items={
+            "EP-001": {"type": "epic", "status": "done"},
+            "WI-0001": {"type": "work-item", "status": "done"}})
+        self.assertTrue(run_iteration.epic_complete(finished))
+        _, reason, _ = run_iteration.engagement_terminal(finished)
+        self.assertEqual(reason, "abandoned")
+
+    def test_e4_over_orphaned_children_is_not_reported_as_an_impasse(self):
+        orphaned = self.observed(self.DECLARED, items={
+            "EP-001": {"type": "epic", "status": "done"},
+            "WI-0001": {"type": "work-item", "status": "blocked"}}, blocked=["WI-0001"])
+        _, reason, _ = run_iteration.engagement_terminal(orphaned)
+        self.assertEqual(reason, "abandoned")
+
+    def test_an_ending_with_no_silence_behind_it_is_the_ordinary_ending(self):
+        ordinary = self.observed(
+            "engagement-state: EP-001 ended\n  - the epic is 'done'\n",
+            items={"EP-001": {"type": "epic", "status": "done"},
+                   "WI-0001": {"type": "work-item", "status": "done"}})
+        _, reason, _ = run_iteration.engagement_terminal(ordinary)
+        self.assertEqual(reason, "epic-done")
+
+    def test_the_clock_still_ticking_is_not_an_ending(self):
+        terminal, _, _ = run_iteration.engagement_terminal(self.observed(self.TICKING))
+        self.assertFalse(terminal)
+        self.assertEqual(run_iteration.abandonment_declared(self.observed(self.TICKING)), [])
+
+    def test_the_stop_is_a_verdict_rather_than_an_interruption(self):
+        self.assertFalse(run_iteration.stop_is_resumable("abandoned"))
+        self.assertIn("abandoned", run_iteration.TERMINAL_STOPS)
+
+    def test_a_budget_spent_on_an_abandoned_engagement_is_the_ending_not_the_budget(self):
+        self.assertFalse(run_iteration.stop_is_resumable(
+            "turn-budget", self.observed(self.DECLARED)))
+
+    # -- and the asymmetry, decided by running `decide` ----------------------------------
+
+    def decide(self, observed, fingerprints, record=None):
+        run = run_iteration.Run.__new__(run_iteration.Run)
+        run.state = {"fingerprints": list(fingerprints)}
+        return run.decide("worker", observed, record or {"worker-report": {}})
+
+    STUCK = ["same", "same", "same"]
+
+    def test_abandoned_not_stalled(self):
+        """The case that used to lie. Three turns changed nothing AND the engagement ended by
+        silence: the old driver said `stalled`, "three turns changed nothing", which is true of
+        the run and says nothing about what happened — the person left."""
+        decision = self.decide(self.observed(self.DECLARED), self.STUCK)
+        self.assertTrue(decision["stop"])
+        self.assertEqual(decision["reason"], "abandoned")
+        self.assertIn("This is not a stall", decision["detail"])
+
+    def test_stalled_not_abandoned(self):
+        """The other half, and without it the first proves nothing: three turns changed nothing
+        and NO engagement is abandoned. This must still be `stalled`."""
+        decision = self.decide(self.observed(self.TICKING), self.STUCK)
+        self.assertTrue(decision["stop"])
+        self.assertEqual(decision["reason"], "stalled")
+        self.assertIn("not about the engagement", decision["detail"])
+        self.assertIn("EP-001 active", decision["detail"])
+
+    def test_an_abandoned_engagement_that_has_not_declared_yet_does_not_stop_the_run(self):
+        """F-045's branch in a second place: `abandoned` means review-close is owed, and the
+        worker's next turn is the one that records it. Stopping here would stop one turn before
+        the thing the run exists to observe."""
+        decision = self.decide(
+            self.observed(self.ABANDONED,
+                          **{"unanswered-human-questions": ["EP-001/Q-001"]}),
+            self.STUCK)
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-role"], "worker")
+
+    def test_the_undeclared_abandonment_never_routes_another_turn_to_the_sim(self):
+        """ADR-0011 Context (b): asking a stakeholder who is gone, getting nothing, and
+        repeating until the budget is spent is the loop E4 exists to end."""
+        observed = self.observed(self.ABANDONED)
+        observed["unanswered-human-questions"] = ["EP-001/Q-001", "WI-0002/Q-001"]
+        observed["open-human-questions"] = ["EP-001/Q-001", "WI-0002/Q-001"]
+        decision = self.decide(observed, [])
+        self.assertEqual(decision["next-role"], "worker")
+
+    def test_an_unanswered_question_with_no_abandonment_still_routes_to_the_sim(self):
+        """The non-vacuity of the branch above: the ordinary case must be unchanged."""
+        observed = self.observed(self.TICKING)
+        observed["unanswered-human-questions"] = ["EP-001/Q-001"]
+        observed["open-human-questions"] = ["EP-001/Q-001"]
+        decision = self.decide(observed, [])
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-role"], "sim")
+
+    def test_a_stakeholder_request_is_still_the_workers_first_business(self):
+        observed = self.observed(self.ABANDONED, **{"open-requests": ["R-001"]})
+        decision = self.decide(observed, self.STUCK)
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-role"], "worker")
+
+    def test_a_broken_workspace_is_still_the_first_thing_reported(self):
+        observed = self.observed(self.DECLARED)
+        observed["validator-exit"] = 1
+        observed["validator-tail"] = ["nope"]
+        decision = self.decide(observed, self.STUCK)
+        self.assertEqual(decision["reason"], "validator-failed")
+
+    def test_the_reschedule_guard_reads_the_abandonment(self):
+        """The loop's H-004 guard hands a worker turn to the sim when human questions are open.
+        Under an abandonment that is the wrong move, and the guard is in the loop, so the test
+        reads the loop rather than restating it."""
+        source = open(os.path.join(HARNESS, "run_iteration.py"), encoding="utf-8").read()
+        body = source[source.index("# H-004: on a start or a resume"):]
+        body = body[:body.index('self.state["repo-snapshot"]')]
+        self.assertIn("engagements_abandoned(reading)", body)
+        self.assertLess(body.index("if pending and gone:"), body.index("elif pending:"))
 
 
 if __name__ == "__main__":

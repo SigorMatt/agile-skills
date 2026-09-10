@@ -83,6 +83,7 @@ TERMINAL_STOPS = {
     "contamination": "a turn read or wrote outside the boundary; --reaudit is the recovery",
     "validator-failed": "the workspace no longer validates; fix it, then --fresh or --reaudit",
     "stalled": "three turns changed nothing",
+    "abandoned": "the stakeholder went silent past the threshold and the engagement ended as E4",
 }
 
 
@@ -236,6 +237,64 @@ def fill(template, values):
 # what the project actually says (never the worker's word for it)
 
 
+# ADR-0011 §1.3: the silence threshold lives in `pipeline.yaml` and three programs read it,
+# because any two of them disagreeing about whether a stakeholder is gone is F-045's mechanism
+# exactly. The driver is a fourth reader and it does not re-derive anything: it runs the
+# *project's own* `engagement-state` and reads the verdict off its output. Nothing here knows
+# what the threshold is, how a silent round is counted, or where the waiting log lives.
+ENGAGEMENT_VERDICT_RE = re.compile(r"^engagement-state:\s+(?P<epic>[A-Za-z]+-\d+)\s+"
+                                   r"(?P<verdict>[a-z-]+)\s*$")
+# Both of `engagement-state`'s silence sentences carry the same two numbers, and they are the
+# numbers it derived rather than any the driver computed:
+#   "3 silent round(s) recorded against a threshold of 3"     (the clock, still ticking)
+#   "3 silent round(s) against a threshold of 3: the last 3 halts on the human share ..."
+SILENT_ROUNDS_RE = re.compile(r"(?P<rounds>\d+) silent round\(s\).*?threshold of "
+                              r"(?P<threshold>\d+)")
+
+
+def parse_engagement_state(text):
+    """{epic: {verdict, reasons, silent-rounds, threshold}} from `engagement-state --all`."""
+    states = {}
+    current = None
+    for line in (text or "").split("\n"):
+        match = ENGAGEMENT_VERDICT_RE.match(line)
+        if match:
+            current = {"verdict": match.group("verdict"), "reasons": [],
+                       "silent-rounds": 0, "threshold": None}
+            states[match.group("epic")] = current
+            continue
+        if current is None or not line.startswith("  "):
+            continue
+        reason = line.strip().lstrip("- ").strip()
+        current["reasons"].append(reason)
+        counted = SILENT_ROUNDS_RE.search(reason)
+        if counted:
+            current["silent-rounds"] = max(current["silent-rounds"],
+                                           int(counted.group("rounds")))
+            current["threshold"] = int(counted.group("threshold"))
+    return states
+
+
+def engagement_states(project_dir):
+    """Ask the workspace what its engagements are. Never infer it here.
+
+    Returns {} when the project has no toolkit installed or the script fails — a driver that
+    cannot ask does not get to guess, and every consumer below treats an absent reading as "no
+    epic is abandoned", which is the reading that changes nothing.
+    """
+    script = os.path.join(project_dir, ".claude", "agile-skills", "scripts", "engagement-state")
+    if not os.path.isfile(script):
+        return {}
+    try:
+        result = subprocess.run([sys.executable, script, "--all", "--root", project_dir],
+                                cwd=project_dir, capture_output=True, text=True)
+    except OSError:
+        return {}
+    if result.returncode != 0:
+        return {}
+    return parse_engagement_state(result.stdout)
+
+
 def scan_project(project_dir):
     """The workspace as the driver reads it: items, questions, and the validator's verdict."""
     items = {}
@@ -252,12 +311,7 @@ def scan_project(project_dir):
     for path in audit.question_files(project_dir):
         text = read(path)
         fields = audit.frontmatter(text)
-        answer = ""
-        if "\n## Answer" in text:
-            body = text.split("\n## Answer", 1)[1]
-            answer = body.split("\n## ", 1)[0]
-        answer = "\n".join(line for line in answer.split("\n")
-                           if not line.strip().startswith("<!--")).strip()
+        answer = audit.answer_body(text)
         questions.append({
             "id": f"{fields.get('item', '?')}/{fields.get('id', '?')}",
             "path": os.path.relpath(path, project_dir),
@@ -272,9 +326,13 @@ def scan_project(project_dir):
         cwd=project_dir, capture_output=True, text=True)
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project_dir,
                           capture_output=True, text=True)
+    engagements = engagement_states(project_dir)
     return {
         "items": items,
         "questions": questions,
+        "engagements": engagements,
+        "abandoned-epics": [epic for epic, state in sorted(engagements.items())
+                            if state["verdict"] == "abandoned"],
         "validator-exit": validator.returncode,
         "validator-tail": (validator.stdout + validator.stderr).strip().split("\n")[-1:],
         "head": head.stdout.strip(),
@@ -354,6 +412,44 @@ def engagements_ended(observed):
     return bool(epics) and all(item["status"] in TERMINAL_CHILD_STATUSES for item in epics)
 
 
+def engagements_abandoned(observed):
+    """Epics `engagement-state` calls `abandoned`: E4 is due and it is not recorded.
+
+    ADR-0011 §5: `abandoned` sits parallel to `at-rest` — both mean "review-close is owed on this
+    epic". So this is not a stop. It is the F-045 branch in a second place: the run is one worker
+    turn short of the thing it exists to observe, and that turn is the declaration.
+    """
+    return list(observed.get("abandoned-epics")
+                or [epic for epic, state in sorted((observed.get("engagements") or {}).items())
+                    if state.get("verdict") == "abandoned"])
+
+
+def abandonment_declared(observed):
+    """Epics whose *recorded* ending is E4 — the stop this driver was missing.
+
+    Two facts, both of them `engagement-state`'s and neither of them the driver's: the epic has
+    ended (`ended`, or `closed` once the retro is written), and the silent-round count it
+    reports has reached the threshold it reports. The count survives the declaration because it
+    is derived from the waiting log, which is append-only — so "this engagement ended because
+    nobody came back" is still readable afterwards, which is what makes this stop possible at
+    all. The driver holds no threshold of its own: both numbers come out of the same sentence.
+    """
+    found = []
+    for epic, state in sorted((observed.get("engagements") or {}).items()):
+        if state.get("verdict") not in ("ended", "closed"):
+            continue
+        threshold = state.get("threshold")
+        if threshold and (state.get("silent-rounds") or 0) >= threshold:
+            found.append((epic, state["silent-rounds"], threshold))
+    return found
+
+
+def abandonment_detail(declared):
+    return "; ".join(f"{epic}: the stakeholder was silent for {rounds} round(s) against a "
+                     f"threshold of {threshold}, and the ending recorded is E4"
+                     for epic, rounds, threshold in declared)
+
+
 def engagement_terminal(observed):
     """Is the workspace itself at an ending? Returns (terminal, stop-reason, detail).
 
@@ -363,6 +459,14 @@ def engagement_terminal(observed):
     label was wrong. The counter is a bound on work; what happened to the engagement is read off
     the disk.
     """
+    # First, because E4 is the most specific thing that can be true of a finished engagement and
+    # every other branch here would describe it as something else. An epic ended by silence over
+    # an answered board reads as `epic-done`; one ended by silence over orphaned children reads
+    # as `blocked-no-recourse`, "an impasse with nothing left to ask" — and there was plenty left
+    # to ask. Nobody answered.
+    declared = abandonment_declared(observed)
+    if declared:
+        return True, "abandoned", abandonment_detail(declared)
     if epic_complete(observed):
         return True, "epic-done", f"{len(observed['items'])} item(s), all done"
     if (engagement_at_rest(observed) and engagements_ended(observed)
@@ -782,14 +886,51 @@ class Run:
         say(f"turn {number} — sim ({self.sim_model}, job={job}, "
             f"persona={self.config['persona']})")
         before = audit.question_frontmatter_snapshot(self.project_dir)
+        answers_before = audit.question_answer_snapshot(self.project_dir)
+        requests_before = open_requests(self.project_dir)
         outcome = stream_turn(argv, HERE, transcript, self.args.turn_timeout, self.pid_path)
         uses, fields = turn_result_fields(transcript)
         note_unknown_cost(outcome, fields)
         violations = audit.audit_sim(uses, self.project_dir, HERE, self.sim_log) + \
             audit.audit_sim_tree(self.project_dir, before)
+        silence = audit.sim_turn_outcome(
+            answers_before, audit.question_answer_snapshot(self.project_dir),
+            audit.sim_log_entry(self.sim_log, number),
+            requests_before, open_requests(self.project_dir))
+        self.report_sim_outcome(number, silence)
         return {"role": "sim", "job": job, "prompt-version": version, "model": self.sim_model,
                 "transcript": os.path.relpath(transcript, self.run_dir),
-                "outcome": outcome, "result": fields, "violations": violations}, uses
+                "outcome": outcome, "result": fields, "violations": violations,
+                "sim-outcome": silence}, uses
+
+    @staticmethod
+    def report_sim_outcome(number, silence):
+        """Say what the stakeholder did with what was asked of them — including nothing.
+
+        A sim turn that writes no `## Answer` is not a failed turn and never was: nothing in the
+        audit calls it one, and a persona whose whole script is to stop replying produces one
+        every turn (ADR-0011 §6). What it *is* had no name until now, and no line in the trail.
+        Both silences get one, and they are not the same line: the scripted one is a turn that
+        succeeded, the unaccounted one is the driver saying it cannot tell a silent stakeholder
+        from a broken sim and refusing to pick.
+        """
+        if silence["outcome"] == "answered":
+            spoke = silence["answered"] + [f"request {name}"
+                                           for name in silence["requests-filed"]]
+            say(f"    the stakeholder spoke: {', '.join(spoke)}"
+                + (f"; withheld {', '.join(silence['withheld'])}" if silence["withheld"] else ""))
+        elif silence["outcome"] == "scripted-silence":
+            say(f"    scripted silence — the stakeholder answered nothing and logged the "
+                f"withholding of {', '.join(silence['withheld'])} against the probe that "
+                f"scripted it. A successful turn that answered nothing.")
+        elif silence["outcome"] == "unexplained-silence":
+            say(f"    ! turn {number} answered nothing and its SIM-LOG entry does not record "
+                f"withholding {', '.join(silence['withheld'])}"
+                + ("" if silence["log-entry"] else " — and there is no entry for this turn")
+                + "; this may be a broken sim rather than a silent stakeholder")
+        else:
+            say("    nothing was open and addressed to the stakeholder; the turn had nothing "
+                "to answer")
 
     # -- the loop ------------------------------------------------------------------------
 
@@ -929,8 +1070,21 @@ class Run:
                 # decision, so the driver used to walk a worker turn straight into unanswered
                 # human questions. The orchestrator correctly halts at step 2 and the whole turn
                 # is a no-op — iteration 1's turn 2 was exactly that. The observation is free.
-                pending = scan_project(self.project_dir)["unanswered-human-questions"]
-                if pending:
+                reading = scan_project(self.project_dir)
+                pending = reading["unanswered-human-questions"]
+                gone = engagements_abandoned(reading)
+                if pending and gone:
+                    # The one case where handing the turn to the sim is the wrong move for the
+                    # same reason it is usually the right one. The questions are open and
+                    # unanswered because the stakeholder is gone; the worker keeps the turn and
+                    # declares the ending (ADR-0011 §5).
+                    say(f"    {len(pending)} human question(s) are open and unanswered, and "
+                        f"engagement-state reports abandoned ({', '.join(gone)}); the worker "
+                        f"keeps the turn — another sim turn would ask a stakeholder the "
+                        f"pipeline has already established is gone")
+                    self.log({"event": "abandonment-pending", "at": now(), "turn": number,
+                              "epics": gone, "questions": pending})
+                elif pending:
                     say(f"    {len(pending)} human question(s) are open and unanswered "
                         f"({', '.join(pending)}); giving the turn to the sim instead — a worker "
                         f"turn would halt at orchestrator step 2 having done nothing")
@@ -956,7 +1110,8 @@ class Run:
                                         ("items", "validator-exit", "head",
                                          "open-human-questions",
                                          "unanswered-human-questions", "blocked-items",
-                                         "open-requests")}})
+                                         "open-requests", "engagements",
+                                         "abandoned-epics")}})
             self.log(record)
             self.state["turn"] = number
             self.state["in-flight"] = None
@@ -1091,6 +1246,36 @@ class Run:
                 f"{', '.join(observed['open-requests'])} — the worker handles them next")
             return {"stop": False, "next-role": "worker", "next-job": None}
 
+        declared = abandonment_declared(observed)
+        if declared:
+            # H-008's lesson, applied to an ending rather than to an impasse: a stall is a fact
+            # about this driver's own progress and an ending is a fact about the engagement, and
+            # the two coincided here until they didn't. E4 used to fall through every branch
+            # below and land on `stalled` — "three turns changed nothing" — which is true of the
+            # run and says nothing about what happened, which is that the person left.
+            #
+            # No closing sim turn, and that is the one place E4 departs from H-007. The closing
+            # turn exists so the stakeholder sees the ending of every run; this ending is the
+            # recorded finding that there is no stakeholder to show it to, established over the
+            # threshold's worth of halts and readable in the waiting log.
+            return {"stop": True, "reason": "abandoned",
+                    "detail": abandonment_detail(declared)
+                    + "\nThis is not a stall: the driver kept making progress and the "
+                      "engagement ended. Both facts are in the log."}
+
+        awaiting_declaration = engagements_abandoned(observed)
+        if awaiting_declaration:
+            # `abandoned` is `at-rest`'s twin (ADR-0011 §5): the ending is due and unrecorded, and
+            # the worker's next turn is the one that records it. Routing to the sim here — which
+            # every branch below would do, because human questions are open and unanswered by
+            # definition of this verdict — is the loop ADR-0011's Context (b) describes: ask a
+            # stakeholder who is gone, get nothing, repeat until the budget is spent.
+            say(f"    engagement-state reports abandoned: "
+                f"{', '.join(awaiting_declaration)} — the ending is E4 and it is not recorded; "
+                f"the worker runs review-close to declare it. No sim turn: the pipeline has "
+                f"already established there is nobody to ask.")
+            return {"stop": False, "next-role": "worker", "next-job": None}
+
         if epic_complete(observed):
             # H-007: a self-sufficient worker used to end the engagement unilaterally — run 1b
             # went epic-done at turn 6 with the sim locked out from turn 5 onward, so a mid-run
@@ -1146,8 +1331,19 @@ class Run:
 
         fingerprints = self.state.get("fingerprints", [])
         if len(fingerprints) >= 3 and fingerprints[-1] == fingerprints[-2] == fingerprints[-3]:
+            # Reached only with no epic abandoned and no E4 declared — both are handled above —
+            # so this stop can say what it is not. A run can stall while the engagement is
+            # perfectly alive, and an engagement can be abandoned while the driver is still
+            # making progress; the two branches exist because those are different facts about
+            # different things (H-008).
+            verdicts = ", ".join(f"{epic} {state['verdict']}"
+                                 for epic, state in
+                                 sorted((observed.get("engagements") or {}).items()))
             return {"stop": True, "reason": "stalled",
-                    "detail": "three turns changed nothing in the workspace"}
+                    "detail": "three turns changed nothing in the workspace — a fact about this "
+                              "run's progress, not about the engagement.\n"
+                              "No epic is abandoned and no ending is recorded: "
+                              + (verdicts or "engagement-state reported no epic")}
 
         if observed["open-human-questions"]:
             return {"stop": False, "next-role": "sim", "next-job": "answer"}

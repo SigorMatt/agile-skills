@@ -1,4 +1,4 @@
-<!-- harness-prompt: sim-turn, version 2 -->
+<!-- harness-prompt: sim-turn, version 3 -->
 # Sim turn
 
 The driver substitutes `{{PROJECT_DIR}}`, `{{TURN}}`, `{{SIM_LOG}}`, `{{PERSONA_FILE}}`,
@@ -31,6 +31,13 @@ If the job is `answer`, read `{{PROJECT_DIR}}/tracker/board.md` and every
 `addressed-to: human` and `status: open`. Answer every one of them whose `## Answer` section is
 still empty, by putting your answer in that section, tagged `[human]`, and changing nothing else
 in the file.
+
+**Unless your persona has told you to stop replying.** If it has, that instruction outranks the
+paragraph above and every reminder below: read the board and the questions addressed to you,
+write into no `## Answer` at all, and record one `- **Withheld:** <question id> —
+[PLANTED: <probe id>] <your persona's standing note>` line per open question in your log. A turn
+that answers nothing and logs the withholding is a turn that succeeded; a turn that answers
+nothing and logs nothing is indistinguishable from a broken simulation, and is reported as one.
 
 If the job is `closing`, the engagement is ending — either the team believes the work is
 finished, or it has hit an impasse it cannot get past. Read

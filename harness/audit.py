@@ -346,6 +346,108 @@ def question_files(project_dir):
     return found
 
 
+def answer_body(text):
+    """The `## Answer` section's text, with the template's HTML comments stripped.
+
+    One reading, used by the driver's workspace scan and by the sim-turn snapshot below, because
+    "did this question get an answer" must not be two slightly different questions.
+    """
+    if "\n## Answer" not in text:
+        return ""
+    body = text.split("\n## Answer", 1)[1].split("\n## ", 1)[0]
+    return "\n".join(line for line in body.split("\n")
+                     if not line.strip().startswith("<!--")).strip()
+
+
+def question_answer_snapshot(project_dir):
+    """{path: {id, addressed-to, status, answered}} — what was asked of the human, and whether
+    they have written anything into it yet.
+
+    Taken before and after a sim turn, the pair is what says whether the stakeholder spoke.
+    """
+    snapshot = {}
+    for path in question_files(project_dir):
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            text = handle.read()
+        fields = frontmatter(text)
+        snapshot[path] = {"id": f"{fields.get('item', '?')}/{fields.get('id', '?')}",
+                          "addressed-to": fields.get("addressed-to", "?"),
+                          "status": fields.get("status", "?"),
+                          "answered": bool(answer_body(text))}
+    return snapshot
+
+
+SIM_LOG_ENTRY_RE = r"^##\s+Turn\s+{turn}\b"
+
+
+def sim_log_entry(sim_log, turn):
+    """The `## Turn <n>` section of SIM-LOG.md, or "" if the sim wrote none for this turn."""
+    try:
+        with open(sim_log, "r", encoding="utf-8", errors="replace") as handle:
+            text = handle.read()
+    except OSError:
+        return ""
+    pattern = re.compile(SIM_LOG_ENTRY_RE.format(turn=int(turn)), re.MULTILINE)
+    match = pattern.search(text)
+    if not match:
+        return ""
+    following = re.compile(r"^##\s", re.MULTILINE).search(text, match.end())
+    return text[match.start():following.start() if following else len(text)]
+
+
+WITHHELD_RE = re.compile(r"^\s*[-*]?\s*\**\s*withheld\s*:?", re.IGNORECASE | re.MULTILINE)
+PLANTED_RE = re.compile(r"\[PLANTED:\s*[^\]]+\]")
+
+# ADR-0011 §6, the `ghosting-founder` walkthrough: a persona whose script is to stop replying
+# takes its turn, reads the board, writes no `## Answer` and logs the withholding. That is a
+# turn that SUCCEEDED and answered nothing, and it is the input the whole E4 mechanism is built
+# to consume — so it must not be recorded as a failed turn, an empty turn, or a contamination.
+# What separates it from a sim that simply broke is the trail: the persona's own log names what
+# it saw and what it refused to say, tagged with the probe that told it to. A silence with no
+# such entry is not scripted silence; it is a silence nobody can account for, and the driver
+# says so rather than quietly treating the two the same (SKILL.md §2.2a).
+SIM_TURN_OUTCOMES = ("answered", "scripted-silence", "unexplained-silence", "nothing-to-answer")
+
+
+def sim_turn_outcome(before, after, log_entry, requests_before=(), requests_after=()):
+    """How a sim turn ended, judged from the questions rather than from the exit code.
+
+    `before`/`after` are `question_answer_snapshot` readings taken either side of the turn.
+    Returns a record naming what was asked of the stakeholder, what they answered, what they
+    withheld, and which of `SIM_TURN_OUTCOMES` this turn was.
+    """
+    asked, answered, withheld = [], [], []
+    for path, state in sorted(before.items()):
+        if state["addressed-to"] != "human" or state["status"] != "open" or state["answered"]:
+            continue
+        asked.append(state["id"])
+        if after.get(path, {}).get("answered"):
+            answered.append(state["id"])
+        else:
+            withheld.append(state["id"])
+    filed = sorted(set(requests_after) - set(requests_before))
+    logged = bool(log_entry.strip())
+    accounted = bool(WITHHELD_RE.search(log_entry)) and bool(PLANTED_RE.search(log_entry))
+    if answered or filed:
+        outcome, note = "answered", "the stakeholder spoke"
+    elif not asked:
+        outcome, note = "nothing-to-answer", (
+            "nothing addressed to the human was open and unanswered when the turn began, so "
+            "this turn had nothing to answer and its silence is not silence")
+    elif accounted:
+        outcome, note = "scripted-silence", (
+            "the stakeholder answered nothing and the log records the withholding, tagged with "
+            "the probe that scripted it: a successful turn that answered nothing")
+    else:
+        outcome, note = "unexplained-silence", (
+            "the stakeholder answered nothing and the log does not say they withheld anything"
+            + ("" if logged else ", and wrote no entry for this turn at all")
+            + " — this may be a broken sim rather than a silent stakeholder")
+    return {"outcome": outcome, "asked": asked, "answered": answered, "withheld": withheld,
+            "requests-filed": filed, "log-entry": logged, "withholding-logged": accounted,
+            "note": note}
+
+
 def question_frontmatter_snapshot(project_dir):
     """{path: frontmatter} — what the sim is forbidden to change."""
     snapshot = {}

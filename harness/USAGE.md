@@ -62,7 +62,13 @@ The driver does not simply alternate, though — before a worker turn it checks 
 question is open and unanswered, and gives the turn to the sim instead (a worker turn there would
 halt at orchestrator step 2 having done nothing). And before it accepts `epic-done` as final, it
 gives the sim one `closing` turn, so the stakeholder sees the finished thing on every run rather
-than only on the runs that happen to end with a question open.
+than only on the runs that happen to end with a question open. The one exception is an ending by
+abandonment: there is no closing turn, because that ending *is* the recorded finding that there
+is nobody to show it to.
+
+The driver also asks the project's own `scripts/engagement-state` after every turn and logs each
+epic's verdict, so the silent-round clock is visible in `iteration-log.jsonl` while it is ticking
+rather than only once it strikes.
 
 A worker turn stops after `--skills-per-turn` skill executions and reports
 `turn-budget-exhausted`; the next turn reads the workspace and carries on. That bound is what
@@ -107,7 +113,7 @@ directory and re-provisions from nothing, and it refuses any directory that does
 engagement still going, that is an interruption: rerun with a larger `--max-turns` and it picks
 up at the next turn, in the same run directory, with the same trail. It is a *verdict* only when
 the workspace itself is at an ending. And the budget never overrules the disk — a workspace at a
-terminal ending stops `epic-done` (or `blocked-no-recourse`) whatever the counter says, and the
+terminal ending stops `epic-done` (or `blocked-no-recourse`, or `abandoned`) whatever the counter says, and the
 one closing sim turn is exempt, because it exists for the engagement's benefit rather than the
 budget's (H-010, H-014).
 
@@ -230,6 +236,7 @@ opposite responses. The driver says which when you rerun.
 | `epic-done` | terminal | the run finished |
 | `blocked-no-recourse` | terminal | the run reached an impasse; that is a result |
 | `turn-budget` | **usually resumable** | rerun with a larger `--max-turns` and the run continues in place. Terminal only when the engagement itself is at an ending — then it is the ending, not the budget, that stopped it |
+| `abandoned` | terminal | the stakeholder went silent past the threshold and the engagement ended as E4; read the ending statement and the waiting log |
 | `stalled` | terminal | read the worker's status files in order; this is a finding |
 | `validator-failed` | terminal | the workspace is broken; that is a finding about the toolkit |
 | `contamination` | terminal | `--reaudit`, below |
@@ -262,7 +269,39 @@ disk and has to be re-examined.
 sim turn could help. This is a legitimate end to an iteration — check whether it was a planted
 probe (`SIM-LOG`) before treating it as a defect.
 
-**`stalled`.** Three turns in a row changed nothing in the workspace. Usually the worker is
+**`abandoned`.** The stakeholder stopped answering, the pipeline halted on them
+`termination.silence.threshold_rounds` times with nothing inbound in between, and `review-close`
+recorded ending **E4** (ADR-0011). This is the run finishing, not the run failing: read the
+epic's `## Ending statement`, the orphaned children and `tracker/waiting/<EP>.md`, which holds
+one row per halt and is where the arithmetic is. The driver never works any of that out — it
+runs the project's own `scripts/engagement-state` and reads the verdict, so the threshold has
+exactly one implementation and it is the toolkit's (F-045).
+
+Two things this stop is deliberately not:
+
+- It is **not `stalled`**. A stall is a fact about *this run's* progress; an abandonment is a
+  fact about *the engagement*. A run can stall while the stakeholder is perfectly present, and
+  an engagement can be abandoned while the driver is making progress every turn — so the two
+  stops say different things and both say what they are not (H-008).
+- It is **not `blocked-no-recourse` or `epic-done`**, which is what an E4 workspace looks like
+  from the item statuses alone: orphaned children read as an impasse, and a finished board whose
+  sign-off nobody answered reads as a delivery. Neither describes what happened.
+
+While `engagement-state` says `abandoned` and the ending is **not yet recorded**, the driver does
+not stop and does not hand the turn to the sim: the worker keeps it and runs `review-close` to
+declare the ending, because another sim turn would be asking a stakeholder the pipeline has
+already established is gone.
+
+**A sim turn that answers nothing.** That is not a failed turn. Personas exist whose script is to
+stop replying, and the driver classifies every sim turn from the questions rather than from the
+exit code: `answered`, `scripted-silence` (nothing answered, and the SIM-LOG entry records the
+withholding tagged with the probe that scripted it), `unexplained-silence` (nothing answered and
+nothing logged — the driver says so, because it cannot tell that from a broken sim and will not
+guess), or `nothing-to-answer`. The classification is on the turn's line in
+`iteration-log.jsonl` under `sim-outcome`, and on the console.
+
+**`stalled`.** Three turns in a row changed nothing in the workspace, **and** no engagement is
+abandoned — the stop names every epic's verdict so the reader can see that. Usually the worker is
 stopping without doing anything: read its `HARNESS-STATUS.md` files in order.
 
 **The worker's status file disagrees with the tracker.** The driver logs it and believes the
