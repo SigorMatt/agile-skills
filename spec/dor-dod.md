@@ -31,6 +31,7 @@ reviewer cannot tell which criterion was the weak one.
 | R8 | The refinement Q&A is recorded verbatim in `artifacts/refinement-qa.md`, including which answers came from the human and which were assumed, and that file declares `status: recorded` — an agenda for a conversation that has not happened yet does not satisfy this | [auto] |
 | R9 | Estimated to be deliverable as one coherent change. If it is not, it was split, and this item is one of the parts | [skill] |
 | R10 | Every combination of the behaviours this item introduces — its options, its flags, its modes — either has a stated behaviour in a criterion, or is named in `## Out of scope`, or is recorded in `## Notes` as deliberately unconstrained with who left it so | [skill] |
+| R11 | Every criterion **names** the artefacts it constrains rather than counting them. Where it states a count of something this item may move — tests, files, criteria, cases — the count was **measured before the criterion was written**, and the criterion carries the measurement as a command-outcome citation `[src: run: <command> → <outcome>]` | [skill] |
 
 R10 was added after a real run found the checklist could not express what was wrong. An item
 specified `--sort`, an earlier item had specified `--top`, and nothing anywhere said what the two
@@ -40,6 +41,40 @@ override, because naming a criterion that was not failing would have been a fals
 was right that none was failing. The gap was in the checklist. R10 does not force the
 combination to be *decided*; it forces it to be **visible**, which is the difference between an
 open question someone can find and one nobody knows exists.
+
+### R11: a criterion that counts is a criterion that will be amended
+
+R4 asks whether a criterion is **decidable**. It says nothing about whether the quantity it names
+is one the item is about to move — and in one engagement four criteria quantified over exactly
+that: *"exactly `2 + max`"*, *"the suite runs unchanged"*, *"exactly one of its 65 tests
+changes"*. Every one had to be amended after the code existed, at a cost of three architect round
+trips, and one of them still miscounts while remaining perfectly decidable (F-089). Nothing was
+reshaped around what was built — each amendment was to a checking clause and each execution said
+so explicitly — which is precisely why this is a checklist gap rather than a discipline failure:
+the criteria were decidable, and they were still wrong.
+
+"Unchanged" and "exactly n" are the natural way to write a regression guard, and both are false
+the moment the item touches the thing they count. So:
+
+- **Name, do not count.** *"`tests/test_top.py::test_ties` still passes"* survives a suite that
+  grows; *"the suite runs unchanged"* does not. Naming also tells the reader which artefact the
+  criterion is protecting, which a number never does.
+- **Where a count is genuinely wanted, measure it first** — run the command, read the number,
+  and write the criterion around what you measured, carrying the measurement in the criterion as
+  a command-outcome citation. That citation form already exists and already resolves
+  (`doc-header.md` §4a), so the number in the criterion has a provenance a later reader can
+  repeat. The engagement that produced this finding adopted exactly that on its last item.
+- **An amendment is still legal** — `answer-questions` propagating an answer, `refine` on a
+  send-back (`work-item.md` §2) — and it stays journaled with its reason. R11 is about not
+  needing one.
+
+**R11 is `[skill]` and it stays `[skill]`.** Whether a number counts a project artefact or
+describes the tool's own output is a read, and the measurement says so: the narrowest pattern
+that catches this finding's own three criteria also flags **26 of the 53** acceptance criteria in
+`examples/toy-project` — *"prints one row per file"*, *"a folder holding one readable file"*,
+*"two files with the same count"*, none of which R11 is about. A mechanical rule with that error
+rate would be switched off in a week, and the honest version of it is a criterion `refine`
+applies with its eyes open.
 
 ### The override
 
@@ -85,8 +120,8 @@ time and records the result in the filing journal entry.
 | D8 | Every commit on the branch references the item ID, so `git log --grep <ID>` reconstructs the item's code history | [auto] |
 | D9 | The change is merged into the trunk, and the branch's work is not left only on the branch | [auto] |
 | D10 | `verify` ran **after** the last code change. A verification older than the code it verifies does not count | [auto] |
-| D11 | The review record exists at `artifacts/review.md` and states what was examined, not only the verdict | [skill] |
-| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it. Absolute claims this execution wrote carry a resolvable citation, and every **quantified** claim it audited carries, in its audit row, the set, how the set was enumerated with the command's output, the members by name, and a verdict per member — opening what the claim cites does not discharge it (`doc-header.md` §4a). **Engagement-state sentences are out of scope**: no item audit is charged with one | [skill] + [auto] |
+| D11 | The review record exists at `artifacts/review.md` and states what was examined, not only the verdict. Every gap it **accepts** carries an owner and a disposition that the orchestrator can act on — an open question, or an item on the board — written at the moment the gap is accepted (§3's *An accepted gap is dispatchable or it is nothing*) | [skill] + [auto] |
+| D12 | Every claim in `docs/` about the behaviour this item touched is **still true**, checked by reading it against the code — not by remembering whether this change invalidated it. Absolute claims this execution wrote carry a resolvable citation, and every **quantified** claim it audited carries, in its audit row, the set, how the set was enumerated with the command's output, the members by name, a verdict per member, and the **falsifier** — what a counterexample would look like and why the thing opened could have produced one. Opening what the claim cites does not discharge it, and neither does an example that could not have failed (`doc-header.md` §4a). **Engagement-state sentences are out of scope**: no item audit is charged with one | [skill] + [auto] |
 | D13 | The plan's `binding-adrs` list is **complete** — the change engages no ADR the list does not name. Whether the change *conforms* to each listed ADR is `verify`'s verdict in `artifacts/verify-report.md`, not this criterion's | [skill] |
 
 ### D7 confirms against a set; it does not discover
@@ -136,6 +171,24 @@ sentence is not D12's at all — nothing an item does makes it true or false, so
 D12 on one has been handed a defect it is structurally unable to fix. DE4 owns those (F-093,
 F-095).
 
+**The example has to be able to fail.** D12 says *checked by reading it against the code* and
+leaves the choice of what to read to the reader — which is how a sentence gets audited **holds**
+from the one case that cannot contradict it. *"No column's width depends on its marker"* was
+checked by laying the same table out under all four markers, in a table whose cells were every
+one of them wider than any marker, so the rule the sentence denies never applied; the sentence
+was false and one empty column shows it. Its replacement then passed the item's own two reproduce
+commands and was still false, and what caught it was a verifier choosing the boundary instead of
+the happy path (F-088). This is `scripts/lib/scope.py`'s *out-of-scope-by-construction* reached
+through the **example** rather than through the scope, and the answer is the same shape: the
+audit row says why the thing opened could have produced a `false`, and an absolute about a rule
+with a boundary is checked **at** the boundary. `doc-header.md` §4a's `Falsifier:` label is where
+that goes. **Which half is which**: the label's presence is decided by a script only where the
+labelled form is already gated — an answering question's `## Consequences`. Over `review.md`'s
+`## What I examined`, which is D12's own audit row, nothing mechanical reads it and nothing did
+before; the falsifier there is `[skill]`, recorded like the rest of D12's read. Whether an
+example could really have failed is a read everywhere. The one degenerate case a script *can*
+decide — an enumeration naming no members — passes **with a mark**.
+
 **The half of D12 that is now a program.** The read itself cannot be automated; what can be, and
 now is, is the demand that the confident sentences point at something. `doc-header.md` §4a
 requires an absolute claim about named code to carry a citation, and requires every citation to
@@ -162,6 +215,39 @@ D13 is the other half and the cheap one: did the plan name every ADR the change 
 can decide that mechanically — it is the same shape as D7's closing question — and it is the half
 that catches a plan which listed nothing at all.
 
+### An accepted gap is dispatchable or it is nothing
+
+A review may accept a gap rather than send the item back, and that is right: not everything a
+reviewer notices is worth another round. What was missing is the second half. A review accepted a
+gap and recorded that the remedy belonged to `answer-questions`; nothing then caused
+`answer-questions` to run. Two executions passed over it, and it was discharged only because a
+later verification chose to file a question nobody required — and said in the same breath what
+would otherwise have happened: the obligation would have died at close (F-090).
+
+The orchestrator dispatches on **open questions** and on **item status**, and on nothing else
+(`pipeline.yaml`, orchestrator steps 3–5). An accepted gap is neither. So `review.md`'s
+`## Accepted gaps` is a table — the same shape as the invalidation set, in the same file, for the
+same reason — with one row per gap, its **owner**, and a **disposition** from a closed alphabet:
+
+| Disposition | Means | Dispatched by |
+|-------------|-------|---------------|
+| `question-filed:<ITEM>/Q-###` | the remedy is an answer somebody owes | step 3 (human) or step 4 (architect → `answer-questions`) |
+| `item-filed:<ID>` | the remedy is work | step 5, to the owner of that item's status |
+| `no-owner` | a limitation recorded, not work deferred | nothing, and nothing is owed |
+
+Which of the two live dispositions is legal follows from the owner, and it is **read off
+`pipeline.yaml` rather than restated**: a question puts to work only the owner of the status a
+question suspends an item to, and an item on the board puts to work only the owner of the status
+it sits at. A gap owned by a skill in neither set is inert wherever it is written.
+
+**"At the moment it is accepted" means before the closing transition**, in the execution that
+accepts the gap. The close is the last moment the engagement can still act on it: after it, the
+item is `done`, nobody reads its reports again, and a question filed later is a question about
+history. `scripts/lint-documents --rule accepted-gaps-are-dispatchable` is `review-close`'s gate
+and it does not apply to an item already `done` — the obligation is discharged at acceptance, and
+a closed item's review is history rather than a standing debt. What it cannot decide, and does
+not claim to: whether the question or item named actually **discharges** the gap.
+
 ### D3 and D10 are the two that get skipped
 
 Both fail the same way: something is re-touched after the check, and the check is not re-run
@@ -181,7 +267,7 @@ to `done` with a note.
 | DE3 | The epic's `## Success measures` are each addressed — met, or explicitly not met with the reason | [skill] |
 | DE4 | `docs/product/` reflects what was actually built, not what was proposed. And the ending has restated **every** `## Engagement state` section in the workspace — all of them, not the ones it noticed — written **after the ending is determined**, because what is now true about the engagement is not settled until then (`doc-header.md` §4a) | [skill] + [auto] |
 | DE5 | Open questions across all child items are closed, or re-filed against a follow-up item | [auto] |
-| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written, each quantified claim by the enumeration its audit row owes rather than by opening what it cites (`doc-header.md` §4a). Every citation in the workspace resolves. **Engagement-state sentences are out of scope**: DE4 owns them | [skill] + [auto] |
+| DE6 | Every claim in `docs/` about behaviour this epic delivered has been checked against the code **during this epic**, not merely at the moment it was written, each quantified claim by the enumeration its audit row owes — including the **falsifier** — rather than by opening what it cites (`doc-header.md` §4a). Every citation in the workspace resolves. **Engagement-state sentences are out of scope**: DE4 owns them | [skill] + [auto] |
 | DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and **answered** — in **every** ending, not only closure. At **E4 by silence** the form is *asked, and the ask stood unanswered for the threshold*: there is an ask addressed to the human, it was open across `termination.silence.threshold_rounds` silent rounds, and the waiting log shows them (`ids-and-statuses.md` §3.5a) | [auto] |
 | DE8 | The stakeholder was asked, at least once in this engagement, an **open** question that was not about the team's agenda — a `kind: elicitation` question (`question.md` §2) — and it was **answered**. At **E4 by silence** the elicitation may end `abandoned` with an empty `## Answer`; the criterion is then that it was asked and went unanswered, never that it was skipped | [auto] |
 
@@ -367,3 +453,4 @@ derivation, and where the two texts differ ADR-0011's is the later and governing
 | 8 | 2026-09-10 | DE7 and DE8 gain their **E4 by silence** form — *asked, and the ask stood unanswered for the threshold* — the one ending where *answered* cannot hold, bounded by three named compensating controls. **DE4's trigger is amended from *after the sign-off answer arrived* to *after the ending is determined***, because at E4 no answer arrives and the old trigger could never fire; **this amends ADR-0010 §4.3**, and ADR-0011 §2.4 is the governing derivation. Derived in ADR-0011 (F-060, F-022, F-033). |
 | 9 | 2026-09-10 | D1 takes the third criterion state: `- [~]` is settled, so an item whose environment could not perform an observation still closes — and the close is spelled differently from one settled directly, and owes the stakeholder a question in time (F-096). |
 | 10 | 2026-09-10 | §4a added: **when** each epic criterion is applied. DE1–DE6 and DE4's first half go before the engagement's account of itself — the sign-off's `## Question`, or the `## Ending statement` at E4 — and DE4's restatement, DE7 and DE8 follow the ending. One ordering for all four endings, because a criterion applied after the account is applied to a state the account no longer describes (F-086). |
+| 11 | 2026-09-10 | **R11** added: a criterion **names** the artefacts it constrains rather than counting them, and a wanted count is **measured first** and carried as a command-outcome citation — four criteria in one engagement counted things their own item moved and every one had to be amended afterwards (F-089). It is `[skill]`, and the measurement that says why is in §1. **D11** gains its second half: an accepted gap carries an owner and a disposition the orchestrator can act on, written at acceptance time, because the orchestrator dispatches on open questions and item status and on nothing else (F-090). **D12/DE6**: the audit row carries the **falsifier** — an example that could not have failed does not discharge a claim, and an absolute about a rule with a boundary is checked at the boundary (F-088). |

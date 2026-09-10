@@ -1055,17 +1055,29 @@ def run_documents(results) -> None:
              "    - **Set:** the adapters under `adapters/`\n"
              "    - **Enumerated by:** `ls -d adapters/*/`\n"
              "    - **Members:** `one`, `two`\n"
-             "    - **Verdict:** true of each\n")
+             "    - **Verdict:** true of each\n"
+             "    - **Falsifier:** an adapter writing directly; `two` predates the helper\n")
     found = documents_lib.enumerations_in("q.md", entry, 1)
     results.check("documents/a complete enumeration hangs under the document it is about",
                   [(item.document, item.complete) for item in found],
                   [("docs/architecture/overview.md", True)])
     partial = documents_lib.enumerations_in("q.md", "\n".join(entry.split("\n")[:4]) + "\n", 1)
     results.check("documents/an enumeration missing its parts says which",
-                  [item.missing for item in partial], [["members", "verdict"]])
+                  [item.missing for item in partial], [["members", "verdict", "falsifier"]])
     results.check("documents/an enumeration under nothing names no document",
                   [item.document for item in
                    documents_lib.enumerations_in("q.md", "- **Enumeration:** loose\n", 1)], [""])
+    # F-088. The one part whose CONTENT a script can judge: an audit over nobody could not have
+    # found a counterexample. It is not incomplete — every label is there — and it is not an
+    # ordinary pass either.
+    empty = entry.replace("- **Members:** `one`, `two`", "- **Members:** none")
+    results.check("documents/an enumeration over no members is complete and vacuous (F-088)",
+                  [(item.complete, item.vacuous)
+                   for item in documents_lib.enumerations_in("q.md", empty, 1)],
+                  [(True, True)])
+    results.check("documents/an enumeration that names members is not vacuous",
+                  [item.vacuous for item in documents_lib.enumerations_in("q.md", entry, 1)],
+                  [False])
 
 
 

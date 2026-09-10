@@ -43,7 +43,8 @@ import frontmatter  # noqa: E402
 
 __all__ = [
     "KINDS", "DISPOSITIONS", "OPEN_DISPOSITION_RE", "ADR_VERDICTS", "ENGAGEMENT_SECTION",
-    "ENUMERATION_LABEL", "ENUMERATION_PARTS", "Enumeration", "EngagementSection",
+    "ENUMERATION_LABEL", "ENUMERATION_PARTS", "NO_MEMBERS_RE", "Enumeration",
+    "EngagementSection",
     "document_body", "documents_under", "engagement_sections", "engagement_state_text",
     "quantified_paragraphs", "enumerations_in", "artifact_rows", "artifact_section",
     "show", "new_paragraphs", "ADR_ID_RE", "QUESTION_DISPOSITION_RE", "QUANTIFIER_RE",
@@ -66,14 +67,28 @@ ADR_ID_RE = re.compile(r"\bADR-\d{4}\b")
 
 ENGAGEMENT_SECTION = "## Engagement state"
 
-# The enumeration entry's shape. `spec/doc-header.md` §4a names the four things a quantified
+# The enumeration entry's shape. `spec/doc-header.md` §4a names the five things a quantified
 # claim's audit row records — (a) the set, (b) how the set was enumerated, with the command's
-# output, (c) the members by name, (d) the verdict per member. A shape check needs those four to
-# be *findable*, so they are written as labels, the way ADR-0008 §4 made `Checked against:` the
-# findable half of the cross-answer check. Without a label nothing mechanical can tell "I opened
-# the fixture" from "I enumerated the members", and telling those two apart is the whole of F-095.
+# output, (c) the members by name, (d) the verdict per member, (e) the falsifier: what a member
+# that made the sentence false would look like, and why the members examined could have exhibited
+# one. A shape check needs those five to be *findable*, so they are written as labels, the way
+# ADR-0008 §4 made `Checked against:` the findable half of the cross-answer check. Without a label
+# nothing mechanical can tell "I opened the fixture" from "I enumerated the members", and telling
+# those two apart is the whole of F-095.
+#
+# `falsifier` is F-088's part and it is last on purpose: the other four say what was looked at,
+# and this one says whether looking there could have produced a `false`. A row without it records
+# a verdict and destroys the method, which is the sentence §4a already used about "I read it and
+# it is true" — the label is that sentence made findable.
 ENUMERATION_LABEL = "enumeration"
-ENUMERATION_PARTS = ("set", "enumerated by", "members", "verdict")
+ENUMERATION_PARTS = ("set", "enumerated by", "members", "verdict", "falsifier")
+
+# What `Members:` has to *say* for the enumeration to have been able to fail. An audit over a set
+# with no members is the audit-row form of `scope.py`'s out-of-scope-by-construction: it did not
+# come up empty, it could not have come up otherwise. Recognised, marked, and passed — never
+# failed, because a family that is genuinely empty makes the sentence vacuously true and the
+# legal repair for that is to weaken the sentence, which is a read (F-088, F-076).
+NO_MEMBERS_RE = re.compile(r"^(|-|–|—|none|nothing|n/?a|empty|no members)[.\s]*$", re.IGNORECASE)
 
 # The quantifiers, which are a *subset* of the absolutes `lint-claims` detects. `never`,
 # `cannot`, `always` and `guaranteed` are absolutes about a named thing — cited facts, whose
@@ -102,16 +117,18 @@ class EngagementSection:
 
 
 class Enumeration:
-    """An enumeration entry found in an audit row, and which of its four parts are present."""
+    """An enumeration entry found in an audit row, and which of its five parts are present."""
 
-    __slots__ = ("path", "line", "document", "parts", "text")
+    __slots__ = ("path", "line", "document", "parts", "text", "values")
 
-    def __init__(self, path, line, document, parts, text) -> None:
+    def __init__(self, path, line, document, parts, text, values=None) -> None:
         self.path = path
         self.line = line
         self.document = document
         self.parts = set(parts)
         self.text = text
+        # label -> what it said, for the one part whose *content* is decidable (F-088).
+        self.values = dict(values or {})
 
     @property
     def missing(self) -> list:
@@ -120,6 +137,16 @@ class Enumeration:
     @property
     def complete(self) -> bool:
         return not self.missing
+
+    @property
+    def vacuous(self) -> bool:
+        """`Members:` names nobody, so no counterexample could have turned up (F-088).
+
+        Not a failure and not an ordinary pass. The caller marks it; the read it leaves open —
+        whether a family with no members means the sentence should be weakened — is a person's.
+        """
+        return "members" in self.parts and bool(
+            NO_MEMBERS_RE.match(self.values.get("members", "").strip()))
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
         return f"Enumeration({self.document!r}, line={self.line}, missing={self.missing})"
@@ -240,6 +267,7 @@ def enumerations_in(path: str, text: str, line: int):
                 document = match.group(0) if match else ""
             continue
         parts = set()
+        values = {}
         body = [block]
         for following in all_blocks[position + 1:]:
             if following.indent <= block.indent:
@@ -249,8 +277,9 @@ def enumerations_in(path: str, text: str, line: int):
             entry_label = (entry.label or "").strip().lower()
             if entry_label in ENUMERATION_PARTS:
                 parts.add(entry_label)
+                values.setdefault(entry_label, entry.body)
         found.append(Enumeration(path, block.start, document, parts,
-                                 " ".join(item.joined for item in body)))
+                                 " ".join(item.joined for item in body), values))
     return found
 
 

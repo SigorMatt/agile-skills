@@ -140,6 +140,17 @@ acted on. Then write down exactly what was said.
    path that does not exist, a tie, the largest reasonable size. These are where implementations
    diverge from intent, and they are nearly free to specify now.
 
+   **Name artefacts; do not count them.** A criterion that counts something this item may move
+   is a criterion somebody will amend after the code exists. *"The suite runs unchanged"*,
+   *"exactly one of its 65 tests changes"* — four criteria of that shape in one engagement, four
+   amendments, three architect round trips, and one that still miscounts while remaining
+   perfectly decidable (F-089). Name the test, the file, the case instead. If a count is
+   genuinely what is wanted, **run the command now**, read the number, write the criterion around
+   what you measured, and put the measurement on the criterion:
+   `[src: run: python3 -m unittest discover → exit 0, 65 tests]`. That is Definition of Ready
+   R11, and it is yours to judge: nothing mechanical can tell a count of project artefacts from
+   a count in the tool's own output.
+
    **Renumbering is not free, and it is you who does it.** Inserting or dropping a criterion
    shifts every number after it, and a citation elsewhere that says `AC7` goes on resolving
    against whatever moved into that position — silently, with the gate green. It has happened

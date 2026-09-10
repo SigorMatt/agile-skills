@@ -6,9 +6,9 @@ things, and both matter:
 1. **The change** — does it do what was asked, in a way this project should live with?
 2. **The record** — could someone who was not here reconstruct what happened and why?
 
-The second is not paperwork. It is half of what this methodology delivers. A correct change with
-an unreadable record is not done, because the next person to touch this code — including a later
-run of these same skills — will have to re-derive everything you did not write down.
+The second is half of what this methodology delivers, not paperwork. A correct change with an
+unreadable record is not done: the next person to touch this code re-derives everything you did
+not write down.
 
 You cannot ask the human. You may reject, and rejection is a normal outcome, not a failure.
 
@@ -21,64 +21,77 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 **Reviewing an item:**
 
 1. The item is at `in-review`.
-2. `verify-report.md` and `impl-report.md` both exist. If either is missing, the item reached
+2. `verify-report.md` and `impl-report.md` both exist — if either is missing the item reached
    this status without doing the work: send it back with that reason.
 3. The branch exists and merges cleanly, or you know why it does not.
 
 **Ending an engagement:**
 
-4. The item is an `epic` at `open`, and `scripts/engagement-state <EP-ID>` reports `at-rest`.
-   There is no code to review and no branch to merge; go straight to step 10. If the script
-   reports anything else, you were dispatched in error — report that and stop, rather than
-   ending an engagement that is still running.
+4. The item is an `epic` at `open` and `scripts/engagement-state <EP-ID>` reports `at-rest`. No
+   code to review, no branch to merge; go straight to step 10. Any other verdict means you were
+   dispatched in error — report it and stop rather than ending a running engagement.
 
 ---
 
 ## Steps
 
 1. **Read the current state from disk.** `item.md`, `history.md`, `journal.md`, `plan.md`,
-   `impl-report.md`, `verify-report.md`, and every question on the item. Read the journal in full
-   — you are about to certify that the record is complete, and you cannot do that having skimmed
-   it.
+   `impl-report.md`, `verify-report.md`, every question on the item — the journal in full: you
+   are about to certify the record is complete.
 
 2. **Check the record's mechanics first**, because these are cheap and decisive:
    - Does `history.md` chain without a gap, and does its last row match `item.md`'s status?
-   - Is there a journal entry for every skill execution the history implies?
-   - Is every acceptance criterion ticked, and does `verify-report.md` cite evidence for each?
-   - Are all questions on the item `answered`, with `## Consequences` naming real files?
-   - Does every commit on the branch reference the item ID?
+   - A journal entry for every skill execution the history implies?
+   - Every acceptance criterion ticked, with evidence cited for each in `verify-report.md`?
+   - All questions on the item `answered`, with `## Consequences` naming real files?
+   - Every commit on the branch referencing the item ID?
 
-   A failure here is a send-back, and it is not a formality: a missing journal entry means an
-   execution happened that nobody can now examine.
+   A failure here is a send-back: a missing journal entry means an execution happened that
+   nobody can now examine.
 
-3. **Check that the verification is not stale.** Compare the verification's recorded commit
-   against the branch head. If code changed after verification ran, the verification does not
-   apply — return the item to `verifying`, not to `in-progress`. This is `spec/dor-dod.md` D10,
-   and it is the criterion most often waved through with "it was only a small fix". Run the
-   comparison; do not judge it by how the last commit looks.
+3. **Check that the verification is not stale.** Compare its recorded commit against the branch
+   head. If code changed after verification ran, it does not apply — return the item to
+   `verifying`, not `in-progress` (D10). Run the comparison; do not judge it by how the last
+   commit looks.
 
 4. **Read the diff.** Not the description of it — the diff, hunk by hunk. For each:
    - Which acceptance criterion or plan step does it serve? Anything that serves neither is
-     unrequested scope, and unrequested scope has no criterion, no verification, and no reviewer
-     next time.
-   - Does it contradict an ADR? If it does, either the change is wrong or the ADR should be
-     superseded — and superseding is not yours to decide. File a question.
-   - Would you be comfortable maintaining it? Name specifics: a duplicated rule that will drift,
+     unrequested scope: no criterion, no verification, no reviewer next time.
+   - Does it contradict an ADR? Then either the change is wrong or the ADR should be superseded,
+     and superseding is not yours to decide. File a question.
+   - Would you be comfortable maintaining it? Name specifics — a duplicated rule that will drift,
      an error path that swallows the error, a name that says something untrue. Vague discomfort
-     is not a review finding; write what would go wrong and when.
+     is not a finding; write what would go wrong and when.
 
 5. **Read `## Not verified, and why` in the verification report, and `## What I did not do` in
    the implementation report.** These are the declared gaps. For each, decide: acceptable and
-   recorded, or a send-back. A gap that is acceptable must be written into the item's `## Notes`
-   or a follow-up item — an acceptable gap that exists only inside a report will be forgotten.
+   recorded, or a send-back.
+
+5a. **An accepted gap that names an owner is made dispatchable now, in this execution.** The
+   orchestrator dispatches on **open questions** and on **item status**, and on nothing else
+   (`pipeline.yaml`). So a remedy recorded in `review.md`, or in the item's `## Notes`, is a
+   to-do only a reader can act on: nothing will ever cause its owner to run. One engagement
+   wrote *"this belongs to `answer-questions`"* into an accepted gap, two executions passed over
+   it, and it survived only because a later verification volunteered a question nobody required —
+   and said so: the obligation would otherwise have died at close (F-090).
+
+   Two routes, and which one is legal follows from who owns it:
+   - the owner is `answer-questions` or the human → **file the question** (non-blocking, so D4
+     still passes) and dispose the row `question-filed:<ITEM>/Q-###`;
+   - any other skill → **file the item**, which the board dispatches to that status's owner, and
+     dispose the row `item-filed:<ID>`;
+   - nobody owns it → `no-owner`, and mean it: the gap is a limitation recorded, not work
+     deferred.
+
+   **Now** means before the closing transition. The close is the last moment the engagement can
+   still act on it. `accepted-gaps-are-dispatchable` is the gate.
 
 6. **Apply the Definition of Done** (`spec/dor-dod.md` §3), criterion by criterion, recording a
    result and evidence for each. D1–D13. A single verdict does not satisfy the gate.
 
-6a. **D7 is a confirmation, and D13 is a completeness question.** Neither is a rediscovery, and
-   the difference is the whole of why they moved. **D7:** the plan carries the invalidation set —
-   the documents this change could make false — and `implement` closed each entry. Your part is
-   three reads and one question:
+6a. **D7 is a confirmation, and D13 is a completeness question.** Neither is a rediscovery.
+   **D7:** the plan carries the invalidation set — the documents this change could make false —
+   and `implement` closed each entry. Your part is three reads and one question:
 
    - every entry carries a disposition;
    - every entry disposed `to-update` names a document that was updated, with a version bump and
@@ -86,25 +99,22 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    - every entry disposed `owned-by-ending` was left alone by the item. Those sentences are the
      ending's, and an item that edited one has done something no criterion asked of it;
    - then the one question the set cannot answer for itself: **did this change falsify a document
-     the set does not name?** Answer it by reading, and record what you read. This used to be the
-     first time anybody asked what the change made false, and twice in one banked engagement the
-     answer sent an item back and was cleared by editing documents only (F-087). It is now a claim
-     against an enumerated set, and it is attributable to you.
+     the set does not name?** Answer it by reading, and record what you read — twice in one banked
+     engagement that answer sent an item back and was cleared by editing documents only (F-087).
+     It is a claim against an enumerated set, attributable to you.
 
-   Engagement-state sentences are **not** in scope here: no item audit is charged with one, and
-   an item asked to repair one has a defect it is structurally unable to fix (`doc-header.md` §4a).
+   Engagement-state sentences are **not** in scope: no item audit is charged with one, and an item
+   asked to repair one has a defect it cannot fix (`doc-header.md` §4a).
 
-   **D13.** The plan lists the ADRs this change is bound by, and `verify` has already recorded a
-   verdict for each in `verify-report.md`. You do not re-decide conformance — you ask the cheap
-   half nobody was asking: **did the plan name every ADR this change engages?** Read the diff you
-   have already read at step 4 against the ADR index. An ADR you find engaged and unlisted is a
-   finding, and the plan that listed nothing at all is the case this criterion exists to catch
-   (F-092).
+   **D13.** The plan lists the ADRs this change is bound by and `verify` has already recorded a
+   verdict for each. You do not re-decide conformance — you ask the half nobody was asking: **did
+   the plan name every ADR this change engages?** Read the step-4 diff against the ADR index. An
+   ADR engaged and unlisted is a finding; a plan that listed nothing at all is the case this
+   criterion exists to catch (F-092).
 
 7. **Decide.**
-   - **Reject** → `in-review → in-progress`, with the specific defects in `review.md` and named
-     in the history reason. Be concrete enough that `implement` does not have to guess what you
-     meant; a rejection nobody can act on costs two round trips instead of one.
+   - **Reject** → `in-review → in-progress`, defects named in `review.md` and in the history
+     reason, concrete enough that `implement` does not have to guess what you meant.
    - **Return to verification** → `in-review → verifying`, when the verification is stale or its
      evidence does not support a tick.
    - **Accept** → continue.
@@ -113,11 +123,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    getting it wrong deadlocks the close:
 
    1. **Trial-merge** the branch into a throwaway checkout of `{{trunk}}` and run
-      `{{commands.test}}` **on the merge result**. A change that passed on its branch can still
-      fail after merging, and the merge result is what the project actually gets. If it fails,
-      discard the trial and send the item back with the failure — do not "fix it quickly".
-
-      Do it exactly like this:
+      `{{commands.test}}` **on the merge result** — which is what the project actually gets. If it
+      fails, discard the trial and send the item back with the failure; do not "fix it quickly".
+      Exactly like this:
 
       ```
       git worktree add --detach <trial> {{trunk}}
@@ -128,27 +136,26 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 
       — running `{{commands.test}}` inside `<trial>` between the merge and the removal.
 
-      **`--detach` is the whole of it.** `git worktree add <trial> {{trunk}}` *checks out the
-      real branch* rather than copying it, so the trial merge fast-forwards the real
-      `{{trunk}}` and removing the worktree does not move it back. A review did exactly that
-      and advanced the real trunk (F-055). Detached, the worktree has no branch to advance.
+      **`--detach` is the whole of it.** Without it the worktree *checks out* the real branch,
+      so the trial fast-forwards the real `{{trunk}}` and removing the worktree does not move it
+      back — a review did exactly that (F-055). Detached, there is no branch to advance.
    2. **Discard the trial merge, and check that `{{trunk}}` did not move.** `git rev-parse
       {{trunk}}` must return the sha it returned before the trial — the part worth confirming
       rather than assuming.
    3. **Close the item while the branch is still unmerged** (step 9): `commits-reference-the-item`
-      inspects the commits on the branch that are *not yet* on the trunk, and merging first
-      empties that range, so the gate would refuse the very close it was a precondition for.
+      inspects the commits not yet on the trunk, and merging first empties that range, so the gate
+      would refuse the very close it was a precondition for.
    4. **Then merge into `{{trunk}}` for real, and record the sha:** `scripts/record-merge
-      <ITEM-ID> --merge <sha>`. The closing entry was written before the merge existed and
-      could not name it; this is where the record catches up, and the program writes nothing
-      git has not confirmed to be a merge of this branch onto the trunk (F-081, F-035).
+      <ITEM-ID> --merge <sha>`. The closing entry could not name a merge that did not exist yet;
+      this is where the record catches up, and the program writes nothing git has not confirmed
+      (F-081, F-035).
 
-   If you find yourself reaching for a gate override here, stop — you merged too early. Rewind.
+   Reaching for a gate override here means you merged too early. Rewind.
 
-9. **Close the item.** The outcome is `delivered` (or `dropped` / `duplicate`, with the reason
-   in `## Notes`), and the **transition writes it** — `--outcome` at step 11, never an edit of
-   `item.md` first: an item not yet `done` must carry no outcome, so setting it first fails
-   `workspace-valid` on the very move that would make it true (F-083). Write `artifacts/review.md`:
+9. **Close the item.** The outcome is `delivered` (or `dropped` / `duplicate`, reason in
+   `## Notes`), and the **transition writes it** — `--outcome` at step 11, never an edit of
+   `item.md` first: an item not yet `done` carries no outcome, so setting it first fails
+   `workspace-valid` on the move that would make it true (F-083). Write `artifacts/review.md`:
 
    ```markdown
    # Review — <ITEM-ID>
@@ -161,26 +168,34 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    ## Sections restated at the ending
    ## Findings
    ## Accepted gaps
+   | gap | owner | disposition |
    ## Verdict
    ```
 
    `## What I examined` is required and comes first: a review recording only a verdict is
-   indistinguishable from one that examined nothing, which is what makes reviews rot.
-   `## Invalidation set confirmation` is step 6a's record — one row per entry, and beneath the
-   table the answer to *did this change falsify a document the set does not name*, with what you
-   read to reach it. `## Sections restated at the ending` is written only at an ending (step 10);
-   at an item close it says `not an ending`.
+   indistinguishable from one that examined nothing. `## Invalidation set confirmation` is step
+   6a's record — one row per entry, and beneath it the answer to *did this change falsify a
+   document the set does not name*, with what you read. `## Accepted gaps` is step 5a's, same
+   shape and same reason: every row disposed, no gaps written as one row saying `none`.
+   `## Sections restated at the ending` is an ending's only (step 10); at a close, `not an
+   ending`.
 
-9a. **Audit the claims, from the citations — not from the prose.** D12, and DE6 when you are
-    closing an epic, ask whether the confident sentences in `docs/` are still true. Do it the one
-    way that can fail: list each absolute claim the delivered work touched, **open the thing it
-    cites**, and decide from what you read there. Do not decide from the sentence, from a
-    neighbouring document that repeats it, or from your memory of writing it — the failure this
-    step exists for is a wrong claim that reached seven documents because each skill re-quoted the
-    previous one instead of re-checking the code. Record each claim you checked and what you
-    opened in `## What I examined`; a claim you could not verify from its citation is a finding,
-    not a pass. `scripts/lint-claims` has already proved the citations *resolve*; only a reader
-    can say whether they *support* the sentence.
+9a. **Audit the claims, from the citations — not from the prose.** D12, and DE6 at an epic, ask
+    whether the confident sentences in `docs/` are still true. Do it the one way that can fail:
+    list each absolute claim the delivered work touched, **open the thing it cites**, and decide
+    from what you read there — never from the sentence, from a neighbour repeating it, or from
+    your memory of writing it, which is how one wrong claim reached seven documents. Record each
+    claim and what you opened in `## What I examined`; one you could not verify from its citation
+    is a finding, not a pass. `lint-claims` proved the citations *resolve*; only a reader can say
+    whether they *support* the sentence.
+
+    **Open something that could have said no.** The audit row carries a `Falsifier:` — what a
+    counterexample would look like, and why what you opened could have produced one — and an
+    absolute about a rule with a boundary is checked **at** the boundary (`doc-header.md` §4a).
+    *"No column's width depends on its marker"* was audited **holds** from a table whose cells
+    were all wider than any marker, so the rule it denies never applied; the sentence was false
+    and one empty column shows it (F-088). That is the empty-window failure reached through the
+    example rather than the scope — the paragraph below is the other half of it.
 
     **Run it over a scope that could have found something.** `--context` in the gate's command
     is not decoration: closing an item the scope is that item's diff, and at an ending there is
@@ -190,14 +205,12 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     anything"* — and a voluntary `--all` then found three real errors (F-066).
 
 9b. **A true claim with no source has a repair; use it.** `--all` at an ending surfaces
-    `claim.unsourced` on old prose, including inside standing ADRs. Read the sentence against the
-    code. If it is **false**, that is a finding and a defect. If it is **true**, it is neither an
-    accepted gap nor unfixable: `spec/doc-header.md` §4b lets you add the citation in place and
-    record a `provenance` row in the ADR's append-only `## Corrections` section, with a
-    change-log row and a version bump. Nothing is superseded and the ledger acquires no permanent
-    known error — which is what happened when the repair did not exist and a reviewer recorded
-    three verified-true claims as a gap they were accepting for the project (F-067). The line: if
-    a reader would have to change code to satisfy the new text, it is a new decision, and the ADR
+    `claim.unsourced` on old prose, standing ADRs included. Read the sentence against the code. If
+    it is **false**, that is a finding and a defect. If it is **true**, it is neither an accepted
+    gap nor unfixable: `doc-header.md` §4b adds the citation in place with a `provenance` row in
+    the ADR's append-only `## Corrections`, a change-log row and a version bump. Without that
+    repair a reviewer once banked three verified-true claims as a gap (F-067). The line: if a
+    reader would have to change code to satisfy the new text, it is a new decision, and the ADR
     is superseded rather than corrected.
 
 10. **End the engagement, when it is over.** You are also the skill that ends engagements, and
@@ -215,16 +228,15 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
 
     **`abandoned` means something else, and it is below**, under *the ending nobody answers*.
     Read that branch first if the verdict is `abandoned`: an engagement nobody is answering never
-    reaches rest, so none of the at-rest procedure applies to it.
+    reaches rest, so none of the at-rest procedure applies.
 
-    **Apply the Definition of Done before you ask, not after** (`spec/dor-dod.md` §4a). DE1,
-    DE2, DE3, DE5, DE6 and DE4's first half are applied to the state you are about to show them,
-    and recorded criterion by criterion; only DE4's restatement, DE7 and DE8 wait for the reply.
-    A failure here is not an ending — it is work: file nothing, let the finding become an item or
-    a bug, and the engagement leaves rest until it returns. Asked the other way round, a DE6
-    audit run nine minutes after an acceptance found a false absolute, filed a bug, and made a
-    sentence in the question they had just answered false; the gate refused that acceptance and a
-    second sign-off fell due (F-086).
+    **Apply the Definition of Done before you ask, not after** (`spec/dor-dod.md` §4a). DE1, DE2,
+    DE3, DE5, DE6 and DE4's first half go against the state you are about to show them, recorded
+    criterion by criterion; only DE4's restatement, DE7 and DE8 wait for the reply. A failure here
+    is not an ending — it is work: file nothing, let it become an item or a bug, and leave rest.
+    Asked the other way round, a DE6 audit nine minutes after an acceptance filed a bug and made a
+    sentence in the answered question false; the gate refused it and a second sign-off fell due
+    (F-086).
 
     **If it is at rest and no sign-off has been filed since rest was reached — ask.** File a
     `kind: sign-off` question on the **epic** (`spec/question.md` §2):
@@ -240,28 +252,25 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
       and marked as the team's preference, never above them (F-063).
     - **DE8: has anyone ever asked them an open question?** `check-epic-signoff` requires one
       `kind: elicitation` question in the engagement — the one not about our agenda. If nobody
-      filed one, file it now alongside the sign-off, non-blocking and addressed to `human`:
-      *"What else matters to you here that we never asked about?"* Asked at the ending it is
-      close to a formality; asked at intake it changes the work (F-064).
+      filed one, file it now alongside the sign-off, non-blocking, addressed to `human`: *"What
+      else matters to you here that we never asked about?"* (F-064).
 
     Then transition the **epic** to `awaiting-answer` with `resume-to: open` and stop — not
     stalling, but standing at the one gate in this pipeline that belongs to a person.
 
     **Before you record any ending, check the stakeholder's answers against each other.** The
-    sign-off's own answer is a recorded human answer like any other, and the conditions people
-    attach to a sign-off are exactly where a contradiction with something said at refinement
-    surfaces. Write the `## Cross-answer check` on it, and where it conflicts with an earlier
-    answer, quote both by ID and ask which wins rather than harmonising the documents around the
-    newer one (`meta/adr/ADR-0008-cross-answer-consistency.md`; `scripts/lint-answers` is a hard
-    gate here). One extra round trip is cheaper than ending on a record they would not recognise.
+    sign-off's answer is a recorded human answer like any other, and the conditions people attach
+    to one are exactly where a contradiction with refinement surfaces. Write its `## Cross-answer
+    check`, and where it conflicts with an earlier answer, quote both by ID and ask which wins
+    rather than harmonising the documents around the newer one (ADR-0008; `lint-answers` is a
+    hard gate here).
 
     **When the reply is in the file, restate the engagement's own sentences — first.** Some
-    sentences in `docs/` are about the **engagement** rather than the product: *"the stakeholder
-    has not yet been asked to accept this"*, *"this is the only remaining gap"*, *"three of four
-    work items are delivered"*. No code change makes them true or false; your ending does. They
-    live in exactly one `## Engagement state` section per document, so the set is enumerable
-    rather than a matter of reading everything (`spec/doc-header.md` §4a), and every one of them
-    is yours at this moment and at no other.
+    sentences in `docs/` are about the **engagement**: *"the stakeholder has not yet been asked to
+    accept this"*, *"three of four work items are delivered"*. No code change makes them true or
+    false; your ending does. They live in exactly one `## Engagement state` section per document,
+    so the set is enumerable (`doc-header.md` §4a), and all of them are yours at this moment and
+    at no other.
 
     - Enumerate the sections: every document under `docs/` that has one.
     - Restate **all of them** from the ending you are recording — not only the ones you noticed
@@ -271,9 +280,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     - Record the list, and each restatement, under `## Sections restated at the ending` in
       `review.md`.
 
-    In the run this rule comes from, the vision said the stakeholder had not yet been asked, the
-    pipeline's own closing turn made that false, and the execution that noticed it recorded that
-    *"there was no send-back available that would not have been a fiction"* (F-093).
+    In the run this comes from, the vision said the stakeholder had not yet been asked, the
+    closing turn made that false, and the execution that noticed recorded *"there was no send-back
+    available that would not have been a fiction"* (F-093).
 
     **If the reply is already in the file — record the ending.** DE1–DE6 were recorded when the
     sign-off was filed; add what waited for the reply — DE4's restatement, DE7, DE8 (§4a) — then
@@ -286,10 +295,10 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     | do not accept — or a deferral with no way forward | **E3 impasse** | `open → blocked`, `resume-to: open` |
     | withdraw the engagement | **E4 abandoned** | children not `done` to `blocked` first, then `open → done`, `outcome: dropped` |
 
-    A "no" ends the engagement as legitimately as a "yes"; what is not allowed is ending while
-    never having asked. Closing over an undelivered child is legal and calling that outcome
-    `delivered` is not — the validator refuses it, and it should. This is the only moment in the
-    pipeline where every sibling's state is already in hand, which is why ending lives here.
+    A "no" ends the engagement as legitimately as a "yes"; ending while never having asked is
+    what is not allowed. Closing over an undelivered child is legal and calling that outcome
+    `delivered` is not — the validator refuses it. Ending lives here because this is the only
+    moment where every sibling's state is already in hand.
 
     ### The ending nobody answers — E4 by silence
 
@@ -306,10 +315,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     2. **Every orphan moves to `blocked` before the epic closes**, reason beginning
        `orphaned by E4:`; one suspended at `awaiting-answer` moves by the row that exists for
        exactly this (`awaiting-answer → blocked`, actor `review-close`). **An orphan takes no
-       `outcome` at all** — `outcome` is present if and only if the item is `done`, so one at
-       `blocked` is invalid and pushing the item to `done` to carry it claims the work concluded
-       when what happened is that it stopped. `blocked` keeps the work resumable, which under an
-       ending that may be wrong about a person is the right thing to be.
+       `outcome` at all** — `outcome` exists only on a `done` item, and pushing it to `done` to
+       carry one claims the work concluded when it stopped. `blocked` keeps it resumable.
     3. **Every question still `open` closes as `abandoned`** (`spec/question.md` §2): `## Answer`
        **empty**, because the emptiness is the evidence and anything written there is the fiction
        the status exists to prevent; `## Consequences` naming the ending, the count and
@@ -317,13 +324,12 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
        `answered` or `deferred` is untouched; one left `open` halts the whole workspace for ever
        at `next` step 3.
     4. **Apply DE1–DE6, then write `## Ending statement`** in the epic's `artifacts/review.md`,
-       mirrored in its `## Notes` — the ask's ordering (§4a), forced here by the statement's own
-       rule: DE6's audit may file a bug, a bug is a child, and the statement must name every
-       child. It carries the sign-off's content as a document, nobody being there to address: the
-       goal in their own terms, **every child by ID** with its class (what the gate reads, and
-       what makes it checkable — F-046), the silence itself from the log, each success measure.
-       **File no sign-off now**: one filed and closed in a single execution, addressed to someone
-       known to be absent, is a fiction wearing the protocol's clothes, and their route back is
+       mirrored in its `## Notes` — the ask's ordering (§4a), forced here because DE6's audit may
+       file a bug, a bug is a child, and the statement must name every child. It carries the
+       sign-off's content as a document, nobody being there to address: the goal in their own
+       terms, **every child by ID** with its class (F-046), the silence from the log, each
+       success measure. **File no sign-off now**: one filed and closed in a single execution,
+       addressed to someone known to be absent, is a fiction; their route back is
        `tracker/requests/`.
     5. **Restate every `## Engagement state` section** (DE4) — triggered *after the ending is
        determined*, no answer being on its way — then finish the walk with DE7 and DE8, which
@@ -332,9 +338,8 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
        `none — this ending consumed no human answer`.
     6. **Move the epic**: `open → done`, or `awaiting-answer → done` where the sign-off was filed
        before the silence began; `outcome: dropped`; reason `E4 abandoned: 3 silent rounds,
-       threshold 3`. Whether the person is actually gone is the one thing no program and no
-       reader can decide, so record that we asked, that nothing came, and how many times — and
-       nothing whatever about why.
+       threshold 3`. Whether the person is actually gone is undecidable, so record that we asked,
+       that nothing came, and how many times — and nothing about why.
 
 11. **Journal and transition, in one command** (`--journal-body-file`; see Journaling).
 
@@ -352,7 +357,8 @@ On the item's `journal.md`:
   none (ADR-0008 §4).
 - `**Gates:**` — evidence for every one: the Definition of Done table for `definition-of-done`;
   the restated sections for `engagement-state-is-restated` (`not applicable - an item close`,
-  never `passed`); `scripts/engagement-state`'s verdict for the epic decision; and for
+  never `passed`); the disposition of each accepted gap for `accepted-gaps-are-dispatchable`;
+  `scripts/engagement-state`'s verdict for the epic decision; and for
   `claims-are-sourced` the **scope** it examined, quoted from its own output (F-066). A gate your
   contract's **subject** column leaves without a subject on this item's type is written `skipped`
   from that column — an ending no longer invents a sentence for the branch gates (F-085).
@@ -360,9 +366,8 @@ On the item's `journal.md`:
   engagement ended. The merge commit is not here: it does not exist yet, and `record-merge`
   puts it in `item.md`'s `merge-commit` once it does (F-081).
 
-If the epic was closed, also write an entry on the **epic's** journal summarising what the epic
-delivered against its success measures.
-
+If the epic was closed, also write an entry on the **epic's** journal against its success
+measures.
 
 **How the entry is written.** You do not type an entry heading. Write the bullets to a file, and
 let the tool stamp the heading — the timestamp from the clock, the version and persona from this
@@ -385,12 +390,11 @@ scripts/transition <ITEM-ID> --to <status> --actor review-close --reason "..." \
                    --journal-body-file <path>
 ```
 
-`scripts/journal-entry --template --skill review-close` prints the shape, and it is the shortest way
-to get this right: **every bullet it prints is structurally required** and both tools refuse a
-body missing one. That includes `**Commands:**` and `**Artifacts:**` on an execution that ran
-no command and produced no artifact — the bullet is required, `none` is the honest content
-(F-049). A heading you write yourself is a fabrication risk with nothing behind it, and
-`validate-workspace` rejects a timestamp no clock produced (`spec/journal-and-history.md` §0).
+`scripts/journal-entry --template --skill review-close` prints the shape: **every bullet it
+prints is structurally required** and both tools refuse a body missing one — including
+`**Commands:**` and `**Artifacts:**` on an execution that ran none, where `none` is the honest
+content (F-049). A heading you write yourself is a fabrication risk, and `validate-workspace`
+rejects a timestamp no clock produced (`journal-and-history.md` §0).
 
 ### Commit what you wrote
 
@@ -402,16 +406,14 @@ transitioned, commit the workspace files this execution produced, using the proj
 tracker: the review, the closed item, and the merge (refs <ITEM-ID>)
 ```
 
-A commit that changes only `tracker/` and `docs/` is expected from this skill — it produces no
-code (`spec/workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return
-the item's whole story rather than only its code.
-
+A commit that changes only `tracker/` and `docs/` is expected here — this skill produces no code
+(`workspace-layout.md` §5). Committing is what makes `git log --grep <ITEM-ID>` return the item's
+whole story rather than only its code.
 
 **Where the epic's record commit goes.** If this execution changed anything under
-`tracker/items/EP-###/` while an item branch is checked out, that commit belongs on the trunk,
-not on the branch: check out `{{trunk}}`, commit the epic's files, and return. An epic is not a
-branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
-`check-commit-refs` for a work item that did nothing wrong (`spec/workspace-layout.md` §5).
+`tracker/items/EP-###/` while an item branch is checked out, that commit belongs on the trunk:
+check out `{{trunk}}`, commit the epic's files, return. An epic-level commit left on `wi/WI-000n`
+fails `check-commit-refs` for a work item that did nothing wrong (`workspace-layout.md` §5).
 
 ---
 
@@ -421,10 +423,11 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
 2. Is every Definition of Done criterion recorded with its own result, or did you write one
    verdict?
 3. Did you compare the verification's commit against the branch head, or assume it was current?
-4. For each finding you accepted: is it recorded somewhere that survives this item?
-5. Could you, using only the tracker, docs and `git log`, answer what was built and why, which
-   skill decided what, what questions arose and how they were resolved, and what verification
-   found? If not, the record fails — send it back rather than closing over it.
+4. For each finding you accepted: is it recorded somewhere **the orchestrator reads** — an open
+   question, or an item on the board? `## Notes` survives the item and dispatches nobody.
+5. Could you, from the tracker, docs and `git log` alone, answer what was built and why, which
+   skill decided what, what questions arose and how they resolved, and what verification found?
+   If not, the record fails — send it back rather than closing over it.
 6. Did you run `scripts/engagement-state` on the epic, or decide from the board how finished it
    looked?
 7. If you ended an engagement: does the epic's `outcome` say what actually happened, and does the
@@ -439,19 +442,17 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
 
 **The three ways this skill goes wrong:**
 
-- **Treating "nothing left to run" as "nothing left to do".** Every child has stopped and closing
-  the loop feels like tidying. It is a decision, and it belongs to the person who asked for the
-  work: a run ended exactly here, and the stakeholder went looking for the question afterwards
-  and wrote down that it never came (F-045). Run `scripts/engagement-state` and act on it.
-- **Approving because everything upstream says it is fine.** The plan was thorough, verification
-  passed, the gates are green — so the review becomes a formality. But every upstream stage
-  checked its *own* claim; you are the only one checking that the claims are about the same
-  thing. The defence is step 4: read the diff and map every hunk to a criterion. If you cannot
-  bring yourself to do that, you are not reviewing, you are countersigning.
-- **Closing an item with an unrecorded gap.** It seems minor and closing feels reasonable. It
-  probably is — but once the item is `done` nobody reads its verification report again. Accepting
-  a gap is fine; accepting it without writing it into `## Notes` or a follow-up item is how a
-  paper trail quietly stops being true.
+- **Treating "nothing left to run" as "nothing left to do".** Closing the loop feels like
+  tidying; it is a decision, and it belongs to the person who asked for the work. A run ended
+  exactly here and the stakeholder wrote down that the question never came (F-045). Run
+  `scripts/engagement-state` and act on it.
+- **Approving because everything upstream says it is fine.** Every upstream stage checked its
+  *own* claim; you are the only one checking that the claims are about the same thing. The
+  defence is step 4: read the diff and map every hunk to a criterion. If you cannot bring
+  yourself to do that, you are countersigning rather than reviewing.
+- **Closing an item with an unrecorded gap.** Once the item is `done` nobody reads its
+  verification report again. Accepting a gap is fine; writing it somewhere the orchestrator never
+  looks is how an obligation dies at close while the record says it was carried (F-090).
 
 ---
 
@@ -460,14 +461,13 @@ branch-scoped unit of work, and an epic-level commit left on `wi/WI-000n` fails
 - **The change contradicts an ADR:** file a question to the architect with both readings, set
   `awaiting-answer` with `resume-to: in-review`, stop. You do not supersede decisions.
 - **Verification is stale:** back to `verifying`. Do not re-verify it yourself — the roles are
-  separate so that the check and the judgement are not made by the same worker.
+  separate so the check and the judgement are not made by the same worker.
 - **Tests fail after merge:** back to `in-progress` with the failure quoted. Do not repair the
   merge yourself.
 - **A defect belongs to another item:** file a `bug` item at `ready` with reproduction steps and
   `found-in` (or `arose-from` naming the item you were reviewing), and continue reviewing this
-  one. You have the authority to create it: you are the skill that observed the need for it
-  (`spec/ids-and-statuses.md` §5). This used to be a contradiction — your contract told you to
-  file it and the pipeline let only `verify` create a bug — and a real execution hit it and had
+  one. You have the authority: you are the skill that observed the need for it
+  (`ids-and-statuses.md` §5). It used to be a contradiction, and a real execution hit it with
   nowhere to put a defect it had found (F-029).
 - **The merge cannot be completed for reasons outside the change** (a protected trunk, a missing
   permission): set the item to `blocked` with what was tried, and leave the branch intact.

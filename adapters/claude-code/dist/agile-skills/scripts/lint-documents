@@ -4,6 +4,7 @@
 Usage:
   scripts/lint-documents --rule <name> [--root .] [--item <ID>] [--document <path>]
                          [--changed-since <git-ref>] [--uncommitted] [--context <item-type>]
+                         [--pipeline path/to/pipeline.yaml]
 
 One rule per invocation, and **the rule's name is the gate's name** in the contract that runs it.
 That is deliberate: F-059 is a procedure naming a gate its contract does not declare, and a
@@ -45,13 +46,27 @@ command whose argument is the gate's own name cannot drift from it silently.
         execution touched is byte-identical to the one at the base. Creating one counts as
         writing one. The same test `lint-answers --changed-since` performs for sourced claims.
 
+  --rule accepted-gaps-are-dispatchable          (review-close)      F-090
+        Every row of `review.md`'s `## Accepted gaps` carries an owner and a disposition, and a
+        gap whose owner is a skill is disposed to something the ORCHESTRATOR CAN SEE — an open
+        question, or an item on the board. Which of the two is legal is read off `pipeline.yaml`
+        rather than decided here: a question dispatches the owner of the status a question
+        suspends an item to, and nothing else, and an item dispatches the owner of its status. A
+        gap owned by a skill neither route reaches is inert wherever it is written. The rule
+        applies while the item is **not yet `done`** — the obligation is discharged at the moment
+        the gap is accepted, and a closed item's review is history.
+
   --rule propagated-claims-carry-their-obligation (answer-questions) obligation 3
         A **quantified** sentence this execution wrote into a document has an enumeration entry
         in the audit row — the question's `## Consequences` — carrying `Set:`, `Enumerated by:`,
-        `Members:` and `Verdict:`. Opening what the sentence cites does not discharge it (F-095).
-        The **citation** half of that gate's obligation is `lint-claims` rule 2's and
-        `validate-workspace`'s; it is not re-decided here, because one rule in two places is two
-        rules that will disagree.
+        `Members:`, `Verdict:` and `Falsifier:`. Opening what the sentence cites does not
+        discharge it (F-095), and an example that could not have failed does not either: the
+        `Falsifier:` label is where the row says why the thing opened could have produced a
+        counterexample (F-088). An entry whose `Members:` names nobody passes **with a mark**,
+        never silently — `scripts/lib/scope.py`'s fourth state, reached through the example
+        rather than through the scope. The **citation** half of that gate's obligation is
+        `lint-claims` rule 2's and `validate-workspace`'s; it is not re-decided here, because one
+        rule in two places is two rules that will disagree.
 
 **The line this gate does not cross.** ADR-0010's obligation 10 — whether a sentence that *is* an
 engagement-state claim was written **into** a `## Engagement state` section rather than left loose
@@ -76,6 +91,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
 import documents as doc  # noqa: E402
+import frontmatter  # noqa: E402
+import miniyaml  # noqa: E402
 from documents import (ADR_ID_RE, ADR_VERDICTS, DISPOSITIONS, ENGAGEMENT_SECTION,  # noqa: E402
                        KINDS, OPEN_DISPOSITION_RE, QUESTION_DISPOSITION_RE)
 from record import sections as split_sections  # noqa: E402
@@ -86,6 +103,7 @@ from workspace import (BINDING_SECTION, DELIVERABLE_SECTION,  # noqa: E402
                        INVALIDATION_SECTION, id_kind, plan_documents, resolve_root)
 
 RULES = (
+    "accepted-gaps-are-dispatchable",
     "documents-at-risk-are-enumerated",
     "document-writes-are-declared",
     "invalidation-set-is-disposed",
@@ -96,7 +114,8 @@ RULES = (
     "propagated-claims-carry-their-obligation",
 )
 
-NEEDS_ITEM = ("documents-at-risk-are-enumerated", "document-writes-are-declared",
+NEEDS_ITEM = ("accepted-gaps-are-dispatchable",
+              "documents-at-risk-are-enumerated", "document-writes-are-declared",
               "invalidation-set-is-disposed", "adr-conformance-is-decided",
               "engagement-state-is-restated", "propagated-claims-carry-their-obligation")
 NEEDS_WINDOW = ("document-writes-are-declared", "engagement-state-is-left-to-the-ending",
@@ -112,6 +131,29 @@ QUOTED_RE = re.compile(r"[\"“‘']([^\"”’']{6,})[\"”’']|`([^`]{6,})`")
 CONSEQUENCES = "## Consequences"
 RESTATED_SECTION = "## Sections restated at the ending"
 
+# F-090. `review.md`'s accepted-gap table, and the closed alphabet its third column takes. The
+# shape is the invalidation set's, deliberately: the same file already carries one table whose
+# rows must every one of them be disposed, and a second convention for the same job is two
+# conventions that will drift.
+GAPS_SECTION = "## Accepted gaps"
+GAP_NONE_RE = re.compile(r"^(none|no gaps?|nothing)\b", re.IGNORECASE)
+GAP_QUESTION_RE = re.compile(
+    r"^question-filed:\s*(EP-\d{3}|WI-\d{4}|BUG-\d{4})/Q-\d{3}$", re.IGNORECASE)
+GAP_ITEM_RE = re.compile(r"^item-filed:\s*(EP-\d{3}|WI-\d{4}|BUG-\d{4})$", re.IGNORECASE)
+GAP_NO_OWNER = "no-owner"
+ITEM_ID_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})$")
+
+
+def find_pipeline(explicit=None):
+    """Resolve pipeline.yaml, exactly as `validate-workspace` does — one search, one answer."""
+    if explicit:
+        return explicit
+    for candidate in (os.path.join(HERE, "pipeline.yaml"),
+                      os.path.join(HERE, "..", "methodology", "pipeline.yaml")):
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return None
+
 
 def legal_disposition(value: str) -> bool:
     text = value.strip()
@@ -120,7 +162,7 @@ def legal_disposition(value: str) -> bool:
 
 class DocumentLinter:
     def __init__(self, root, rule, item="", document="", changed_since=None,
-                 uncommitted=False, context="") -> None:
+                 uncommitted=False, context="", pipeline_path=None) -> None:
         self.root = os.path.abspath(root)
         self.rule = rule
         self.report = Report("lint-documents", self.root)
@@ -131,6 +173,8 @@ class DocumentLinter:
         self.context = (context or "").strip()
         self._plan = None
         self._window = None
+        self._pipeline = None
+        self.pipeline_path = pipeline_path
 
     # ---- shared reading ---------------------------------------------------------------
 
@@ -232,6 +276,167 @@ class DocumentLinter:
         return old.strip() != new.strip()
 
     # ---- the eight rules ---------------------------------------------------------------
+
+    # ---- F-090: an accepted gap the orchestrator cannot see -----------------------------
+
+    def pipeline(self):
+        """`pipeline.yaml`, or `None`. The dispatch rules are read, never restated."""
+        if self._pipeline is None:
+            path = self.pipeline_path
+            if not path or not os.path.isfile(path):
+                self._pipeline = {}
+            else:
+                try:
+                    self._pipeline = miniyaml.load_file(path) or {}
+                except Exception:
+                    self._pipeline = {}
+        return self._pipeline
+
+    def dispatch_routes(self):
+        """(skills a question dispatches, skills an item on the board dispatches).
+
+        Both are **derived** from `pipeline.yaml` rather than named here, because the whole of
+        F-090 is that a remedy was recorded for a skill nothing dispatches, and a second copy of
+        the dispatch rules in this file would be the same defect with an extra place to drift.
+
+          * A question suspends its item to the status the `any-suspendable -> awaiting-answer`
+            row names, and the orchestrator dispatches that status's `owner`. That is the only
+            skill a filed question can put to work.
+          * An item on the board is dispatched at step 5 by the `owner` of whatever status it is
+            at, so every non-null status owner is reachable that way.
+
+        A skill in neither set — `intake`, `next`, `retro` here — is reachable only by an event
+        `review-close` cannot cause, and a gap assigned to one is inert wherever it is written.
+        """
+        pipeline = self.pipeline()
+        statuses = {entry.get("name"): entry for entry in (pipeline.get("statuses") or [])
+                    if isinstance(entry, dict)}
+        suspended = {row.get("to") for row in (pipeline.get("transitions") or [])
+                     if isinstance(row, dict) and row.get("from") == "any-suspendable"
+                     and row.get("to") in statuses}
+        by_question = {statuses[name].get("owner") for name in suspended
+                       if statuses[name].get("owner")}
+        by_board = {entry.get("owner") for entry in statuses.values() if entry.get("owner")}
+        return by_question, by_board
+
+    def rule_accepted_gaps_are_dispatchable(self) -> None:
+        path = os.path.join(self.root, "tracker", "items", self.item, "artifacts", "review.md")
+        status = self.item_status()
+        if status == "done":
+            self.report.note(
+                f"NOT APPLICABLE — {self.item} is already done. An accepted gap is made "
+                f"dispatchable at the moment it is accepted, which is the execution that closes "
+                f"the item; a closed item's review is history and is not re-gated (F-090)")
+            return
+        rows = doc.artifact_rows(self.root, self.item, "review.md", GAPS_SECTION)
+        if rows is None:
+            self.report.error(
+                path, 0, "document.gaps.section.missing",
+                f"{self.item}'s review.md has no `{GAPS_SECTION}` section",
+                hint="one row per gap you accepted — the gap, its owner, and the disposition "
+                     "that puts it where the orchestrator will find it. No gaps is one row "
+                     "saying `none`; an absent section and an empty one are different answers")
+            return
+        by_question, by_board = self.dispatch_routes()
+        skills = set(self.pipeline().get("skills") or [])
+        entries = [(cells, line) for cells, line in rows
+                   if not (cells and GAP_NONE_RE.match((cells[0] or "").strip().strip("`*")))]
+        if not rows:
+            self.report.error(
+                path, 0, "document.gaps.empty",
+                f"{GAPS_SECTION} holds no rows and does not say `none`",
+                hint="a section that answers nothing is not an answer")
+        checked = 0
+        for cells, line in entries:
+            if len(cells) < 3:
+                self.report.error(
+                    path, line, "document.gaps.row.malformed",
+                    f"an accepted-gap row has {len(cells)} column(s); it needs gap, owner and "
+                    f"disposition",
+                    hint="| gap | owner | disposition |")
+                continue
+            checked += 1
+            owner = (cells[1] or "").strip().strip("`*").lower()
+            disposition = (cells[2] or "").strip().strip("`*")
+            owner_is_skill = owner in skills
+            if not (owner_is_skill or owner in ("none", "human") or ITEM_ID_RE.match(owner.upper())):
+                self.report.error(
+                    path, line, "document.gaps.owner.unknown",
+                    f"owner {owner or '(blank)'!r} is neither a skill, an item, `human` nor "
+                    f"`none`",
+                    hint="say who would do the remaining work. `none` is a real answer and "
+                         "means the gap is a limitation recorded, not work deferred")
+                continue
+            question = GAP_QUESTION_RE.match(disposition)
+            item_filed = GAP_ITEM_RE.match(disposition)
+            if disposition.lower() == GAP_NO_OWNER:
+                if owner_is_skill or owner == "human":
+                    self.report.error(
+                        path, line, "document.gaps.inert",
+                        f"the gap names {owner!r} as its owner and is disposed {GAP_NO_OWNER}",
+                        hint="an owner with no disposition is a to-do only a reader can act on. "
+                             "File it as a question or as an item, or say the owner is `none` "
+                             "and mean it (F-090)")
+                continue
+            if not (question or item_filed):
+                self.report.error(
+                    path, line, "document.gaps.disposition.unknown",
+                    f"disposition {disposition or '(blank)'!r} is not question-filed:"
+                    f"<ITEM>/Q-###, item-filed:<ID> or {GAP_NO_OWNER}",
+                    hint="the orchestrator dispatches on open questions and on item status, and "
+                         "on nothing else; a gap recorded anywhere else is inert "
+                         "(methodology/pipeline.yaml, orchestrator steps 3-5)")
+                continue
+            if question:
+                owning_item = question.group(1).upper()
+                target = os.path.join(self.root, "tracker", "items", owning_item, "questions",
+                                      disposition.split("/", 1)[1].strip() + ".md")
+                if not os.path.isfile(target):
+                    self.report.error(
+                        path, line, "document.gaps.unresolved",
+                        f"{disposition} names a question file that does not exist",
+                        hint="file it before you close, not after — the close is the last "
+                             "moment the engagement can still act on it")
+                elif owner_is_skill and owner not in by_question:
+                    self.report.error(
+                        path, line, "document.gaps.undispatchable",
+                        f"a question dispatches {', '.join(sorted(by_question)) or 'nothing'}, "
+                        f"and this gap's owner is {owner!r}",
+                        hint="the orchestrator reaches every other skill through an item's "
+                             "status; file the remaining work as an item and dispose the gap "
+                             "item-filed:<ID> (methodology/pipeline.yaml, orchestrator step 5)")
+            else:
+                owning_item = item_filed.group(1).upper()
+                if not os.path.isdir(os.path.join(self.root, "tracker", "items", owning_item)):
+                    self.report.error(
+                        path, line, "document.gaps.unresolved",
+                        f"{disposition} names an item that does not exist",
+                        hint="create it before you close; the board is what the orchestrator "
+                             "reads")
+                elif owner_is_skill and owner not in by_board:
+                    self.report.error(
+                        path, line, "document.gaps.undispatchable",
+                        f"no status is owned by {owner!r}, so putting this gap on the board "
+                        f"does not put {owner!r} to work",
+                        hint="an item is dispatched to the owner of the status it is at; a "
+                             "skill that owns no status is reached by an event review-close "
+                             "cannot cause (methodology/pipeline.yaml)")
+        self.report.note(
+            f"{checked} accepted gap(s) in {self.item}'s review, at status {status or '?'}. "
+            f"A question dispatches {', '.join(sorted(by_question)) or 'nothing'}; the board "
+            f"dispatches {', '.join(sorted(by_board)) or 'nothing'}. Whether the question or "
+            f"item named actually discharges the gap is a read this gate does not make")
+
+    def item_status(self):
+        path = os.path.join(self.root, "tracker", "items", self.item, "item.md")
+        if not os.path.isfile(path):
+            return None
+        try:
+            fields, _, _ = frontmatter.split(read_text(path)[0], name="item.md")
+        except Exception:
+            return None
+        value = fields.get("status")
+        return value if isinstance(value, str) else None
 
     def rule_documents_at_risk_are_enumerated(self) -> None:
         self.report_plan_errors()
@@ -515,6 +720,8 @@ class DocumentLinter:
                                                   or relative.endswith(entry.document))]
                 complete = [entry for entry in entries if entry.complete]
                 if complete:
+                    for entry in complete:
+                        self.mark_vacuous_enumeration(entry)
                     continue
                 flagged += 1
                 if entries:
@@ -542,7 +749,30 @@ class DocumentLinter:
             f"{examined} quantified sentence(s) newly written into docs/, against "
             f"{len(found)} enumeration entr(y/ies) in {self.item}'s questions; {flagged} "
             f"unanswered. A universal phrased without one of the quantifier words is caught by "
-            f"nothing here (ADR-0010 obligation 5)")
+            f"nothing here (ADR-0010 obligation 5), and whether the Falsifier: named could "
+            f"really have appeared is a read this gate does not make (F-088)")
+
+    def mark_vacuous_enumeration(self, entry) -> None:
+        """An enumeration whose `Members:` names nobody passed over nothing (F-088).
+
+        `scripts/lib/scope.py`'s fourth state, reached through the example instead of through the
+        scope: the audit did not come up without a counterexample, it was never able to come up
+        with one. It is not a failure — a family that is genuinely empty makes the sentence
+        vacuously true, and the repair for that is to weaken the sentence, which is a read. So
+        this exits 0 and **says so in its own words**, on the same precedent that gave a
+        substituted criterion its warning: a pass that is not an ordinary pass is never spelled
+        the same as one.
+        """
+        if not entry.vacuous:
+            return
+        self.report.warn(
+            entry.path, entry.line, "document.enumeration.vacuous",
+            f"the enumeration for {entry.document or 'this claim'} names no member, so no "
+            f"counterexample could have turned up in it",
+            hint="this is a legal pass and it is marked rather than silent — an audit that "
+                 "could not have failed is not an audit that held (F-088). Either name the "
+                 "members, or weaken the sentence until it says what was actually checked "
+                 "(spec/doc-header.md §4a)")
 
     def audit_enumerations(self):
         """Every enumeration entry in the `## Consequences` sections of this item's questions."""
@@ -618,7 +848,8 @@ def main(argv: list) -> int:
     root = resolve_root(options.get("root"), tool="lint-documents")
     return DocumentLinter(root, rule, item=item, document=options.get("document", ""),
                           changed_since=options.get("changed-since"),
-                          uncommitted="uncommitted" in flags, context=context).run()
+                          uncommitted="uncommitted" in flags, context=context,
+                          pipeline_path=find_pipeline(options.get("pipeline"))).run()
 
 
 if __name__ == "__main__":

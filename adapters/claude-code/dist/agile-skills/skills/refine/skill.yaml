@@ -1,5 +1,5 @@
 name: refine
-version: 0.4.0
+version: 0.5.0
 persona: product-analyst
 purpose: Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange.
 
@@ -61,7 +61,7 @@ quality_gates:
     on_failure: stay
   - name: definition-of-ready
     description: Every DoR criterion for this item type is evaluated individually and recorded.
-    manual_check: Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate.
+    manual_check: Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. R11 is the one most easily passed by inattention - a criterion that counts something this item may move is a criterion somebody will amend after the code exists, so name the artefacts, and where a count is genuinely wanted measure it first and carry the measurement as a command-outcome citation (F-089).
     enforcement: hard
     on_failure: stay
   - name: criteria-are-decidable

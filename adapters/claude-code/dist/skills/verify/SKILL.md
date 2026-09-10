@@ -4,7 +4,7 @@ description: "Independently decide whether an item meets its acceptance criteria
 disallowed-tools: AskUserQuestion
 metadata:
   methodology-skill: verify
-  methodology-version: 0.5.0
+  methodology-version: 0.5.1
   persona: qa-engineer
   human-interaction: via-questions
 ---
@@ -176,8 +176,12 @@ You cannot ask the human. Ambiguity in a criterion becomes a question to the arc
 
    Where a quantified claim was repaired — *every*, *all*, *no*, *the only* — the audit row owes
    the enumeration, not the citation: the set, how it was enumerated with the command's output,
-   the members, and a verdict per member. An audit that opened only what the sentence cites has
-   not checked it (F-095).
+   the members, a verdict per member, and the **falsifier**. An audit that opened only what the
+   sentence cites has not checked it (F-095), and neither has one whose example could not have
+   failed: say what a counterexample would look like and why what you opened could have produced
+   one, and check an absolute about a rule with a boundary **at** the boundary. Choosing the
+   boundary over the happy path is what caught the second false sentence in one engagement, after
+   the first had passed its own audit from the case it was written from (F-088).
 
    **You write no document, ever.** Not a typo, not a stale sentence, not the one word that would
    make an entry true. You judge a change against criteria you did not write; an execution that

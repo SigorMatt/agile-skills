@@ -366,6 +366,52 @@ An **audit row** is one row per claim checked, in the artifact where that audit 
 `artifacts/verify-report.md` where `verify` audits. It names the sentence and carries the
 evidence the sentence's kind owes.
 
+### The example has to be able to fail
+
+An audit row is passed by an example the same way a gate is passed by an empty window, and it is
+the same defect wearing different clothes. `scripts/lib/scope.py` calls that state
+*out-of-scope-by-construction*: the comparison did not come up empty, it was never able to come
+up otherwise. A claim audit reaches it through the example rather than through the scope — the
+auditor picks what to open, and the natural thing to open is the case the sentence was written
+from, which is the one case that cannot contradict it.
+
+It has happened twice on one sentence. *"No column's width depends on its marker"* was audited
+**holds**, honestly, by laying the same table out under all four markers — a table whose cells
+were every one of them wider than any marker, so the rule the sentence denies never applied. The
+unit test named for the claim had the same blind spot. The sentence was false, and the example
+that shows it is one empty column. Its replacement then passed the item's own two reproduce
+commands and was still false, and what caught it was a verifier choosing the boundary instead of
+the happy path (F-088).
+
+So the row carries a fifth thing, and it is the one that makes the other four mean something:
+
+- **`Falsifier:`** — what a counterexample would look like, and **why the thing opened could have
+  produced one**. Not "I checked and it holds": *the marker only governs a column whose widest
+  cell is narrower than the marker itself, and column 3 of the fixture is one character wide, so
+  a dependency would have shown here.*
+- An absolute about a rule with a **threshold, a boundary or an exception** is checked **at** the
+  boundary. The happy path is evidence for the sentence; only the boundary can be evidence
+  against it.
+- Where the falsifier cannot be produced at all — no member of the family can exhibit it, the
+  boundary case does not exist — that is not a pass. It is the same answer §4a already gives for
+  a family nobody can enumerate: **weaken the sentence** until it says what was actually checked.
+
+`scripts/lint-documents` decides the **shape**: the label is present and says something. Whether
+the example named could really have failed is a read, and it is the read this row exists to make
+attributable. One thing it *can* decide is the degenerate case — an enumeration whose `Members:`
+names nobody. That audit could not have found a counterexample, and it **passes with a mark**
+rather than silently, on `scope.py`'s precedent exactly: a pass that is not an ordinary pass is
+never spelled the same as one.
+
+**Where that shape check runs, and where it does not.** It runs where the labelled form is
+already gated — `propagated-claims-carry-their-obligation`, over the enumeration entries in an
+answering question's `## Consequences`. It does **not** run over `review.md`'s
+`## What I examined` or `verify-report.md`, which are the audit rows D12 and DE6 name: nothing
+mechanical reads those, before this rule or after it. There the falsifier is an obligation the
+skill discharges and records, exactly as the rest of D12's read is, and `dor-dod.md` marks it
+`[skill]` for that reason. Under-claiming is the correct failure mode; a gate that overstates
+its reach is worse than one that does not exist.
+
 ### Quantified claims carry their enumeration
 
 A claim over a family — *every adapter …*, *all three tiers …*, *no caller …*, *the only path …*
@@ -376,8 +422,9 @@ case; the falsifier is a member the sentence does not name.
 - The audit row for a quantified claim records (a) **the set** the quantifier ranges over,
   (b) **how the set was enumerated** — the command, glob or grep, with its output, so the
   enumeration is repeatable and its completeness is inspectable, (c) **the members**, by name,
-  and (d) **the verdict per member**, or an explicit statement that the members were
-  spot-checked and which ones.
+  (d) **the verdict per member**, or an explicit statement that the members were
+  spot-checked and which ones, and (e) **the falsifier** — what a member that made the sentence
+  false would look like, and why the members examined could have exhibited one.
 - **Opening what the claim cites does not discharge a quantified claim.** "I opened the fixture"
   and "I enumerated the members" are different entries, and the row has room for both. The
   failure this exists for: the same universal was audited **true** three times, honestly, from
@@ -386,7 +433,7 @@ case; the falsifier is a member the sentence does not name.
   until it is a cited fact — never to record the enumeration as done. A universal nobody can
   enumerate is a universal nobody can check.
 
-The four parts are written as labels, nested under the audit row's own entry, so that the entry
+The five parts are written as labels, nested under the audit row's own entry, so that the entry
 can be found by the reader who needs it and by the script that checks it is there:
 
 ```markdown
@@ -396,13 +443,16 @@ can be found by the reader who needs it and by the script that checks it is ther
     - **Enumerated by:** `ls -d adapters/*/` → `one/`, `two/`
     - **Members:** `one`, `two`
     - **Verdict:** both call `render_all()`; true of each
+    - **Falsifier:** an adapter with its own `open(...).write(...)`; `two` was written before
+      `render_all()` existed and is where one would be, so it was read line by line
 ```
 
 `scripts/lint-documents` decides the **shape**: a sentence carrying a quantifier over a named set
-has an enumeration entry, with those four labels, in its audit row. Whether the enumeration is
-**complete** is a read, and the row is what makes that read attributable rather than a verdict.
-Without the labels nothing mechanical can tell *"I opened the fixture"* from *"I enumerated the
-members"*, and telling those two apart is the whole of the failure this rule exists for.
+has an enumeration entry, with those five labels, in its audit row. Whether the enumeration is
+**complete**, and whether the falsifier named could really have appeared, are reads, and the row
+is what makes those reads attributable rather than a verdict. Without the labels nothing
+mechanical can tell *"I opened the fixture"* from *"I enumerated the members"*, and telling those
+two apart is the whole of the failure this rule exists for.
 
 ### Engagement-state sentences live in a delimited section
 
@@ -503,3 +553,4 @@ wholesale and so excludes the delivered thing on an item whose deliverable is a 
 | 6 | 2026-09-10 | §4a: the four parts of a quantified claim's enumeration are written as labelled entries — `Enumeration:` carrying `Set:`, `Enumerated by:`, `Members:` and `Verdict:` — because a shape check needs the parts to be findable, and without a label nothing mechanical distinguishes opening what a claim cites from enumerating what it quantifies over. `scripts/lint-documents` decides that shape and the eight obligations of ADR-0010's enforcement table that had no implementation. |
 | 7 | 2026-09-10 | §3: `journal-and-history.md` §0 reaches the change log — the top row and the header must agree, `by` and `for` must resolve, `when` must be a time a clock could have produced, and the row is matched against the journal of the item it names while that item is not yet `done`. The `[auto]`/`[skill]` table says plainly which half of a version row is decidable: the version number and the description of the change are not (F-084). |
 | 8 | 2026-09-10 | §4a: a criterion's number is a position, not a name. An `ITEM ACn` citation may quote the criterion's own words, and an anchored citation is checked against them; an unanchored one is refused while the cited item is at `draft` or `ready`, the statuses at which the list may still be rewritten. What it does not catch, and why an anchor is not required everywhere, is stated with it. F-077's disease, not F-077's cure — the bound it added was already in place here and is the check being fooled (F-094). |
+| 9 | 2026-09-10 | §4a: an audit row's example must be **able to fail**, and the row says why it could — a fifth label, `Falsifier:`, on the enumeration entry, plus the rule that an absolute about a rule with a boundary is checked **at** the boundary. This is `scope.py`'s out-of-scope-by-construction reached through the example rather than through the scope: the same sentence was audited *holds* twice from cases in which the rule it denies never applied (F-088). An enumeration whose `Members:` names nobody passes **with a mark**, on the same precedent. |

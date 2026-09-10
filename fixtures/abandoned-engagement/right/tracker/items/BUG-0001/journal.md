@@ -2,7 +2,7 @@
 
 Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
 
-## 2026-09-06T12:10:00Z — verify v0.5.0 — qa-engineer
+## 2026-09-06T12:10:00Z — verify v0.5.1 — qa-engineer
 
 - **Item:** BUG-0001
 - **Trigger:** the orchestrator dispatched verify on BUG-0001

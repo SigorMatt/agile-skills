@@ -136,6 +136,15 @@ As a <role>, I want <capability>, so that <outcome>.
     `verify` writes `- [~]`, and no other skill does — it is the skill that decides a criterion
     against evidence, and the mark is one of its verdicts (`verify`'s step 3). That is a
     `[skill]` rule: nothing here decides *which* skill edited a line.
+  - A criterion **names** the artefacts it constrains; it does not count them. *"The suite runs
+    unchanged"*, *"exactly one of its 65 tests changes"* and *"exactly `2 + max`"* are the natural
+    way to write a regression guard and all three are false the moment the item touches what they
+    count — each of those three had to be amended after the code existed (F-089). Name the test,
+    the file, the case. Where a count is genuinely wanted, **measure it before writing the
+    criterion** and carry the measurement on the criterion as a command-outcome citation,
+    `[src: run: python3 -m unittest discover → exit 0, 65 tests]`, so the number has a provenance
+    a reader can repeat. `dor-dod.md` R11 is the checklist entry, and it is `[skill]`: nothing
+    here can tell a count of project artefacts from a count in the tool's own output.
   - A criterion's **number is not its name**. `AC7` is a position in a list, and the list may
     legally be renumbered while the item is being refined — so a citation elsewhere that says
     `AC7` goes on resolving against whatever moved into that position. `doc-header.md` §4a says
@@ -256,3 +265,4 @@ trailing newline still counts — see `questions` on this item and `artifacts/re
 | 1 | 2026-08-27 | §1: `arose-from` provenance for items a skill other than `intake` created (F-029); `outcome: delivered-partial` for an epic that ended at E2 (F-045). Derived in ADR-0006. |
 | 2 | 2026-09-10 | §1: `merge-commit` — the sanctioned home for a sha the closing entry could not name, written by `scripts/record-merge` after the merge and re-checked against git on every validation (F-081, F-035). |
 | 3 | 2026-09-10 | §2: a criterion's number is a position, not a name — the anchored citation form and its limits are in `doc-header.md` §4a (F-094). The third criterion state `- [~]` — settled by a **substitution**, not by the observation the criterion names. It is a legal close that says so in its own words, and it owes the stakeholder a question on this item while the engagement can still act on the answer (F-096). |
+| 4 | 2026-09-10 | §2: a criterion **names** the artefacts it constrains rather than counting them, and a wanted count is measured first and carried as a command-outcome citation (F-089, `dor-dod.md` R11). |

@@ -1,4 +1,4 @@
-# Contract — refine v0.4.0
+# Contract — refine v0.5.0
 
 Rendered from `methodology/skills/refine/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -40,7 +40,7 @@ The **subject** column is the gate's own answer to *what does this gate look at 
 | gate | subject | enforcement | how it is checked | on failure |
 |------|---------|-------------|-------------------|------------|
 | `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `definition-of-ready` | every type this skill is dispatched on | hard | Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. | stay |
+| `definition-of-ready` | every type this skill is dispatched on | hard | Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. R11 is the one most easily passed by inattention - a criterion that counts something this item may move is a criterion somebody will amend after the code exists, so name the artefacts, and where a count is genuinely wanted measure it first and carry the measurement as a command-outcome citation (F-089). | stay |
 | `criteria-are-decidable` | every type this skill is dispatched on | hard | For each AC, name the command to run or the artifact to inspect and the verdict that would follow. Any AC for which you cannot do this is not ready. | stay |
 | `cross-answer-consistency` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
 | `qa-recorded-verbatim` | every type this skill is dispatched on | hard | refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement. | stay |

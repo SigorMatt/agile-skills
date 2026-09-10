@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question - or deferred it - and the reply must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.6.1
+  methodology-version: 0.6.2
   persona: architect
   human-interaction: direct
 ---
@@ -225,7 +225,7 @@ information.
    **checked** rather than asserted — a later reader can repeat the look without re-deriving what
    the sentence is about.
 
-   A quantified claim's four parts are written as labels **nested under the file's own entry**,
+   A quantified claim's five parts are written as labels **nested under the file's own entry**,
    so that the entry can be found by the reader who needs it and by the gate that checks it is
    there. The `propagated-claims-carry-their-obligation` gate looks for exactly this shape:
 
@@ -238,12 +238,23 @@ information.
        - **Enumerated by:** `ls -d adapters/*/` → `one/`, `two/`
        - **Members:** `one`, `two`
        - **Verdict:** both call `render_all()`; true of each
+       - **Falsifier:** an adapter with its own `open(...).write(...)`; `two` was written
+         before `render_all()` existed and is where one would be, so it was read line by line
    ```
 
    The labels are the mechanical half and they are all it is: a script can see that you recorded
-   a set, a method, the members and a verdict per member, and it cannot see whether the
-   enumeration was **complete**. That half is a read, and the labels are what make it a read
-   somebody can repeat rather than a verdict somebody has to trust.
+   a set, a method, the members, a verdict per member and a falsifier, and it cannot see whether
+   the enumeration was **complete** or whether the falsifier could really have appeared. Those
+   halves are reads, and the labels are what make them reads somebody can repeat rather than
+   verdicts somebody has to trust.
+
+   **`Falsifier:` is the one that stops an audit passing on an example that could not fail.** The
+   same sentence was audited *holds* twice from cases in which the rule it denies never applied
+   (F-088). Name what a counterexample would look like, and why the members you examined could
+   have exhibited one; where the sentence is an absolute about a rule with a boundary, check it
+   **at** the boundary. An enumeration whose `Members:` names nobody is legal and the gate
+   **marks** it — no counterexample could have turned up there, and that is not a pass in the
+   ordinary sense.
 
    **Opening what a quantified claim cites does not discharge it.** The citation names the
    general case and the falsifier is the member the sentence does not name; the same universal was

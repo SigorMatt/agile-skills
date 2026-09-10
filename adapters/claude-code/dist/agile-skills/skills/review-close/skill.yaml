@@ -1,5 +1,5 @@
 name: review-close
-version: 0.11.0
+version: 0.12.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -98,6 +98,12 @@ quality_gates:
     expect: exit-zero
     enforcement: hard
     on_failure: stay
+  - name: accepted-gaps-are-dispatchable
+    description: Every gap this review accepted carries an owner and a disposition that puts it where the orchestrator will find it - an open question, or an item on the board. Which of the two is legal for a given owner is read off pipeline.yaml, not restated. Whether the question or item named actually discharges the gap is a read this gate does not make.
+    command: "scripts/lint-documents --rule accepted-gaps-are-dispatchable --item {{item.id}}"
+    expect: exit-zero
+    enforcement: hard
+    on_failure: stay
   - name: verification-postdates-the-code
     description: The verification ran against the final state of the branch, not an earlier one.
     command: "scripts/check-verify-freshness {{item.id}} {{item.branch}}"
@@ -165,6 +171,7 @@ exit_criteria:
   - The plan's binding-adrs list is complete - the change engages no ADR the list does not name, and each listed ADR already carries verify's conformance verdict (spec/dor-dod.md D13).
   - At an ending, every Engagement state section in the workspace was restated after the ending was determined - which at E1 to E3 is when the sign-off answer arrived and at E4 by silence is when the threshold was reached, because no answer arrives there; at an item close, none was touched (spec/doc-header.md section 4a, ADR-0010 section 4.3 as amended by ADR-0011).
   - review.md states what was examined, not only the verdict.
+  - Every accepted gap was made dispatchable in THIS execution - a question filed, or an item filed - before the closing transition. A gap that names an owner and lives only in review.md or in the item's Notes is inert, because the orchestrator dispatches on open questions and on item status and on nothing else, so nothing will ever cause that owner to run (F-090).
   - The branch is merged into the trunk, the item is done with an outcome the closing transition wrote (--outcome, never an edit of item.md first - F-083), and the merge commit is recorded by scripts/record-merge, which is where the record catches up with a sha that did not exist when the closing entry was written (F-081).
   - At an ending, the criteria that do not depend on the reply were applied BEFORE the engagement's account of itself was written - the sign-off's Question at E1 to E3, the Ending statement at E4 - and recorded criterion by criterion, so that a late finding sends the engagement back to work rather than invalidating an acceptance already given (spec/dor-dod.md section 4a).
   - If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.

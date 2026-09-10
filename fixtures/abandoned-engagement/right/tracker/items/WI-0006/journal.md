@@ -21,7 +21,7 @@ Append-only. One entry per skill execution, per spec/journal-and-history.md sect
 - **Status:** created at `draft`
 - **Result:** refined from the idea
 
-## 2026-09-06T13:30:00Z — refine v0.4.0 — product-analyst
+## 2026-09-06T13:30:00Z — refine v0.5.0 — product-analyst
 
 - **Item:** WI-0006
 - **Trigger:** the orchestrator dispatched refine on WI-0006
@@ -104,7 +104,7 @@ Append-only. One entry per skill execution, per spec/journal-and-history.md sect
 - **Status:** `in-progress` → `verifying`
 - **Result:** hard gates pass; impl-report.md written
 
-## 2026-09-06T14:45:00Z — verify v0.5.0 — qa-engineer
+## 2026-09-06T14:45:00Z — verify v0.5.1 — qa-engineer
 
 - **Item:** WI-0006
 - **Trigger:** the orchestrator dispatched verify on WI-0006

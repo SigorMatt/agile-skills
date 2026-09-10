@@ -1068,10 +1068,14 @@ def check_document_obligations_by_execution(runner: Runner) -> None:
     The must-pass half of each is the load-bearing one: an execution that edited a declared
     document, one that edited a document *around* its engagement-state section, and one whose
     enumeration is complete must all be silent, or the gate is a blocked pipeline.
+
+    F-088 rides on the third: the enumeration's fifth part, `Falsifier:`, and the one degenerate
+    case a script can decide — `Members:` naming nobody, which exits 0 **with a mark** rather
+    than silently, on `scripts/lib/scope.py`'s precedent.
     """
     import shutil
     import tempfile
-    label = "the document obligations by execution (F-087, F-093, F-095, 8 cases)"
+    label = "the document obligations by execution (F-087, F-093, F-095, F-088, 10 cases)"
     if shutil.which("git") is None:
         runner.skip(label, "git is not on PATH")
         return
@@ -1090,7 +1094,9 @@ def check_document_obligations_by_execution(runner: Runner) -> None:
                    "    - **Set:** the adapters under `adapters/`\n"
                    "    - **Enumerated by:** `ls -d adapters/*/` \u2192 `one/`, `two/`\n"
                    "    - **Members:** `one`, `two`\n"
-                   "    - **Verdict:** both call `render_all()`; true of each\n")
+                   "    - **Verdict:** both call `render_all()`; true of each\n"
+                   "    - **Falsifier:** an adapter with its own `open(...).write(...)`; `two` "
+                   "predates `render_all()` and is where one would be\n")
     quantified = ("\nEvery adapter writes through `render_all()`, and no caller reaches the "
                   "writer directly.\n")
     cases = []
@@ -1205,12 +1211,42 @@ def check_document_obligations_by_execution(runner: Runner) -> None:
                       and "document.enumeration.incomplete" in codes_from(partial.stdout
                                                                           + partial.stderr),
                       partial))
+        # ---- F-088: the example has to be able to fail ------------------------------------
+        # The four old parts, with no `Falsifier:`. This is the shape every enumeration in the
+        # repository had before this unit, so the case is the finding: an audit row that records
+        # what was opened and never says why opening it could have produced a `false`.
+        no_falsifier = "".join(line + "\n" for line in enumeration.split("\n")[:5] if line)
+        write(os.path.join(questions, "Q-001.md"), consequences + no_falsifier)
+        commit()
+        unfalsifiable = run("propagated-claims-carry-their-obligation", "--item", "WI-0001")
+        cases.append(("an enumeration that never says why the example could have failed is "
+                      "refused (F-088)",
+                      unfalsifiable.returncode != 0
+                      and "document.enumeration.incomplete" in codes_from(unfalsifiable.stdout
+                                                                          + unfalsifiable.stderr)
+                      and "falsifier" in (unfalsifiable.stdout + unfalsifiable.stderr),
+                      unfalsifiable))
+
         write(os.path.join(questions, "Q-001.md"), consequences + enumeration)
         commit()
         complete = run("propagated-claims-carry-their-obligation", "--item", "WI-0001")
         cases.append(("a complete enumeration discharges the claim",
                       complete.returncode == 0
                       and not codes_from(complete.stdout + complete.stderr), complete))
+
+        # An enumeration over nobody: `scope.py`'s fourth state reached through the example. It
+        # exits 0 — a genuinely empty family makes the sentence vacuously true — and it is MARKED,
+        # because a pass that could not have failed is not spelled like one.
+        empty = enumeration.replace("- **Members:** `one`, `two`", "- **Members:** none")
+        write(os.path.join(questions, "Q-001.md"), consequences + empty)
+        commit()
+        vacuous = run("propagated-claims-carry-their-obligation", "--item", "WI-0001")
+        output = vacuous.stdout + vacuous.stderr
+        cases.append(("an enumeration naming no member passes with a mark, never silently "
+                      "(F-088, scope.py's fourth state)",
+                      vacuous.returncode == 0
+                      and "document.enumeration.vacuous" in codes_from(output)
+                      and "WARNING" in output, vacuous))
 
     failed = [(name, result) for name, ok, result in cases if not ok]
     if failed:
@@ -1222,6 +1258,188 @@ def check_document_obligations_by_execution(runner: Runner) -> None:
         runner.emit(label, False, detail="\n".join(detail))
     else:
         runner.emit(label, True)
+
+def check_accepted_gaps(runner: Runner) -> None:
+    """F-090, both ways: a gap the orchestrator can act on, and every gap it cannot.
+
+    The finding is not that a reviewer forgot to write something down. It is that the thing they
+    wrote down was **unreachable**: `pipeline.yaml`'s orchestrator dispatches on open questions
+    (steps 3-4) and on item status (step 5), so a remedy recorded in `review.md` or in the item's
+    `## Notes` names an owner nothing will ever run. One engagement recorded exactly that, two
+    executions passed over it, and it survived only because a later verification volunteered a
+    question nobody required.
+
+    So the cases here are about **reachability**, not shape, and the two that matter most are the
+    ones where the row is well formed and still inert:
+
+      * a gap owned by `implement` disposed to a question - the question exists, resolves, and
+        dispatches `answer-questions` and nothing else;
+      * a gap owned by `retro` disposed to an item - the item exists, and no status is owned by
+        `retro`, so the board will never dispatch it.
+
+    Both sets are read off `pipeline.yaml` by the rule itself. The assertion below re-derives them
+    here from the same file, so that a change to the pipeline moves the expectation and a change
+    to the rule's *reading* of the pipeline fails.
+
+    **This step is the rule's whole coverage, and that is measured rather than assumed.** Every
+    one of the 18 `review.md` files in `examples/` and `fixtures/` sits on an item that is
+    already `done`, so the rule reports NOT APPLICABLE on all of them. Unscoped it refuses all
+    18, six of them inside the must-pass `examples/toy-project` — free-prose gap sections written
+    before the convention existed. The scope is not a convenience: the obligation is discharged
+    at acceptance, and re-asking it of a closed item invalidates banked evidence retroactively.
+    """
+    import shutil
+    import tempfile
+    label = "an accepted gap the orchestrator can act on (F-090)"
+    pipeline = os.path.join(ROOT, "methodology", "pipeline.yaml")
+    if not os.path.isfile(pipeline):
+        runner.skip(label, "methodology/pipeline.yaml does not exist")
+        return
+    sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
+    import miniyaml
+    model = miniyaml.load_file(pipeline)
+    statuses = {entry["name"]: entry for entry in model["statuses"]}
+    suspended = {row.get("to") for row in model["transitions"]
+                 if row.get("from") == "any-suspendable" and row.get("to") in statuses}
+    by_question = {statuses[name].get("owner") for name in suspended if statuses[name].get("owner")}
+    by_board = {entry.get("owner") for entry in statuses.values() if entry.get("owner")}
+    unreachable = sorted(set(model["skills"]) - by_question - by_board)
+
+    problems, observations = [], 0
+
+    def note(ok, what):
+        nonlocal observations
+        observations += 1
+        if not ok:
+            problems.append(f"  - {what}")
+
+    note(by_question == {"answer-questions"},
+         "a question should dispatch answer-questions and nothing else; pipeline.yaml says "
+         + ", ".join(sorted(by_question)))
+    note(unreachable == ["intake", "next", "retro"],
+         "the skills no accepted gap can reach should be intake, next and retro; got "
+         + ", ".join(unreachable))
+
+    header = "| gap | owner | disposition |\n|---|---|---|\n"
+
+    def review(rows):
+        return "# Review — WI-0001\n\n## Accepted gaps\n\n" + header + rows
+
+    with tempfile.TemporaryDirectory() as base:
+        root = os.path.join(base, "ws")
+        artifacts = os.path.join(root, "tracker", "items", "WI-0001", "artifacts")
+        questions = os.path.join(root, "tracker", "items", "WI-0001", "questions")
+        os.makedirs(artifacts)
+        os.makedirs(questions)
+        os.makedirs(os.path.join(root, "tracker", "items", "WI-0002"))
+        write(os.path.join(root, "tracker", "project.yaml"),
+              "project:\n  name: t\n  trunk-branch: main\n")
+        write(os.path.join(questions, "Q-001.md"),
+              "---\nid: Q-001\nstatus: open\n---\n\n## Answer\n\n## Consequences\n")
+        write(os.path.join(root, "tracker", "items", "WI-0002", "item.md"),
+              "---\nid: WI-0002\ntype: work-item\nstatus: draft\n---\n")
+
+        def item(status):
+            write(os.path.join(root, "tracker", "items", "WI-0001", "item.md"),
+                  f"---\nid: WI-0001\ntype: work-item\nstatus: {status}\n---\n\n## Story\n")
+
+        def run():
+            return _lint_documents(root, "accepted-gaps-are-dispatchable", ["--item", "WI-0001"])
+
+        item("in-review")
+
+        def case(rows, expect_code, what):
+            write(os.path.join(artifacts, "review.md"), review(rows))
+            result = run()
+            found = codes_from(result.stdout + result.stderr)
+            if expect_code is None:
+                note(result.returncode == 0 and not found,
+                     f"{what}: expected silence, got exit {result.returncode} "
+                     f"{', '.join(sorted(found)) or '(no code)'}")
+            else:
+                note(result.returncode != 0 and expect_code in found,
+                     f"{what}: expected {expect_code}, got exit {result.returncode} "
+                     f"{', '.join(sorted(found)) or '(no code)'}")
+            return result
+
+        # The finding, verbatim: the remedy belongs to a skill, and it is written down and
+        # nowhere else.
+        case("| AC12's amendment is not propagated | `answer-questions` | no-owner |\n",
+             "document.gaps.inert",
+             "a gap naming an owner and disposed no-owner")
+        # Reachability, both halves — well-formed rows that still put nobody to work.
+        case("| the renderer is untested | `implement` | question-filed: WI-0001/Q-001 |\n",
+             "document.gaps.undispatchable",
+             "a gap owned by implement, filed as a question")
+        case("| the floor is asserted | `retro` | item-filed: WI-0002 |\n",
+             "document.gaps.undispatchable",
+             "a gap owned by retro, put on the board")
+        # A disposition that names nothing that exists is the appearance of a remedy.
+        case("| the renderer is untested | `answer-questions` | question-filed: WI-0001/Q-009 |\n",
+             "document.gaps.unresolved",
+             "a question-filed disposition naming no question")
+        case("| the floor is asserted | `implement` | item-filed: WI-0009 |\n",
+             "document.gaps.unresolved",
+             "an item-filed disposition naming no item")
+        case("| the renderer is untested | `implement` | later |\n",
+             "document.gaps.disposition.unknown",
+             "a disposition outside the alphabet")
+        case("| the renderer is untested | somebody | item-filed: WI-0002 |\n",
+             "document.gaps.owner.unknown",
+             "an owner who is neither a skill, an item, the human nor nobody")
+
+        # The must-pass half, and it is the load-bearing one: a review that did the right thing
+        # in each of the three legal ways must be silent, or the gate blocks correct work.
+        case("| AC12's amendment | `answer-questions` | question-filed: WI-0001/Q-001 |\n"
+             "| the renderer is untested | `implement` | item-filed: WI-0002 |\n"
+             "| aged by the target's mtime | none | no-owner |\n",
+             None, "the three legal dispositions together")
+        case("| none | none | no-owner |\n", None, "no gaps, said in a row")
+
+        # The finding's own historical shape: free prose naming a skill, in the section, with no
+        # row and no disposition. That is what every banked `## Accepted gaps` looks like, and it
+        # is the thing nothing dispatches.
+        write(os.path.join(artifacts, "review.md"),
+              "# Review — WI-0001\n\n## Accepted gaps\n\n"
+              "The renderer is untested; `implement` will get to it.\n")
+        prose = run()
+        note(prose.returncode != 0
+             and "document.gaps.empty" in codes_from(prose.stdout + prose.stderr),
+             "a gap written as prose naming a skill should be refused — that is the shape "
+             "F-090 was filed against")
+
+        write(os.path.join(artifacts, "review.md"),
+              "# Review — WI-0001\n\n## Accepted gaps\n\n| gap | owner |\n|---|---|\n"
+              "| the renderer is untested | `implement` |\n")
+        short = run()
+        note(short.returncode != 0
+             and "document.gaps.row.malformed" in codes_from(short.stdout + short.stderr),
+             "a row with an owner and no disposition should be refused")
+
+        # Absent is not empty — the same answer `documents-at-risk-are-enumerated` gives.
+        write(os.path.join(artifacts, "review.md"), "# Review — WI-0001\n\n## Verdict\n\nok\n")
+        missing = run()
+        note(missing.returncode != 0
+             and "document.gaps.section.missing" in codes_from(missing.stdout + missing.stderr),
+             "a review with no Accepted gaps section at all should be refused")
+
+        # The scope, measured before it was chosen: at `done` the obligation is discharged and
+        # the review is history. Without this boundary the rule reports on every closed item in
+        # every banked workspace, which is imported real-run evidence (F-084's lesson).
+        write(os.path.join(artifacts, "review.md"),
+              review("| the renderer is untested | `implement` | question-filed: WI-0001/Q-001 |\n"))
+        item("in-review")
+        live = run()
+        item("done")
+        closed = run()
+        note(live.returncode != 0 and closed.returncode == 0
+             and "NOT APPLICABLE" in (closed.stdout + closed.stderr),
+             "the same review should be refused at in-review and reported NOT APPLICABLE at "
+             "done — and say so in those words, never as a pass")
+
+    runner.emit(f"{label} ({observations} observations)", not problems,
+                detail="\n".join(problems))
+
 
 def check_adr_correction(runner: Runner) -> None:
     """F-067's instance, both ways: the defect exists, and the legal repair clears it.
@@ -3486,6 +3704,7 @@ def main() -> int:
     check_cross_answers(runner)
     check_retro(runner)
     check_retro_is_additive(runner)
+    check_accepted_gaps(runner)
     check_adr_correction(runner)
     check_signoff(runner)
     check_termination(runner)

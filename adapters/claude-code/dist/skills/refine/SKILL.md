@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.4.0
+  methodology-version: 0.5.0
   persona: product-analyst
   human-interaction: direct
 ---
@@ -165,6 +165,17 @@ acted on. Then write down exactly what was said.
    Include the negative and boundary cases the human implied but did not say: empty input, a
    path that does not exist, a tie, the largest reasonable size. These are where implementations
    diverge from intent, and they are nearly free to specify now.
+
+   **Name artefacts; do not count them.** A criterion that counts something this item may move
+   is a criterion somebody will amend after the code exists. *"The suite runs unchanged"*,
+   *"exactly one of its 65 tests changes"* — four criteria of that shape in one engagement, four
+   amendments, three architect round trips, and one that still miscounts while remaining
+   perfectly decidable (F-089). Name the test, the file, the case instead. If a count is
+   genuinely what is wanted, **run the command now**, read the number, write the criterion around
+   what you measured, and put the measurement on the criterion:
+   `[src: run: python3 -m unittest discover → exit 0, 65 tests]`. That is Definition of Ready
+   R11, and it is yours to judge: nothing mechanical can tell a count of project artefacts from
+   a count in the tool's own output.
 
    **Renumbering is not free, and it is you who does it.** Inserting or dropping a criterion
    shifts every number after it, and a citation elsewhere that says `AC7` goes on resolving
