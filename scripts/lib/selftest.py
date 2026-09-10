@@ -460,6 +460,55 @@ def run_escaping(results: Results) -> None:
                   claims_lib.masked_lines("a [src: WI-0001] b")[0], "a [src: WI-0001] b")
 
 
+def run_mention_or_use(results: Results) -> None:
+    """F-113 and F-075: one reader decides whether a marker is a citation or an example of one.
+
+    The class is a mention read as a use, and it shows up in whichever direction the rule runs —
+    a *resolution* rule refusing a backticked example as broken, a *presence* rule accepting one
+    as a source. So every case below is stated twice, once per direction, on the shape of the
+    surface it was found on: a paragraph, a table row, an acceptance criterion.
+    """
+    used = claims_lib.citations_in("the rule is stated at [src: ADR-0001] and holds")
+    results.check("mention/a marker in prose is a use", used, [(1, "ADR-0001")])
+    results.check("mention/a marker wholly inside backticks is not",
+                  claims_lib.citations_in("write it `[src: ADR-0001]` like that"), [])
+    results.check("mention/a marker inside a fence is not",
+                  claims_lib.citations_in("a\n```\n[src: ADR-0001]\n```\nb"), [])
+    # F-054, which is the same defect turned around: the marker is made, and only its path is in
+    # backticks. Reading the body off the masked line gave "an empty citation" and sent the
+    # author looking for a stray marker rather than a stray backtick.
+    results.check("mention/a real marker keeps a backticked path",
+                  claims_lib.citations_in("records it [src: `docs/x.md`]"),
+                  [(1, "`docs/x.md`")])
+    results.check("mention/a shown marker beside a made one leaves the made one",
+                  claims_lib.citations_in("`[src: ADR-0009]` is the form; this uses "
+                                          "[src: ADR-0001]"),
+                  [(1, "ADR-0001")])
+    results.check("mention/the line number survives the mask",
+                  claims_lib.citations_in("a\n`[src: X]`\nc [src: ADR-0001]"),
+                  [(3, "ADR-0001")])
+    results.check("mention/first_line offsets into a larger file",
+                  claims_lib.citations_in("[src: ADR-0001]", first_line=42), [(42, "ADR-0001")])
+
+    # The presence rules, on the two surfaces where a bare scrape was accepting a shown marker.
+    row = "| 2026-08-16T11:00:00Z | plan | WI-0001 | provenance | tightened the wording |"
+    results.check("mention/a correction row that cites nothing",
+                  claims_lib.carries_citation(row), False)
+    results.check("mention/a correction row that shows what it would have cited",
+                  claims_lib.carries_citation(row[:-1] + ", would carry `[src: ADR-0001]` |"),
+                  False)
+    results.check("mention/a correction row that cites something",
+                  claims_lib.carries_citation(row[:-1] + ", sourced at [src: ADR-0001] |"), True)
+    criterion = claims_lib.criteria_in(
+        "- [~] AC2 — settled by a substitution, declared the way `[src: WI-0001/Q-001]`\n"
+        "  declares one\n")[0]
+    results.check("mention/a criterion that only shows the question it owes",
+                  claims_lib.carries_citation(criterion["text"]), False)
+    results.check("mention/a criterion that names it",
+                  claims_lib.carries_citation("settled by a substitution declared at "
+                                              "[src: WI-0001/Q-001]"), True)
+
+
 def repo_yaml_files() -> list:
     found = []
     for base, dirs, files in os.walk(REPO_ROOT):
@@ -1166,6 +1215,7 @@ def main() -> int:
     run_workspace(results)
     run_root_resolution(results)
     run_escaping(results)
+    run_mention_or_use(results)
     run_scope(results)
     run_plan_documents(results)
     run_documents(results)

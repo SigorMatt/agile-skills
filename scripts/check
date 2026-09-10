@@ -469,12 +469,25 @@ VISION_AFTER = VISION_BEFORE.replace(
     "The marker decides where the text sits, except in a cell holding a line break\n"
     "[src: WI-0001/Q-001].")
 
+# The same paragraph with the marker *shown* instead of made: a sentence about how an answer is
+# cited, sourced to nobody. Rewriting it owes the stakeholder nothing, and a bare scrape of the
+# citation vocabulary said it did (F-113).
+VISION_MENTION = VISION_BEFORE.replace(
+    "The marker decides where the text sits, in every column without exception\n"
+    "[src: WI-0001/Q-001].",
+    "A claim taken from an answer names it, so this document writes `[src: WI-0001/Q-001]`\n"
+    "wherever it repeats one. This paragraph is about the convention and claims nothing.")
+
+VISION_MENTION_REWRITTEN = VISION_MENTION.replace(
+    "This paragraph is about the convention and claims nothing.",
+    "This paragraph explains the convention and claims nothing.")
+
 
 def check_rewritten_claim(runner: Runner) -> None:
     """The refused move, by execution: the human's own sentence, rewritten without asking."""
     import shutil
     import tempfile
-    label = "the human's own sentence is not rewritten unasked (F-062, 4 cases)"
+    label = "the human's own sentence is not rewritten unasked (F-062, 5 cases)"
     if shutil.which("git") is None:
         runner.skip(label, "git is not on PATH")
         return
@@ -547,6 +560,19 @@ def check_rewritten_claim(runner: Runner) -> None:
               "<!-- filled in by answer-questions -->\n")
         asked = lint("--changed-since", "main")
         cases.append(("asking its author clears it", asked.returncode == 0, asked))
+        # 5. and the other direction of the same reader: a paragraph whose only marker is
+        # *quoted* is not sourced to that answer, so rewriting it is not the refused move. The
+        # question and the journal bullet are both gone, so nothing but the masking can clear it
+        # — under a scrape that ignores code spans this case is refused, which is F-113 (F-075's
+        # class, in the direction that reports a defect where there is none).
+        os.remove(os.path.join(item_dir, "questions", "Q-002.md"))
+        write(vision, VISION_MENTION)
+        git("add", "-A")
+        git("commit", "-m", "a paragraph that shows the form rather than using it")
+        write(vision, VISION_MENTION_REWRITTEN)
+        mention = lint("--changed-since", "main")
+        cases.append(("a quoted marker is not a source, so rewriting it is not refused",
+                      mention.returncode == 0, mention))
 
     failed = [(name, result) for name, ok, result in cases if not ok]
     if failed:
@@ -718,12 +744,19 @@ def check_claims(runner: Runner) -> None:
         return
     result = subprocess.run([sys.executable, linter, "--root", broken, "--all"],
                             capture_output=True, text=True, cwd=ROOT)
-    found = codes_from(result.stdout + result.stderr)
+    output = result.stdout + result.stderr
+    found = codes_from(output)
     expected = {"claim.citation.unresolved", "claim.unsourced"}
-    if result.returncode == 0 or not expected <= found:
+    # A subset cannot see the second unsourced paragraph regressing into the first one's code, so
+    # rule 2 is pinned by count as well — the same reasoning `check_cross_answers` gives. The two
+    # are the pair F-113 is about: one absolute with no marker at all, and one whose only marker
+    # is *shown* inside backticks and must not be read as a source.
+    counted = output.count("[claim.unsourced]")
+    if result.returncode == 0 or not expected <= found or counted != 2:
         runner.emit("claim-provenance fixtures", False, result,
-                    detail=f"expected {sorted(expected)} over the broken fixture, "
-                           f"found {sorted(found)}")
+                    detail=f"expected {sorted(expected)} over the broken fixture with "
+                           f"claim.unsourced twice, found {sorted(found)} with it "
+                           f"{counted} time(s)")
         return
     # A rule nobody can satisfy is not a rule: prose that cites its sources must pass cleanly.
     runner.run("claim-provenance fixtures",

@@ -32,4 +32,6 @@ See EXPECTED-CODES.txt.
 ## Acceptance criteria
 
 - [ ] AC1 — the defects above are each reported
-- [~] AC2 — a regression test covers this fixture
+- [~] AC2 — a regression test covers this fixture. The substitution was declared the way
+  `[src: BUG-0001/Q-001]` declares one — which is a marker shown, not a marker made, so
+  no question on this item has actually been named

@@ -6595,3 +6595,69 @@ recall is a reading, not a number, and the report says which.
 - **Artifacts:** `meta/FINAL-REPORT-5.md` (new), `meta/ROADMAP.md` (§4 stamp; header date),
   `meta/plan.md` (Phase VI boxes ticked and a *what actually ran* note), `meta/journal.md` (this
   entry).
+
+## 2026-09-11 — META-167 — one masking rule for every citation surface
+
+- **Result:** the citation vocabulary is scraped on six record surfaces and four of them did it
+  with a bare `CITATION_RE`. `scripts/lib/claims.py` gains `citations_in()` — every marker in a
+  text that is a **use** rather than a mention, as `(line, body)` — and `carries_citation()` over
+  it, both built on the same `masked_lines()` mask `problems_in()` already used, and
+  `problems_in()` is now a fold over `citations_in()` so there is exactly one answer to "is this
+  marker a citation or an example of one". The module docstring carries the surface→site→reader
+  table, which is where a later reader will look for it.
+  - **The four unmasked sites, converted.** `validate-workspace.check_substituted_criterion` (an
+    acceptance criterion naming the question its substitution owes), `check_adr_corrections` (a
+    `## Corrections` row must cite something), `lint-answers` rule 3 (which human answer a
+    paragraph is sourced to), and `lint-claims` rule 2 (already masked, now the same call). Three
+    of the four are *presence* rules, which is the direction F-113 names: a backticked example
+    **satisfied** a requirement for a real citation.
+  - **`lint-retro` was carrying F-054 in a private copy.** It masked, then read the citation body
+    off the **masked** text — so a real marker whose path was written in backticks, which is how
+    this repository writes every path, came back as `' '` and was reported as *"an empty
+    citation"*. Confirmed by execution before the change. That is the same class in the opposite
+    direction and the brief did not know about it; the fixture's clean report (`EP-001`) now
+    carries the case.
+  - **The brief was wrong about `arose-from`.** `validate-workspace:~623` is not a `CITATION_RE`
+    site at all — `arose-from` is a frontmatter scalar resolved directly against the tree. It is
+    named in the docstring table as deliberately excluded, so the question is not reopened.
+  - **The brief was wrong about the fixture comparison, and it mattered.**
+    `fixtures/broken-workspace` is compared as a **set**, not a multiset, so a new case emitting a
+    code some other case already emits is invisible to the gate. Each new mention case was
+    therefore placed so that it is the **only** source of its code: `BUG-0001` AC2 is now the only
+    `item.criteria.substitution.unasked`, `ADR-1-Bad_Name.md`'s row the only
+    `adr.correction.unsourced`, and `WI-0003` AC5 stays the only `item.criteria.substituted`.
+    `claim.unsourced` cannot be made unique that way, so `scripts/check` pins its count at 2 — the
+    precedent `check_cross_answers` set for exactly this reason.
+  - **A fixture per surface, both directions.** Criterion: a substitution that only *shows*
+    `[src: BUG-0001/Q-001]` must still be unasked, against `WI-0003` AC5 which names one and gets
+    the warning. ADR row: an unsourced correction that says what it *would* have cited, against
+    the sourced rows beside it and `fixtures/adr-correction/after`, which must stay clean.
+    `docs/` paragraph: a quoted marker beside an absolute is still unsourced
+    (`fixtures/broken-workspace`), while `fixtures/sourced-claims` must stay silent. `lint-answers`
+    rule 3 reads a diff, so its pair is by execution — a fifth case in `check_rewritten_claim`
+    where the rewritten paragraph's only marker is quoted and the rewrite is therefore **not**
+    refused. Retro: the mention pair was already there; the F-054 case is new.
+  - **Non-vacuity, strong form, three mutations.** (A) masking off: 6 selftest cases and 5 gate
+    steps fail — `must-fail fixture` loses both new codes, `claim-provenance fixtures` drops to
+    one `claim.unsourced`, the new `lint-answers` case is refused, both retro steps break. (B)
+    `citations_in` stubbed to `[]`: 7 selftest cases and 9 gate steps fail, including
+    `must-fail fixture` losing `item.criteria.substituted` and the ADR repair fixture. (C)
+    `carries_citation` stubbed to `True`: 3 selftest cases and 5 gate steps fail. Every one of the
+    12 new selftest cases fails under at least one mutation; the one that moves only under (C) is
+    the control row that carries no marker at all.
+- **Questions raised:** none. `claim.citation.unresolved`'s severity and the resolver's
+  fall-through message were left untouched — META-168's unit — and `meta/findings/FINDINGS.md`
+  was not edited, so F-113 and F-075 still read as open here.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **45 steps** (unchanged);
+  `must-fail fixture` **108 codes** (unchanged — the new cases replace what used to be a second
+  source of the same code rather than adding one); `the retrospective format` 25 codes
+  (unchanged); `scripts/lib/selftest.py` **357 → 369** (12 new cases in `run_mention_or_use`; the previous
+  entry's 356 was one behind the tree, measured again here before the change); `the human's own sentence is not
+  rewritten unasked (F-062)` **4 → 5 cases**; `claim-provenance fixtures` now pins
+  `claim.unsourced` at 2.
+- **Artifacts:** `scripts/lib/claims.py` (`citations_in`, `carries_citation`, the surface table,
+  `problems_in` refolded), `scripts/validate-workspace`, `scripts/lint-answers`,
+  `scripts/lint-claims`, `scripts/lint-retro` (the F-054 copy), `scripts/lib/selftest.py`,
+  `scripts/check`, `fixtures/broken-workspace/` (BUG-0001 AC2, ADR-1-Bad_Name.md, overview.md,
+  README), `fixtures/retro/` (EP-001's report, README),
+  `adapters/claude-code/dist/` (re-rendered), `meta/plan.md`, `meta/journal.md` (this entry).

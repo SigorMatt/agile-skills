@@ -42,7 +42,10 @@ still cited by the marker that is not quoted.
 ### The history chains and the endings are recorded on both children
 
 Each child's last row is its close, written by `review-close`, and the epic's own last row
-records the ending [src: tracker/items/EP-001/history.md].
+records the ending [src: `tracker/items/EP-001/history.md`]. That citation is a real one
+whose path happens to be written in backticks, which is how this convention writes every
+path — masking is what decides a mention from a use, and it must not swallow the inside
+of a marker that was made rather than shown (F-054).
 
 ## Proposed toolkit findings
 

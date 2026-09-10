@@ -84,8 +84,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
-from claims import (ABSOLUTE_RE, CITATION_RE, CODE_TOKEN_RE,  # noqa: E402
-                    CitationResolver, looks_like_code, masked_lines)
+from claims import (ABSOLUTE_RE, CODE_TOKEN_RE, CitationResolver,  # noqa: E402
+                    carries_citation, looks_like_code)
 from record import is_prose, paragraphs  # noqa: E402
 from report import Report  # noqa: E402
 from scope import DiffScope, constrained, diff_scope, working_tree_scope  # noqa: E402
@@ -295,7 +295,7 @@ class ClaimLinter:
                 # A real citation anywhere in the paragraph satisfies the rule. A *quoted* one
                 # does not, so the same masking F-037 introduced applies here too — otherwise a
                 # paragraph could satisfy the rule by talking about citations.
-                if CITATION_RE.search("\n".join(masked_lines(joined))):
+                if carries_citation(joined):
                     continue
                 absolute = ABSOLUTE_RE.search(joined)
                 if not absolute:

@@ -618,7 +618,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 
 ### Cluster 1 — mention is not use (F-113 + F-075, one class)
 
-- [ ] **META-167** — enumerate every record surface the citation vocabulary is scraped on, and
+- [x] **META-167** — enumerate every record surface the citation vocabulary is scraped on, and
       fix the scraping once at the shared layer: a *presence* check reads masked text like a
       *resolution* check does, so a quoted example can no longer satisfy a rule that wants a
       real citation. Per-surface fixtures.

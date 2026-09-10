@@ -25,7 +25,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 
 import board as board_lib  # noqa: E402
 import engagement as engagement_lib  # noqa: E402
-from claims import CITATION_RE, CitationResolver, split_sources  # noqa: E402
+from claims import (CitationResolver, carries_citation, citations_in,  # noqa: E402
+                    split_sources)
 from textio import read_text  # noqa: E402
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
@@ -713,9 +714,13 @@ class Validator:
         re-checked here — `check_claim_citations` walks `item.md` like every other document and
         reports an unresolvable citation wherever it stands.
         """
+        # `citations_in`, not a bare scrape: this is a *presence* rule, and a criterion
+        # explaining why it was substituted is prose that may well show what the citation it
+        # owes would look like. A shown one is a mention, and a mention leaves the question
+        # unasked (F-113).
         cited = [body.strip().strip("`")
-                 for match in CITATION_RE.finditer(criterion["text"])
-                 for body in split_sources(match.group("body"))]
+                 for _line, marker in citations_in(criterion["text"])
+                 for body in split_sources(marker)]
         asked = [part for part in cited
                  if QUESTION_CITATION_RE.match(part)
                  and QUESTION_CITATION_RE.match(part).group(1) == item.identifier]
@@ -1633,7 +1638,10 @@ class Validator:
                                        "`erratum` (a clause that was false against the code). "
                                        "Anything that changes what the code must do is a new "
                                        "decision and the ADR is superseded (doc-header.md §4b)")
-            if not CITATION_RE.search(row):
+            # A *shown* marker is not a source (F-113): a correction row is exactly where an
+            # author writes `[src: ...]` to say what the repair should have cited, and a bare
+            # scrape read that as the repair being sourced.
+            if not carries_citation(row):
                 self.report.error(doc.path, row_line, "adr.correction.unsourced",
                                   "a correction cites nothing",
                                   hint="a repair with no source is the shape F-001 found")

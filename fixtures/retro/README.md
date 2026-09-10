@@ -30,6 +30,12 @@ plainly it proposes no change. That second entry is the shape the whole classifi
 protect — "this engagement's goal arrived already decided" is a true and useful sentence, and
 filing it as a defect in a skill is the failure mode `spec/retro.md` §7 is written against.
 
+**EP-001's `## Positive record` carries the other half of the mask (F-054).** Its citation is
+made, not shown, and the *path inside it* is written in backticks — which is how this convention
+writes every path. `lint-retro` used to read the body off the masked text, so that marker came
+back empty and was reported as an unresolvable citation; the entry is here so that a reader
+swallowing the inside of a real marker fails the must-pass half.
+
 **EP-001 and EP-002 also carry the mention-versus-use pair.** A retrospective is the document in
 a workspace most likely to *explain* the citation convention, and the first live run of the skill
 wrote `` `[src: ...]` `` inside backticks and was told three times that its citations did not

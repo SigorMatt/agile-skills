@@ -36,7 +36,7 @@ This is permanent and cannot be undone easily.
 
 | when | by | for | kind | what changed |
 |------|----|-----|------|--------------|
-| 2026-08-16T11:00:00Z | plan | WI-0001 | provenance | tightened the wording of the decision |
+| 2026-08-16T11:00:00Z | plan | WI-0001 | provenance | tightened the wording of the decision; a sourced repair would carry `[src: docs/architecture/overview.md]` here |
 | 2026-08-16T11:00:00Z | plan | WI-0001 | erratum | `## Decision` said something that was false; fixed it [src: docs/architecture/overview.md] |
 | 2026-08-16T11:00:00Z | plan | WI-0001 | rewrite | *"Do A"* becomes *"Do B"* [src: docs/architecture/overview.md] |
 

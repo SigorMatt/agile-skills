@@ -23,6 +23,10 @@ carrying no citation at all.
 And a marker in a form the gate does not define: [src: WI-0001 ## Acceptance criteria]. Bare, so
 it must still fail — the code-span exemption is for quoting one, not for writing one.
 
+`render_table` never writes outside a table, and the source for that would be written
+`[src: ADR-0001]`. Shown, not made: a paragraph cannot source itself by describing what its
+citation would look like, so this is unsourced too (F-113).
+
 ## Change log
 
 | version | when | by | for | what changed |

@@ -78,7 +78,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
-from claims import CITATION_RE  # noqa: E402
+from claims import citations_in  # noqa: E402
 from record import blocks, paragraphs, split_label  # noqa: E402
 from report import Report  # noqa: E402
 from scope import diff_scope, git, working_tree_scope  # noqa: E402
@@ -515,7 +515,10 @@ class AnswerLinter:
         for start, block in paragraphs(text):
             joined = "\n".join(block)
             cited = set()
-            for citation in CITATION_RE.findall(joined):
+            # A marker inside backticks is an example of the form, not a source (F-113): a
+            # paragraph that merely *shows* how a human answer is cited is not sourced to that
+            # answer, and rewriting it owes the person nothing.
+            for _line, citation in citations_in(joined):
                 for part in citation.split(";"):
                     match = ANSWER_ID_RE.search(part.strip())
                     if match and f"{match.group(1)}/{match.group(2)}" in self.human:

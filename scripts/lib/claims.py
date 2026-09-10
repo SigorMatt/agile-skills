@@ -1,8 +1,36 @@
-"""Claim provenance: the citation forms, and whether one resolves.
+"""Claim provenance: the citation forms, whether one resolves, and whether it is one at all.
 
 Shared by `scripts/lint-claims` (the gate) and `scripts/validate-workspace` (the resting-state
 check), because two implementations of "does this citation resolve" would disagree eventually and
 the disagreement would surface as a gate that passes on a record the validator rejects.
+
+The same argument reaches one step further back, and did not used to (F-113, F-075). A marker
+inside an inline code span or a fenced block is a **mention** of the form, not a use of it, and
+that is decided in exactly one place: `masked_lines()`, read by `citations_in()` and by the
+`carries_citation()` predicate over it. Every site that scrapes the vocabulary calls one of the
+two. Where a bare `CITATION_RE` was used instead, the same class of defect appeared in whichever
+direction the rule ran — a *resolution* rule refused a backticked example as a broken citation,
+and a *presence* rule accepted one as a real one.
+
+The surfaces the vocabulary is read on, and the site that reads each (`record.py` holds the
+structures they are cut out of — entries, table rows, list items, paragraphs):
+
+  * every `*.md` body            `validate-workspace.check_claim_citations`, `lint-claims`
+                                 rule 1 — `problems_in()`; resolution
+  * a `docs/` prose paragraph    `lint-claims` rule 2 — `carries_citation()`; presence, a cited
+                                 paragraph is exempt from the absolutes rule
+  * a `docs/` prose paragraph    `lint-answers` rule 3 — `citations_in()`; which human answers
+                                 a paragraph is sourced to, before it is rewritten
+  * an acceptance-criterion      `validate-workspace.check_substituted_criterion` —
+    list item                    `citations_in()`; presence of a question on this
+                                 item (F-096)
+  * an ADR `## Corrections` row  `validate-workspace.check_adr_corrections` —
+                                 `carries_citation()`; presence (doc-header.md §4b)
+  * a retro report `###` entry   `lint-retro.check_citations` — `citations_in()`;
+                                 presence and resolution
+
+`arose-from` is deliberately not in that list: it is a frontmatter scalar, not prose, so there is
+no code span to mask and `check_provenance` resolves it against the tree directly.
 
 The convention itself is specified in `spec/doc-header.md`. Standard library only (ADR-0002).
 """
@@ -19,7 +47,7 @@ from textio import read_text  # noqa: E402
 
 __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
            "AC_LINE_RE", "AC_RENUMBERABLE_STATUSES", "ac_state", "criteria_in",
-           "normalise_anchor",
+           "normalise_anchor", "carries_citation", "citations_in",
            "looks_like_code", "mask_code", "masked_lines", "split_sources"]
 
 CITATION_RE = re.compile(r"\[src:\s*(?P<body>[^\]]+)\]")
@@ -138,6 +166,47 @@ def masked_lines(text: str):
             continue
         out.append("" if fenced else line)
     return out
+
+
+def citations_in(text: str, first_line: int = 1):
+    """Every marker in `text` that is a **use** of the citation form, as (line, body).
+
+    One reader for every surface, because "is this a citation or an example of one" is one
+    question and two answers to it is F-113: a rule that wants a real citation was satisfied by a
+    backticked example, while a rule that checks citations refused the same example as a broken
+    one — the same defect, once in each direction, on surfaces that sit a few lines apart.
+
+    F-054: masking protects a *quoted* citation from being read as one (F-037), and it also
+    blanks the inside of a real citation whose path is written in backticks — which is how this
+    repository's prose writes every path. The author got "an empty citation" and went looking for
+    a stray marker rather than a stray backtick. Masking preserves offsets, so a marker that
+    survives in the masked line is a real one, and its body is read from the raw line where the
+    backticks still are. Every caller gets that discipline by calling this rather than
+    reimplementing it; `lint-retro` had reimplemented half of it and reported the empty citation.
+
+    `first_line` numbers the first line of `text`, for a caller reporting into a larger file.
+    """
+    found = []
+    raw_lines = text.split("\n")
+    for index, line in enumerate(masked_lines(text), start=first_line):
+        raw = raw_lines[index - first_line] if index - first_line < len(raw_lines) else line
+        for match in CITATION_RE.finditer(raw):
+            if line[match.start():match.start() + 5] != "[src:":
+                continue            # the whole marker sits inside a code span: a quotation
+            found.append((index, match.group("body")))
+    return found
+
+
+def carries_citation(text: str) -> bool:
+    """Does `text` cite anything at all?
+
+    The predicate every *presence* rule asks. It has to be this one and not `CITATION_RE.search`,
+    or a requirement to cite something is satisfied by prose that merely shows what a citation
+    looks like — which is the reading a record most likely to explain the convention (a
+    retrospective, an ADR correction, a criterion saying why it was substituted) is most likely
+    to produce.
+    """
+    return bool(citations_in(text))
 
 
 def looks_like_code(token: str) -> bool:
@@ -371,26 +440,16 @@ class CitationResolver:
         """(line, message) for every citation in `text` that does not resolve.
 
         A marker inside an inline code span or a fenced block is a **quotation**, not a citation,
-        and is skipped. F-037: without this, a journal entry could not describe a malformed
-        citation without reproducing it — and since `journal.md` is append-only, the only way to
-        satisfy the linter was to rewrite an entry, which is the one thing the audit trail forbids.
-        A rule that forces a record to break the append-only invariant is worse than no rule.
+        and `citations_in()` has already dropped it. F-037: without that, a journal entry could
+        not describe a malformed citation without reproducing it — and since `journal.md` is
+        append-only, the only way to satisfy the linter was to rewrite an entry, which is the one
+        thing the audit trail forbids. A rule that forces a record to break the append-only
+        invariant is worse than no rule.
         """
         found = []
-        # F-054: masking protects a *quoted* citation from being read as one (F-037), and it also
-        # blanked the inside of a real citation whose path was written in backticks — which is how
-        # this repository's prose writes every path. The author got "an empty citation" and went
-        # looking for a stray marker rather than a stray backtick. Masking preserves offsets, so a
-        # marker that survives in the masked line is a real one, and its body is read from the raw
-        # line where the backticks still are.
-        raw_lines = text.split("\n")
-        for index, line in enumerate(masked_lines(text), start=1):
-            raw = raw_lines[index - 1] if index - 1 < len(raw_lines) else line
-            for match in CITATION_RE.finditer(raw):
-                if line[match.start():match.start() + 5] != "[src:":
-                    continue        # the whole marker sits inside a code span: a quotation
-                for part in split_sources(match.group("body")):
-                    problem = self.resolve(part)
-                    if problem:
-                        found.append((index, problem))
+        for line, body in citations_in(text):
+            for part in split_sources(body):
+                problem = self.resolve(part)
+                if problem:
+                    found.append((line, problem))
         return found
