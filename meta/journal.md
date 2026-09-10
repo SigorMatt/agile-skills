@@ -5847,3 +5847,108 @@ recall is a reading, not a number, and the report says which.
 - **Artifacts:** `scripts/check` (step 17b, `sweep_finding_refs` + `check_finding_refs`),
   `meta/findings/FINDINGS.md` (the `H-001` tombstone; F-099 resolved with its full first-run
   yield), `meta/journal.md`, `meta/CHECKPOINT.md`. Commits `f61ce10` and this one.
+
+## 2026-09-10 — META-159 — the ending's contracts: a gate with no subject, a checklist in the wrong order, an option that lied about its price
+
+- **Unit:** META-159 (F-085, F-086, F-061 — cluster 4, the ending contracts)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-085, F-086, F-061 with its addendum, and F-045,
+  F-022, F-066, F-105, F-106 for context; `spec/dor-dod.md` §§3–4, `spec/question.md` §§2–3,
+  `spec/skill-contract.md` §§1.3–1.4, `spec/journal-and-history.md` §2.2a;
+  `methodology/skills/review-close/skill.yaml` + `process.md`; `scripts/check-epic-signoff`,
+  `scripts/run-gate`, `scripts/transition`, `scripts/journal-entry`, `scripts/lint-skills`,
+  `adapters/claude-code/render.py`; `meta/adr/ADR-0006` §§1–2, `meta/adr/ADR-0011` §§2–3; commit
+  `1ebba5a` (META-154); and **every `EP-001/journal.md` in `meta/harness/evidence/`** — the five
+  epic-level executions F-085 is filed about, read rather than taken from the finding's summary.
+- **Decisions:**
+  - **The epic-subject column is a contract field, not a paragraph.** `applies_to` +
+    `not_applicable` on a gate row; `run-gate` does not run the gate on a type the row leaves
+    out; `transition` composes the `**Gates:**` line from it. The key name, syntax and meaning
+    are `pipeline.yaml`'s existing transition scoping, deliberately — a second vocabulary for
+    "which item types does this apply to" would have been the cost of the feature.
+  - **`skipped` gains a second source rather than the vocabulary gaining a third word.**
+    `skipped` = *nothing here to look at*; `pending` = *a verdict is not owed by this entry*
+    (F-080). A contract-declared non-subject is the first of those reached deliberately instead
+    of through §1.4's unresolved placeholder. One fact, one word; what changed is who noticed it.
+    The two sources stay apart in the record because each carries its own sentence, and a
+    `./scripts/check` observation asserts that they do.
+  - **The third gate is the one that proves this is not cosmetic.**
+    `verification-postdates-the-code` and `commits-reference-the-item` already SKIPped, by
+    accident — `{{item.branch}}` resolved to nothing. `tests-pass-on-the-merge-result` resolves
+    `{{commands.test}}`, which an epic has, so it **ran the project's suite and reported PASS at
+    an ending that merged nothing**. Iteration 4b's worker recorded it as skipped, `run-gate`
+    disagreed by running it, and the worker had to correct their own entry by appending. That
+    contradiction is now unwritable — the command does not run. Proven by a sentinel file: absent
+    after the epic run, present after the work-item run, in the same workspace.
+  - **`epic-sign-off` was NOT scoped, and the choice is recorded.** It self-passes on a work item,
+    which is the same shape from the other side. But F-085 is about a gate with **no subject**,
+    and that gate has one and answers about it; declaring `applies_to: [epic]` would move every
+    work-item entry's line from `pass` to `skipped` across the banked fixtures for a scoping the
+    finding did not ask for. Measured before deciding, and named in the ledger rather than left
+    as an oversight.
+  - **Half of F-085's symptom was already fixed and is recorded rather than re-claimed.** The
+    section-3/section-4 mismatch the finding quotes from the 0.6.0 contract was closed by 0.10.0,
+    whose `definition-of-done` description already reads *"section 3 at an item close, section 4
+    at an engagement's ending"*. This unit only added §4a's ordering to it. The `review.md`
+    always-output half **is** fixed here, in the outputs row rather than in the `when` enum: the
+    row now says the ask-and-stop execution writes what was examined and that the engagement
+    waits on the stakeholder, **never a verdict**.
+  - **F-086's ordering is one ordering with E4's, and the argument is what makes it one.** F-086
+    reads as an acceptance problem, and at E4 there is no acceptance — so the two paths could
+    easily have diverged. They do not, because the same audit breaks the same thing by a second
+    route: DE6 may file a bug, a bug is a **child**, and the `## Ending statement` must name every
+    child by ID, which `check-epic-signoff` enforces by containment. So the rule is stated over
+    **the engagement's account of itself** — the sign-off's `## Question`, or the `## Ending
+    statement` — and holds in all four endings for one reason.
+  - **DE4 splits, and the split was forced.** Its second conjunct is *required* to be written
+    after the ending is determined (ADR-0010 §4.3 as amended by ADR-0011 §2.4). Taking F-086's
+    *DE1 through DE6* literally would have contradicted that amendment silently, so the conjunct
+    is named. DE8 joins DE7 for the same structural reason and did not exist when F-086 was filed.
+  - **A DE1–DE6 failure at the ask is not an ending; it is work.** Nothing is filed, the finding
+    becomes an item or a bug, the engagement leaves rest. That is what *one sign-off per rest*
+    always implied and nothing said.
+  - **F-086 gets no fixture, and the reason is stated rather than skipped.** The ordering is a
+    rule about *when a worker performs a read*. Nothing in a workspace distinguishes a checklist
+    applied before an acceptance from one applied after it: `definition-of-done` is a
+    `manual_check`, so its verdict is the caller's word by design (F-091). The enforcement that
+    exists is second-order and already present — a bug filed at the ask takes the engagement out
+    of rest, and `check-epic-signoff` refuses a sign-off filed before rest.
+  - **F-061 is one sentence and stays one sentence.** Its own history is that the cost was hidden
+    by a **label**; the mechanism worked (the engagement reopened, built the follow-up and asked
+    again, and the stakeholder said they were not asked to take anything on faith either time).
+    The author of the false consequence line is `spec/question.md` §2, so that is where the repair
+    goes. **No mechanism is needed and none was built** — a gate for this would have to decide
+    whether a sentence of prose is true. The nearest checkable neighbour (*does the sign-off offer
+    the three options at all*) is a different rule that nothing has been observed failing, so no
+    finding was filed for it either; filing one would be manufacturing it.
+  - **`process.md` additions were paid for by compression, not by moving a requirement.** The
+    rendered SKILL.md was at exactly 500/500. Eleven added lines were funded by tightening step
+    6a, step 9's two trailing paragraphs, 9a's scope paragraph, 9b, step 10's DE8 bullet and the
+    closing failure-modes list — which also fixed a small standing defect: the heading said *"the
+    two ways this skill goes wrong"* over **three** bullets. Back to 473/473 and 500/500.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **41 steps** (new: *a gate's
+  subject comes from its contract row (F-085)*, 20 observations); `fixtures/broken-workspace`
+  unmoved at **108 codes** (the new codes are `lint-skills`' and that fixture is the workspace
+  validator's); `findings citations resolve` 61 → **62**; *finding numbers cited resolve* 3399
+  citations, 128 numbers, 0 phantoms; `scripts/lib/selftest.py` unmoved at **354**.
+  **Non-vacuity in the strong form, three stubs.** (1) `run-gate`'s subject branch disabled
+  (`if False and applies_to ...`) and (2) `lint-skills`' `check_gate_subject` body returned
+  immediately → **12 of 20 observations fail**, quoted: *"on an epic,
+  'tests-pass-on-the-merge-result' reported PASS where its contract row gives it no subject
+  there"*, *"the project's test command ran at an ending"*, *"the composed entry does not record
+  'commits-reference-the-item' as skipped with its contract row's own sentence"*, and all four
+  *"lint-skills accepted …"*. Note what did **not** fail: the SKIP verdict for the two branch
+  gates, because those already skipped through the null placeholder — only their *sentence*
+  changed, and it is the sentence assertion that catches it. (3) Against the step's own
+  work-item cases, the branch inverted to fire on every type — a scoping that scopes nothing —
+  → **5 observations fail**, quoted: *"the project's test command did not run on a work item
+  either, so the scoping is not a scoping — it skips everywhere and checks nothing"*. That is
+  the third unit in a row to catch a vacuous case of its own with its own stub, and the case it
+  caught here is the one the discipline note predicts.
+- **Artifacts:** `spec/skill-contract.md` (§1.3, revision 7), `spec/journal-and-history.md`
+  (§2.2a, revision 6), `spec/dor-dod.md` (**§4a**, revision 10), `spec/question.md` (§2,
+  revision 10), `methodology/skills/review-close/{skill.yaml,process.md}` (0.10.0 → **0.11.0**),
+  `scripts/run-gate`, `scripts/journal-entry`, `scripts/lint-skills`, `scripts/check`,
+  `adapters/claude-code/render.py` (the rendered contract's **subject** column) and `dist/`,
+  `meta/findings/FINDINGS.md` (F-085, F-086, F-061 resolved with citations), `meta/journal.md`.
+  Commits `bb76d7d` and this one.

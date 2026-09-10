@@ -1890,6 +1890,31 @@ required options and belongs with the owner's triage of the retro's proposals, n
 session that built the reader. Evidence:
 `meta/evidence/retro-calibration/iteration-2-retro.md` P-3 and the observation above it.
 
+### Status update 2026-09-10 (META-159, commit bb76d7d) — **fixed, as one sentence**
+The addendum's direction, taken in the first of the two places it names: `spec/question.md` §2,
+`kind: sign-off`'s `## Options considered` rule. The option that offers a named follow-up now
+states the consequence it actually has — **the epic stays `open`, the follow-up is built like any
+other item, and a fresh sign-off is due at the next rest** — against the sentence a real sign-off
+printed, *"the engagement still closes as delivered, and the new work is opened"*, with the
+reason that sentence is unexecutable written beside it (an engagement ends only from rest, rest
+requires every child terminal, and the follow-up is created at `draft`) and the stakeholder's own
+verdict on the cost quoted: *"more process than I expected for one follow-up request"*.
+
+**No mechanism was built, and that is a conclusion rather than an omission.** The failure this
+finding records is a **false sentence**, not a missing capability: the engagement's status model
+already did the right thing — it reopened, built WI-0004 through the full pipeline, and asked
+again — and the stakeholder's second remark, *"I wasn't asked to take anything on faith either
+time"*, says the mechanism was sound. What was wrong was that they chose an option whose printed
+consequence was not what would happen. The author of that consequence line is this spec, so this
+spec is where the repair belongs. A gate for it would have to decide whether a sentence of prose
+is *true*, which is not a thing a program does; the nearest checkable neighbour — *does the
+sign-off offer the three options at all* — is a different rule, nothing has been observed failing
+it, and filing a finding for it would be manufacturing one. The addendum's *lightweight amendment
+path for minor follow-ups* is untouched and stays where the original entry left it: a candidate
+whose burden of proof is on the shortcut.
+
+`spec/question.md` revision 10.
+
 ## H-010 — A turn-budget stop mid-acknowledgment is terminal, and only --fresh continues it
 - Severity: harness, UX/semantics (three occurrences in one iteration)
 - Component: harness/run_iteration.py (stop classification), USAGE
@@ -3148,6 +3173,62 @@ second occurrence shows the error is common rather than incidental.
   the worker's. A gate that is skipped by every execution of a whole class is not a gate.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-1); accepted at owner triage 2026-08-31.
 - **Status:** open
+- **Status update 2026-09-10 (META-159, commit bb76d7d): fixed** — the second branch of the
+  direction was taken, *each gate's row states its subject*, and it is a field rather than a
+  habit. `spec/skill-contract.md` §1.3 gives a gate two optional keys: `applies_to`, the item
+  types it has a **subject** on — the same key name, syntax and meaning `pipeline.yaml` already
+  uses to scope a transition row — and `not_applicable`, the sentence to say where it has none.
+  `run-gate` reads them and **does not run the gate** on a type the row leaves out, reporting
+  SKIP with that sentence; `transition` composes the `**Gates:**` line from it, so the ending's
+  entry carries the contract's words and not the worker's
+  [src: scripts/run-gate] [src: scripts/journal-entry].
+  **Three of the gates named in the symptom now carry it**, and the third is the one that proves
+  the change is not cosmetic. `verification-postdates-the-code` and `commits-reference-the-item`
+  already skipped, but by accident — `{{item.branch}}` resolved to nothing and §1.4's placeholder
+  rule fired, so the record carried the *resolver's* sentence (*"has no value in the item's
+  item.md"*). `tests-pass-on-the-merge-result` resolves `{{commands.test}}`, which an epic has,
+  so it **ran the project's suite on the trunk and reported PASS**. One banked execution recorded
+  it as skipped on the reasoning that an ending merges nothing, `run-gate` disagreed by running
+  it, and the worker corrected their own entry by appending a paragraph beginning *"the claim
+  `commands.test` was not run is therefore false as written"*
+  [src: meta/harness/evidence/iteration-4b/tracker/items/EP-001/journal.md]. That contradiction
+  is now unwritable: the command does not run.
+  **No third verdict was coined, and the reason is in the spec.** `journal-and-history.md` §2.2a
+  already had two words for a gate with no ordinary verdict, and they answer different questions:
+  `skipped` is *there was nothing here to look at*, `pending` is *there was, and the verdict is
+  not owed by this entry* (F-080). A contract-declared non-subject is the **first of those,
+  reached deliberately instead of by an unresolved placeholder** — one fact, one word, and what
+  changed is only who noticed it. Two collapse into one; a third word would have been a
+  vocabulary about provenance wearing the clothes of a vocabulary about verdicts. The two sources
+  stay distinguishable in the record by the sentence each carries, and a `./scripts/check`
+  observation asserts exactly that.
+  **Two halves of the symptom were already closed before this unit, and are recorded rather than
+  re-claimed.** The section-3/section-4 mismatch was fixed by the 0.10.0 contract, whose
+  `definition-of-done` gate already read *"section 3 at an item close, section 4 at an
+  engagement's ending"*; META-159 only added §4a's ordering to it (F-086). The `review.md`
+  always-output is fixed here, in the outputs row rather than in the `when` enum, which is closed:
+  the row now says the ask-and-stop execution writes what was examined and that the engagement
+  waits on the stakeholder, **never a verdict**, which belongs to the execution that records the
+  ending — the eleven-hour stale *"not ended"* had no contract answer to point at.
+  **What was deliberately not scoped.** `epic-sign-off` self-passes on a work item (*"is a
+  'work-item', not an epic — the termination gate applies to an engagement's ending only.
+  PASS"*), which is the same shape from the other side. It is left alone: this finding is about a
+  gate with **no subject**, and that one has a subject and answers about it, so declaring it
+  `applies_to: [epic]` would be a scoping the finding did not ask for and would move every
+  work-item entry's line from `pass` to `skipped` across the banked fixtures. Named here so the
+  choice is a decision rather than an oversight.
+  **Fixtures both ways**, in one `./scripts/check` step (*a gate's subject comes from its
+  contract row*, 20 observations): on an epic each scoped gate SKIPs carrying its row's exact
+  sentence and the test command's sentinel file is **not** created; on a work item the sentinel
+  **is** created and no scoped gate skips for want of a subject; a branchless work item still
+  skips `verification-postdates-the-code` with §1.4's sentence; the composed journal entry
+  carries all three; and four injections into a copied contract prove the lint
+  (`gate.applies_to.unknown`, `gate.applies_to` for a list covering every dispatched type,
+  `gate.not_applicable` in both directions). **Non-vacuity in the strong form**: with the
+  `run-gate` branch and `lint-skills`' `check_gate_subject` body stubbed one at a time, 12 of the
+  20 observations fail; with the branch inverted so it skips on **every** type — a scoping that
+  scopes nothing — the five work-item observations fail. `review-close` 0.10.0 → **0.11.0**;
+  `spec/skill-contract.md` revision 7, `spec/journal-and-history.md` revision 6.
 
 ## F-086 — the acceptance is asked for before the epic's Definition of Done is applied, so a late finding invalidates an acceptance already given
 
@@ -3171,6 +3252,50 @@ second occurrence shows the error is common rather than incidental.
   stays where it is; it is the one that genuinely cannot precede the answer.
 - **Provenance:** proposed by retro 0.1.0 (iteration-3-retro.md, P-2); accepted at owner triage 2026-08-31.
 - **Status:** open
+- **Status update 2026-09-10 (META-159, commit bb76d7d): fixed** as the direction says.
+  `spec/dor-dod.md` **§4a** states when each epic criterion is applied: DE1, DE2, DE3, DE5, DE6
+  and DE4's first half against **the state the stakeholder is about to be shown**, before the
+  sign-off is filed; DE4's restatement, DE7 and DE8 after the ending is determined.
+  `review-close` 0.11.0 carries it in the `definition-of-done` gate, in step 10 of the procedure
+  and as an exit criterion.
+  **It is one ordering with ADR-0011's E4 path, and the argument is what makes it one.** F-086
+  reads as an acceptance problem — a criterion applied after the acceptance invalidates it — and
+  at E4 there is no acceptance to invalidate, so the two orderings could easily have diverged.
+  They do not, because the same audit breaks the same thing by a second route: DE6 may file a
+  bug, a bug is a **child of the epic**, and the `## Ending statement` must **name every child
+  by ID** (F-046, ADR-0011 §2.1), which `check-epic-signoff` enforces by containment. An audit
+  run after the statement is written therefore leaves the statement incomplete and the gate
+  refuses the ending. So the rule generalises past acceptance: **the engagement's account of
+  itself** — the sign-off's `## Question` at E1–E3 and E4 by withdrawal, the `## Ending
+  statement` at E4 by silence — is written against a state that has already passed every
+  criterion that could change it. The E4 procedure's step 4 now applies DE1–DE6 before writing
+  the statement, where before it wrote the statement and walked the checklist afterwards.
+  **DE4 splits, and the split was forced rather than chosen.** DE4 has two conjuncts and only the
+  first is reply-independent: whether `docs/product/` describes what was built is settled by the
+  work, while the restatement of every `## Engagement state` section is required to be written
+  *after the ending is determined* (ADR-0010 §4.3 as amended by ADR-0011 §2.4). Applying that
+  half early would describe an engagement that had not ended. So the direction's *DE1 through
+  DE6* is honoured with that conjunct named, rather than silently contradicting the amendment.
+  DE8 joins DE7 for the same structural reason — its elicitation may be filed alongside the
+  sign-off, so *answered* cannot hold before the reply — and DE8 did not exist when this finding
+  was filed.
+  **A DE1–DE6 failure at the ask is not an ending, it is work**: nothing is filed, the finding
+  becomes an item or a bug, the engagement leaves rest, and the sign-off is due when it returns —
+  which is what *one sign-off per rest* already meant and nothing said out loud.
+  **What this legitimises was already happening off the record.** Five epic-level executions in
+  banked runs recorded `definition-of-done` as *"skipped, deliberately"* on the reasoning that
+  *"applying DE1–DE6 now would decide the thing the question exists to ask"* — and one of them
+  listed, in the same entry, every child terminal and named, every outcome recorded and all eight
+  success measures addressed
+  [src: meta/harness/evidence/iteration-3b/tracker/items/EP-001/journal.md]. The work was being
+  done; only the record of it was withheld.
+  **No fixture, and the reason is stated rather than skipped.** The ordering is a rule about *when
+  a worker performs a read*, and nothing in the workspace distinguishes a Definition of Done
+  applied before an acceptance from one applied after it: `definition-of-done` is a
+  `manual_check`, so its verdict is the caller's word by design (F-091), and the only mechanical
+  trace either way is the same journal entry. The enforcement that does exist is second-order and
+  already present — a bug filed at the ask takes the engagement out of rest, and
+  `check-epic-signoff` refuses a sign-off filed before rest. `spec/dor-dod.md` revision 10.
 
 ## F-087 — the pipeline asks which documents a change touched, and never asks which documents it falsified, until the last gate
 
