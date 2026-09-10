@@ -6305,3 +6305,93 @@ recall is a reading, not a number, and the report says which.
   (revision 13), `spec/workspace-layout.md` §1.4, `adapters/claude-code/dist/`,
   `meta/findings/FINDINGS.md` (F-097 and F-104 resolved; F-109 and F-110 filed),
   `meta/journal.md`. Commits `b4f1909`, `6e02a61` and this one.
+
+## 2026-09-10 — META-164 — a fresh install of everything this session shipped, twice, then nothing left behind
+
+- **Unit:** META-164 (Phase VI — provision-verification of the two staged regressions)
+- **Inputs read:** `meta/CHECKPOINT.md`, `meta/OPS-CONVENTIONS.md` in full; `harness/provision.py`
+  in full (docstring, `directory_state`, `wipe`, `merge_allow_list`, `trust_project`, `provision`,
+  `main`); `harness/iterations/iteration-5-envel.json` and `iteration-5b-droll.json`;
+  `harness/USAGE.md` §2 and §4; `USAGE.md` §4's allow-list block; `harness/tests/test_harness.py`
+  `Configuration`; `adapters/claude-code/install.py` (docstring, `copy_tree`, `install_hooks`) and
+  `render.py`'s docstring; `scripts/check`'s `check_shipped_scripts` (F-072), whose method this
+  unit re-ran against the *install* rather than against `dist/`;
+  `adapters/claude-code/dist/agile-skills/scripts/workspace-init`'s `.gitignore` block.
+- **NOT read, deliberately:** `harness/skills/simulated-human/probes/iteration-5-envel.md`.
+  Iteration 5 is a **held-out calibration engagement**; provisioning never opens a probe, so the
+  amount of it this unit needed was none, and its existence was established with `os.path.isfile`
+  and a byte count (3396) rather than a read. `iteration-5b-droll.md` was likewise only stat'd.
+- **NOT run, deliberately:** `harness/run_iteration.py`, in any mode, for either iteration. The
+  runs are the owner's to launch. **No iteration was run.** What was verified is *runnability*.
+- **Decisions:**
+  - **The scratch root is outside the repository and outside the default:**
+    `…/scratchpad/m164-throwaway`, passed explicitly with `--root`, so that
+    `~/agile-skills-throwaway` (checked first: empty) could not be confused with this unit's
+    output. `--trust` was **not** passed: it writes to `~/.claude.json`, which is outside both the
+    repository and the throwaway root, and this unit's contract is to leave nothing behind. The
+    consequence is stated rather than hidden — the merged allow-list is therefore *installed and
+    checked*, not *exercised*; a headless run ignores it unless the project is trusted.
+  - **The decision table, ten rules, applied identically to both configs.** (1) `--dry-run` exits
+    0 and writes nothing — the target directory still does not exist afterwards. (2) provisioning
+    exits 0 and leaves `.harness/provision.json` naming the right project at `pipeline 0.10.0`,
+    the repository's current VERSION. (3) the installed toolkit is **byte-identical** to
+    `adapters/claude-code/dist/` (`diff -r` exit 0 for `skills/`, and for `agile-skills/` with
+    the single expected extra `hooks/`, which `install.py`'s docstring names), and `dist/` is
+    itself current (`render.py --check`: *"render: dist/ is current"*) — so *matches what this
+    repo renders* is a chain of two proofs, not an eyeball. (4) `validate-workspace` exits **0**
+    on the fresh workspace with *"0 errors, 2 warnings"*, both warnings being the ones
+    `workspace-init` is documented to leave for `intake`. (5) `.claude/settings.json`'s
+    `permissions.allow` equals `USAGE.md` §4's JSON block exactly, all eight entries in order,
+    with the installer's `PreToolUse` hooks (`Edit|Write|MultiEdit|NotebookEdit` and `Bash`)
+    undisturbed. (6) the persona and probe the config names exist. (7) `CONSUMER-PROMPT.md` is
+    `cmp`-identical to the repository's. (8) **every shipped script imports, from the install** —
+    18 scripts, 0 broken, `runpy` with `run_name='imported'` and only the installed `lib/` on the
+    path, which is `check_shipped_scripts` run one layer further out than the gate runs it.
+    (9) this session's new material is present in a fresh install: `record-halt`, `record-merge`,
+    `lint-documents`, `tracker/waiting/`, all nine skill contracts at the versions
+    `methodology/skills/*/skill.yaml` currently declare (`review-close` 0.14.0, `retro` 0.2.1,
+    `answer-questions`/`plan` 0.6.2, `implement`/`next`/`refine` 0.6.0, `intake`/`verify` 0.5.1),
+    and `spec/` `diff -r`-identical to the repository's. (10) idempotence **tested, not repeated
+    from the docstring**: a second provision over the same directory exits 0, prints *"nothing to
+    commit (already provisioned)"*, leaves HEAD on the same sha and the project tree
+    `git status`-clean, and for `droll` the file-by-file md5 manifest is **identical** before and
+    after.
+  - **A wrinkle the idempotence rule found, and the reason it is not a defect.** The second run
+    prints *"wrote .gitignore"* every time. `provision.py` step 2 writes its own five-line
+    `.gitignore`; `workspace-init` step 4 *appends* `*.py[cod]` and `HARNESS-STATUS.md` to it.
+    So each re-provision clobbers `workspace-init`'s lines and the very next step restores them.
+    The end state converges — the md5 manifest proves it — but the ordering is load-bearing:
+    `provision.py`'s steps 2 and 4 disagree about who owns that file, and only their order makes
+    the disagreement invisible.
+  - **The one real finding: `install.py` ships whatever build byproducts sit in
+    `adapters/claude-code/hooks/`.** Step `install.py:174` copies that directory wholesale
+    (`shutil.copytree`), and the directory carries a **git-ignored** `__pycache__/`
+    `guard-workspace-writes.cpython-312.pyc` left behind whenever this repository's own gate runs
+    the hook's tests. Every consumer install therefore contains a `.pyc` compiled on the
+    *builder's* machine. Established rather than assumed: `git ls-files` lists only
+    `guard-workspace-writes.py` and `test_guard.py`; `git check-ignore -v` returns
+    `.gitignore:1:__pycache__/`; a controlled re-run showed neither `render.py --check` nor
+    `install.py` changes that file's mtime, so it predates this unit and is pure local state; and
+    a fresh `install.py` into an empty temp directory reproduces the copy. **Severity is stated
+    honestly and it is low**: the project's own `.gitignore` covers `__pycache__/`, so the
+    provisioning commit is 85 files on both machines and *what git tracks in a provisioned project
+    is unaffected*. What is affected is that a fresh install's **contents depend on untracked
+    local state** — the install is not hermetic with respect to what git tracks — which also means
+    `--uninstall`'s *"remove exactly what was installed"* and any file count vary by machine.
+    `test_guard.py` ships too; that one is git-tracked and may well be intended.
+  - **Verify before destroying, and the check is what made the deletion safe.** Before removal
+    both directories were inspected: under the scratch root, carrying this tool's own marker,
+    exactly **one** commit each (the provisioning commit `743d04c` / `564a11d`), **no remotes**,
+    99 files. Nothing in either was worth keeping, and nothing could have been pushed anywhere.
+- **Questions raised:** none.
+- **Gates:** `harness/tests/test_harness.py` — **110 tests, OK (skipped=1)**; its
+  `test_the_allow_list_still_matches_usage_section_4` and
+  `test_every_iteration_config_names_files_that_exist` are the repository-side halves of rules 5
+  and 6 above. `adapters/claude-code/render.py --check`: *"render: dist/ is current"*.
+  Per-iteration: `iteration-5-envel` **10/10 rules pass**, `iteration-5b-droll` **10/10 rules
+  pass**. Afterwards: both projects removed, the scratch root `rmdir`'d and confirmed absent,
+  `~/agile-skills-throwaway` still empty, `git status --porcelain` **empty at exit 0**, and
+  `harness/runs/` `diff`-identical to the 19-entry baseline taken before the unit started.
+- **Artifacts:** `meta/journal.md` (this entry) and this commit. **No toolkit, harness or fixture
+  file was changed** — this unit is a verification, and the only thing it had licence to write is
+  its own record.
