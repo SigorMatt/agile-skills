@@ -1500,37 +1500,149 @@ class OpsClassification(unittest.TestCase):
 
 
 class OpsProcesses(unittest.TestCase):
-    """Who counts as a driver — and, more to the point, who does not."""
+    """Who counts as a driver — and, more to the point, who does not.
 
-    PROCESSES = [
-        (11, ["python3", "harness/run_iteration.py", "--iteration", "iteration-5-envel"]),
-        (12, ["python3", "/tmp/claude-1000/x/scratchpad/probe.py", "iteration-5-envel"]),
-        (13, ["python3", "harness/ops/status.py", "--iteration", "iteration-5-envel"]),
-        (14, ["python3", "harness/ops/watch.py", "--iteration", "iteration-5-envel"]),
-        (15, ["bash", "-c", "echo unrelated"]),
-    ]
+    The rule is the invocation, not the mention. Matching `run_iteration` or `iteration-<id>`
+    anywhere in a joined cmdline was wrong on a live run: the ops session's own `bash -c`
+    monitor carried both strings in the script text it was about to interpret, and was counted
+    as the driver of a run whose real driver had already exited.
+    """
+
+    DRIVER = (11, ["python3", "harness/run_iteration.py",
+                   "--iteration", "iteration-5-envel", "--turn-timeout", "7200"])
+    SCRATCHPAD = (12, ["python3", "/tmp/claude-1000/x/scratchpad/probe.py", "iteration-5-envel"])
+    STATUS_TOOL = (13, ["python3", "harness/ops/status.py", "--iteration", "iteration-5-envel"])
+    WATCH_TOOL = (14, ["python3", "harness/ops/watch.py", "--iteration", "iteration-5-envel"])
+    UNRELATED = (15, ["bash", "-c", "echo unrelated"])
+
+    # Recorded from the live run, trimmed: an ops monitor polling the iteration. Its argv holds
+    # the whole loop as ONE string, so `run_iteration` and `iteration-5-envel` are both inside
+    # it — and neither says anything about what this process is.
+    OPS_MONITOR = (1244620, [
+        "/bin/bash", "-c",
+        "source /home/msi/.claude/shell-snapshots/snapshot-bash-1788988217359-70tc0z.sh "
+        "2>/dev/null || true && eval 'WATCH=1244501; DRIVER=1243961; "
+        "REPORT=/home/msi/git/agile-skills/harness/runs/iteration-5-envel/watch-report.txt\n"
+        "while true; do\n"
+        "  if [ -f \"$REPORT\" ]; then echo \"WATCH-FIRED\"; break; fi\n"
+        "  if ! pgrep -af run_iteration >/dev/null; then echo gone; fi\n"
+        "  sleep 60\ndone'"])
+
+    ALL = [DRIVER, SCRATCHPAD, STATUS_TOOL, WATCH_TOOL, UNRELATED, OPS_MONITOR]
+
+    def drivers(self, processes, iterations=("iteration-5-envel",), self_pid=99):
+        return ops_status.driver_processes(list(iterations), processes=list(processes),
+                                           self_pid=self_pid)
 
     def test_the_driver_is_found(self):
-        found = ops_status.driver_processes(["iteration-5-envel"], processes=self.PROCESSES,
-                                            self_pid=99)
+        found = self.drivers(self.ALL)
         self.assertEqual([record["pid"] for record in found], [11])
+        self.assertEqual(found[0]["matched"], "iteration-5-envel")
+
+    def test_the_ops_sessions_own_shell_wrapper_is_not_the_driver(self):
+        """The live false positive, reproduced. This argv contains both `run_iteration` and
+        `iteration-5-envel`; it is a shell holding a script, and the run's real driver was
+        already dead when it was reported alive."""
+        self.assertEqual(self.drivers([self.OPS_MONITOR]), [])
+
+    def test_a_phantom_driver_would_have_hidden_the_dead_process_case(self):
+        """Why it mattered, by execution rather than assertion. With the phantom counted, a run
+        whose state still says `running` classifies as a stall instead of a dead driver — the
+        one case the probe exists to catch."""
+        running = {"status": "running", "stop-reason": None, "turn": 4, "error": None}
+        phantom = len(self.drivers([self.OPS_MONITOR]))
+        self.assertEqual(phantom, 0)
+        self.assertEqual(ops_status.classify_run(running, phantom, 0)[:2],
+                         (2, "process-dead-state-running"))
+        self.assertEqual(ops_status.classify_run(running, 1, 0)[:2], (3, "stalled-candidate"))
 
     def test_a_scratchpad_process_that_names_the_iteration_is_not_a_driver(self):
-        found = ops_status.driver_processes(["iteration-5-envel"],
-                                            processes=[self.PROCESSES[1]], self_pid=99)
-        self.assertEqual(found, [])
+        self.assertEqual(self.drivers([self.SCRATCHPAD]), [])
+
+    def test_a_scratchpad_copy_of_the_driver_itself_is_still_excluded(self):
+        """The guard the script-name rule does not subsume: somebody's experiment under the
+        scratchpad is a real invocation, and still not this run's driver."""
+        copy = (16, ["python3", "/tmp/claude-1000/x/scratchpad/run_iteration.py",
+                     "--iteration", "iteration-5-envel"])
+        self.assertEqual(self.drivers([copy]), [])
 
     def test_the_ops_tools_do_not_count_themselves_as_the_driver(self):
-        """`status.py --iteration X` carries X in its own argv. Without this exclusion the
-        probe reports the run as alive whenever the probe itself is running."""
-        found = ops_status.driver_processes(["iteration-5-envel"],
-                                            processes=self.PROCESSES[2:4], self_pid=99)
-        self.assertEqual(found, [])
+        """`status.py --iteration X` carries X in its own argv."""
+        self.assertEqual(self.drivers([self.STATUS_TOOL, self.WATCH_TOOL]), [])
 
     def test_our_own_pid_is_excluded(self):
-        found = ops_status.driver_processes(["iteration-5-envel"], processes=self.PROCESSES,
-                                            self_pid=11)
-        self.assertEqual(found, [])
+        self.assertEqual(self.drivers(self.ALL, self_pid=11), [])
+
+    def test_a_driver_for_another_iteration_is_not_this_ones(self):
+        other = (17, ["python3", "harness/run_iteration.py", "--iteration", "iteration-4-recall"])
+        self.assertEqual(self.drivers([other]), [])
+        self.assertEqual([record["pid"] for record in
+                          self.drivers([other], iterations=("iteration-4-recall",))], [17])
+
+    def test_the_iteration_is_read_from_the_flag_not_from_the_whole_cmdline(self):
+        """A driver for one run whose argv mentions another — a log path, say — belongs to the
+        run its `--iteration` flag names, and to no other."""
+        confusing = (18, ["python3", "harness/run_iteration.py",
+                          "--iteration", "iteration-4-recall",
+                          "--note", "supersedes iteration-5-envel"])
+        self.assertEqual(self.drivers([confusing]), [])
+
+    def test_the_shebang_invocation_counts(self):
+        """`harness/run_iteration.py --iteration X`, run through its own shebang, is how the
+        tmux launch actually starts it."""
+        shebang = (19, ["harness/run_iteration.py", "--iteration", "iteration-5-envel"])
+        self.assertEqual([record["pid"] for record in self.drivers([shebang])], [19])
+
+    def test_the_iteration_flag_is_read_in_both_spellings(self):
+        self.assertEqual(ops_status.argv_iterations(
+            ["python3", "x.py", "--iteration", "a", "--iteration=b"]), ["a", "b"])
+
+    def test_is_driver_argv_isolated_the_script_name_rule(self):
+        """Isolating the rule, because the iteration-flag rule masks it in the end-to-end case.
+
+        The first version of this test file asserted only that the ops monitor was excluded —
+        which stayed true when `is_driver_argv` was reverted to the substring match, because the
+        flag rule caught it instead. A rule with no test that fails when it is removed is not
+        being tested, so each half is pinned here directly.
+        """
+        # A shell holding the driver's name in the text it is about to interpret.
+        self.assertFalse(ops_status.is_driver_argv(
+            ["/bin/bash", "-c", "while true; do pgrep -af run_iteration; sleep 60; done"]))
+        # A shell asked to interpret the script itself: argv[0] decides, not the argument.
+        self.assertFalse(ops_status.is_driver_argv(["bash", "harness/run_iteration.py"]))
+        # Anything else merely naming the file.
+        self.assertFalse(ops_status.is_driver_argv(["grep", "-n", "x", "run_iteration.py"]))
+        self.assertFalse(ops_status.is_driver_argv(["python3", "harness/audit.py"]))
+        # And the two shapes that are real, so the rule is not simply "always no".
+        self.assertTrue(ops_status.is_driver_argv(
+            ["python3", "harness/run_iteration.py", "--iteration", "it"]))
+        self.assertTrue(ops_status.is_driver_argv(
+            ["harness/run_iteration.py", "--iteration", "it"]))
+
+    def test_a_shell_wrapper_is_excluded_even_when_it_names_the_iteration_by_flag(self):
+        """The end-to-end pair for the rule above: an argv that would satisfy the flag rule and
+        is still not a driver, so the script-name rule is what has to refuse it."""
+        wrapper = (20, ["/bin/bash", "-c", "run the thing", "--iteration", "iteration-5-envel"])
+        self.assertEqual(self.drivers([wrapper]), [])
+
+    def test_a_shell_is_recognised_by_argv_zero(self):
+        self.assertTrue(ops_status.is_shell(["/bin/bash", "-c", "anything"]))
+        self.assertTrue(ops_status.is_shell(["sh", "-c", "anything"]))
+        self.assertFalse(ops_status.is_shell(["python3", "harness/run_iteration.py"]))
+
+    def test_an_ops_shell_wrapper_in_the_repo_is_not_a_builder_session(self):
+        """Where `is_shell` is load-bearing. `builder_processes` matches the word `claude`
+        anywhere in a cmdline, so this session's own `bash -c` wrapper — running in the
+        repository, with `claude` inside the script text — is the same false positive one layer
+        over. argv[0] alone cannot refuse it here, because the match is not on argv[0]."""
+        repo = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, repo, ignore_errors=True)
+        wrapper = (21, ["/bin/bash", "-c", "pgrep -af claude | wc -l"])
+        real = (22, ["claude", "--dangerously-skip-permissions"])
+        with mock.patch.object(ops_status, "process_cwd", lambda pid: repo):
+            found, _ = ops_status.builder_processes(repo, pid_file=None,
+                                                    processes=[wrapper, real], self_pid=99)
+        self.assertEqual([record["pid"] for record in found], [22])
 
     def test_cpu_ticks_survive_a_comm_containing_parentheses(self):
         """Splitting on the first `)` reports a field that is not CPU time at all."""

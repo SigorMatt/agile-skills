@@ -63,11 +63,25 @@ CURRENT_UNIT_HEADING = re.compile(r"^##[ \t]+Current unit\b.*$", re.IGNORECASE)
 SECTION_BOUNDARY = re.compile(r"^##[ \t]+(?!#)")
 UNIT_REF = re.compile(r"\bMETA-([0-9]+)\b")
 
-# Cmdlines that mention an iteration but are not a driver. The scratchpad is where an agent
-# session keeps its own scripts and notes, and this tool's own argv necessarily carries the
-# iteration ids it was asked about — a status probe that counts itself as the driver reports the
-# run as alive forever.
-NOT_A_DRIVER = ("/scratchpad", "ops/status.py", "ops/watch.py")
+# A driver is an INVOCATION of this script, never a mention of one. Matching the words
+# `run_iteration` or `iteration-<id>` anywhere in a joined cmdline was wrong twice in one live
+# run: an ops session's own `bash -c '...'` wrapper carries the whole script it is about to run
+# in its argv, so a monitor loop polling `iteration-5-envel` was counted as that run's driver
+# while the real driver was already gone. The failure direction is the bad one — a phantom
+# driver turns `2 process-dead-state-running` into `3 stalled-candidate` and hides exactly the
+# case the probe exists to catch.
+DRIVER_SCRIPT = "run_iteration.py"
+
+# argv[0] of a shell. Its arguments are text it is going to interpret, not a program it is
+# running, so nothing inside them is evidence about what this process IS.
+SHELLS = ("bash", "sh", "dash", "zsh", "ksh", "fish")
+
+# The scratchpad is where an agent session keeps its own scripts and notes. A copy of the driver
+# living there is somebody's experiment, not this run.
+NOT_A_DRIVER = ("/scratchpad",)
+
+# `--iteration <id>` / `--iteration=<id>` as the driver's own argv writes it.
+ITERATION_FLAG = "--iteration"
 
 CLOCK_TICKS = os.sysconf("SC_CLK_TCK")
 
@@ -283,28 +297,77 @@ def describe(pid, argv):
     }
 
 
+def is_shell(argv):
+    """True when argv[0] is a shell, whose arguments are text rather than a program.
+
+    Used by `builder_processes`, which matches on the word `claude` appearing anywhere in a
+    cmdline — so an ops session's own `bash -c '... claude ...'` wrapper, running in this
+    repository, would otherwise be counted as a builder session.
+    """
+    return bool(argv) and os.path.basename(argv[0]).split("-")[0] in SHELLS
+
+
+def argv_iterations(argv):
+    """The iteration ids an argv actually asks for, read from its `--iteration` flags."""
+    found = []
+    for index, item in enumerate(argv):
+        if item == ITERATION_FLAG and index + 1 < len(argv):
+            found.append(argv[index + 1])
+        elif item.startswith(ITERATION_FLAG + "="):
+            found.append(item.split("=", 1)[1])
+    return found
+
+
+def is_driver_argv(argv):
+    """True when this argv IS a run of the driver, not a string containing its name.
+
+    Two shapes are real: `python3 .../run_iteration.py ...` and `.../run_iteration.py ...` run
+    through its shebang. Everything else — a shell holding the text, an editor, a grep, this
+    probe — is a mention, and a mention is not a process.
+
+    There is deliberately no separate shell guard here. `argv[0]` already decides: a shell is
+    not python and is not the script, so it fails the leader test on its own. A guard no test
+    can make fail is not a guard, and `is_shell` earns its place in `builder_processes`, where
+    argv[0] is not enough.
+    """
+    if not argv:
+        return False
+    script = next((item for item in argv
+                   if os.path.basename(item) == DRIVER_SCRIPT), None)
+    if script is None:
+        return False
+    leader = os.path.basename(argv[0])
+    return leader.startswith("python") or leader == DRIVER_SCRIPT
+
+
 def driver_processes(iterations, processes=None, self_pid=None):
     """Driver processes for the named iterations.
 
-    Matched on `run_iteration` / `run-iteration`, or on `iteration-<id>` for an id asked about.
-    Excluded: anything under a scratchpad, this tool and its watch sibling, and our own pid —
-    all three would otherwise match on argv alone and report a dead run as alive.
+    A process qualifies by being an invocation of `run_iteration.py` (`is_driver_argv`); the
+    iteration ids then select WHICH driver, read from the driver's own `--iteration` flags
+    rather than by looking for the id loose in the cmdline. A substring match on the id cannot
+    tell a driver from a shell quoting one, and telling them apart is the whole job here.
     """
     if processes is None:
         processes = live_processes()
     if self_pid is None:
         self_pid = os.getpid()
-    wanted = ["run_iteration", "run-iteration"] + [str(name) for name in iterations]
+    wanted = [str(name) for name in iterations]
     found = []
     for pid, argv in processes:
         if pid == self_pid:
             continue
-        line = " ".join(argv)
-        if any(marker in line for marker in NOT_A_DRIVER):
+        if any(marker in " ".join(argv) for marker in NOT_A_DRIVER):
             continue
-        hit = next((marker for marker in wanted if marker in line), None)
-        if hit is None:
+        if not is_driver_argv(argv):
             continue
+        running = argv_iterations(argv)
+        if wanted:
+            hit = next((name for name in wanted if name in running), None)
+            if hit is None:
+                continue
+        else:
+            hit = running[0] if running else DRIVER_SCRIPT
         record = describe(pid, argv)
         record["matched"] = hit
         found.append(record)
@@ -374,7 +437,7 @@ def builder_processes(repo, pid_file=None, processes=None, self_pid=None):
         if pid == self_pid or pid in found:
             continue
         line = " ".join(argv)
-        if any(marker in line for marker in NOT_A_DRIVER):
+        if any(marker in line for marker in NOT_A_DRIVER) or is_shell(argv):
             continue
         if "claude" not in os.path.basename(argv[0]) and "claude" not in line:
             continue
@@ -597,8 +660,8 @@ def build_report(args, now, repo=REPO, harness=HARNESS, home=None):
                 report.say(f"                  cwd  {driver['cwd']}")
                 report.say(f"                  argv {driver['argv']}")
         else:
-            report.say("  driver          no process matches "
-                       f"run_iteration or {iteration!r} (scratchpads and this tool excluded)")
+            report.say("  driver          no process is an invocation of run_iteration.py "
+                       f"asking for {iteration!r} (a cmdline that merely names it is not one)")
 
         activity = file_activity(record["run-dir"], args.window_minutes, now, binary=binary)
         report.pair(f"{key}.activity.count", activity["count"])
