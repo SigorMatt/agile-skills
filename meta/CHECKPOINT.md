@@ -10,32 +10,31 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at e5a9bb8 — 37 steps; 102 codes; selftest 320; 56 citations; harness 110
+## The gate is GREEN at d788007 — 38 steps; 106 codes; selftest 332; 57 citations; harness 110
 
 ## Current unit
 
-**META-156** — cluster 3's three record-shape fixes: **F-081, F-083, F-084**.
+**META-157** — cluster 3's two citation-integrity fixes: **F-094** and **F-096**.
 
-- **F-081** — the close-before-merge order leaves the merge unrecordable in the entry that
-  reports it. `review-close` closes the item, *then* merges; the merge sha is created **after**
-  the closing entry is written, so the entry that reports the merge cannot name it. Give the sha
-  a sanctioned home. (Related and already filed: **F-035**, `check-commit-refs` reports a merge
-  that never happened.)
-- **F-083** — `review-close`'s recorded step order fails its own `workspace-valid` gate. Make
-  the legal order legal.
-- **F-084** — a document's version row is a self-reported field with nothing behind it; match
-  the rows against the executions that claim them.
+- **F-094** — a criterion cited by number keeps resolving after the number has come to mean
+  something else. Acceptance criteria are cited as `ITEM ACn`; renumber the list and every
+  standing citation silently now points at a different criterion. It is **F-077's family** (a
+  `path:line` citation resolves for ever, whatever is at the line) — read F-077's resolution
+  first and follow it if it fits, rather than inventing a second mechanism for one problem.
+- **F-096** — a criterion the environment cannot execute is ticked on a substitution, and the
+  tick carries no mark of it. The substituted verification must leave a mark. Compare with
+  `scope.py`'s *out-of-scope-by-construction*, landed this session in META-148: a pass that is
+  not the same as an ordinary pass **exits 0 and says so in its own words**. That precedent is
+  probably the right shape here too.
 
-Each ships its must-fail fixture. F-083 in particular is F-014's family — *the gate runs against
-the pre-move workspace* — so check whether the fix belongs in the order or in when the gate runs,
-and say which and why.
+Both are `spec/work-item.md` / `scripts/lib/claims.py` / `validate-workspace` territory.
 
-- Done when: three fixes, fixtures both ways, a `./scripts/check` step proved non-vacuous,
-  gate green, the three statuses updated with resolving citations (a second commit if a sha
-  must be cited), journalled, committed AND pushed.
-- Next units: **META-157** (F-094, F-096), **META-158** (the F-099 sweep), then cluster 4
-  (**META-159**), cluster 5 (**META-160/161/162**), cluster 6 (**META-163**),
-  staging (**META-164**), the report (**META-165**).
+- Done when: both fixed with fixtures both ways, a `./scripts/check` step proved non-vacuous in
+  the strong form, gate green, both statuses updated with resolving citations (second commit if
+  a sha must be cited), journalled, committed AND pushed.
+- Next units: **META-158** (the F-099 sweep — expect phantoms; tombstone or correct each,
+  honestly), then cluster 4 (**META-159**), cluster 5 (**META-160/161/162**), cluster 6
+  (**META-163**), staging (**META-164**), the report (**META-165**).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -114,3 +113,28 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
 - Toolkit commits and harness commits stay separate.
 - **No harness run is in flight.** Iteration 5 is a HELD-OUT calibration engagement: this
   session does not run it and does not read its probe beyond provision-verification.
+- **META-156** F-081/F-083/F-084 (**8804bd7** + **d788007**), 38 steps, 102 → **106** codes,
+  selftest 332. **F-081**: `item.md` gains `merge-commit`, written by a new `scripts/record-merge`
+  and nothing else — a second entry was rejected (§2 is one entry per execution, and the format
+  would force the tool to invent `Inputs read`/`Decisions`/`Gates` to record an anti-fabrication
+  fact) and an amendment convention was rejected (a second in-place exception to append-only,
+  which §0 forbids by name). **F-035 is not reintroduced structurally, not carefully**:
+  `vcs.merge_problems` answers four questions once, `record-merge` refuses on it and
+  `validate-workspace` re-asks it every run, so a typed field is held to exactly what a written
+  one is. **F-083: the ORDER, not the gate** — F-014's downgrade exists for a state the move
+  *forces*, and this is not that; a legal order already existed (`transition --outcome` writes
+  both fields in one act) and the procedure simply never named it, so downgrading the code would
+  have legalised the one order that leaves a committable-invalid workspace behind. **F-084**: the
+  execution match is scoped to rows whose item is **not yet `done`** — measured first, because
+  without that boundary the rule reports 10 rows in the must-pass `examples/toy-project`, which
+  is imported real-run evidence. What is **not** decidable is stated in a `[auto]`/`[skill]`
+  table: the version *number* being right, `what changed` describing the change, and whether the
+  named skill made *this* edit. **A stub caught a vacuous case of the agent's own** — its first
+  F-083 case passed with both guards disabled, because the move it used was refused by a gate
+  instead. **Filed F-108**: the new change-log rules' first run over the toy project reports six
+  rows whose named skill was not executing then, two versions out of order with their own
+  timestamps, nine sharing one hand-typed timestamp, and four typed by hand by builder units into
+  a tree whose README says *"Nothing here was written by hand."* Exactly one was repaired — a
+  builder correcting its own splice — and the other seven stand, which is why the rule is scoped
+  rather than retroactive.
+
