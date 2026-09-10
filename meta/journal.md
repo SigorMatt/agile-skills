@@ -5398,3 +5398,81 @@ recall is a reading, not a number, and the report says which.
   citations resolve* now reports **54 cited** (49 before; the five cluster-2 shas are new, 77a5d96
   was already cited). Ledger diff **335 insertions, 0 deletions**.
 - **Artifacts:** `meta/findings/FINDINGS.md`, `meta/journal.md`.
+
+## 2026-09-10 — META-153c — H-020's fix: the driver reads the ending the record states
+
+- **Unit:** META-153c
+- **Inputs read:** `meta/findings/FINDINGS.md` H-020 in full and F-045;
+  `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` §2, §3, §3.1 and §7;
+  `spec/ids-and-statuses.md` §3.5 and §3.5a; `scripts/engagement-state` and
+  `scripts/lib/engagement.py`'s `state()`; `harness/run_iteration.py`'s
+  `scan_project`/`abandonment_declared`/`engagement_terminal`/`Run.decide`;
+  `harness/tests/test_harness.py`'s `Abandonment`; the eleven `item.md` frontmatters of
+  `fixtures/abandoned-engagement/right` (read-only).
+- **Decisions:**
+  - **The test is the epic's recorded `outcome`; the count is corroboration.** ADR-0011 §3's
+    table and `spec/ids-and-statuses.md` §3.5 both give `done` + `outcome: dropped` to E4 and to
+    no other ending — E1 is `delivered`, E2 `delivered-partial`, E3 leaves the epic `blocked` — so
+    one frontmatter field says which of the four endings was recorded. The property that decides
+    it over every alternative is that it is **current state**: a returning stakeholder reopens the
+    epic (ADR-0011 §7) and the engagement's next ending overwrites it. Everything derived from the
+    waiting log is append-only and therefore outlives the silence it describes, which is precisely
+    how the old reading came to be unsound.
+  - **The history prefix `orphaned by E4:` / `E4 abandoned:` was considered and not taken.**
+    Same argument, turned around: history is append-only too, so a recovered-and-delivered epic
+    still carries the `E4 abandoned:` row. The prefix only distinguishes the endings if the driver
+    also decides which row is the **last** one — a second inference, on a table the driver does
+    not otherwise parse, to learn what one frontmatter field already states. It is corroboration
+    of the same kind as the count, and it is not needed to make the reading sound.
+  - **The signal was NOT in `engagement-state`'s output, and it did not need to be.** Its `ended`
+    reason is *"the epic is 'done'; the engagement has ended and the retrospective has not been
+    written"* — the epic's **status**, never its `outcome`. No toolkit change was made or asked
+    for: `scan_project` has read `outcome` off every item's frontmatter since long before E4
+    existed, so the driver already had the fact in hand. Asking the toolkit to print it for a
+    grader's benefit is the ADR-0005 move H-020 refused when it was filed, and it would have
+    reproduced the very dependency the finding is about.
+  - **Reading the ending rather than the clock made the recognition complete, not just sound.**
+    E4 has two routes (`spec/ids-and-statuses.md` §3.5) and a **withdrawal** is an act the
+    stakeholder performs, so it ends the engagement with no silent round ever recorded. The old
+    predicate required the count and so reported a withdrawal-E4 run as `epic-done` or
+    `blocked-no-recourse`. It is now recognised, with a detail line that claims no silence — the
+    finding's own instruction that E4 *"asserts nothing about why"* (ADR-0011 §7).
+  - **Non-vacuity, by execution, in the strong form.** With the old predicate restored in place
+    and nothing else changed, **five** of `Abandonment`'s tests fail. The two that carry the
+    finding: `test_the_declaration_is_read_off_the_record_not_off_the_count`, which puts one
+    byte-identical `engagement-state` output over two records and gets
+    `[('EP-001', 3, 3)] != []`; and `test_a_recovered_engagement_that_delivered_is_a_delivery`,
+    the whole path — silence past the threshold, a recovery through `tracker/requests/`, a
+    delivery — where the old reading gives `'abandoned' != 'epic-done'`. A third,
+    `test_a_recovered_delivery_still_gets_its_closing_sim_turn`, records what the mislabel *cost*
+    beyond the label: E4 skips the closing sim turn because there is nobody to show the ending to,
+    so a delivery called `abandoned` loses that turn as well.
+  - **The synthetic readings had to become coherent, and that is a strengthening.** `Abandonment`
+    built an `ended` verdict on top of an epic recorded as `open`; the driver now reads both, so
+    the class carries two records — `E4_RECORD` (`done`/`dropped`) and `RECOVERED_RECORD`
+    (`done`/`delivered`) — and the fixture test additionally reads the eleven real `item.md`
+    frontmatters and asserts EP-001 and EP-002 record `dropped`. No assertion was weakened: every
+    existing `assertEqual` stands, on inputs that now describe one moment instead of two.
+  - **What deliberately did not change.** The driver still asks rather than re-derives — the
+    verdict is `engagement-state`'s and both numbers come out of one sentence of its output — and
+    `test_the_driver_holds_no_threshold_of_its_own` (no `threshold_rounds`, no `tracker/waiting`,
+    no `pipeline.yaml` in the driver's source) is still green: F-045's mechanism refused
+    structurally. `abandoned` is still checked first in `engagement_terminal()` (H-014's shape),
+    the undeclared-abandonment branch still routes to the worker and never to the sim, and
+    META-153's `stalled`/`abandoned` pair is untouched and green.
+  - **H-020 stays open, and says so.** Its first half — that nothing *states* that a terminal
+    verdict carries the silence sentence, and that the fixture pin `skipTest`s to a green exit
+    when the fixture is absent — is unfixed. What changed is its consequence: both are now
+    dependencies of a detail line's evidence, not of the driver's recognition of an ending, so
+    neither can mislabel a run. The status update says that rather than claiming the finding.
+  - **The sha is recorded in a follow-up commit (F-024).** The harness fix is 4a59a9a; a commit
+    cannot cite itself, and a citation recorded by amending the commit being cited is always
+    orphaned — which is the failure F-024 was filed for and which `./scripts/check`'s
+    *findings citations resolve* step checks with `git merge-base --is-ancestor`.
+- **Questions raised:** none new. No toolkit change is needed or requested by this unit.
+- **Gates:** harness self-test **110 tests**, green (105 before; five new, one pre-existing skip —
+  iteration 2's turn-6 transcript is not in this checkout). `./scripts/check` green —
+  `check: all steps passed`, 36 steps, *findings citations resolve* now **55 cited**. Ledger diff
+  **46 insertions, 0 deletions**.
+- **Artifacts:** `harness/run_iteration.py`, `harness/tests/test_harness.py`,
+  `meta/findings/FINDINGS.md`, `meta/journal.md`.

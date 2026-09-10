@@ -3976,3 +3976,49 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   decision established by execution and by reading `scripts/lib/engagement.py` against ADR-0011
   §5 and §7.
 - **Status:** open
+- **Status update 2026-09-10 (META-153c): the unsound half is fixed (commit 4a59a9a); the
+  display-rule dependency it was filed for stands, and can no longer mislabel a run.** Taking the
+  serious half first, because it is the one that could stamp the wrong ending on a whole run.
+  `abandonment_declared()` no longer tests the count. It
+  tests the **ending the toolkit recorded**: `engagement-state` says the engagement has ended
+  (`ended`, or `closed` once the retro is written), *and* the epic it ended is `done` with
+  `outcome: dropped`. `spec/ids-and-statuses.md` §3.5 gives that pair to E4 and to no other ending
+  — E1 records `delivered`, E2 `delivered-partial`, E3 leaves the epic `blocked` — and unlike
+  anything derived from the waiting log it is **current state**, so a stakeholder who comes back,
+  reopens the epic (ADR-0011 §7) and gets a delivery overwrites it. That is exactly the property
+  the count lacks, and it is the direction above, taken as written.
+  The count is now **corroboration** and appears only in the detail line, quoted from
+  `engagement-state`'s own sentence when the verdict carries one. This is what makes the
+  display-rule dependency stop mattering: a maintainer who tidied the sentence out of the terminal
+  verdicts as noise would cost the driver a phrase of evidence, not its recognition of the ending.
+  The other half of the direction — the history reason beginning `E4 abandoned:` — was
+  **considered and not taken**, and the reason is the same soundness argument: a recovered
+  engagement's history still holds that row, because history is append-only too, so the prefix
+  distinguishes the two endings only if the driver also decides which row is the last one. The
+  frontmatter says it in one field.
+  **The reading is now complete as well as sound.** Requiring the count missed E4's *other* route:
+  a withdrawal (§3.5) is an act the stakeholder performs, so it ends the engagement at E4 with no
+  silent round ever recorded, and the old predicate reported such a run as `epic-done` or
+  `blocked-no-recourse`. It is now recognised, with a detail line that claims no silence.
+  **Non-vacuity, by execution.** Five tests in `Abandonment` fail against the old predicate and
+  pass against the new one, the deciding two being
+  `test_the_declaration_is_read_off_the_record_not_off_the_count` — one byte-identical
+  `engagement-state` output over two records, `[('EP-001', 3, 3)] != []` under the old reading —
+  and `test_a_recovered_engagement_that_delivered_is_a_delivery`, the whole path, where the old
+  reading gives `'abandoned' != 'epic-done'`. The genuine E4 cases and the `stalled`/`abandoned`
+  distinction from META-153 are unchanged and still green. Self-test 105 → **110**.
+  **What did not change, deliberately.** The driver still asks rather than re-derives: the verdict
+  is `engagement-state`'s, both numbers come out of one sentence of its output, and
+  `test_the_driver_holds_no_threshold_of_its_own` — no `threshold_rounds`, no `tracker/waiting`,
+  no `pipeline.yaml` in the driver's source — is still green (F-045's mechanism, refused
+  structurally). No toolkit change was made or needed: **the signal was not in `engagement-state`'s
+  output** (its `ended` reason names the epic's *status* and not its `outcome`) and it did not have
+  to be, because the epic's frontmatter is already in every reading `scan_project` takes. Asking
+  the toolkit to add it for the grader's benefit is the ADR-0005 move this finding refused when it
+  was filed.
+  **Still open, and unfixed here:** the *first* half of this finding. Nothing yet **states** that
+  a terminal verdict carries the silence sentence, and the fixture pin
+  (`test_the_real_script_is_read_the_way_the_driver_parses_it`) still `skipTest`s — exiting 0 —
+  when `fixtures/abandoned-engagement` is absent. Neither can now
+  mislabel a run; both are unpromised dependencies of a detail line, which is the standing this
+  finding leaves them in.
