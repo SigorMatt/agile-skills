@@ -3049,7 +3049,42 @@ second occurrence shows the error is common rather than incidental.
   under it, alongside the children and the accepted gaps, so that surfacing one is the default
   rather than a reviewer's initiative.
 - **Provenance:** proposed by retro 0.1.0 (iteration-2-retro.md, P-5); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** fixed (commit cb344f4) — **both halves, and the reach is under-claimed on purpose.**
+  A decision taken under a delegation carries one labelled line beside it —
+  `**Under delegation:** <ANSWER-ID> — <category>` — in `refinement-qa.md` next to the
+  `[assumed]` tag, in `plan.md` under `## Assumptions`, or in `## Notes`. The form is
+  ADR-0008's `Checked against:` precedent rather than a new shape, and it is read by the same
+  `record.blocks()`, so a declaration that wraps is one declaration. It is also read **inside**
+  another block, because `plan.md`'s natural home for it is under the assumption bullet it
+  belongs to and a reader that only looked at a block's own label would pass silently over
+  every one of those. The second half is the sign-off: `spec/question.md` §2's sixth sign-off
+  rule makes `## Question` name every answer the engagement spent under, with the category and
+  what was assumed; at E4, where there is nobody to address, the same list goes into
+  `artifacts/review.md`'s `## Ending statement`, which is where an ending's account lives when
+  it is a document (§3.5a). `scripts/lint-answers` gains rules 4 and 5.
+  **What the lint can see:** that a written delegation's answer ID resolves to a recorded human
+  answer or an existing request; that a category is named beside it; and that at an ending —
+  `--context epic`, which is how `review-close` runs this gate — every ID so spent appears in
+  the sign-off's `## Question` or in the `## Ending statement`. **What it cannot see:** whether
+  the delegation really reaches the decision taken under it; whether the category named is the
+  category the person meant; whether the assumptions listed beside an ID at the ending are the
+  ones actually taken; and, the largest of them, **a delegation relied on and never written
+  down at all**. That last one is why the first half lands as Definition of Ready **R12**,
+  marked `[skill]` with the measurement beside it rather than as a gate: `[assumed]` is not a
+  usable proxy. `examples/toy-project` records **eight** assumed answers, six of which say in
+  the same breath that the human confirmed them; one states it was taken under **no** licence
+  and names where a later disagreement lands; and exactly one is taken under a licence —
+  *"don't hold the item up over it"* — quoted in prose, with no ID and no category, which is
+  the case R12 is for. A rule keyed on the tag would fire eight times for one true positive.
+  **Half of half 1 already existed and is recorded rather than re-claimed:** `refine`'s step 3
+  already said to decide under a standing deferral and to name it. What it had no form for was
+  the *category*, the ID, or anything that read the line — and the finding's own evidence is
+  that naming it in prose is what happened and what failed.
+  Where an engagement has filed neither a sign-off nor an ending statement, rule 5 **says so on
+  stdout and reports nothing**: an ending with no ask at all is `check-epic-signoff`'s to
+  refuse, and two gates reporting one failure teaches a reader to skim this one's output.
+  Nothing is retroactive: no file in `examples/` or `fixtures/` carried the line before this
+  change, so the rules were silent everywhere until the fixture gave them cases.
 
 ## F-083 — `review-close`'s recorded step order fails its own `workspace-valid` gate
 

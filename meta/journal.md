@@ -6065,3 +6065,116 @@ recall is a reading, not a number, and the report says which.
   `scripts/check`, `fixtures/broken-workspace` and `fixtures/abandoned-engagement` journal
   versions, `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md` (F-088, F-089, F-090
   resolved with citations), `meta/journal.md`. Commits `5e43182` and this one.
+
+## 2026-09-10 — META-161 — a blank cheque with a stated amount, and a receipt at the ending
+
+- **Unit:** META-161 (F-082 — cluster 5, part 2)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-082 in full, and F-028, F-062, F-023, F-027,
+  F-063, F-064, F-046, F-031, F-089 for context; `meta/adr/ADR-0008-cross-answer-consistency.md`
+  in full, §1 and §5 twice; `spec/question.md` in full (current text, after META-159's §2 edit),
+  `spec/dor-dod.md` §1 and §2, `spec/workspace-layout.md` §1.2–1.3; `scripts/lint-answers`,
+  `scripts/check-epic-signoff`, `scripts/lib/record.py`, `scripts/check` steps 8–10;
+  `methodology/skills/{refine,plan,review-close}/`; `examples/toy-project`'s three
+  `refinement-qa.md` files, read line by line rather than counted.
+- **Decisions:**
+  - **The form is ADR-0008's, not a new one.** A consumed delegation writes one labelled line
+    beside the decision — `**Under delegation:** <ANSWER-ID> — <category>` — read by the same
+    `record.blocks()` that reads `Checked against:`, so a declaration that wraps is one
+    declaration. It goes wherever the decision is recorded: `refinement-qa.md` beside the
+    `[assumed]` tag, `plan.md` under `## Assumptions`, `## Notes` where the assumption is
+    carried there.
+  - **It is also read *inside* another block, and that is not a convenience.** `plan.md`'s
+    `## Assumptions` is a list, and the natural home for the line is under the assumption bullet
+    it belongs to. A reader that only looked at a block's own label would pass silently over
+    every one of those — a clean bill of health on exactly the record the finding is about. The
+    first draft did exactly that, and the fixture case built to look like a real plan is what
+    caught it.
+  - **The ending is `lint-answers`', not `check-epic-signoff`'s, and the reason is a rule this
+    repo already has.** `review-close` runs `lint-answers --context {{item.type}}`, so on an
+    epic the ending's scope already exists and nothing new is dispatched. The alternative —
+    putting the containment check where the sign-off's *other* containment check lives — would
+    have needed `--item` added to that command, which scopes rules 1 and 2 to one item and
+    **weakens an existing check**: the ADR's obligation 1 runs over the whole record at an
+    ending on purpose.
+  - **`answer.delegation.unsurfaced` fires only at the ending, and the fixture pins the zero.**
+    Before the ending, a delegation not yet surfaced is not yet a defect; the sign-off has not
+    been written. `scripts/check` asserts it fires **0** times in the default scope and **2** at
+    `--context epic`, so a rule that leaked into every skill's run would fail here.
+  - **Three branches, three cases, each with a silent twin.** `EP-001` has a sign-off; `EP-002`
+    ended at E4 and has `artifacts/review.md`'s `## Ending statement` instead, which is where an
+    ending's account of itself lives when there is nobody to address (§3.5a); `EP-003` has
+    neither, and there rule 5 **names the count on stdout and reports nothing** — an ending with
+    no ask at all is `check-epic-signoff`'s to refuse, and two gates reporting one failure is how
+    a reader learns to skim.
+  - **Half 1 is smaller than billed, and the difference is the whole finding.** `refine` step 3
+    already said to decide under a standing deferral and *"naming the deferral you are relying
+    on"*. What it had no form for was the category, the ID, or anything that read the line — and
+    the finding's own evidence is that naming it in prose is what happened and what failed. That
+    is recorded rather than re-claimed.
+  - **R12 is `[skill]`, and the measurement is beside it in the spec, not in this ledger.**
+    `[assumed]` is not a usable proxy for a delegation. The must-pass `examples/toy-project`
+    records **eight** assumed answers: six say in the same breath that the analyst proposed them
+    and the human confirmed them, which is no delegation at all; `WI-0001` AC12 states it was
+    taken under **no** licence and names where a later disagreement lands, which is the honest
+    form of R12's other half; and exactly one — `WI-0003` Q7, taken because he *"had just said
+    'don't hold the item up over it'"* — is a delegation quoted in prose with no ID and no
+    category, which is precisely the case R12 is for. Eight fires, one true positive. F-089's
+    precedent from the last unit: the measurement goes into `dor-dod.md` §1 beside the rule.
+  - **Nothing is retroactive, and that was measured before scoping.** No file under `examples/`
+    or `fixtures/` carried an `Under delegation:` line before this change, so both rules were
+    silent over every tree until the fixture gave them cases — 0 findings over `toy-project`,
+    `ended-engagement`, `signed-off-epic`, `abandoned-engagement/right` and `sourced-claims`, in
+    both scopes.
+  - **The `[auto]`/`[skill]` split, stated the way ADR-0008 §5 states it.** `[auto]`: the ID
+    resolves to a recorded human answer or an existing request; a category is named beside it;
+    every ID spent is named at the ending. `[skill]`: whether the delegation reaches the decision
+    taken under it; whether the category is the one the person meant; whether the assumptions
+    listed at the ending are the ones actually taken; and **a delegation relied on and never
+    written down at all**, which nothing here can see and which is why half 1 is a criterion and
+    not a gate.
+  - **`review-close` was at 500/500 again.** Five added lines were paid for by compressing
+    skill-specific narrative — 5a's F-090 story, 9a's closing commentary, step 8's `--detach`
+    paragraph, step 10's `abandoned` pointer, D7's fourth read, two failure-mode bullets. No
+    requirement moved out; `process.md` 473 → 474, rendered body 500 → **500**.
+  - **A bump-time hazard checked and found absent.** `refine`, `plan` and `review-close` were
+    bumped; the only fixture journal entry inside META-154's version-scoped comparison is
+    `fixtures/broken-workspace`'s `verify v0.5.1`, which was not touched. `broken-workspace`
+    stays at 108 codes.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **43 steps** (new: *the ending
+  surfaces every delegation spent (F-082)*, 12 observations); `fixtures/broken-workspace`
+  unmoved at **108 codes** (delta 0 — the new codes belong to `fixtures/crossed-answers`, whose
+  set moves 5 → **8**); `scripts/lib/selftest.py` **356**; `findings citations resolve` **62**;
+  *finding numbers cited resolve* 3590 citations, 128 numbers, 0 phantoms.
+  **Non-vacuity in the strong form, eleven stubs, every one caught.** (1) `declared_delegation`
+  returning `None` → three codes *"expected, not emitted"* and *"unsurfaced fired 0 time(s),
+  expected 2"*; (2) the unnamed branch disabled → *"answer.delegation.unnamed fired 0 time(s),
+  expected 1"*; (3) the resolution loop emptied → *"unresolved fired 0 time(s), expected 2"*;
+  (4) the category check disabled → *"no-category fired 0 time(s), expected 1"*; (5)
+  `check_delegations_surfaced` returning immediately → *"unsurfaced fired 0 time(s), expected
+  2"*; (6) the containment test removed so the rule fires on every delegation → *"fired 3
+  time(s)"* and *"EP-001's sign-off names WI-0002/Q-002, and it was reported anyway"*; (7) the
+  nested-line reader removed → *"unresolved fired 1 time(s), expected 2"*, the `plan.md` case
+  vanishing exactly as the un-stubbed first draft did; (8) rule 5 un-scoped from the ending →
+  *"unsurfaced fired 1 time(s), expected 0"* in the default scope; (9) the E4/ending-statement
+  branch removed → *"expected the report to say 'EP-002 ends without artifacts/review.md's
+  ## Ending statement naming WI-0002/Q-002'"*; (10) the sign-off branch removed → the same, for
+  EP-001; (11) the request-resolves path removed → *"unresolved fired 3 time(s), expected 2"*
+  and *"R-001 is a request that exists in this workspace, and it was reported anyway"*.
+  **The vacuous case of this unit's own, caught by looking for a branch with no case:** the
+  first version of the fixture exercised the **sign-off** branch only. The E4 branch — the one
+  that reads `artifacts/review.md`'s `## Ending statement`, which exists because at E4 there is
+  nobody to address — had **no case at all**, and so did the branch that stays silent when an
+  engagement has filed neither, and so did the path where a delegation cites a request that
+  **does** exist. All three now have cases, and stubs 9 and 11 are the proof they bite. Sixth
+  unit in a row to find one of its own.
+- **Artifacts:** `spec/question.md` (§2: `Under delegation:`, the sixth sign-off rule, revision
+  11), `spec/dor-dod.md` (§1: **R12** and its measurement, revision 12),
+  `scripts/lint-answers` (rules 4 and 5, four codes), `scripts/check` (step 8's new
+  by-execution check), `fixtures/crossed-answers` (seven delegation cases across three
+  engagements, a request, `EXPECTED-CODES.txt` 5 → 8, README),
+  `methodology/skills/refine/{skill.yaml,process.md}` (0.5.0 → **0.6.0**),
+  `methodology/skills/plan/{skill.yaml,process.md}` (0.6.1 → **0.6.2**),
+  `methodology/skills/review-close/{skill.yaml,process.md}` (0.12.0 → **0.13.0**),
+  `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md` (F-082 resolved with a citation),
+  `meta/journal.md`. Commits `cb344f4` and this one.
