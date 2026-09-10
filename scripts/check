@@ -2218,6 +2218,188 @@ def check_gate_verdicts(runner: Runner) -> None:
     runner.emit(f"{label} ({observations} observations)", True)
 
 
+def check_gate_subject(runner: Runner) -> None:
+    """A gate's subject is its contract row's answer, not something each execution invents.
+
+    `review-close` serves two subjects. It closes a work item, which has a branch, and it ends an
+    engagement, whose subject is an epic, which has none — and three of its hard gates are
+    defined over that branch or over a merge. Five epic-level executions in banked runs each
+    wrote their own sentence for the same absence, between them `skipped`, `not applicable`,
+    `skipped, deliberately`, `skipped as a gate, run as evidence` and `not applicable, and
+    recorded rather than skipped silently`. One recorded `tests-pass-on-the-merge-result` as
+    skipped because an ending merges nothing, while the runner ran the project's test command
+    anyway and reported PASS, and the worker had to correct their own entry by appending to it
+    (F-085).
+
+    So: the epic side of every such row is read from the contract and asserted by execution — the
+    gate is not run, the verdict is `skipped`, and the sentence in the record is the contract's.
+    The work-item side is asserted too, because a scoping that skipped everywhere would pass
+    every one of those assertions and check nothing: the same gate runs there, and the same word
+    `skipped` reached by §1.4's null placeholder still carries the resolver's sentence rather than
+    the contract's, so the two sources stay distinguishable in the record. Then the lint that
+    keeps the pair honest, in each direction it can be got wrong.
+    """
+    import shutil
+    import tempfile
+    label = "a gate's subject comes from its contract row (F-085)"
+    tools = {name: os.path.join(SCRIPTS, name)
+             for name in ("workspace-init", "new-item", "run-gate", "transition", "lint-skills")}
+    contract_path = os.path.join(ROOT, "methodology", "skills", "review-close", "skill.yaml")
+    if not all(os.path.isfile(path) for path in tools.values()) \
+            or not os.path.isfile(contract_path):
+        runner.skip(label, "one of the scripts or review-close's contract is absent")
+        return
+
+    sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
+    import miniyaml
+    contract = miniyaml.load_file(contract_path) or {}
+    scoped = [gate for gate in (contract.get("quality_gates") or [])
+              if isinstance(gate, dict) and gate.get("applies_to")]
+    if not scoped:
+        runner.emit(label, False,
+                    detail="  - review-close declares no gate with an applies_to row, so this "
+                           "step would assert nothing; the case, not the rule, is stale")
+        return
+
+    problems, observations = [], 0
+
+    def note(ok, message):
+        nonlocal observations
+        observations += 1
+        if not ok:
+            problems.append(message)
+
+    with tempfile.TemporaryDirectory() as base:
+        root = os.path.join(base, "ws")
+        os.makedirs(root)
+        sentinel = os.path.join(base, "the-suite-ran")
+
+        def tool(name, *args):
+            return subprocess.run([sys.executable, tools[name], *args],
+                                  capture_output=True, text=True, cwd=ROOT)
+
+        tool("workspace-init", root)
+        tool("new-item", "--root", root, "--id", "EP-001", "--type", "epic", "--title", "A goal",
+             "--status", "open", "--actor", "intake", "--reason", "from the raw idea")
+        tool("new-item", "--root", root, "--id", "WI-0001", "--type", "work-item",
+             "--epic", "EP-001", "--title", "Do the thing", "--status", "draft",
+             "--actor", "intake", "--reason", "refined from the idea")
+        project = os.path.join(root, "tracker", "project.yaml")
+        write(project, read(project).replace("  test: null",
+                                             f'  test: "touch {sentinel}"', 1))
+
+        epic = tool("run-gate", "--skill", "review-close", "--item", "EP-001", "--all",
+                    "--root", root).stdout
+        for gate in scoped:
+            reason = gate["not_applicable"]
+            block = _gate_block(epic, gate["name"])
+            note(block.startswith("SKIP"),
+                 f"on an epic, {gate['name']!r} reported {block.split()[0] if block else 'nothing'}"
+                 f" where its contract row gives it no subject there")
+            note(reason in block,
+                 f"on an epic, {gate['name']!r} did not carry its own contract row's sentence — "
+                 f"the record has to say why, or the worker writes a sentence of their own, "
+                 f"which is the finding")
+        note(not os.path.exists(sentinel),
+             "the project's test command ran at an ending: `tests-pass-on-the-merge-result` has "
+             "no merge to test there, and a gate that runs its command anyway is the PASS one "
+             "execution had to correct by hand (F-085, F-091)")
+
+        item = tool("run-gate", "--skill", "review-close", "--item", "WI-0001", "--all",
+                    "--root", root).stdout
+        note(os.path.exists(sentinel),
+             "the project's test command did not run on a work item either, so the scoping is "
+             "not a scoping — it skips everywhere and checks nothing")
+        for gate in scoped:
+            note("no subject on" not in _gate_block(item, gate["name"]),
+                 f"on a work item, {gate['name']!r} was skipped for having no subject; the "
+                 f"contract row names work-item, so the gate is owed a real verdict there")
+        freshness = _gate_block(item, "verification-postdates-the-code")
+        note("has no value in" in freshness,
+             "a work item with no branch no longer skips for the reason it actually has — "
+             "§1.4's unresolved placeholder — so the record can no longer tell the two sources "
+             "of 'skipped' apart")
+
+        body = os.path.join(base, "body.md")
+        write(body, "- **Item:** EP-001\n"
+                    "- **Trigger:** status `open`, dispatched by `next` step 6\n"
+                    "- **Inputs read:**\n  - `tracker/items/EP-001/item.md`\n"
+                    "- **Decisions:**\n  - none\n"
+                    "- **Questions raised:** Q-001\n"
+                    "- **Commands:**\n  - `scripts/engagement-state EP-001` → at-rest\n"
+                    "- **Gates:**\n"
+                    "  - `definition-of-done` → **pass** (DE1 to DE6 walked, dor-dod.md §4a)\n"
+                    "  - `record-is-reconstructible` → **pass** (the record reads)\n"
+                    "- **Artifacts:**\n  - `tracker/items/EP-001/questions/Q-001.md`\n"
+                    "- **Result:** the sign-off is filed.\n")
+        tool("transition", "EP-001", "--to", "awaiting-answer", "--resume-to", "open",
+             "--actor", "review-close", "--reason", "Q-001 sign-off filed", "--root", root,
+             "--journal-body-file", body)
+        entry = read(os.path.join(root, "tracker", "items", "EP-001", "journal.md"))
+        for gate in scoped:
+            note(f"`{gate['name']}` → **skipped**" in entry
+                 and gate["not_applicable"] in entry,
+                 f"the composed entry does not record {gate['name']!r} as skipped with its "
+                 f"contract row's own sentence; the whole point is that the ending stops "
+                 f"improvising one")
+
+        # The lint that keeps the pair honest. A copied tree, one injection at a time.
+        tree = os.path.join(base, "tree")
+        os.makedirs(tree)
+        for name in ("methodology", "spec"):
+            shutil.copytree(os.path.join(ROOT, name), os.path.join(tree, name))
+        target = os.path.join(tree, "methodology", "skills", "review-close", "skill.yaml")
+        original = read(target)
+        clean = tool("lint-skills", tree)
+        note(clean.returncode == 0,
+             "the unmodified tree does not lint clean, so every injection below would fail for "
+             "a reason that has nothing to do with the rule")
+        first = scoped[0]
+        injections = [
+            ("an item type pipeline.yaml does not have",
+             f"applies_to: [{', '.join(first['applies_to'])}]",
+             "applies_to: [work-item, gnome]", "gate.applies_to.unknown"),
+            ("a scoping that covers every type the skill dispatches on",
+             f"applies_to: [{', '.join(first['applies_to'])}]",
+             "applies_to: [work-item, bug, epic]", "gate.applies_to"),
+            ("applies_to with no sentence to print in place of a verdict",
+             f"    not_applicable: {first['not_applicable']}\n", "", "gate.not_applicable"),
+            ("a sentence with no scoping to explain",
+             "  - name: workspace-valid\n",
+             "  - name: workspace-valid\n    not_applicable: an epic has nothing to validate\n",
+             "gate.not_applicable"),
+        ]
+        for what, find, replace, code in injections:
+            if find not in original:
+                note(False, f"{what}: the text this injection edits is no longer in the "
+                            f"contract — the case, not the rule, is stale")
+                continue
+            write(target, original.replace(find, replace, 1))
+            result = tool("lint-skills", tree)
+            note(result.returncode != 0 and f"[{code}]" in result.stdout,
+                 f"lint-skills accepted {what}; expected [{code}]")
+        write(target, original)
+
+    if problems:
+        runner.emit(label, False, detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit(f"{label} ({observations} observations)", True)
+
+
+def _gate_block(report: str, name: str) -> str:
+    """One gate's outcome line and its detail, out of a `run-gate` report."""
+    collected, collecting = [], False
+    for line in report.split("\n"):
+        if re.match(r"^(PASS|FAIL|SKIP|MANUAL)\s", line):
+            collecting = line.split()[1] == name
+            if collecting:
+                collected.append(line)
+            continue
+        if collecting:
+            collected.append(line)
+    return "\n".join(collected)
+
+
 def contract_version(skill: str) -> str:
     sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
     import miniyaml
@@ -3313,6 +3495,7 @@ def main() -> int:
     check_derived_model(runner)
     check_journal_body(runner)
     check_gate_verdicts(runner)
+    check_gate_subject(runner)
     check_trial_merge(runner)
     check_record_catches_up(runner)
     check_criterion_identity(runner)

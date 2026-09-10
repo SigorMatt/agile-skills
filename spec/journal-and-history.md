@@ -201,7 +201,7 @@ The verdict vocabulary is exactly four words:
 |---------|-------|
 | `pass` | the gate ran and its check held |
 | `fail` | the gate ran and its check did not hold |
-| `skipped` | the gate could not run — a placeholder with no value, an input that does not exist — and therefore checked nothing. It is never a pass (`skill-contract.md` §1.4) |
+| `skipped` | the gate had nothing here to look at and therefore checked nothing. Two sources, one word: a placeholder with no value (`skill-contract.md` §1.4), or the gate's own contract row declaring it has no **subject** on this item's type — `applies_to` / `not_applicable`, §1.3. It is never a pass |
 | `pending` | **no verdict is owed by this entry**, because the acting skill is dispatched again on this item and decides the gate at a later transition of the same execution |
 
 `pending` is legal in exactly one place, and the place is derived rather than named: an entry
@@ -297,3 +297,4 @@ That is the test `examples/toy-project/AUDIT.md` applies to a real run.
 | 3 | 2026-08-27 | §2.2: `**Status:**` is the transition tool's bullet — a body passed to it need not carry one, and every other bullet is still required of the caller (F-049). |
 | 4 | 2026-09-10 | §2.2a added: a fourth verdict `pending`, legal only on a move into a status the acting skill is itself dispatched on; `**Gates:**` is the transition tool's bullet for the verdict and the caller's for the evidence; the gate names are read against the contract of the skill in the entry's heading (F-080, F-091). |
 | 5 | 2026-09-10 | §0 extended to a document's header and change log, with the execution match a validator now makes (F-084); §2.2b — the merge sha has a sanctioned home in `item.md`, because it is created after the entry that reports it and neither a second entry nor an amendment is honest (F-081). |
+| 6 | 2026-09-10 | §2.2a: `skipped` gains its second source — a gate whose contract row declares it has no subject on this item's type (`skill-contract.md` §1.3). One word, because it is one fact; what changed is who noticed it (F-085). |

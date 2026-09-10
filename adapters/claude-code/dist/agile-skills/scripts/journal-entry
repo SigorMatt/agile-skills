@@ -250,7 +250,9 @@ def compose_gates(gates, supplied, verdicts, pending_reason=""):
     and the runner's own one-line detail only when the caller wrote none.
 
     Two verdicts are not the runner's to give. A `manual_check` gate has no command behind it, so
-    its verdict stays the caller's word — this tool will not invent one. And when
+    its verdict stays the caller's word — this tool will not invent one, unless the runner
+    reported SKIP, which for a manual gate can only mean the contract declared it has no subject
+    on this item's type and nothing was asked of the worker at all (F-085). And when
     `pending_reason` is set, every gate is `pending`: the move is one the same skill is
     dispatched again after, so no verdict is owed by this entry at all (F-080).
 
@@ -274,7 +276,7 @@ def compose_gates(gates, supplied, verdicts, pending_reason=""):
             if observed:
                 note += f"; run-gate reported {observed} here, which decides nothing"
             evidence = f"{given_evidence}; {note}" if given_evidence else note
-        elif gate.get("manual_check"):
+        elif gate.get("manual_check") and observed != "SKIP":
             verdict = given_verdict or "fail"
             evidence = given_evidence or "no evidence recorded for a manual check"
         else:

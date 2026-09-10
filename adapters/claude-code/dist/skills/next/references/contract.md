@@ -34,14 +34,16 @@ Rendered from `methodology/skills/next/skill.yaml`. This is the authoritative li
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `silence-is-recorded` | hard | run `.claude/agile-skills/scripts/record-halt`, expect exit-zero | stay |
-| `engagements-are-ended` | hard | For every epic still at open, state the verdict scripts/engagement-state gave it. If any is at-rest and this run did not dispatch review-close on it, the run stopped on an engagement that is over and nobody has told the stakeholder. | stay |
-| `ended-engagements-are-read` | hard | For every epic at done or blocked, state the verdict scripts/engagement-state gave it. If any is ended rather than closed and this run did not dispatch retro on it, the run reported an engagement as finished that has not read its own trail. | stay |
-| `board-current` | hard | run `.claude/agile-skills/scripts/board-gen`, expect exit-zero | stay |
-| `selection-is-deterministic` | hard | State the candidate set and the selection key values that eliminated each rejected candidate. If any candidate was rejected for a reason not in the key, the selection is invalid. | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `silence-is-recorded` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/record-halt`, expect exit-zero | stay |
+| `engagements-are-ended` | every type this skill is dispatched on | hard | For every epic still at open, state the verdict scripts/engagement-state gave it. If any is at-rest and this run did not dispatch review-close on it, the run stopped on an engagement that is over and nobody has told the stakeholder. | stay |
+| `ended-engagements-are-read` | every type this skill is dispatched on | hard | For every epic at done or blocked, state the verdict scripts/engagement-state gave it. If any is ended rather than closed and this run did not dispatch retro on it, the run reported an engagement as finished that has not read its own trail. | stay |
+| `board-current` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/board-gen`, expect exit-zero | stay |
+| `selection-is-deterministic` | every type this skill is dispatched on | hard | State the candidate set and the selection key values that eliminated each rejected candidate. If any candidate was rejected for a reason not in the key, the selection is invalid. | stay |
 
 ## Escalation
 

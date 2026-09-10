@@ -170,18 +170,33 @@ def render_contract_reference(contract: dict) -> str:
     for entry in contract["outputs"]:
         lines.append(f"| `{entry['path']}` | {entry['kind']} | {entry['when']} |")
 
+    types = (contract["dispatch"].get("item_types") or [])
     lines += ["", "## Quality gates", "",
               "Every gate below appears in the journal entry for every execution — including "
               "gates that were skipped, with the reason. A gate silently omitted is the "
               "failure the journal format exists to prevent.",
-              "", "| gate | enforcement | how it is checked | on failure |",
-              "|------|-------------|-------------------|------------|"]
+              "",
+              "The **subject** column is the gate's own answer to *what does this gate look at "
+              "on this kind of item?* A gate with no subject on a type is not run there and is "
+              "recorded `skipped` with the sentence below, so the answer is the contract's "
+              "rather than something each execution improvises (`spec/skill-contract.md` §1.3).",
+              "", "| gate | subject | enforcement | how it is checked | on failure |",
+              "|------|---------|-------------|-------------------|------------|"]
     for gate in contract["quality_gates"]:
         if gate.get("command"):
             how = f"run `{gate_command(gate['command'])}`, expect {gate.get('expect', 'exit-zero')}"
         else:
             how = gate["manual_check"]
-        lines.append(f"| `{gate['name']}` | {gate['enforcement']} | {how} "
+        scope = gate.get("applies_to")
+        if scope:
+            left = [item_type for item_type in types if item_type not in scope]
+            subject = (", ".join(f"`{item_type}`" for item_type in scope)
+                       + " — on "
+                       + ", ".join(f"`{item_type}`" for item_type in left)
+                       + f" **skipped**: {gate.get('not_applicable', '')}")
+        else:
+            subject = "every type this skill is dispatched on"
+        lines.append(f"| `{gate['name']}` | {subject} | {gate['enforcement']} | {how} "
                      f"| {gate['on_failure']} |")
 
     lines += ["", "## Escalation", ""]

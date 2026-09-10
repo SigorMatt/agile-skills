@@ -35,13 +35,15 @@ Rendered from `methodology/skills/refine/skill.yaml`. This is the authoritative 
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `definition-of-ready` | hard | Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. | stay |
-| `criteria-are-decidable` | hard | For each AC, name the command to run or the artifact to inspect and the verdict that would follow. Any AC for which you cannot do this is not ready. | stay |
-| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
-| `qa-recorded-verbatim` | hard | refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement. | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `definition-of-ready` | every type this skill is dispatched on | hard | Walk spec/dor-dod.md section 1 (or 2 for a bug) criterion by criterion and record pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. | stay |
+| `criteria-are-decidable` | every type this skill is dispatched on | hard | For each AC, name the command to run or the artifact to inspect and the verdict that would follow. Any AC for which you cannot do this is not ready. | stay |
+| `cross-answer-consistency` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
+| `qa-recorded-verbatim` | every type this skill is dispatched on | hard | refinement-qa.md contains every question asked and every answer received, each tagged human or assumed, with nothing paraphrased into agreement. | stay |
 
 ## Escalation
 

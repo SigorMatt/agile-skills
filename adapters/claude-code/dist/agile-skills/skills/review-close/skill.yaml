@@ -1,5 +1,5 @@
 name: review-close
-version: 0.10.0
+version: 0.11.0
 persona: reviewer
 purpose: Review the change and its record against the Definition of Done, then merge and close the item, or reject it with reasons.
 
@@ -52,7 +52,7 @@ inputs:
     why: at E4 by silence, the halts the ending statement reports - how many rounds, what was surfaced on each, and the first round's timestamp. Read only; a reader that recorded would advance the clock by consulting it
 
 outputs:
-  - path: tracker/items/{{item.id}}/artifacts/review.md
+  - path: "tracker/items/{{item.id}}/artifacts/review.md - the verdict at an item close; at an ending's ask-and-stop execution what was examined and that the engagement waits on the stakeholder, never a verdict, which belongs to the execution that records the ending"
     kind: file
     when: always
   - path: tracker/items/{{item.id}}/item.md
@@ -88,8 +88,8 @@ outputs:
 
 quality_gates:
   - name: definition-of-done
-    description: Every Definition of Done criterion is evaluated individually and recorded - section 3 at an item close, section 4 at an engagement's ending.
-    manual_check: Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here.
+    description: Every Definition of Done criterion is evaluated individually and recorded - section 3 at an item close, section 4 at an engagement's ending, and at an ending in the order spec/dor-dod.md section 4a sets, DE1-DE6 before the engagement's account of itself is written and DE4, DE7 and DE8 after the ending is determined.
+    manual_check: Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. At an ending the walk is split by spec/dor-dod.md section 4a - the ask-and-stop execution records DE1, DE2, DE3, DE5 and DE6 plus DE4's first half against the state the stakeholder is about to be shown, and a failure there is not an ending but work, so the engagement leaves rest and no sign-off is filed. The execution that records the ending adds DE4's restatement, DE7 and DE8. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here.
     enforcement: hard
     on_failure: stay
   - name: engagement-state-is-restated
@@ -104,18 +104,24 @@ quality_gates:
     expect: exit-zero
     enforcement: hard
     on_failure: verifying
+    applies_to: [work-item, bug]
+    not_applicable: an epic has no branch and no verify-report.md of its own, so check-verify-freshness has nothing to compare - each child's verification freshness was gated at that child's own close
   - name: commits-reference-the-item
     description: Every commit on the branch carries the item ID.
     command: "scripts/check-commit-refs {{item.id}} {{item.branch}}"
     expect: exit-zero
     enforcement: hard
     on_failure: stay
+    applies_to: [work-item, bug]
+    not_applicable: an epic has no branch, so there is no range of commits not yet on the trunk to inspect - an epic's own record commits go on the trunk and carry its ID in their subjects (spec/workspace-layout.md section 5)
   - name: tests-pass-on-the-merge-result
     description: The project's test command passes after merging, not only on the branch.
     command: "{{commands.test}}"
     expect: exit-zero
     enforcement: hard
     on_failure: stay
+    applies_to: [work-item, bug]
+    not_applicable: an ending merges nothing, so there is no merge result to test - running the suite on the trunk answers a different question, and one execution recorded this gate as skipped for that reason while the runner ran the suite anyway and reported a pass the gate had not earned (F-085)
   - name: workspace-valid
     description: The tracker and docs satisfy the schemas after closing.
     command: scripts/validate-workspace
@@ -160,6 +166,7 @@ exit_criteria:
   - At an ending, every Engagement state section in the workspace was restated after the ending was determined - which at E1 to E3 is when the sign-off answer arrived and at E4 by silence is when the threshold was reached, because no answer arrives there; at an item close, none was touched (spec/doc-header.md section 4a, ADR-0010 section 4.3 as amended by ADR-0011).
   - review.md states what was examined, not only the verdict.
   - The branch is merged into the trunk, the item is done with an outcome the closing transition wrote (--outcome, never an edit of item.md first - F-083), and the merge commit is recorded by scripts/record-merge, which is where the record catches up with a sha that did not exist when the closing entry was written (F-081).
+  - At an ending, the criteria that do not depend on the reply were applied BEFORE the engagement's account of itself was written - the sign-off's Question at E1 to E3, the Ending statement at E4 - and recorded criterion by criterion, so that a late finding sends the engagement back to work rather than invalidating an acceptance already given (spec/dor-dod.md section 4a).
   - If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
   - If scripts/engagement-state reported abandoned, the ending recorded is E4 by silence - every orphan at blocked with a reason beginning "orphaned by E4:" and NO outcome, every question still open closed as abandoned with an EMPTY Answer, and the Ending statement written into review.md and mirrored in the epic's Notes.
   - An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.

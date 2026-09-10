@@ -38,17 +38,19 @@ Rendered from `methodology/skills/verify/skill.yaml`. This is the authoritative 
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `tests-pass` | hard | run `{{commands.test}}`, expect exit-zero | escalate |
-| `lint-clean` | hard | run `{{commands.lint}}`, expect exit-zero | escalate |
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `every-criterion-independently-checked` | hard | For each AC, record the command this skill ran and its actual output. Citing the implementation report as evidence fails this gate. | stay |
-| `negative-cases-exercised` | hard | For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened. | stay |
-| `a-criterion-about-criteria-is-read` | hard | For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065). | stay |
-| `adr-conformance-is-decided` | hard | run `.claude/agile-skills/scripts/lint-documents --rule adr-conformance-is-decided --item {{item.id}}`, expect exit-zero | stay |
-| `invalidation-set-is-disposed` | hard | run `.claude/agile-skills/scripts/lint-documents --rule invalidation-set-is-disposed --item {{item.id}}`, expect exit-zero | stay |
-| `tests-would-fail-without-the-change` | advisory | For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed. | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `tests-pass` | every type this skill is dispatched on | hard | run `{{commands.test}}`, expect exit-zero | escalate |
+| `lint-clean` | every type this skill is dispatched on | hard | run `{{commands.lint}}`, expect exit-zero | escalate |
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `every-criterion-independently-checked` | every type this skill is dispatched on | hard | For each AC, record the command this skill ran and its actual output. Citing the implementation report as evidence fails this gate. | stay |
+| `negative-cases-exercised` | every type this skill is dispatched on | hard | For each criterion describing an error, an empty input, or a boundary, record the command that produced that condition and what happened. | stay |
+| `a-criterion-about-criteria-is-read` | every type this skill is dispatched on | hard | For each criterion of the form "the earlier criteria still hold", name every criterion it covers by ID and state, per criterion, whether its sentence is still true of the new behaviour. Record the tests as evidence for that answer. Where nothing executable exercises the old criterion and the new behaviour together, say so in those words and either add a case or waive it by name. "The suite is green" answers a different question (spec/dor-dod.md, F-065). | stay |
+| `adr-conformance-is-decided` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule adr-conformance-is-decided --item {{item.id}}`, expect exit-zero | stay |
+| `invalidation-set-is-disposed` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule invalidation-set-is-disposed --item {{item.id}}`, expect exit-zero | stay |
+| `tests-would-fail-without-the-change` | every type this skill is dispatched on | advisory | For at least one test per criterion, confirm it fails when the behaviour is disabled or reverted, and record how that was confirmed. | stay |
 
 ## Escalation
 

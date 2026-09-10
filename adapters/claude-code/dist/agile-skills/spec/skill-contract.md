@@ -138,11 +138,40 @@ principle 4 forbids.
 | `expect` | with `command` | `exit-zero` (default) or `exit-nonzero` |
 | `enforcement` | yes | `hard` \| `advisory` |
 | `on_failure` | yes | `stay` (keep the current status and fix) \| `retry` \| `escalate` \| a status name |
+| `applies_to` | no | the item types this gate has a **subject** on: a non-empty subset of the skill's `dispatch.item_types`, strictly smaller than it. Same key, same syntax and same meaning as `pipeline.yaml`'s row scoping |
+| `not_applicable` | with `applies_to` | one sentence saying why the gate has no subject on the types `applies_to` leaves out. It is the text the runner prints and the worker journals |
 
 Rules:
 
 - A gate MUST have exactly one of `command` or `manual_check`. A gate with both invites
   reporting the manual check when the command fails.
+- **A gate's row states its subject, so the worker does not have to.** One contract can serve
+  two subjects: `review-close` closes a work item, which has a branch, and it also ends an
+  engagement, whose subject is an epic, which has none. Three of its hard gates are defined over
+  `{{item.branch}}` or over a merge, and at every epic-level execution of one banked engagement
+  the worker wrote a fresh sentence explaining that they did not apply — five executions, and
+  between them `skipped`, `not applicable`, `skipped, deliberately`, `skipped as a gate, run as
+  evidence` and `not applicable, and recorded rather than skipped silently`. One of those
+  executions recorded `tests-pass-on-the-merge-result` as skipped on the reasoning that an
+  ending merges nothing, while the runner ran the project's test command anyway and reported
+  PASS, and the worker had to correct their own entry by appending to it (F-085, F-091).
+  `applies_to` moves that decision into the contract: the gate is **not run** on a type it has
+  no subject on, and `not_applicable` is the reason the record carries. A gate that every
+  execution of a whole class skips for the same reason was never that class's gate.
+- **`applies_to` is for a gate with no subject, not for one with a different subject.** A gate
+  that means something else on another type — `definition-of-done` walks `dor-dod.md` §3 at an
+  item close and §4 at an ending — states both in its `description` and keeps its subject on
+  both. Declaring it `applies_to: [work-item, bug]` would delete the epic checklist.
+- **The verdict is `skipped`, and no new word is coined for it.** `journal-and-history.md` §2.2's
+  vocabulary already has two words for a gate that produced no ordinary verdict, and they answer
+  different questions. `skipped` means *there was nothing here to look at* — until now reached
+  only by §1.4's null placeholder, which is the resolver noticing an absence by accident.
+  `pending` means *there was something to look at and the verdict is not owed by this entry*,
+  because the same skill is dispatched again and decides it then (§1.3, F-080). A gate declared
+  not-applicable on this item's type is the first of those, arrived at deliberately: the two
+  collapse into one word because they are one fact, and what changes is only who noticed it —
+  the contract rather than an unresolved placeholder. A third word would be a vocabulary about
+  provenance masquerading as a vocabulary about verdicts.
 - **A skill's gates guard its *completion* transition** — the move to its own `next_status` —
   and nothing else. On any other transition an adapter MUST still run them and record the
   results, and MUST NOT refuse the move. Two reasons, both found by running the pipeline rather
@@ -318,3 +347,4 @@ what makes "the toy run used skill X v0.1.0, and it went wrong here" an actionab
 | 4 | 2026-08-27 | §2.3: the window in which the tracker is committed-invalid after a transition, and the rule that a skill does not end an execution inside it (F-038). |
 | 5 | 2026-08-30 | §1.1: `process-analyst` added to the persona enum. Every other role was on the team; the retro's standing rests on not having been (ADR-0009 §9). |
 | 6 | 2026-09-10 | §1.3: a gate that cannot hold at a skill's opening transition still appears in that entry, recorded `pending` — F-080's open question, answered (F-080). |
+| 7 | 2026-09-10 | §1.3: `applies_to` and `not_applicable` — a gate's row states the item types it has a **subject** on, so *"skipped, an epic has no branch"* is the contract's answer rather than something each execution improvises. The verdict stays `skipped`; no third word is coined (F-085). |

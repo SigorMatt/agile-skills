@@ -38,14 +38,16 @@ Rendered from `methodology/skills/intake/skill.yaml`. This is the authoritative 
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `epic-has-success-measures` | hard | Read the epic's Success measures section; each entry must be something a person could check, not a restatement of the goal. | stay |
-| `an-open-question-was-asked` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}} --require-elicitation`, expect exit-zero | stay |
-| `engagement-state-is-delimited` | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-delimited --document docs/product/vision.md`, expect exit-zero | stay |
-| `items-are-separable` | advisory | For each item, state the order it could be built in and what it depends on; an item that cannot be described this way is really part of another. | stay |
-| `no-solution-in-the-problem` | advisory | Read each title and story back; if it names a technology or a data structure the human did not, remove it and record what was removed. | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `epic-has-success-measures` | every type this skill is dispatched on | hard | Read the epic's Success measures section; each entry must be something a person could check, not a restatement of the goal. | stay |
+| `an-open-question-was-asked` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}} --require-elicitation`, expect exit-zero | stay |
+| `engagement-state-is-delimited` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-delimited --document docs/product/vision.md`, expect exit-zero | stay |
+| `items-are-separable` | every type this skill is dispatched on | advisory | For each item, state the order it could be built in and what it depends on; an item that cannot be described this way is really part of another. | stay |
+| `no-solution-in-the-problem` | every type this skill is dispatched on | advisory | Read each title and story back; if it names a technology or a data structure the human did not, remove it and record what was removed. | stay |
 
 ## Escalation
 

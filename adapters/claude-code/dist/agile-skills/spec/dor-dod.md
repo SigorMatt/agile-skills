@@ -185,6 +185,55 @@ to `done` with a note.
 | DE7 | The stakeholder was **asked** whether they accept the engagement as it stands, after it reached rest, and **answered** — in **every** ending, not only closure. At **E4 by silence** the form is *asked, and the ask stood unanswered for the threshold*: there is an ask addressed to the human, it was open across `termination.silence.threshold_rounds` silent rounds, and the waiting log shows them (`ids-and-statuses.md` §3.5a) | [auto] |
 | DE8 | The stakeholder was asked, at least once in this engagement, an **open** question that was not about the team's agenda — a `kind: elicitation` question (`question.md` §2) — and it was **answered**. At **E4 by silence** the elicitation may end `abandoned` with an empty `## Answer`; the criterion is then that it was asked and went unanswered, never that it was skipped | [auto] |
 
+### 4a. When each criterion is applied — the ordering, and why it is one ordering
+
+An acceptance is an acceptance **of a state**. So every criterion that could still change that
+state is applied **before** the engagement's account of itself is written, and only the two that
+cannot precede the ending come after.
+
+| Applied | Criteria | Against what |
+|---------|----------|--------------|
+| **Before the engagement's account of itself is written** | DE1, DE2, DE3, DE5, DE6, and DE4's first half (`docs/product/` reflects what was built) | the state the stakeholder is about to be shown |
+| **After the ending is determined** | DE4's restatement of every `## Engagement state` section, DE7, DE8 | the ending itself |
+
+**The engagement's account of itself** is the sign-off question's `## Question` at E1, E2, E3 and
+E4 by withdrawal, and the `## Ending statement` in `review.md` at E4 by silence
+(`ids-and-statuses.md` §3.5a). One ordering covers both, because the same thing goes wrong at
+each: a criterion applied after the account is written is applied to a state the account no
+longer describes.
+
+It was written the other way round, and it cost a full engagement cycle. The termination review
+filed the sign-off and stopped; DE1–DE6 were applied when the reply arrived, on the reasoning
+that DE7 cannot be satisfied before it. The stakeholder accepted at 22:29:11Z. Nine minutes
+later, in the next execution, the DE6 claim audit found a false absolute and filed a bug — which
+made the sentence *"no bug was filed and left unfixed"*, in the question they had just answered,
+false. `check-epic-signoff` then correctly refused the acceptance, a second sign-off was due, and
+the engagement paid a whole extra round for the ordering (F-086). At E4 the same ordering is
+forced by a different failure: DE6's audit may file a bug, a bug is a child of the epic, and the
+`## Ending statement` must **name every child by ID** — so an audit run after the statement is
+written leaves the statement incomplete and the gate refuses it.
+
+Three consequences, stated so they are not rediscovered:
+
+- **A DE1–DE6 failure at the ask is not an ending. It is work.** Nothing is filed, the finding
+  becomes an item or a bug like any other, the engagement leaves rest, and the sign-off is due
+  when it comes back to rest — which is exactly what "one sign-off per rest" already says.
+- **DE7 genuinely cannot move.** It asks whether the stakeholder answered, and at the moment of
+  the ask they have not. At E4 by silence it takes its *asked, and the ask stood unanswered*
+  form, which the threshold decides — also after the account is written, and for the same reason
+  that nothing about it can change the account.
+- **DE4 splits because its two halves have different subjects.** Whether `docs/product/`
+  describes what was built is settled by the work; whether the engagement-state sentences are
+  true is settled by the ending, and restating them before it is determined describes an
+  engagement that has not ended (ADR-0010 §4.3 as amended by ADR-0011 §2.4).
+
+The ask-and-stop execution therefore records a real Definition of Done walk rather than skipping
+one. Before this was written, five epic-level executions in banked runs recorded
+`definition-of-done` as *"skipped, deliberately"* on the reasoning that *"applying DE1–DE6 now
+would decide the thing the question exists to ask"* — and one of them then listed, in the same
+entry, every child terminal and named, every outcome recorded and all eight success measures
+addressed. The work was being done; only the record of it was being withheld.
+
 ### DE1 was an entry condition for one ending out of four
 
 "Every child item is `done`" describes ending **E1** and nothing else. E2 (delivered-partial),
@@ -317,3 +366,4 @@ derivation, and where the two texts differ ADR-0011's is the later and governing
 | 7 | 2026-09-10 | D7 becomes a **confirmation** against the invalidation set `plan` emits: every entry disposed, plus "did this change falsify a document the set does not name?", scoped to what the change touched **or its plan named** (F-087). D12 and DE6 gain the member enumeration a **quantified** claim owes and exclude **engagement-state** sentences; DE4 gains the ending's restatement of every delimited `## Engagement state` section, after the sign-off answer (F-095, F-093). D13 added: the plan's `binding-adrs` list is complete, `review-close`'s to check, each ADR's conformance verdict `verify`'s to decide (F-092). Derived in ADR-0010. |
 | 8 | 2026-09-10 | DE7 and DE8 gain their **E4 by silence** form — *asked, and the ask stood unanswered for the threshold* — the one ending where *answered* cannot hold, bounded by three named compensating controls. **DE4's trigger is amended from *after the sign-off answer arrived* to *after the ending is determined***, because at E4 no answer arrives and the old trigger could never fire; **this amends ADR-0010 §4.3**, and ADR-0011 §2.4 is the governing derivation. Derived in ADR-0011 (F-060, F-022, F-033). |
 | 9 | 2026-09-10 | D1 takes the third criterion state: `- [~]` is settled, so an item whose environment could not perform an observation still closes — and the close is spelled differently from one settled directly, and owes the stakeholder a question in time (F-096). |
+| 10 | 2026-09-10 | §4a added: **when** each epic criterion is applied. DE1–DE6 and DE4's first half go before the engagement's account of itself — the sign-off's `## Question`, or the `## Ending statement` at E4 — and DE4's restatement, DE7 and DE8 follow the ending. One ordering for all four endings, because a criterion applied after the account is applied to a state the account no longer describes (F-086). |

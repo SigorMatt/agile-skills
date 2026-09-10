@@ -41,17 +41,19 @@ Rendered from `methodology/skills/answer-questions/skill.yaml`. This is the auth
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `answer-is-propagated` | hard | For each question answered, open each file named in its Consequences section and confirm the change is there. A Consequences section naming no file fails this gate. | stay |
-| `answered-from-the-record` | hard | For each answer, cite the document, ADR, or Q&A entry it follows from - or state explicitly that the record was silent and record the new decision as an ADR. | stay |
-| `escalation-is-justified` | hard | For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition. | stay |
-| `propagated-claims-carry-their-obligation` | hard | run `.claude/agile-skills/scripts/lint-documents --rule propagated-claims-carry-their-obligation --item {{item.id}} --uncommitted`, expect exit-zero | stay |
-| `engagement-state-is-left-to-the-ending` | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted`, expect exit-zero | stay |
-| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `item-resumed-correctly` | hard | Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match. | stay |
-| `a-deferral-is-not-an-answer` | hard | For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, a work item or bug must be at blocked and an epic must be back at open, with what would unblock it in Consequences either way. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop; and an epic parked at blocked is a move only review-close may make (F-050). | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `answer-is-propagated` | every type this skill is dispatched on | hard | For each question answered, open each file named in its Consequences section and confirm the change is there. A Consequences section naming no file fails this gate. | stay |
+| `answered-from-the-record` | every type this skill is dispatched on | hard | For each answer, cite the document, ADR, or Q&A entry it follows from - or state explicitly that the record was silent and record the new decision as an ADR. | stay |
+| `escalation-is-justified` | every type this skill is dispatched on | hard | For each question re-addressed to human, name which condition in spec/question.md section 4 applies. Effort is not a condition. | stay |
+| `propagated-claims-carry-their-obligation` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule propagated-claims-carry-their-obligation --item {{item.id}} --uncommitted`, expect exit-zero | stay |
+| `engagement-state-is-left-to-the-ending` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted`, expect exit-zero | stay |
+| `cross-answer-consistency` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --item {{item.id}}`, expect exit-zero | stay |
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `item-resumed-correctly` | every type this skill is dispatched on | hard | Compare the new history row's target status with the resume-to value on the row that suspended the item. They must match. | stay |
+| `a-deferral-is-not-an-answer` | every type this skill is dispatched on | hard | For each question whose reply defers rather than answers - state which move you took. If you marked it answered, quote the deferral and say what it settled. If you marked it deferred, a work item or bug must be at blocked and an epic must be back at open, with what would unblock it in Consequences either way. A deferral recorded as an answer overstates what was settled; one left open deadlocks the loop; and an epic parked at blocked is a move only review-close may make (F-050). | stay |
 
 ## Escalation
 

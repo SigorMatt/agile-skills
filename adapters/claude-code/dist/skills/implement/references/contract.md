@@ -38,17 +38,19 @@ Rendered from `methodology/skills/implement/skill.yaml`. This is the authoritati
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `tests-pass` | hard | run `{{commands.test}}`, expect exit-zero | stay |
-| `lint-clean` | hard | run `{{commands.lint}}`, expect exit-zero | stay |
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `every-criterion-has-a-test` | hard | For each AC, name the test function or the exact command and its expected output. An AC demonstrated only by reading the code fails this gate. | stay |
-| `commits-reference-the-item` | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
-| `no-unplanned-scope` | advisory | Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed. | stay |
-| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --changed-since {{trunk}}`, expect exit-zero | stay |
-| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}`, expect exit-zero | stay |
-| `document-writes-are-declared` | hard | run `.claude/agile-skills/scripts/lint-documents --rule document-writes-are-declared --item {{item.id}} --changed-since {{trunk}}`, expect exit-zero | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `tests-pass` | every type this skill is dispatched on | hard | run `{{commands.test}}`, expect exit-zero | stay |
+| `lint-clean` | every type this skill is dispatched on | hard | run `{{commands.lint}}`, expect exit-zero | stay |
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `every-criterion-has-a-test` | every type this skill is dispatched on | hard | For each AC, name the test function or the exact command and its expected output. An AC demonstrated only by reading the code fails this gate. | stay |
+| `commits-reference-the-item` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
+| `no-unplanned-scope` | every type this skill is dispatched on | advisory | Read the diff. Every hunk must trace to an AC or to a plan step. Anything else is either a separate item or must be removed. | stay |
+| `cross-answer-consistency` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --changed-since {{trunk}}`, expect exit-zero | stay |
+| `claims-are-sourced` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-claims --changed-since {{trunk}} --plan-documents {{item.id}}`, expect exit-zero | stay |
+| `document-writes-are-declared` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule document-writes-are-declared --item {{item.id}} --changed-since {{trunk}}`, expect exit-zero | stay |
 
 ## Escalation
 

@@ -338,7 +338,13 @@ It obeys every rule above and adds five:
   engagement as it stands.
 - `## Options considered` MUST offer at least: accept as complete; accept with named follow-up
   items; do not accept, with what is missing. That is a real choice, and a sign-off that offers
-  only "yes" is theatre.
+  only "yes" is theatre. **Accept-with-follow-ups carries the consequence it actually has**: the
+  epic stays `open`, the follow-up is built like any other item, and a fresh sign-off is due at
+  the next rest — never *"the engagement still closes as delivered, and the new work is opened"*,
+  which a real sign-off printed, which this protocol's own status model forbids (an engagement
+  ends only from rest, rest requires every child terminal, and the follow-up is created at
+  `draft`), and which cost the stakeholder a second full cycle they had chosen the option to
+  avoid: *"more process than I expected for one follow-up request"* (F-061).
 - Exactly one sign-off is due per **rest**. If the engagement re-enters rest after further work,
   the acknowledgment is due again, because the previous one accepted something else.
 
@@ -451,3 +457,4 @@ Every escalation MUST state, in `## Context`, which of the four conditions above
 | 7 | 2026-08-29 | §2: `## Cross-answer check` — a consumed human answer records what it was checked against, and a declared conflict is put to its author rather than settled in a document (F-062). Derived in ADR-0008. |
 | 8 | 2026-08-29 | §2: options before the recommendation, and the recommendation marked as ours (F-063); `kind: elicitation`, the one open question per engagement that is not about the team's agenda (F-064). |
 | 9 | 2026-09-10 | §2: `status: abandoned` — the fourth question status, and the pipeline's only vocabulary for **absence**. `## Answer` MUST be empty, `## Consequences` names the ending and the item's orphan class, `answered-at`/`answered-by` stay unset, and only `review-close` sets it, only at E4. §3: rule 4 gains the orchestrator's `abandoned` branch, and new rule 8. Derived in ADR-0011 (F-060, F-028, H-008). |
+| 10 | 2026-09-10 | §2: `kind: sign-off`'s accept-with-follow-ups option states the consequence it actually has — the epic stays `open`, the follow-up is built, a fresh sign-off follows — rather than an ending the status model forbids (F-061). |

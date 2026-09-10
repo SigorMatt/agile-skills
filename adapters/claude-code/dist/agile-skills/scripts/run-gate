@@ -20,6 +20,11 @@ is printed. It is never reported as a pass — `spec/skill-contract.md` §1.4. A
 is a `manual_check` cannot be run here; it is printed so a worker can carry it out, and it is
 reported as MANUAL rather than as either outcome.
 
+A gate whose contract row declares `applies_to` is **not run at all** on an item type that row
+leaves out, and is SKIPPED with the row's own `not_applicable` sentence — the same word for the
+same fact, decided by the contract rather than by a placeholder that happened to resolve to
+nothing (`spec/skill-contract.md` §1.3, F-085).
+
 `--verdicts <path>` writes the same outcomes a second time, as one tab-separated
 `name<TAB>PASS|FAIL|SKIP|MANUAL<TAB>one-line detail` record per gate, in contract order. It
 exists so that `scripts/transition` can put the verdicts *this run produced* into the journal
@@ -113,6 +118,19 @@ class Resolver:
 
 def run_one(gate: dict, resolver: Resolver, root: str, resolving=None) -> tuple:
     """Return (outcome, detail). Outcome is PASS, FAIL, SKIP or MANUAL."""
+    # The gate's own row says which item types it has a subject on (`spec/skill-contract.md`
+    # §1.3). One contract serves two subjects — `review-close` closes a work item, which has a
+    # branch, and ends an engagement, whose subject is an epic, which has none — and before this
+    # read the contract, every epic-level execution improvised its own sentence for the same
+    # three gates. Checked ahead of `manual_check`, because a gate with no subject has none
+    # whichever way it is decided, and only when the type is actually known: an unreadable
+    # `item.md` must not buy a skip (F-085).
+    applies_to = gate.get("applies_to")
+    subject = resolver.item.get("type")
+    if applies_to and subject and subject not in applies_to:
+        return "SKIP", (f"this gate's own contract row gives it no subject on {subject!r} — "
+                        f"{gate.get('not_applicable') or 'no reason declared'}")
+
     if gate.get("manual_check"):
         return "MANUAL", gate["manual_check"]
 
@@ -222,7 +240,11 @@ def main(argv: list) -> int:
                   file=sys.stderr)
             return 2
 
-    manual = [gate["name"] for gate in selected if gate.get("manual_check")]
+    # A gate the contract declared not applicable here was not run, whichever kind of check
+    # stands behind it, so it is not something a worker is being asked to carry out.
+    skipped_by_subject = {name for name, outcome, _ in recorded if outcome == "SKIP"}
+    manual = [gate["name"] for gate in selected if gate.get("manual_check")
+              and gate["name"] not in skipped_by_subject]
 
     print()
     if failures:

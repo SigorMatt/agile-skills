@@ -724,6 +724,62 @@ class Linter:
                 self.report.error(path, 0, "gate.on_failure",
                                   f"gate {name!r} has on_failure {on_failure!r}; expected "
                                   f"stay, retry, escalate, or a status name")
+            self.check_gate_subject(path, contract, gate, name)
+
+    def check_gate_subject(self, path: str, contract: dict, gate: dict, name) -> None:
+        """`applies_to` / `not_applicable` — the gate's subject, stated by its own row.
+
+        A contract can serve two subjects: `review-close` closes a work item, which has a branch,
+        and ends an engagement, whose subject is an epic, which has none. Three of its hard gates
+        are defined over that branch, and five epic-level executions in one banked engagement
+        each invented their own sentence for the same absence (F-085). The pair is optional; what
+        this checks is that a row which declares one says something a program can act on.
+
+        The narrowing must be **strict**: a list covering every type the skill dispatches on
+        declares nothing and would read, to someone scanning the contract, as a scoping that is
+        in force. And `not_applicable` is required with it, because the sentence is the whole
+        point — it is what the runner prints and what the journal carries in place of a verdict.
+        """
+        applies_to = gate.get("applies_to")
+        reason = gate.get("not_applicable")
+        if applies_to is None:
+            if reason is not None:
+                self.report.error(path, 0, "gate.not_applicable",
+                                  f"gate {name!r} declares not_applicable without applies_to",
+                                  hint="the sentence explains a scoping; without applies_to "
+                                       "there is no scoping and the gate runs on every type")
+            return
+        if not isinstance(applies_to, list) or not applies_to                 or not all(is_str(value) for value in applies_to):
+            self.report.error(path, 0, "gate.applies_to",
+                              f"gate {name!r} has applies_to {applies_to!r}; expected a "
+                              f"non-empty list of item types")
+            return
+        known = set(self.pipeline.get("item_types") or [])
+        unknown = [value for value in applies_to if value not in known]
+        if unknown:
+            self.report.error(path, 0, "gate.applies_to.unknown",
+                              f"gate {name!r} has applies_to containing {unknown!r}, which "
+                              f"pipeline.yaml does not list as item types")
+        dispatched = (contract.get("dispatch") or {}).get("item_types") or []
+        outside = [value for value in applies_to if value not in dispatched]
+        if outside:
+            self.report.error(path, 0, "gate.applies_to",
+                              f"gate {name!r} has applies_to naming {outside!r}, which this "
+                              f"skill is not dispatched on",
+                              hint=f"dispatch.item_types is {dispatched!r}")
+        elif set(applies_to) >= set(dispatched):
+            self.report.error(path, 0, "gate.applies_to",
+                              f"gate {name!r} has applies_to covering every type this skill "
+                              f"dispatches on, so it scopes nothing",
+                              hint="drop the pair, or narrow it to the types the gate has a "
+                                   "subject on")
+        if not (is_str(reason) and reason.strip()):
+            self.report.error(path, 0, "gate.not_applicable",
+                              f"gate {name!r} declares applies_to but no not_applicable "
+                              f"sentence",
+                              hint="the runner prints that sentence in place of a verdict and "
+                                   "the journal keeps it; without it the record says only that "
+                                   "something was skipped")
 
     # ---- cross-checks --------------------------------------------------------------
 

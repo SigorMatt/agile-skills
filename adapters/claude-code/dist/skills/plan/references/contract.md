@@ -40,16 +40,18 @@ Rendered from `methodology/skills/plan/skill.yaml`. This is the authoritative li
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `every-criterion-is-addressed` | hard | Map every AC in item.md to a step in plan.md and to the test or observation that will demonstrate it. An AC with no step is a hole in the design. | stay |
-| `project-commands-resolved` | hard | tracker/project.yaml has a real command for test and lint, or an ADR records why the project has none. A command that does not exist, or one that exits zero without checking anything, fails this gate. | stay |
-| `decisions-recorded` | hard | List the choices this plan makes. For each, point to an ADR, or to an entry under Assumptions stating what would be needed to reverse it. | stay |
-| `plan-is-executable-without-you` | advisory | Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make. | stay |
-| `documents-at-risk-are-enumerated` | hard | run `.claude/agile-skills/scripts/lint-documents --rule documents-at-risk-are-enumerated --item {{item.id}}`, expect exit-zero | stay |
-| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --uncommitted`, expect exit-zero | stay |
-| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --uncommitted`, expect exit-zero | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `every-criterion-is-addressed` | every type this skill is dispatched on | hard | Map every AC in item.md to a step in plan.md and to the test or observation that will demonstrate it. An AC with no step is a hole in the design. | stay |
+| `project-commands-resolved` | every type this skill is dispatched on | hard | tracker/project.yaml has a real command for test and lint, or an ADR records why the project has none. A command that does not exist, or one that exits zero without checking anything, fails this gate. | stay |
+| `decisions-recorded` | every type this skill is dispatched on | hard | List the choices this plan makes. For each, point to an ADR, or to an entry under Assumptions stating what would be needed to reverse it. | stay |
+| `plan-is-executable-without-you` | every type this skill is dispatched on | advisory | Read the plan as if you had never seen the item. Each step must say which files to change and what the result should be, without requiring a decision the plan does not make. | stay |
+| `documents-at-risk-are-enumerated` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule documents-at-risk-are-enumerated --item {{item.id}}`, expect exit-zero | stay |
+| `cross-answer-consistency` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --uncommitted`, expect exit-zero | stay |
+| `claims-are-sourced` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-claims --uncommitted`, expect exit-zero | stay |
 
 ## Escalation
 

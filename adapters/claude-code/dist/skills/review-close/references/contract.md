@@ -1,4 +1,4 @@
-# Contract — review-close v0.10.0
+# Contract — review-close v0.11.0
 
 Rendered from `methodology/skills/review-close/skill.yaml`. This is the authoritative list of what this skill must read, must produce, and must not skip. Open it when you need the exact gate list or the exit criteria; the procedure in SKILL.md is the how.
 
@@ -30,7 +30,7 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 
 | path | kind | when |
 |------|------|------|
-| `tracker/items/{{item.id}}/artifacts/review.md` | file | always |
+| `tracker/items/{{item.id}}/artifacts/review.md - the verdict at an item close; at an ending's ask-and-stop execution what was examined and that the engagement waits on the stakeholder, never a verdict, which belongs to the execution that records the ending` | file | always |
 | `tracker/items/{{item.id}}/item.md` | file | always |
 | `merge of {{item.branch}} into {{trunk}}, its sha then recorded in item.md by scripts/record-merge` | commit | on-success |
 | `docs/ - a correction inside this item's invalidation set at an item close, and at an ending every Engagement state section, restated` | file | conditional |
@@ -46,18 +46,20 @@ Rendered from `methodology/skills/review-close/skill.yaml`. This is the authorit
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `definition-of-done` | hard | Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here. | stay |
-| `engagement-state-is-restated` | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-restated --item {{item.id}} --context {{item.type}}`, expect exit-zero | stay |
-| `verification-postdates-the-code` | hard | run `.claude/agile-skills/scripts/check-verify-freshness {{item.id}} {{item.branch}}`, expect exit-zero | verifying |
-| `commits-reference-the-item` | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
-| `tests-pass-on-the-merge-result` | hard | run `{{commands.test}}`, expect exit-zero | stay |
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
-| `record-is-reconstructible` | hard | Answer, using only those sources - what was built and why, which decisions were made and by which skill, what questions arose and how they were resolved, what verification found. Any answer you cannot give is a defect in the record, not in the reader. | stay |
-| `claims-are-sourced` | hard | run `.claude/agile-skills/scripts/lint-claims --context {{item.type}} --changed-since {{trunk}}`, expect exit-zero | stay |
-| `cross-answer-consistency` | hard | run `.claude/agile-skills/scripts/lint-answers --context {{item.type}} --changed-since {{trunk}}`, expect exit-zero | stay |
-| `epic-sign-off` | hard | run `.claude/agile-skills/scripts/check-epic-signoff {{item.id}}`, expect exit-zero | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `definition-of-done` | every type this skill is dispatched on | hard | Walk spec/dor-dod.md section 3 criterion by criterion at an item close, and section 4 at an ending, recording pass or fail for each with its evidence. A single overall verdict does not satisfy this gate. At an ending the walk is split by spec/dor-dod.md section 4a - the ask-and-stop execution records DE1, DE2, DE3, DE5 and DE6 plus DE4's first half against the state the stakeholder is about to be shown, and a failure there is not an ending but work, so the engagement leaves rest and no sign-off is filed. The execution that records the ending adds DE4's restatement, DE7 and DE8. D7 is a confirmation against the plan's invalidation set - every entry disposed, plus the one question the set cannot answer for itself - and D13 asks whether binding-adrs named every ADR this change engages; conformance per ADR is verify's verdict, already in verify-report.md, and is not re-decided here. | stay |
+| `engagement-state-is-restated` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-restated --item {{item.id}} --context {{item.type}}`, expect exit-zero | stay |
+| `verification-postdates-the-code` | `work-item`, `bug` — on `epic` **skipped**: an epic has no branch and no verify-report.md of its own, so check-verify-freshness has nothing to compare - each child's verification freshness was gated at that child's own close | hard | run `.claude/agile-skills/scripts/check-verify-freshness {{item.id}} {{item.branch}}`, expect exit-zero | verifying |
+| `commits-reference-the-item` | `work-item`, `bug` — on `epic` **skipped**: an epic has no branch, so there is no range of commits not yet on the trunk to inspect - an epic's own record commits go on the trunk and carry its ID in their subjects (spec/workspace-layout.md section 5) | hard | run `.claude/agile-skills/scripts/check-commit-refs {{item.id}} {{item.branch}}`, expect exit-zero | stay |
+| `tests-pass-on-the-merge-result` | `work-item`, `bug` — on `epic` **skipped**: an ending merges nothing, so there is no merge result to test - running the suite on the trunk answers a different question, and one execution recorded this gate as skipped for that reason while the runner ran the suite anyway and reported a pass the gate had not earned (F-085) | hard | run `{{commands.test}}`, expect exit-zero | stay |
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+| `record-is-reconstructible` | every type this skill is dispatched on | hard | Answer, using only those sources - what was built and why, which decisions were made and by which skill, what questions arose and how they were resolved, what verification found. Any answer you cannot give is a defect in the record, not in the reader. | stay |
+| `claims-are-sourced` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-claims --context {{item.type}} --changed-since {{trunk}}`, expect exit-zero | stay |
+| `cross-answer-consistency` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-answers --context {{item.type}} --changed-since {{trunk}}`, expect exit-zero | stay |
+| `epic-sign-off` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/check-epic-signoff {{item.id}}`, expect exit-zero | stay |
 
 ## Escalation
 
@@ -75,6 +77,7 @@ Every gate below appears in the journal entry for every execution — including 
 - [ ] At an ending, every Engagement state section in the workspace was restated after the ending was determined - which at E1 to E3 is when the sign-off answer arrived and at E4 by silence is when the threshold was reached, because no answer arrives there; at an item close, none was touched (spec/doc-header.md section 4a, ADR-0010 section 4.3 as amended by ADR-0011).
 - [ ] review.md states what was examined, not only the verdict.
 - [ ] The branch is merged into the trunk, the item is done with an outcome the closing transition wrote (--outcome, never an edit of item.md first - F-083), and the merge commit is recorded by scripts/record-merge, which is where the record catches up with a sha that did not exist when the closing entry was written (F-081).
+- [ ] At an ending, the criteria that do not depend on the reply were applied BEFORE the engagement's account of itself was written - the sign-off's Question at E1 to E3, the Ending statement at E4 - and recorded criterion by criterion, so that a late finding sends the engagement back to work rather than invalidating an acceptance already given (spec/dor-dod.md section 4a).
 - [ ] If the engagement reached rest, the stakeholder was asked - a kind sign-off question naming every child item - or, their reply already being in the file, the ending was recorded on the epic.
 - [ ] If scripts/engagement-state reported abandoned, the ending recorded is E4 by silence - every orphan at blocked with a reason beginning "orphaned by E4:" and NO outcome, every question still open closed as abandoned with an EMPTY Answer, and the Ending statement written into review.md and mirrored in the epic's Notes.
 - [ ] An engagement this execution ended carries one of the four endings and an outcome that does not overclaim what was delivered.

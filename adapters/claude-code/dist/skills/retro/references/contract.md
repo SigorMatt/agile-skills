@@ -36,13 +36,15 @@ Rendered from `methodology/skills/retro/skill.yaml`. This is the authoritative l
 
 Every gate below appears in the journal entry for every execution — including gates that were skipped, with the reason. A gate silently omitted is the failure the journal format exists to prevent.
 
-| gate | enforcement | how it is checked | on failure |
-|------|-------------|-------------------|------------|
-| `engagement-has-ended` | hard | run `.claude/agile-skills/scripts/engagement-state {{item.id}}`, expect exit-zero | stay |
-| `retro-report-is-well-formed` | hard | run `.claude/agile-skills/scripts/lint-retro {{item.id}}`, expect exit-zero | stay |
-| `scope-was-not-degenerate` | hard | run `.claude/agile-skills/scripts/lint-retro {{item.id}} --require-scope`, expect exit-zero | stay |
-| `the-record-was-not-touched` | hard | List every file this execution wrote. If it is not exactly artifacts/retro.md and the epic's journal.md, the retrospective has edited the record it is auditing and the report is void. | stay |
-| `workspace-valid` | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
+The **subject** column is the gate's own answer to *what does this gate look at on this kind of item?* A gate with no subject on a type is not run there and is recorded `skipped` with the sentence below, so the answer is the contract's rather than something each execution improvises (`spec/skill-contract.md` §1.3).
+
+| gate | subject | enforcement | how it is checked | on failure |
+|------|---------|-------------|-------------------|------------|
+| `engagement-has-ended` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/engagement-state {{item.id}}`, expect exit-zero | stay |
+| `retro-report-is-well-formed` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-retro {{item.id}}`, expect exit-zero | stay |
+| `scope-was-not-degenerate` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/lint-retro {{item.id}} --require-scope`, expect exit-zero | stay |
+| `the-record-was-not-touched` | every type this skill is dispatched on | hard | List every file this execution wrote. If it is not exactly artifacts/retro.md and the epic's journal.md, the retrospective has edited the record it is auditing and the report is void. | stay |
+| `workspace-valid` | every type this skill is dispatched on | hard | run `.claude/agile-skills/scripts/validate-workspace`, expect exit-zero | stay |
 
 ## Escalation
 
