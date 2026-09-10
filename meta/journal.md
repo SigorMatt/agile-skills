@@ -6178,3 +6178,130 @@ recall is a reading, not a number, and the report says which.
   `methodology/skills/review-close/{skill.yaml,process.md}` (0.12.0 → **0.13.0**),
   `adapters/claude-code/dist/`, `meta/findings/FINDINGS.md` (F-082 resolved with a citation),
   `meta/journal.md`. Commits `cb344f4` and this one.
+
+## 2026-09-10 — META-162 — the halt is the last thing the loop does, and only an outstanding ask causes one
+
+- **Unit:** META-162 (F-097, F-104 — cluster 5, part 3; ADR-0012)
+- **Inputs read:** `meta/findings/FINDINGS.md` F-097 and F-104 in full, then F-020, F-011,
+  F-013, F-021, F-028, F-060, F-008, F-050, F-064; `meta/adr/ADR-0006-termination-model.md` in
+  full (§4 twice), `meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md` in full (§1 and
+  §5 twice, §6's *"a contradiction this derivation surfaced, and did not fix"* verbatim),
+  `meta/adr/ADR-0010-document-as-deliverable.md` for the house shape and its **Enforcement
+  boundary**; `spec/question.md` in full at its current text, `spec/ids-and-statuses.md`
+  §3.5/§3.5a, `spec/dor-dod.md` §4/§4a, `spec/workspace-layout.md` §1.4;
+  `methodology/pipeline.yaml`, `methodology/skills/next/`, `methodology/skills/review-close/`
+  step 10, `methodology/skills/answer-questions/` preconditions; `scripts/lib/engagement.py`,
+  `scripts/record-halt`, `scripts/engagement-state`, `scripts/check-epic-signoff`,
+  `scripts/validate-workspace`'s question rules, `scripts/check` steps 14b and 15;
+  `harness/prompts/worker-turn.md` (read, not touched).
+- **Decisions:**
+  - **F-097 and F-104 are one sentence read twice, and the rule is one predicate.** F-104 asks
+    *which* questions stop the loop; F-097 asks *when* it stops. ADR-0012 answers both from one
+    table of **four classes of open question**, each with exactly one owner, decided by three
+    frontmatter fields and one section's emptiness: *ours to answer* (architect), *a reply to
+    consume* (human, `## Answer` written), *an outstanding ask* (human, blocking, empty), *a
+    standing ask* (human, non-blocking, empty). The loop stops on the human when, and only when,
+    an outstanding ask exists.
+  - **The one-action rule is PRESERVED, unamended, and F-097's Direction was rejected in its
+    literal form.** A pass that walks the board asking what each item *could* state is several
+    actions and a judgement inside the scheduler. **The collect pass F-097 asks for already
+    exists — it is the loop.** What stopped it was the step order: the halt sat at step 3, above
+    dispatch. It now sits at step **5**, below `dispatch-answer-questions` and `dispatch-owner`,
+    and each runnable item files its own questions on its own pass with its own journal entry and
+    its own gates. One round trip carries them all.
+  - **Both loci of F-104 were repaired together, because repairing one moves the deadlock.**
+    Rest's condition 2 — *no question anywhere is `open`* — becomes *no open question is anyone's
+    to act on but the stakeholder's, non-blockingly*. It meant the same thing in the world it was
+    written for and stopped meaning it the moment the protocol grew a question that must not stop
+    the loop. `is_outstanding`, `is_standing`, `holds_rest` and `is_answerable` live once, in
+    `scripts/lib/engagement.py`, read by four consumers.
+  - **A third locus the brief did not name: `record-halt`.** It re-derived "what a halt is" for
+    itself, and moving the halt below dispatch made its condition **necessary and no longer
+    sufficient** — a pass may hold an outstanding ask and still have work. `dispatchable()` asks
+    steps 2–4's *existence* question, never their selection question, and the program **fails
+    open**: it records nothing and names what to dispatch, because refusing would leave a loop
+    that can neither dispatch nor halt while `silence-is-recorded` is a hard gate. That is an
+    honest **downgrade of an ADR-0011 claim**: its obligation 1 was `[auto]`; ADR-0012's
+    obligation 4 is `[auto]` for the necessary half and `[skill]` for the rest.
+  - **A fourth locus, found by derivation before it shipped, and it is F-013's shape.** Once a
+    standing ask can survive to an ending, **DE5** requires it closed, the only honest closure for
+    a question nobody replied to is `abandoned`, and **DE8** accepted `abandoned` only at E4 — a
+    rule requiring a state no legal move can reach. `abandoned` is widened from *only at E4* to
+    *at any ending*, same actor, same shape rules; H-008's *never on its own account* stands,
+    because it is still only set as part of declaring an ending, and ADR-0011 §3's E3/E4 test
+    reads the **sign-off's** status and the log's trailing run, neither of which this touches.
+  - **DE8 is weakened and the ADR says so in those words** — twice now, and by the same argument
+    ADR-0011 used at E4. The compensating control is a half DE8 never had: the waiting log's
+    `surfaced` column must name the elicitation, so *"file it alongside the sign-off"* cannot
+    degenerate into filing it, closing it, and showing nobody anything. The evidence exists by
+    construction: rest files a sign-off, a sign-off is blocking, a blocking ask is reached through
+    a halt, and a halt records what it surfaced.
+  - **The ADR-0011 reconciliation was checked four ways, not assumed, and it is split.** §1's
+    counting claim **survives**: `silent_rounds()` takes rows and returns a trailing run, and no
+    arithmetic anywhere in the count reads a question, so changing which questions halt cannot
+    change what a round is. §4's boundary sentence — *"a halt requires a question addressed to
+    `human` that is `open`"* — **does not**, and is **narrowed** to an outstanding ask; §1.1's own
+    last clause (*"a question that does not stop the loop never produces one"*) turns out to be
+    the reason rest had to change too, rather than a throwaway.
+  - **F-109 filed and fixed: F-011's other half.** F-011 is recorded as fixed and the fix landed
+    only in `answer-questions`, whose precondition names both answerable shapes and whose own
+    prose describes `next`'s behaviour in the past tense. `next` was never changed. The harness
+    carries the workaround — *"Run `answer-questions` on each such item **first**, before running
+    `/next`"* — beside the note saying amendment B was deleted because F-011 was fixed. Two
+    harness workarounds in one prompt for one sentence, and they are what made this a class rather
+    than two bugs. Filed as a new number rather than by reopening F-011, whose status text is
+    accurate about the file it changed. **The harness prompt was read and not edited** — no run is
+    in flight, and that is a harness change.
+  - **F-110 filed and deliberately not fixed.** Check 4 of the reconciliation: a question **we**
+    file adds a line to `inbound_rendering()`, moves the digest and resets the silence clock —
+    against that function's own docstring, against `pipeline.yaml`'s `termination.silence` block,
+    and against ADR-0011 §1.3's table row. Proved by execution: `EP-003`'s digest `ee47bf97` →
+    `edd86dbe` on adding one unanswered human question. It is a different rule from the one being
+    derived and its fix moves the digests three banked fixtures assert, so it is the ledger's, not
+    this ADR's — and it is named in §3 because ADR-0012 makes it **worse**: the loop now
+    dispatches between halts, so there is more room for a skill to file a question between two.
+  - **Measured before scoping.** The predicate was run over `examples/toy-project` and every
+    fixture first: only two workspaces hold an open question at all, and the only behaviour that
+    moves is `fixtures/abandoned-engagement/right`'s `EP-003`, whose `abandoned` verdict is
+    preserved because `WI-0008/Q-001` is blocking. 108 codes unmoved, no fixture rewritten.
+  - **`review-close` was at 500/500 for the fourth time.** Three added lines were paid for by
+    compressing skill-specific narrative — the F-093 anecdote, the ending paragraph, and E4's
+    rule 3 pointer. No requirement moved out; rendered body 500 → **500**.
+- **Questions raised:** none.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **44 steps** (new: *the halt is
+  the last resort, and only an outstanding ask causes one (F-097, F-104)*, 17 observations);
+  `fixtures/broken-workspace` unmoved at **108 codes**; `scripts/lib/selftest.py` **356**;
+  `findings citations resolve` **63**; *finding numbers cited resolve* 3702 citations, 129
+  numbers, 0 phantoms.
+  **Non-vacuity in the strong form, nine stubs, every one caught.** (1) `is_standing` → `False`
+  (rest as it was before this unit): the fixture reproduces F-104's **literal symptom** —
+  `engagement-state: EP-001 active`, *"open questions: WI-0001/Q-001"* — on a workspace whose
+  every child has stopped. (2) `dispatchable()` → `None`: five observations, including a waiting
+  row written on a pass that had `WI-0002` runnable. (3) `is_answerable`'s human-reply branch
+  removed: the F-109 case halts on a reply the stakeholder already wrote. (4) `is_outstanding`
+  ignoring `blocking`: the standing ask returns to the outstanding list and produces a round of
+  its own. (5) `answer_text` keeping the filed-empty placeholder comment: **every** question
+  becomes answered and seven observations fall. (6) `surfaced_at_a_halt` → `True`: DE8 takes an
+  abandoned elicitation on trust and both must-fail cases pass. (7) the new DE8 branch accepting
+  any abandoned elicitation: same two. (8) DE8 restored to E4-only: the two must-fail cases still
+  refuse but *with the wrong message*, which the case distinguishes, and the positive case fails —
+  the fourth deadlock site, reproduced. (9) `dispatchable()` blind to an open request.
+  **The vacuous case of this unit's own, and it is a good one.** Stub 9 **passed** at first. The
+  request case asserted `"R-001" in line`, and every one of these messages cites **`ADR-0012`** —
+  which contains the substring `R-001`. The case could not fail, on a branch of `dispatchable()`
+  that had had no case at all until it was written. It now matches the whole clause, *"an open
+  stakeholder request: R-001"*, and stub 9 bites. Two branches were found with **no case at all**
+  by looking for them — the open-request branch, and `answer_text`'s placeholder stripping, which
+  is why every question the fixture files now carries the `<!-- filled in by answer-questions -->`
+  comment F-032 requires. Seventh unit in a row to catch one of its own.
+- **Artifacts:** `meta/adr/ADR-0012-when-the-loop-stops-on-the-human.md` (526 lines),
+  `scripts/lib/engagement.py` (the predicate, rest, the abandonment trigger, `dispatchable`),
+  `scripts/record-halt`, `scripts/check-epic-signoff` (DE8's branch and `surfaced_at_a_halt`),
+  `scripts/check` (step 44, and step 14b's partial-answer case restated so the halt survives the
+  reply), `methodology/pipeline.yaml` (0.9.0 → **0.10.0**),
+  `methodology/skills/next/{skill.yaml,process.md}` (0.5.0 → **0.6.0**),
+  `methodology/skills/review-close/{skill.yaml,process.md}` (0.13.0 → **0.14.0**),
+  `spec/question.md` (revision 12), `spec/ids-and-statuses.md` (revision 8), `spec/dor-dod.md`
+  (revision 13), `spec/workspace-layout.md` §1.4, `adapters/claude-code/dist/`,
+  `meta/findings/FINDINGS.md` (F-097 and F-104 resolved; F-109 and F-110 filed),
+  `meta/journal.md`. Commits `b4f1909`, `6e02a61` and this one.

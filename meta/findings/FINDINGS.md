@@ -3909,7 +3909,27 @@ second occurrence shows the error is common rather than incidental.
   human, would make one round trip carry them all without giving the scheduler judgement or letting
   two skills run against unwritten state.
 - **Provenance:** proposed by retro 0.1.0 (live-recall-4c-retro.md, P-4); accepted at owner triage 2026-08-31.
-- **Status:** open
+- **Status:** fixed (commit 6e02a61), derived in `meta/adr/ADR-0012-when-the-loop-stops-on-the-human.md`
+  §2 — **by ordering, and the one-action rule is untouched.** The Direction's literal form was
+  rejected and the reason is in the ADR: a pass that walks the board deciding what each item
+  *could* state is several actions and a judgement, in the one component that must hold none.
+  What was wrong was the step order. The halt moved from step 3 to step **5**, below
+  `dispatch-answer-questions` and below `dispatch-owner`, so each runnable item is dispatched on
+  its own pass, files the questions its own skill can state through its own gates and journal,
+  and suspends; the loop then stops once with all of them in front of the person. **The collect
+  pass this finding asks for already existed — it is the loop** — and one round trip now carries
+  what used to cost one per item. `pipeline.yaml` → 0.10.0, `next` → 0.6.0.
+  **What it costs, recorded rather than discovered later** (ADR-0012 §6): the pipeline now keeps
+  building while an answer is outstanding, so work invalidated by a pending reply is spent before
+  anyone knows — the remedy is the existing one, a blocking question filed on the item that is
+  invalidated. And a silent round became a scarcer thing, because the clock only runs on passes
+  with nothing else to do, so E4 by silence arrives later than it used to.
+  **A third locus the finding did not name:** `record-halt`'s condition was *sufficient* only
+  while the halt was step 3. `engagement.dispatchable()` supplies the other half — an open
+  request, an answerable question or a runnable item — and it fails **open**, because refusing
+  would leave a loop that can neither dispatch nor halt.
+  Both directions in `./scripts/check` step 44: a pass with a runnable item records nothing and
+  names it; take the work away and the same workspace is a halt at round 1 of 3.
 
 ## F-098 — the toolkit's own ADRs and a consumer's ADRs share one citation form and one number space
 
@@ -4307,7 +4327,32 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   unfiled through META-151, META-151b, META-152 and META-153, each of which named it in its unit
   report as owed to the ledger; filed here by META-153b. The second locus — the rest condition in
   `scripts/lib/engagement.py` — was found by reading the code for this entry and is in no ADR.
-- **Status:** open
+- **Status:** fixed (commit 6e02a61), derived in `meta/adr/ADR-0012-when-the-loop-stops-on-the-human.md`.
+  **`spec/question.md` §2 is the rule and the other two follow it**, in one predicate rather than
+  two repairs. A question stops the loop only if it is an **outstanding ask** —
+  `addressed-to: human`, `open`, `blocking: true`, `## Answer` empty — and rest is its
+  complement: an open question holds rest unless it is a **standing ask**. `is_outstanding`,
+  `is_standing` and `holds_rest` live once in `scripts/lib/engagement.py` and are read by
+  `next`'s halt, `record-halt`, the rest condition and the abandonment trigger, so the loci
+  cannot drift apart again.
+  **Every consequence this entry named was decided rather than inherited.** *Rest*: repaired,
+  because repairing step 3 alone would have converted a loop that halts for ever into one that
+  idles for ever. *The silence clock*: ADR-0011 §1's claim that the count follows the **halt**
+  was checked against the code and survives — `silent_rounds()` reads rows and never a question —
+  but §4's boundary sentence did not, and is **narrowed**: abandonment is declared against an
+  *outstanding* ask, so an engagement whose only open ask is a standing one accrues no rounds and
+  is never declared abandoned over it. That is why rest had to change with it; the two together
+  are what make an ending reachable.
+  **A fourth locus, found by derivation before it shipped:** DE5 requires an open question closed
+  at the ending; the only honest closure for one nobody replied to is `abandoned`; DE8 accepted
+  `abandoned` only at E4. A rule requiring a state no legal move can reach — F-013's shape from
+  one side, F-050's from the other. `abandoned` is now set by `review-close` at any ending, and
+  DE8 accepts it where the waiting log shows the elicitation was **surfaced** to the person, which
+  is a half DE8 never had in place of one the pipeline cannot compel.
+  Both directions in `./scripts/check` step 44: an engagement whose only open question is a
+  standing ask reports `at-rest` and records no halt, and the same workspace with an outstanding
+  ask still open reports `active`. With `is_standing` stubbed to `False` the fixture reproduces
+  this finding's literal symptom — `EP-001 active`, *"open questions: WI-0001/Q-001"*, for ever.
 
 ## F-105 — the termination gate refuses an epic nobody was asked about, and prints no reason at all
 
