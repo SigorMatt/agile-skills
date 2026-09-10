@@ -10,66 +10,41 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at bf1caa9 — 43 steps; 108 codes; selftest 356; 64 citations; harness 110
+## The gate is GREEN at aee1c88 — 44 steps; 108 codes; selftest 356; harness 110
+
+**CLUSTERS 1–5 ARE COMPLETE.** Remaining: staging verification, cluster 6's triage, the report.
 
 ## Current unit
 
-**META-162** — cluster 5, part 3: **F-097**, and **F-104**'s deadlock with it. **ADR the
-resolution** — the mission says so explicitly, because this one has to be designed against the
-one-action rule rather than patched.
+**META-164** — provision-verify the two staged regressions, then tear them down.
+**Brought forward ahead of cluster 6** because it is a hard acceptance item and independent of
+the triage.
 
-**F-097** — the loop stops on the **first** human question, so an asynchronous stakeholder is
-asked one item at a time. A collect-askable-questions pass before the loop stops on the human.
+**READ THIS FIRST — the held-out rule.** `iteration-5-envel` is a **HELD-OUT CALIBRATION
+ENGAGEMENT**. Its trail must be reviewed by the owner before anyone reads the retro's report on
+it. This session:
+- **does NOT run** iteration 5 or 5b — the runs are the owner's to launch;
+- **does NOT read** `harness/skills/simulated-human/probes/iteration-5-envel.md` beyond what
+  provision verification strictly requires (which is: nothing — provisioning does not read
+  probes);
+- says so explicitly in the final report.
 
-**F-104** (filed this session by META-153b) — `next` step 3 halts on **any** open
-human-addressed question, while `spec/question.md` §2 says an elicitation *"must not stop the
-loop"*. Both cannot hold; today the first wins, so an unanswered elicitation makes **every**
-ending unreachable, **E1 included**. And META-153b established a locus that is in **no ADR**:
-**rest itself** (`scripts/lib/engagement.py`, *no question anywhere is open*) counts
-elicitations — so **repairing step 3 alone moves the deadlock rather than removing it.** That
-sentence is the design constraint; do not lose it.
+Verifying **runnability**, not running: provision each into a throwaway path, validate what
+provisioning produced, tear it down, leave nothing behind.
 
-These are one problem. F-097 asks the loop to gather more before it stops; F-104 says the
-current stopping rule is contradictory *and* has a second site. Solve them together.
+`harness/provision.py --iteration <id> [--root DIR] [--dry-run]`. `HARNESS_THROWAWAY_ROOT`
+defaults to `~/agile-skills-throwaway`. Use a scratch root **outside the repo**, and confirm the
+repo tree is untouched afterwards (`git status` clean, no stray `harness/runs/` entries).
 
-**The one-action rule is the hard constraint.** `next` dispatches one action. A
-collect-askable-questions pass that walks the board looking for what else could be asked is,
-naively, several actions — and the pipeline's determinism and auditability rest on the one-action
-property. Derive a resolution that does not quietly break it, or derive an explicit, argued
-amendment to it. Either is acceptable; an unacknowledged breach is not.
+`meta/OPS-CONVENTIONS.md` governs — read it. In particular: verify before any destructive
+action and look at the target first, every time; never append `2>/dev/null` to a command whose
+empty output decides a verdict; a command that returns nothing is not evidence until its exit
+status and stderr have been seen; quote outputs verbatim; report what was skipped and why.
 
-Interacts with ADR-0011's silence threshold: a *silent round* is one halt at *waiting on the
-human* with no inbound change. If the loop gathers more questions before halting, the shape of a
-round changes. **Reconcile the two or the threshold's meaning drifts.** ADR-0011 §1 is explicit
-that the count is defined against **the halt**, not the question set, precisely so it survives
-this — check that claim rather than assuming it.
-
-Also relevant: **F-008** (asynchronous file-based interaction, deferred), **F-060** (the pipeline
-cannot say what it is waiting for, deferred behind F-008), **F-013**, **F-020** (refine files
-several separate questions for one item in one round), **F-021**, **F-028**.
-
-## Discipline reminders that have paid off this session
-- Must-fail fixtures both ways; a `./scripts/check` step **proved non-vacuous in the strong
-  form** (stub the deciding bodies) — and **run the stubs against your own new cases**: three
-  units in a row have caught a vacuous case of their own that way.
-- **Measure before scoping.** Twice this session an unscoped rule would have invalidated
-  imported real-run evidence retroactively.
-- `review-close`'s rendered SKILL.md is at **exactly 500/500 lines**; pay for additions by
-  compressing skill-specific prose, never by moving a requirement out of the contract.
-- A contract bump silently changes which journal entries META-154's **version-scoped** `Gates:`
-  comparison reads. Expect it; the fixtures catch it.
-
-- **The rendered body limit is on the RENDERED file, not `process.md`.** META-160 was told
-  "473/500, there is room" by this checkpoint and found the rendered body was at **500/500**.
-  Check the rendered artefact, not the source.
-- **The rendered body limit is on the RENDERED file, not `process.md`** — `review-close` has hit
-  exactly 500/500 three times and been compressed each time.
-- Done when: the ADR exists, the mechanism (if any) lands with fixtures, the one-action rule is
-  either preserved or explicitly amended, the ADR-0011 reconciliation is **checked** not assumed,
-  F-097 and F-104 statuses updated with resolving citations, gate green, journalled, committed
-  AND pushed.
-- Next: cluster 6 (**META-163** — triage every remaining open finding), staging (**META-164** —
-  provision-verify both regressions and tear down), the report (**META-165**).
+- Done when: both configs provision, both validate, both are removed, the repo is clean, and the
+  evidence is recorded — journalled, committed AND pushed. **No iteration run.**
+- Next: **META-163** (cluster 6 — every remaining open finding gets a decision), then
+  **META-165** (`meta/FINAL-REPORT-5.md` + the ROADMAP §4 stamp).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -281,4 +256,27 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   missing were the category, the ID, and anything that read the line. **The vacuous case of its
   own**: the fixture exercised only the sign-off branch — the E4 branch, the deliberately-silent
   branch and the citing-an-existing-request path had **no cases at all**. Sixth unit running.
+- **META-162** F-097 + F-104, **ADR-0012** (**b4f1909** + **6e02a61** + **aee1c88**), 44 steps,
+  108 codes unmoved. One predicate, two clauses: the loop stops on the human only when an
+  **outstanding ask** exists (`addressed-to: human`, `open`, `blocking: true`, empty `## Answer`),
+  and it stops there **last**, below every dispatching step. A **standing ask** is surfaced at
+  every halt, causes none, holds no rest, accrues no round.
+  **The one-action rule is PRESERVED, unamended** — and F-097's literal Direction was **rejected**:
+  a collect-askable-questions pass is several actions plus a judgement inside the scheduler, and
+  **the collect pass it asks for already existed; it is the loop.** What was broken was the step
+  order (halt at 3 → halt at 5).
+  **The reconciliation was checked, not assumed, and half of it failed**: ADR-0011 **§1 survives**
+  — `silent_rounds()` takes rows and returns a trailing run of digests, never reading a question,
+  status or addressee, so changing which questions halt cannot change what a round is. **§4 does
+  not**: *"a halt requires a question addressed to `human` that is `open`"* is false under the new
+  predicate, since a standing ask is all three and produces no halt. Narrowed, not reversed, in
+  the ADR and in `ids-and-statuses.md` §3.5a's copy of it.
+  **A fourth deadlock site found by derivation and fixed rather than moved**: DE5 demands the
+  question closed, `abandoned` is the only honest closure, DE8 accepted `abandoned` only at E4 —
+  F-013's shape. **F-109 and F-110 filed**; F-110 proved by execution and **deliberately not
+  fixed**, because its fix moves digests three banked fixtures assert. F-008 and F-060 stay
+  deferred where META-128 put them. **The vacuous case of its own**: an assertion
+  `"R-001" in line` could never fail, because every one of those messages cites **`ADR-0012`**,
+  which contains the substring `R-001` — on a branch that had no case at all until it wrote one.
+  Seventh unit running.
 
