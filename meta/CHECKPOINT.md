@@ -1,328 +1,63 @@
 # CHECKPOINT
 
-## Session: builder five (`meta/BUILDER-5-PROMPT.md`). Phase VI, in flight.
+## Builder session five is COMPLETE. There is no next unit in this session.
 
-Execution model (binding, from the mission): every unit is executed by a **dedicated
-sub-agent**. The orchestrator holds only the mission, `meta/plan.md`, this file, and each unit's
-verdict. Per unit: checkpoint the intent → dispatch with scope, files to read, definition of
-done, and the obligation to commit AND push → verify cheaply (git log for the sha,
-`./scripts/check` or the unit's fixture) → advance this file.
+`meta/BUILDER-5-PROMPT.md` is done: META-144 through META-165, committed and pushed.
+`./scripts/check` is green across **45 steps**; `fixtures/broken-workspace` emits **108** codes;
+`scripts/lib/selftest.py` is **356** cases; `harness/tests/test_harness.py` is **110** tests.
+The ledger holds **133** entries and every one carries a readable current status, enforced by
+step 17c. Read `meta/FINAL-REPORT-5.md` and `meta/ROADMAP.md` §4 first.
 
-Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
+**What was built.** Three derivations and their machinery.
+- **ADR-0010 — document-as-deliverable.** Record-vs-deliverable is a property of **sentences**,
+  not files. Three claim kinds; **K8** engagement-state statements are **owned by the ending**.
+  The **invalidation set** is a `plan` output. `doc-header.md` §5's absolute does not hold and
+  the claims gate **stays on `implement`**, whose window no longer stands empty by construction.
+- **ADR-0011 — stakeholder silence and abandonment.** E4 is reachable: a **silent round**,
+  default 3, stated once in `pipeline.yaml` and read by all three consumers. `review-close`
+  declares it; the ending statement is a **document, not a question**, because there is nobody
+  to address.
+- **ADR-0012 — which questions stop the loop.** Only an **outstanding ask** halts, and it halts
+  **last**. The one-action rule is preserved, unamended: F-097's collect-pass already existed —
+  it is the loop; only the step order was wrong.
 
-## The gate is GREEN at c662d8c — 45 steps; 108 codes; selftest 356; harness 110
+**What is NOT proven, and the report says so.** **No live run has produced an E4.** **Nothing in
+cluster 1 has met a real engagement.** Each of the eight `[auto]` obligations decides **less**
+than the `manual_check` it replaced, and says so in its own gate description. **Obligation 10 is
+claimed by nothing**, and the K8 mechanism rests on it.
 
-**ALL SIX CLUSTERS COMPLETE. STAGING VERIFIED.** One unit remains.
+## What the owner does next — `meta/ROADMAP.md` §4 and FINAL-REPORT-5 §8
 
-## Current unit — the last
+1. **Iteration 5 (`envel`)** — E2 *and* the held-out retro calibration. First, because it is the
+   only step whose value is destroyed by anything happening before it.
+2. **Owner reviews the trail and writes findings down — before reading the retro's report.**
+3. **Read the retro report and score it** against step 2. The first recall number honest to quote.
+4. **Iteration 5b (`droll`)** — the first live test of E4. Last, because it is the most likely to
+   produce a toolkit change, and a change before step 3 contaminates the calibration.
 
-**META-165** — `meta/FINAL-REPORT-5.md`, and the **ROADMAP §4 stamp**.
-
-The mission's acceptance list, which the report must answer line by line:
-
-- [x] `./scripts/check` green; every enforcement change carries its must-fail fixture; the
-      derivation's historical cases (F-076/F-087/F-093/F-095/F-053-class) run as fixtures.
-- [x] E4 executes end to end in fixtures and harness tests (the run itself is 5b's job).
-- [x] Findings statuses current; F-099's sweep results handled honestly.
-- [x] Both regression configs provision-verified and torn down.
-- [ ] `meta/FINAL-REPORT-5.md` — **this unit.**
-
-The report must carry, per the mission: the derivation's decisions; what each cluster changed;
-versions bumped; the F-099 sweep's yield; **explicit confirmation that iteration 5 was not run
-or read**; and the recommended launch order (expected: iteration 5 → owner review → retro
-comparison → 5b).
-
-**Say what is not proven.** The house standard is FINAL-REPORT-4, which said in three places
-that a procedure fix made after reading a miss is not a measurement. The equivalents here:
-**no live run has produced an E4** — everything is fixture and unit test; **nothing in cluster 1
-has been exercised by a real engagement**; the eight `[auto]` obligations each decide **less**
-than the `manual_check` text they replaced; and obligation 10 is claimed by nothing.
-
-- Done when: the report exists, the ROADMAP carries its §4 stamp, `./scripts/check` green,
-  journalled, `meta/plan.md` ticked, committed AND pushed.
-- After this unit: **the session is done.** Update this checkpoint to say so.
-
-## Done this session — one line per unit; the shas are the record
-
-Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`.
-
-- **META-144** Phase VI planned (2c4b0b7, 0deafc0).
-
-### Cluster 1 — document-as-deliverable — COMPLETE
-- **META-145** ADR-0010, 699 lines (**3701069**). §5 does not hold; the claims gate stays on
-  `implement` (F-076). Record-vs-deliverable is a property of **sentences**, not files. **K8**
-  engagement-state statements are **owned by the ending** (F-093). The **invalidation set** is a
-  `plan` output (F-087). Quantified claims need member enumeration in the audit row (F-095).
-  `verify` decides ADR conformance; `review-close` checks the list is complete (F-092).
-- **META-146** specs carry it (**c1fbde8**); D13 new, marked `[skill]` honestly.
-- **META-147** four contracts + dist (**5e6434d**); **META-147b** `intake` + `answer-questions`
-  (**9adff0e**) — `intake` gets **no** `lint-claims` gate, F-076's shape in a new place.
-- **META-148** the window (**5ae1539**): `scope.py`'s fourth state
-  *out-of-scope-by-construction* passes **with a mark**; `constrained()` takes the permission
-  knowledge from the caller, because **no diff distinguishes "nobody wrote a document" from
-  "nobody was allowed to"**. 5 of 8 cases failed against the old scripts.
-- **META-148b** all eight `[auto]` obligations become commands (**a843114**); each decides
-  **less** than the `manual_check` it replaced and says so. **Obligation 10 is not claimed.**
-  Non-vacuity proved twice, the second time with every rule body stubbed.
-- **META-148c ABSORBED** — its cases already ran as by-execution steps.
-- **META-149** the ledger (**f474027**), append-only proved (358/0), citations 43 → 49. Fixed
-  F-076/087/092/093/095/057/058; **F-053 NOT fixed**. **META-148 and META-148b had filed
-  contradictory reports; META-148 was right**, proved by execution. Filed **F-100..F-103**.
-
-### Cluster 2 — E4 — COMPLETE
-- **META-150** ADR-0011, 627 lines (**94606f5**). The threshold is a **silent round**, default
-  3, in `pipeline.yaml`. Wall-clock rejected (wrong in **both** directions); turns rejected
-  (ADR-0005). The count is **derived** from an append-only log; the halt is recorded **before**
-  state is read; **the reader never writes**. E3 vs E4 in one test: **did the stakeholder's own
-  words arrive?**
-- **META-151** the model on paper (**877ee85**). **ADR-0006 repaired by a header pointer, not a
-  `## Corrections` entry**, argued four ways — stretching §4b in the file its own ledger watches
-  would be this repo failing F-067.
-- **META-151b** the programs (**4d1b7ce**): `record-halt` is a **separate script**, so "the
-  reader never writes" is structural. **The registry grew rather than taking a false triple** —
-  pinning the actor is what makes it bite. Threshold single-source proved by execution.
-- **META-152** the fixture, both ways (**e9f8d79**); digests **computed**, non-vacuity in the
-  strong form; **three defects reported, not bent around**.
-- **META-153** the harness (**b845342**), 74 → 105 tests. The driver **asks**; a test forbids the
-  threshold's mechanics from its source. `abandoned` checked **first**. Undeclared abandonment is
-  **not** a stop; the declared one takes **no closing sim turn**.
-- **META-153b** cluster 2's ledger (**bc21bce**), 335/0, citations 49 → 54. Filed
-  **F-104..F-107, H-020**; **corrected the orchestrator's summary in three places by reading the
-  code**. F-060 not settled, deliberately. **No live run has produced an E4.**
-- **META-153c** H-020's unsound half fixed (**4a59a9a** + **a98dbd0**), 110 tests. The driver
-  reads **current state** (`done` + `outcome: dropped`), not an append-only derivation. Old
-  predicate restored → five failures. A false negative removed: E4 **by withdrawal** now
-  recognised. **No toolkit change needed or made.**
-
-### Cluster 3 — enforcement mechanics — COMPLETE
-- **META-154** the `**Gates:**` bullet (**1ebba5a** + **e5a9bb8**), 37 steps, 97 → **102** codes,
-  selftest 320. `transition` now **composes the whole bullet from the contract** — one line per
-  gate, in contract order, verdict from the run, evidence from the caller — so F-091's
-  completeness symptom is **unwritable**. A contradicted verdict is **replaced and named on
-  stdout**, never silently overwritten. Two things stay the caller's because nothing decided
-  them: a `manual_check`'s verdict, and the whole bullet under `--force`. The fourth verdict is
-  **`pending`** — *no verdict is owed*, legal in exactly one **derived, not named** situation: a
-  move into a status the acting skill's own `dispatch.on_status` contains. Two alternatives were
-  tested against the transition table and rejected. **F-080's open question answered: yes, the
-  gate belongs in the entry** — an entry naming a gate as not-owed-here is *stronger* evidence
-  than silence, because it shows nobody was surprised. The comparison is **version-scoped**: an
-  entry records an execution under the contract of its own time. It also found `implement`'s
-  procedure was **factually false** (the gates *had* run; what was true is that nothing was
-  owed — which is why `pending` means *not owed*, not *not run*) and a verbatim duplicated
-  bullet in the same file.
+Both configs are **provision-verified and torn down**. **Neither iteration was run**, and
+iteration 5's probe was **not read** — its existence was established by `isfile` + `getsize`.
 
 ## Standing instructions (still in force)
 
 - **The unit cycle ends with `git push`, not `git commit`.**
 - `meta/harness/evidence/**` is read-only history. Filed finding text is appended to, never
-  rewritten.
+  rewritten — and **the LAST status bullet is the current one** (F-112; step 17c).
 - Toolkit commits and harness commits stay separate.
-- **No harness run is in flight.** Iteration 5 is a HELD-OUT calibration engagement: this
-  session does not run it and does not read its probe beyond provision-verification.
-- **META-156** F-081/F-083/F-084 (**8804bd7** + **d788007**), 38 steps, 102 → **106** codes,
-  selftest 332. **F-081**: `item.md` gains `merge-commit`, written by a new `scripts/record-merge`
-  and nothing else — a second entry was rejected (§2 is one entry per execution, and the format
-  would force the tool to invent `Inputs read`/`Decisions`/`Gates` to record an anti-fabrication
-  fact) and an amendment convention was rejected (a second in-place exception to append-only,
-  which §0 forbids by name). **F-035 is not reintroduced structurally, not carefully**:
-  `vcs.merge_problems` answers four questions once, `record-merge` refuses on it and
-  `validate-workspace` re-asks it every run, so a typed field is held to exactly what a written
-  one is. **F-083: the ORDER, not the gate** — F-014's downgrade exists for a state the move
-  *forces*, and this is not that; a legal order already existed (`transition --outcome` writes
-  both fields in one act) and the procedure simply never named it, so downgrading the code would
-  have legalised the one order that leaves a committable-invalid workspace behind. **F-084**: the
-  execution match is scoped to rows whose item is **not yet `done`** — measured first, because
-  without that boundary the rule reports 10 rows in the must-pass `examples/toy-project`, which
-  is imported real-run evidence. What is **not** decidable is stated in a `[auto]`/`[skill]`
-  table: the version *number* being right, `what changed` describing the change, and whether the
-  named skill made *this* edit. **A stub caught a vacuous case of the agent's own** — its first
-  F-083 case passed with both guards disabled, because the move it used was refused by a gate
-  instead. **Filed F-108**: the new change-log rules' first run over the toy project reports six
-  rows whose named skill was not executing then, two versions out of order with their own
-  timestamps, nine sharing one hand-typed timestamp, and four typed by hand by builder units into
-  a tree whose README says *"Nothing here was written by hand."* Exactly one was repaired — a
-  builder correcting its own splice — and the other seven stand, which is why the rule is scoped
-  rather than retroactive.
-- **META-157** F-094/F-096 (**181e69d** + **3ae7bcd**), 39 steps, 106 → **108** codes, selftest
-  354. **F-077's mechanism did NOT generalise, and the reason is the finding's substance**:
-  F-077's fix is a *bound* (a line number against the file's length), and the equivalent bound
-  for `ITEM ACn` — does the item declare an ACn? — **was already the behaviour F-094 reports as
-  fooled**. A bound cannot distinguish a moved target from a standing one; only the target's
-  content can. So the *place* was extended, not a second mechanism added: a citation may carry
-  the criterion's own words, and an **unanchored** citation is refused only while the item is at
-  `draft`/`ready` — the statuses §2 still permits a rewrite at. **Scope measured first**: 84
-  standing `ITEM ACn` citations exist across the repo and requiring an anchor everywhere would
-  have invalidated all 84 retroactively, which §4a's own grandfathering paragraph forbids.
-  **F-096**: a third checkbox state `- [~]`, written by `verify` alone. It follows `scope.py`'s
-  exit-0-and-say-so shape, then departs from it in the harder direction — a `- [~]` **MUST** name
-  a question on this item (an ERROR), which is the finding's demand that somebody put the
-  criterion's wording to the stakeholder while the engagement can still act; the question need
-  not be answered, because an open question already holds the engagement short of rest. Also
-  unified two divergent criterion-line regexes into one, since adding a state to one would have
-  left the other reading `[~]` as unticked. **A vacuous case of its own, caught by its own
-  stub** — the second such catch in two units. **A bump-time hazard worth remembering**: the
-  `verify` and `refine` bumps silently dropped nine fixture entries out of META-154's
-  version-scoped `**Gates:**` comparison; the fixture caught it.
-- **META-158** the F-099 sweep (**f61ce10** + **715ef26**), 40 steps, new step 17b. Reads **every
-  git-tracked file** — F-099's own direction proposed `meta/**.md` and that was **too narrow for
-  the finding's own reason**: a phantom in `dist/` reaches a user, one in `fixtures/` teaches a
-  wrong number, one in `harness/` sits in the instrument. Cost 0.4s. A phantom in read-only
-  evidence is corrected by a **tombstone in the ledger**, which makes the standing citation
-  resolve while the evidence stays byte-identical — F-071's precedent turned into the mechanism.
-  One tracked path is a gitlink and cannot be read as text; it is **named on stdout every run**
-  rather than passed over, and its 129 files were checked by hand. **Yield: 3276 citations, 128
-  numbers, one phantom — H-001**, cited in banked evidence and in the journal, never filed: the
-  H-numbering begins at H-002 and the defect was **fixed instead of filed** (META-081). F-071's
-  mirror — there a number was named 66 seconds too early, here a fix outran its record.
-  Tombstoned; neither citing file edited. **Calibration**: run over a detached worktree at
-  `ff8be8a^`, the instant before F-071's tombstone, the sweep reports `PHANTOM F-071 ->
-  meta/harness/evidence/iteration-3b/README.md:27` — the known instance at the exact line.
-  A subtle one it found: **the report of a phantom must quote the phantom**, so with the H-001
-  heading removed the sweep flags the tombstone's own body — a design without tombstones would
-  leave the ledger unable to describe its own gaps. `f61ce10` is **red by construction** (the
-  step's first run *is* the finding) and `715ef26` is green; the reverse order would have filed
-  the tombstone before the instrument that found it, citing a sha that did not exist — F-024's
-  trap.
+- **No harness run is in flight.**
 
-### Cluster 4 — ending contracts — COMPLETE
-- **META-159** F-085/F-086/F-061 (**bb76d7d** + **83541cf**), 41 steps, 108 codes unmoved.
-  **F-085**: a gate row gains `applies_to` + `not_applicable`, reusing `pipeline.yaml`'s scoping
-  key, syntax and meaning; `run-gate` **does not run** the gate on a type the row leaves out and
-  `transition` composes the line from it. **No third verdict word** — a contract-declared
-  non-subject is `skipped` reached *deliberately* rather than through a null placeholder; one
-  fact, one word, and what changed is only who noticed it. The load-bearing case:
-  `tests-pass-on-the-merge-result` resolves `{{commands.test}}`, which an epic **has**, so it
-  **ran the suite and reported PASS at an ending that merged nothing** — iteration-4b's worker
-  recorded it skipped, `run-gate` disagreed by running it, and they had to correct their own
-  entry. Now unwritable. **F-086**: `dor-dod.md` §4a — DE1/2/3/5/6 and DE4's first half **before**
-  the engagement's account of itself; DE4's restatement, DE7, DE8 after. It **is** ADR-0011's E4
-  ordering, unified by one argument: a late DE6 finding invalidates an acceptance at E1–E3, and
-  at E4 it files a bug, which is a child, which the `## Ending statement` must name — the same
-  audit broken by a second route. **F-061**: one sentence, as specified. **No mechanism needed
-  and none filed** — the mechanism worked (it reopened, built and asked again); the *label* lied,
-  and a gate here would have to decide whether prose is true. **Deliberate non-scoping recorded**:
-  `epic-sign-off` self-passes on a work item — the same shape from the other side — but scoping
-  it would flip every work-item entry from `pass` to `skipped` across banked fixtures for
-  something F-085 did not ask. **F-086 has no fixture, and the reason is stated rather than
-  skipped**: `definition-of-done` is a `manual_check`, so its verdict is the caller's word by
-  design (F-091), and nothing in a workspace distinguishes a checklist applied before an
-  acceptance from one applied after. **F-085's section-3/4 half was already fixed** before the
-  unit and is recorded, not re-claimed. Fourth unit running to catch a vacuous case of its own:
-  inverting the scoping to fire everywhere failed 5 observations, including *"it skips everywhere
-  and checks nothing"*.
+## For the next builder session — what this session's method showed
 
-### Cluster 5 — planning/criteria and stakeholder protocol — in progress
-- **META-160** F-089/F-090/F-088 (**5e43182** + **4bdcbf1**), 42 steps, 108 codes (delta 0, **but
-  not trivially** — bumping `verify` dropped five `journal.gates.*` codes out of META-154's
-  version-scoped comparison, 108 → 103, so the fixture entries were bumped with the contract;
-  this is the third time a bump has moved that comparison). **F-089** lands as DoR **R11** and is
-  marked **`[skill]` with evidence, not opinion**: the narrowest regex catching its own three
-  criteria flags **26 of 53** criteria in the must-pass toy project for **2 true positives** —
-  and that measurement is written into `dor-dod.md` §1 beside the rule, not left in the ledger.
-  A wanted count is measured first and carried as a `[src: run: … → …]` citation, a form that
-  already existed. **F-089 is smaller than billed and says so**: its own evidence shows no
-  criterion was ever reshaped around what was built, so R11 removes a round trip, not a
-  correctness failure. **F-090**: acceptance time = the execution that accepts the gap, **before
-  its closing transition**; on a `done` item the gate reports NOT APPLICABLE in those words.
-  Dispatch sets were **derived from `pipeline.yaml`, not restated** — `intake`, `next` and `retro`
-  are reachable by neither route, so a gap owned by one is inert wherever it is written.
-  **F-088: the diagnosis transferred from `scope.py`'s fourth state, the mechanism did not** —
-  `constrained()` re-reads a git window from a repo, a ref and a permitted set, and an audit row
-  is prose with no window to re-read. What transferred is the **shape of the verdict**: a pass
-  that could not have failed is marked, never spelled like an ordinary pass. The existing
-  labelled form gained a fifth label `Falsifier:`; **reach under-claimed on purpose and stated in
-  both specs** — nothing mechanical reads `review.md`'s `## What I examined` or
-  `verify-report.md`, before this change or after it. **The vacuous case of its own**: two new
-  findings had **no case at all** and would have shipped unexercised; both now fire, and one is
-  F-090's *literal* historical shape. Fifth unit running to catch one.
-- **META-161** F-082 (**cb344f4** + **bf1caa9**), 43 steps, 108 codes (delta 0; `crossed-answers`
-  5 → **8**). A consumed delegation records one labelled line in ADR-0008's `Checked against:`
-  shape — ID, category, what was assumed — read by the same `record.blocks()`, and read both as
-  a block **and nested inside another block**, because `plan.md`'s natural home for it is under
-  the assumption bullet it belongs to and the first draft passed silently over exactly those.
-  The sign-off gains a **sixth rule** naming every answer spent under delegation; at **E4**, where
-  there is nobody to address, the same list goes into the `## Ending statement`. Enforced at
-  `review-close`'s **existing** `cross-answer-consistency` gate — nothing new dispatched.
-  **The `[skill]` mark is justified by measurement, in the spec beside the rule**: `[assumed]` is
-  not a usable proxy — the toy project records **eight** assumed answers, six confirmed by the
-  human, one taken under *no* licence, and exactly **one** a real delegation quoted in prose with
-  no ID; eight fires, one true positive. What the lint **cannot** see is stated ADR-0008-§5 style,
-  the largest being **a delegation relied on and never written down at all**. **Half 1 was partly
-  there and is recorded, not re-claimed** — `refine` step 3 already said to name the deferral;
-  missing were the category, the ID, and anything that read the line. **The vacuous case of its
-  own**: the fixture exercised only the sign-off branch — the E4 branch, the deliberately-silent
-  branch and the citing-an-existing-request path had **no cases at all**. Sixth unit running.
-- **META-162** F-097 + F-104, **ADR-0012** (**b4f1909** + **6e02a61** + **aee1c88**), 44 steps,
-  108 codes unmoved. One predicate, two clauses: the loop stops on the human only when an
-  **outstanding ask** exists (`addressed-to: human`, `open`, `blocking: true`, empty `## Answer`),
-  and it stops there **last**, below every dispatching step. A **standing ask** is surfaced at
-  every halt, causes none, holds no rest, accrues no round.
-  **The one-action rule is PRESERVED, unamended** — and F-097's literal Direction was **rejected**:
-  a collect-askable-questions pass is several actions plus a judgement inside the scheduler, and
-  **the collect pass it asks for already existed; it is the loop.** What was broken was the step
-  order (halt at 3 → halt at 5).
-  **The reconciliation was checked, not assumed, and half of it failed**: ADR-0011 **§1 survives**
-  — `silent_rounds()` takes rows and returns a trailing run of digests, never reading a question,
-  status or addressee, so changing which questions halt cannot change what a round is. **§4 does
-  not**: *"a halt requires a question addressed to `human` that is `open`"* is false under the new
-  predicate, since a standing ask is all three and produces no halt. Narrowed, not reversed, in
-  the ADR and in `ids-and-statuses.md` §3.5a's copy of it.
-  **A fourth deadlock site found by derivation and fixed rather than moved**: DE5 demands the
-  question closed, `abandoned` is the only honest closure, DE8 accepted `abandoned` only at E4 —
-  F-013's shape. **F-109 and F-110 filed**; F-110 proved by execution and **deliberately not
-  fixed**, because its fix moves digests three banked fixtures assert. F-008 and F-060 stay
-  deferred where META-128 put them. **The vacuous case of its own**: an assertion
-  `"R-001" in line` could never fail, because every one of those messages cites **`ADR-0012`**,
-  which contains the substring `R-001` — on a branch that had no case at all until it wrote one.
-  Seventh unit running.
-
-### Staging — VERIFIED, nothing run
-- **META-164** both regressions provision-verified and torn down (**8e61fdb**). Scratch root
-  outside the repo, both projects removed, root `rmdir`'d and confirmed absent; `harness/runs/`
-  `diff`-identical to its 19-entry baseline; the default `~/agile-skills-throwaway` checked
-  first and still empty. **10 rules, both configs, 10/10 each** — including that the install
-  matches what the repo renders (`diff -r` clean but for `hooks/`, which `install.py`'s docstring
-  names), `validate-workspace` passes fresh, the allow-list equals `USAGE.md` §4 in order, all
-  **18** shipped scripts import **from the install** (F-072's check run one layer further out),
-  and this session's new material ships — `record-halt`, `record-merge`, `lint-documents`,
-  `tracker/waiting/.gitkeep`, all nine contracts at source versions. **Idempotence was tested,
-  not repeated from the docstring**: second run exits 0, HEAD unchanged, md5 manifest
-  byte-identical. **`--trust` deliberately not used** (it writes `~/.claude.json`, outside both
-  the repo and the throwaway root), so the allow-list is *installed and checked*, not
-  *exercised* — stated honestly rather than glossed. **Neither iteration was run**;
-  `run_iteration.py` was never invoked in any mode; the held-out probe was **not read**, its
-  existence established by `os.path.isfile` + `getsize` only.
-
-### Cluster 6 — triage — COMPLETE
-- **META-163** (**c662d8c**), 45 steps, 108 codes unmoved. **130 entries read by last status,
-  133 after filing, 133 current**: 108 fixed, 3 tombstones that had carried **no status at all**,
-  1 rejected, 21 open — **none saying only "open"** (17 deferred behind a named gate, 2
-  known-derived-and-accepted with the standing *confirmed* rather than restated, 1 open-unstarted
-  -sequenced, 1 re-gated on scope). 24 status blocks appended; nothing rewritten.
-  **Two deferrals were already fixed and nobody had noticed**: **F-053 and F-043**, at
-  **8804bd7** (META-156), incidentally, while it was fixing F-083's *ordering* — and
-  **META-149's own status on F-053, written this session, says "`transition` still has no
-  `--outcome`"**, true when written and false seven units later; corrected by appending.
-  **F-010's gate has been met since 2026-08-30** — its gate *is* ROADMAP §2, whose stamp that day
-  named F-010 among the opened tracks; it read `deferred (gated)` for eleven days.
-  **The half-written-record class's gate was literally met this session** (META-144); F-036 is
-  one print statement and was **deliberately not taken**, because a message telling the caller to
-  hand-write a journal entry documents the path F-051 exists to delete. **H-015's blocker was
-  gone** (no run in flight all session) and it was re-gated honestly on scope.
-  **F-098 deferred behind a named one-sweep unit, price measured**: 97 bare `ADR-nnnn` citations
-  over 11 numbers, **37 written this session**, surface 60 → 97 — and the collision is already
-  exhibited in-repo, since `examples/toy-project` holds a real, different ADR-0001…ADR-0010.
-  **Item D filed as F-111 and H-021, both differing from the report it was handed**: the
-  `__pycache__` leak is **wider** (13 `.pyc` from **two** ignored dirs, not one from one) and its
-  reported consequence **does not survive the code** (`uninstall()` rmtree's the shared dir
-  wholesale), so the narrower true claim was filed instead; and the `.gitignore` reprint is **not
-  cosmetic** — `provision.py` *writes* where `workspace-init` *appends*, so it **destroys** what
-  the project added, proved by inserting `/build/` between two provisions.
-  **The trap is F-112, filed and fixed**, because its subject *is* this unit: the naive grep names
-  24 entries of which **13 are already resolved**, **misses F-076 entirely**, is blind to F-061's
-  `###`-heading status, and 3 entries had no status at all — wrong in both directions and blind
-  to one form. New step 17c requires every entry to carry a status and the header to state that
-  the **last** one is current; proved non-vacuous three ways. **The orchestrator's own account of
-  the trap was hearsay too** — its list was 12, missed F-057/F-058/F-061/H-020, and wrongly named
-  F-076. META-153b's lesson in a third place.
-
+- **Strong-form non-vacuity proofs** (stub the deciding body; run the stubs against your *own*
+  new cases) caught a defect in the unit's own new tests **five times**, including an assertion
+  that could not fail because `ADR-0012` contains the substring `R-001`.
+- **An orchestrator's summary is hearsay.** Sub-agents corrected these briefs by reading the
+  code at least four times — F-105 is unreachable on every input, not merely late; F-107 fires
+  under every verdict; F-111 is wider than reported *and* its reported consequence does not
+  survive the code; META-148 and META-148b filed contradictory reports and **execution** settled
+  it. META-165 then corrected four claims in this very file.
+- **Measure before scoping.** Four rules this session were scoped by measurement rather than
+  taste, and two would otherwise have retroactively invalidated imported real-run evidence.
+- **A deferral whose gate has been met and not noticed is how a backlog rots** — F-053 and F-043
+  were fixed *incidentally* at 8804bd7 and noticed only at triage, and F-010's gate had been met
+  for eleven days.
