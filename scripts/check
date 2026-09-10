@@ -17,6 +17,11 @@ Steps, in order:
                                                unsourced absolute, `--all` is the ending's scope,
                                                and `--changed-since main` standing on `main` is
                                                refused rather than passing over nothing (F-066)
+  6a. a mention is not a verdict             — the row that ended iteration 5, replayed over a
+                                               copy of the banked evidence: a bare `path:line`
+                                               written in prose produces no error, and a citation
+                                               planted in the same row that matches a form and
+                                               resolves to nothing still does (F-113)
   6b. the document window                    — F-076 and F-058, by execution: a document the
                                                plan's invalidation set names is inside
                                                `lint-claims`' window even though the branch never
@@ -881,6 +886,73 @@ def _plan(invalidation: str, deliverable: str) -> str:
     return ("# Plan — WI-0001\n\n## Invalidation set\n\n"
             + PLAN_TABLE_HEADER + invalidation + "\n## Deliverable documents\n\n"
             + deliverable)
+
+
+def check_mention_is_not_a_verdict(runner: Runner) -> None:
+    """The row that ended iteration 5, re-run against the fix (F-113, F-075).
+
+    `meta/harness/evidence/iteration-5-envel-abandoned/` is a real workspace as it stood at a
+    `validator-failed` stop, and the single error that stopped it is still in it at
+    `tracker/items/WI-0002/history.md:14`: `verify` naming the citation form `path:line` in prose,
+    bare, in the sentence reporting four real citations it had just found falsified. The copy is
+    the anchor rather than a hand-made fixture because a fixture is written by whoever wrote the
+    rule, and this row was not.
+
+    Both directions, because a split that only ever softens is the same defect turned around: the
+    mention must produce no error, and a citation planted in the same row that *matches a form*
+    and does not resolve must still produce one. The rest of the copy reports ~43 unrelated
+    errors — `envel/` and `.claude/` were never banked — so the assertions name the row, not the
+    total. The evidence is copied and never touched: it is read-only history.
+    """
+    import shutil
+    import tempfile
+    source = os.path.join(ROOT, "meta", "harness", "evidence", "iteration-5-envel-abandoned")
+    row = os.path.join("tracker", "items", "WI-0002", "history.md")
+    if not os.path.isfile(os.path.join(source, row)):
+        runner.skip("the row that ended iteration 5 (F-113)", f"{source} has no {row}")
+        return
+    validator = os.path.join(SCRIPTS, "validate-workspace")
+    located = f"{row.replace(os.sep, '/')}:14:"
+    problems = []
+    with tempfile.TemporaryDirectory() as base:
+        copy = os.path.join(base, "workspace")
+        shutil.copytree(source, copy)
+
+        def findings_on_the_row():
+            result = subprocess.run([sys.executable, validator, copy],
+                                    capture_output=True, text=True, cwd=ROOT)
+            return [line for line in (result.stdout + result.stderr).split("\n")
+                    if line.startswith(located)]
+
+        before = findings_on_the_row()
+        errors = [line for line in before if " ERROR " in line]
+        warnings = [line for line in before if " WARNING " in line]
+        if errors:
+            problems.append("the mention still fails the run:\n      " + "\n      ".join(errors))
+        if not any("claim.citation.unrecognised" in line for line in warnings):
+            problems.append("the mention is not reported at all — silence is not the fix, the "
+                            "gate must still say it could not check this")
+
+        # The other half: a citation in a form the gate knows, pointing at nothing.
+        text = read(os.path.join(copy, row))
+        planted = text.replace("were falsified by this item's own edits",
+                               "were falsified by this item's own edits [src: ADR-9999]", 1)
+        if planted == text:
+            problems.append("the planted-citation anchor no longer matches the banked row")
+        else:
+            write(os.path.join(copy, row), planted)
+            after = findings_on_the_row()
+            if not any(" ERROR " in line and "claim.citation.unresolved" in line
+                       for line in after):
+                problems.append("a citation matching a known form and resolving to nothing no "
+                                "longer fails:\n      " + "\n      ".join(after) or
+                                "(nothing reported on the row)")
+    if problems:
+        runner.emit("the row that ended iteration 5 (F-113)", False,
+                    detail="\n".join(f"  - {problem}" for problem in problems))
+        return
+    runner.emit("the row that ended iteration 5 is a warning, a wrong citation still an error "
+                "(F-113)", True)
 
 
 def check_document_window(runner: Runner) -> None:
@@ -4172,6 +4244,7 @@ def main() -> int:
     check_render(runner)
     check_example(runner)
     check_claims(runner)
+    check_mention_is_not_a_verdict(runner)
     check_document_window(runner)
     check_document_obligations(runner)
     check_cross_answers(runner)

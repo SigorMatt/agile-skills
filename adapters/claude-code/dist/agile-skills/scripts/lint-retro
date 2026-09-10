@@ -213,10 +213,14 @@ class RetroLinter:
                                        "reader to believe you about a record they are holding")
             for body in citations:
                 for part in split_sources(body):
-                    message = self.resolver.resolve(part)
-                    if message:
-                        self.report.error(path, entry.line, "retro.citation.unresolved",
-                                          f"in {entry.title!r}: {message}")
+                    # `retro.citation.*` splits the same way `claim.citation.*` does and for the
+                    # same reason: a body matching no form was not checked, so the report says
+                    # so instead of ruling (F-113). One resolver decides; this only names the
+                    # code space it reports into.
+                    problem = self.resolver.resolve(part)
+                    if problem is not None:
+                        problem.report(self.report, path, entry.line, "retro",
+                                       prefix=f"in {entry.title!r}: ")
         # Prose written outside any `###` entry is not checked for citations — it is the
         # section's framing, not a claim about the record. A section that is *only* framing is
         # caught by `retro.section.empty` above.

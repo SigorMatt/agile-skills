@@ -623,7 +623,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
       *resolution* check does, so a quoted example can no longer satisfy a rule that wants a
       real citation. Per-surface fixtures.
       Gate: `./scripts/check` green; a mention and a real unresolved citation on each surface.
-- [ ] **META-168** — severity follows knowledge: a marker the resolver *recognises* and cannot
+- [x] **META-168** — severity follows knowledge: a marker the resolver *recognises* and cannot
       resolve stays an ERROR; a marker matching no form at all is a mention or a typo, the gate
       cannot tell which, and it says so as a WARNING under its own code. The mention convention
       (backticked = mention) moves out of the validator source comment into the forms table.

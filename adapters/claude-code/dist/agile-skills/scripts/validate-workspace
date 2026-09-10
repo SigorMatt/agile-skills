@@ -1879,11 +1879,12 @@ class Validator:
                                           "deliberately not text, it does not belong under a "
                                           ".md name")
                 # problems_in() masks code spans and fenced blocks, so a *quoted* marker is not
-                # read as a citation (F-037).
+                # read as a citation (F-037), and it classifies what is left: a known form that
+                # fails is an error, an unrecognised body is a warning, because the gate has not
+                # checked anything and a bare mention of a form is indistinguishable from a typo
+                # (F-113). The Problem carries both, so this site holds no copy of the mapping.
                 for line, problem in self.citations.problems_in(text):
-                    self.report.error(path, line, "claim.citation.unresolved", problem,
-                                      hint="a citation that does not resolve is the appearance "
-                                           "of evidence, which is worse than none")
+                    problem.report(self.report, path, line, "claim")
 
     def uninitialised(self) -> bool:
         """Is this simply a directory nobody has initialised yet? (F-005)

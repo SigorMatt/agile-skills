@@ -27,7 +27,9 @@ backticks. Nothing here points at anything, so this observation cites nothing.
 
 ### The plan cited an item that is not in this workspace
 
-The plan names an item that does not exist [src: tracker/items/WI-0099/item.md].
+The plan names an item that does not exist [src: tracker/items/WI-0099/item.md]. It also names
+the form it meant to use, bare — [src: item AC-number] — which matches nothing the gate can look
+up, so that one is a warning and the missing file above it is the error (F-113).
 
 ## Positive record
 

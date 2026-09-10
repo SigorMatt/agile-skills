@@ -262,10 +262,9 @@ class ClaimLinter:
                                  hint="the workspace record is text; if the file is deliberately "
                                       "not text, it does not belong under a .md name")
             for line, problem in self.citations.problems_in(text):
-                self.report.error(os.path.join(self.root, relative), line,
-                                  "claim.citation.unresolved", problem,
-                                  hint="a citation that does not resolve is the appearance of "
-                                       "evidence, which is worse than none")
+                # Severity and code come from the Problem, not from here (F-113): an
+                # unrecognised body is a warning because nothing was checked.
+                problem.report(self.report, os.path.join(self.root, relative), line, "claim")
 
     # ---- rule 2: an absolute claim is sourced -----------------------------------------
 

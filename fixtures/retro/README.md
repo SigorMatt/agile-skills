@@ -49,3 +49,10 @@ empty observations list, and so does a diligent retro of a flawless engagement. 
 scope, checked against the workspace, is the only place a program can tell them apart. F-033 and
 F-066 are that same defect twice in this project's own scripts, and reading is this skill's whole
 job.
+
+
+**EP-002's citation entry carries both severities.** `tracker/items/WI-0099/item.md` matches the
+workspace-path form and is not there, so the gate looked and it is an ERROR
+(`retro.citation.unresolved`); `item AC-number` matches no form, so the gate looked at nothing
+and it is a WARNING (`retro.citation.unrecognised`). The multiset comparison holds one of each,
+which is what makes a classifier stuck at either answer visible here (F-113).

@@ -284,6 +284,16 @@ Several sources are separated by `;` inside one marker. `scripts/lint-claims` en
 rules and is a hard gate on `plan`, `implement` and `review-close`; `scripts/validate-workspace`
 enforces the resolution rule over the whole workspace, at any time.
 
+**Naming a form is not using one.** A marker inside an inline code span or a fenced block is a
+**mention** — `[src: WI-0007]` written like this — and is not read as a citation. Outside
+backticks, a marker whose body matches none of the forms above is reported as a **warning**, not
+an error, because there the gate has checked nothing and cannot tell a mention from a typo; a
+marker that does match a form and then fails to resolve stays an error, because there it looked.
+The cost is real and is the point: `[src: WI-007]`, three digits, matches no form and now warns
+where it used to fail the gate. That is the better trade because the opposite one has been paid
+— a run ended mid-item on a history row that wrote the words `path:line` in prose, in a sentence
+reporting four citations it had just found falsified.
+
 ### A criterion's number is a position, not a name
 
 `AC7` is where a criterion sits in a list. Renumbering that list is legal and cheap while an item
@@ -554,3 +564,4 @@ wholesale and so excludes the delivered thing on an item whose deliverable is a 
 | 7 | 2026-09-10 | §3: `journal-and-history.md` §0 reaches the change log — the top row and the header must agree, `by` and `for` must resolve, `when` must be a time a clock could have produced, and the row is matched against the journal of the item it names while that item is not yet `done`. The `[auto]`/`[skill]` table says plainly which half of a version row is decidable: the version number and the description of the change are not (F-084). |
 | 8 | 2026-09-10 | §4a: a criterion's number is a position, not a name. An `ITEM ACn` citation may quote the criterion's own words, and an anchored citation is checked against them; an unanchored one is refused while the cited item is at `draft` or `ready`, the statuses at which the list may still be rewritten. What it does not catch, and why an anchor is not required everywhere, is stated with it. F-077's disease, not F-077's cure — the bound it added was already in place here and is the check being fooled (F-094). |
 | 9 | 2026-09-10 | §4a: an audit row's example must be **able to fail**, and the row says why it could — a fifth label, `Falsifier:`, on the enumeration entry, plus the rule that an absolute about a rule with a boundary is checked **at** the boundary. This is `scope.py`'s out-of-scope-by-construction reached through the example rather than through the scope: the same sentence was audited *holds* twice from cases in which the rule it denies never applied (F-088). An enumeration whose `Members:` names nobody passes **with a mark**, on the same precedent. |
+| 10 | 2026-09-11 | §4a: naming a citation form is not using one. A marker inside backticks or a fence is a mention and is not read; a bare marker matching no form is a **warning**, because the gate has checked nothing there and cannot tell a mention from a typo, while a marker that matches a form and fails to resolve stays an error. The cost — a typo'd body matching no form now warns — is smaller than the one already paid: an engagement ended at turn 11 on a history row that wrote `path:line` in prose (F-113, F-075). |

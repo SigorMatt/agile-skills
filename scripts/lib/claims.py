@@ -12,6 +12,12 @@ two. Where a bare `CITATION_RE` was used instead, the same class of defect appea
 direction the rule ran — a *resolution* rule refused a backticked example as a broken citation,
 and a *presence* rule accepted one as a real one.
 
+The mask is only half the answer, because a writer may reasonably name a form **without**
+backticks, and one did: the run this is filed from ended on a history row that wrote `path:line`
+bare, in prose, describing four citations it had just found falsified. So severity follows
+knowledge as well — `Problem` splits a marker the resolver *checked* and rejected from one it
+could not check at all, and the second is a warning, not a verdict.
+
 The surfaces the vocabulary is read on, and the site that reads each (`record.py` holds the
 structures they are cut out of — entries, table rows, list items, paragraphs):
 
@@ -45,7 +51,7 @@ import frontmatter  # noqa: E402
 from record import FENCE_RE  # noqa: E402
 from textio import read_text  # noqa: E402
 
-__all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver",
+__all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver", "Problem",
            "AC_LINE_RE", "AC_RENUMBERABLE_STATUSES", "ac_state", "criteria_in",
            "normalise_anchor", "carries_citation", "citations_in",
            "looks_like_code", "mask_code", "masked_lines", "split_sources"]
@@ -263,6 +269,71 @@ def split_sources(body: str):
     return parts or [body]
 
 
+class Problem:
+    """One citation that did not check out, and **which kind** of not-checking-out it is.
+
+    Severity follows knowledge (F-113, F-075). A body that matches a known citation form and
+    fails to resolve is a wrong citation: the gate looked, and the appearance of evidence is
+    worse than none, so it is an ERROR. A body that matches no form at all is a different fact —
+    the gate has not looked at anything, and it cannot tell a **mention** of the form from a typo
+    in a citation. Reporting that as an error is the gate announcing a verdict it does not hold,
+    and it is how an engagement ended at turn 11: a history row naming the form `path:line` in
+    prose, in a sentence about four citations the same skill had just found falsified.
+
+    The kind, the severity and the code all live here and nowhere else. A caller that re-derived
+    "was this recognised?" from the message text would be the two-readers-one-vocabulary defect
+    this module exists to prevent — so `report()` files the finding and the caller supplies only
+    its own code namespace (`claim` for the two claim gates, `retro` for the retrospective one),
+    because the two name their findings differently and the split is the same in both.
+    """
+
+    UNRESOLVED = "unresolved"
+    UNRECOGNISED = "unrecognised"
+
+    __slots__ = ("kind", "message")
+
+    def __init__(self, kind: str, message: str) -> None:
+        self.kind = kind
+        self.message = message
+
+    def __repr__(self) -> str:
+        return f"Problem({self.kind!r}, {self.message!r})"
+
+    def __eq__(self, other) -> bool:
+        return (isinstance(other, Problem) and other.kind == self.kind
+                and other.message == self.message)
+
+    def __hash__(self):
+        return hash((self.kind, self.message))
+
+    @classmethod
+    def unresolved(cls, message: str) -> "Problem":
+        """A known form that does not resolve. The gate looked."""
+        return cls(cls.UNRESOLVED, message)
+
+    @classmethod
+    def unrecognised(cls, citation: str) -> "Problem":
+        """No form at all. The gate did not look, and says so instead of ruling."""
+        return cls(cls.UNRECOGNISED,
+                   f"{citation!r} matches no citation form, so this gate cannot tell a mention "
+                   f"of one from a typo in one — put it in backticks if it is naming the form, "
+                   f"or write one of the forms in spec/doc-header.md's citation forms table if "
+                   f"it is a citation")
+
+    def report(self, report, path, line, namespace: str, prefix: str = "") -> None:
+        """File this problem on `report` as `<namespace>.citation.<kind>`, at its own level."""
+        code = f"{namespace}.citation.{self.kind}"
+        message = f"{prefix}{self.message}"
+        if self.kind == self.UNRECOGNISED:
+            report.warn(path, line, code, message,
+                        hint="a warning, because nothing was checked: only a marker that "
+                             "matches a form and then fails is an error")
+            return
+        report.error(path, line, code, message,
+                     hint="a citation that does not resolve is the appearance of evidence, "
+                          "which is worse than none")
+
+
 class CitationResolver:
     """Resolves `[src: ...]` citations against one workspace."""
 
@@ -302,8 +373,8 @@ class CitationResolver:
         except OSError:
             return None
 
-    def resolve(self, citation: str) -> str:
-        """An error message, or '' when the citation resolves."""
+    def resolve(self, citation: str):
+        """The `Problem` with this citation, or None when it resolves."""
         raw = citation
         citation = citation.strip().strip("`")
         # F-040: several sources are separated by ';' inside one marker, so the second part
@@ -314,35 +385,46 @@ class CitationResolver:
             citation = citation[4:].strip()
             repeated_prefix = True
         if not citation:
-            return "an empty citation"
-        message = self._resolve(citation)
-        if message and repeated_prefix:
-            return (f"{message} — note that {raw.strip()!r} repeats the 'src:' prefix; inside one "
-                    f"marker, sources are separated by ';' and only the first carries it")
-        return message
+            # `[src: ]` is a citation, not a mention of one: the marker was made in prose and
+            # left empty. The gate knows that much, so this keeps the error severity.
+            return Problem.unresolved("an empty citation")
+        problem = self._resolve(citation)
+        if problem and repeated_prefix:
+            return Problem(problem.kind,
+                           f"{problem.message} — note that {raw.strip()!r} repeats the 'src:' "
+                           f"prefix; inside one marker, sources are separated by ';' and only "
+                           f"the first carries it")
+        return problem
 
-    def _resolve(self, citation: str) -> str:
+    def _resolve(self, citation: str):
 
-        match = RUN_RE.match(citation)
-        if match:
-            if not match.group("outcome").strip():
-                return f"{citation!r} records a command with no outcome"
-            return ""
+        if RUN_RE.match(citation):
+            return None
+        if citation.lower().startswith("run:"):
+            # `run:` names the form, so this is a citation and not a mention of one, and the
+            # gate can say exactly what is missing. Without this the split below would file it
+            # as unrecognised — a warning — and a command citation with its outcome dropped is
+            # the one that loses the most evidence (F-070).
+            return Problem.unresolved(
+                f"{citation!r} records a command with no outcome — a run citation is "
+                f"'run: <command> → <outcome>'")
 
         match = COMMIT_RE.match(citation)
         if match:
             result = self.git(["cat-file", "-e", f"{match.group(1)}^{{commit}}"])
             if result is None:
-                return f"{citation!r} cannot be checked — this workspace is not a git repository"
+                return Problem.unresolved(f"{citation!r} cannot be checked — this workspace is "
+                                          f"not a git repository")
             if result.returncode != 0:
-                return f"commit {match.group(1)} is not in this repository"
-            return ""
+                return Problem.unresolved(f"commit {match.group(1)} is not in this repository")
+            return None
 
         match = ITEM_QUESTION_RE.match(citation)
         if match:
             path = os.path.join(self.root, "tracker", "items", match.group(1), "questions",
                                 f"{match.group(2)}.md")
-            return "" if os.path.isfile(path) else f"{citation} does not exist"
+            return None if os.path.isfile(path) \
+                else Problem.unresolved(f"{citation} does not exist")
 
         match = ITEM_AC_RE.match(citation)
         if match:
@@ -350,8 +432,8 @@ class CitationResolver:
                                            match.group("anchor"))
 
         if ITEM_RE.match(citation):
-            return "" if citation in self.items \
-                else f"{citation} is not an item in this workspace"
+            return None if citation in self.items \
+                else Problem.unresolved(f"{citation} is not an item in this workspace")
 
         match = ADR_RE.match(citation)
         if match:
@@ -359,14 +441,15 @@ class CitationResolver:
             if os.path.isdir(adr_dir):
                 for name in os.listdir(adr_dir):
                     if name.startswith(f"ADR-{match.group(1)}-"):
-                        return ""
-            return f"{citation} is not an ADR in docs/architecture/adr/"
+                        return None
+            return Problem.unresolved(f"{citation} is not an ADR in "
+                                      f"docs/architecture/adr/")
 
         candidate = citation.split(":")[0].split(" ")[0]
         if "/" in candidate or "." in candidate:
             target = os.path.join(self.root, candidate)
             if not os.path.exists(target):
-                return f"{candidate!r} does not exist in this workspace"
+                return Problem.unresolved(f"{candidate!r} does not exist in this workspace")
             # `path:line` is the most precise citation form the convention offers, and it was the
             # only one whose precision was not checked: the resolver split the line number off
             # and asked whether the *file* existed, so `store.py:412` resolved for ever against a
@@ -379,14 +462,14 @@ class CitationResolver:
                 with open(target, "r", encoding="utf-8", errors="replace") as handle:
                     lines = sum(1 for _ in handle)
                 if wanted > max(lines, 1):
-                    return (f"{citation} points past the end of the file, which has "
-                            f"{lines} line{'' if lines == 1 else 's'}")
-            return ""
+                    return Problem.unresolved(
+                        f"{citation} points past the end of the file, which has "
+                        f"{lines} line{'' if lines == 1 else 's'}")
+            return None
 
-        return (f"{citation!r} is not a citation form this gate can check "
-                f"(spec/doc-header.md, the citation forms table)")
+        return Problem.unrecognised(citation)
 
-    def _resolve_criterion(self, item_id: str, label: str, anchor) -> str:
+    def _resolve_criterion(self, item_id: str, label: str, anchor):
         """`ITEM ACn`, and what makes it point at the same criterion tomorrow (F-094).
 
         The number is a **position in a list**, not a name. Criteria may legally be renumbered
@@ -413,31 +496,38 @@ class CitationResolver:
         """
         record = self.items.get(item_id)
         if record is None:
-            return f"{item_id} is not an item in this workspace"
+            return Problem.unresolved(f"{item_id} is not an item in this workspace")
         criterion = None
         for found in criteria_in(record["body"]):
             if found["label"] == label:
                 criterion = found["text"]
                 break
         if criterion is None:
-            return f"{item_id} has no {label}"
+            return Problem.unresolved(f"{item_id} has no {label}")
 
         if anchor is not None:
             if normalise_anchor(anchor) in normalise_anchor(criterion):
-                return ""
-            return (f"{item_id} {label} does not say {anchor.strip()!r} — it reads "
-                    f"{_shorten(criterion)!r}. A criterion cited by number moves when the list "
-                    f"is renumbered; the quoted words are the part that does not move")
+                return None
+            return Problem.unresolved(
+                f"{item_id} {label} does not say {anchor.strip()!r} — it reads "
+                f"{_shorten(criterion)!r}. A criterion cited by number moves when the list "
+                f"is renumbered; the quoted words are the part that does not move")
 
         status = record["status"]
         if status in AC_RENUMBERABLE_STATUSES:
-            return (f"{item_id} is at {status}, where its criteria may still be renumbered, so "
-                    f"{label!r} does not yet name one — quote the criterion's words too, as "
-                    f"[src: {item_id} {label} \"{_shorten(criterion, words=6)}\"]")
-        return ""
+            return Problem.unresolved(
+                f"{item_id} is at {status}, where its criteria may still be renumbered, so "
+                f"{label!r} does not yet name one — quote the criterion's words too, as "
+                f"[src: {item_id} {label} \"{_shorten(criterion, words=6)}\"]")
+        return None
 
     def problems_in(self, text: str):
-        """(line, message) for every citation in `text` that does not resolve.
+        """(line, `Problem`) for every citation in `text` that does not check out.
+
+        The `Problem` carries its own severity and code, so all three callers report the same
+        split without any of them re-deriving it (F-113): a marker matching a known form and
+        failing is an error, and a marker matching no form is a warning, because the gate cannot
+        tell a mention of a form from a typo in a citation.
 
         A marker inside an inline code span or a fenced block is a **quotation**, not a citation,
         and `citations_in()` has already dropped it. F-037: without that, a journal entry could
@@ -450,6 +540,6 @@ class CitationResolver:
         for line, body in citations_in(text):
             for part in split_sources(body):
                 problem = self.resolve(part)
-                if problem:
+                if problem is not None:
                     found.append((line, problem))
         return found

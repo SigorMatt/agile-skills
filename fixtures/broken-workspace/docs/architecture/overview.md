@@ -21,7 +21,10 @@ The paragraph above is the shape the audit found — an absolute claim about a n
 carrying no citation at all.
 
 And a marker in a form the gate does not define: [src: WI-0001 ## Acceptance criteria]. Bare, so
-it must still fail — the code-span exemption is for quoting one, not for writing one.
+it is still reported — but as a **warning**, because nothing was checked here and a bare marker
+in no known form could as easily be prose naming a form as a typo in a citation (F-113). The
+error above it, `src/store.py`, is the other half of the pair: a marker in a form the gate does
+define, which it looked up and did not find.
 
 `render_table` never writes outside a table, and the source for that would be written
 `[src: ADR-0001]`. Shown, not made: a paragraph cannot source itself by describing what its

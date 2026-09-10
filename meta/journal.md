@@ -6661,3 +6661,91 @@ recall is a reading, not a number, and the report says which.
   `scripts/check`, `fixtures/broken-workspace/` (BUG-0001 AC2, ADR-1-Bad_Name.md, overview.md,
   README), `fixtures/retro/` (EP-001's report, README),
   `adapters/claude-code/dist/` (re-rendered), `meta/plan.md`, `meta/journal.md` (this entry).
+
+## 2026-09-11 — META-168 — severity follows knowledge: an unrecognised marker is a warning, not a verdict
+
+- **Result:** the resolver used to answer two different questions with one message. A body that
+  matches a known citation form and fails to resolve is a **wrong citation** — the gate looked.
+  A body that matches no form at all is not a verdict about anything: the gate looked at nothing
+  and cannot tell a *mention* of a form from a typo in a citation. It reported both as
+  `claim.citation.unresolved`, an ERROR, and the second one ended iteration 5 at turn 11 on a
+  history row that wrote the words `path:line` in prose while reporting four real citations it
+  had just found falsified. The second is now a WARNING under `claim.citation.unrecognised` /
+  `retro.citation.unrecognised`, and a warning touches no exit code.
+  - **The classification shape.** `CitationResolver.resolve()` returns a `Problem` (kind +
+    message) or `None`, instead of a message-or-empty-string, and `Problem.report()` files the
+    finding: the kind decides the level and the code suffix, and the caller supplies only its own
+    namespace — `claim` for `validate-workspace.check_claim_citations` and `lint-claims` rule 1,
+    `retro` for `lint-retro.check_citations`. That was the constraint that chose the shape: a
+    caller re-deriving "was this recognised?" from the message text would be exactly the
+    two-readers-one-vocabulary defect `claims.py` exists to prevent, and putting the mapping on
+    the value means there is nowhere for a second copy to live. It also removed a copy that was
+    already there — the "appearance of evidence" hint had been written out twice, in
+    `validate-workspace` and in `lint-claims`.
+  - **`[src: ]` stays an error.** An empty marker is a citation somebody made and left empty, not
+    a mention; the gate knows that much. Said in the code where the decision is.
+  - **A `run:` body with no outcome would have been softened, and is not.** The `records a
+    command with no outcome` branch turned out to be unreachable — `resolve()` strips the
+    citation, so `RUN_RE`'s outcome group can never match only whitespace — which meant
+    `[src: run: cmd →]` fell through to the *unrecognised* branch and would have become a
+    warning. A `run:` prefix is a citation attempt and nothing else, so it is now guarded
+    explicitly and the message it always meant to give is reachable for the first time (F-070's
+    citation is the one that carries the most evidence, so it is the worst one to soften).
+  - **The convention moved to where a writer reads it.** `spec/doc-header.md` §4a, under the
+    citation forms table: naming a form is not using one; backticked or fenced is a mention;
+    outside backticks, a body matching no form warns because the gate has checked nothing, and a
+    body matching a form and failing stays an error. The cost is stated rather than left to be
+    discovered — `[src: WI-007]`, three digits, matches no form and now warns where it used to
+    fail — with the reason the trade is right: the opposite choice has already been paid for once,
+    with a whole engagement.
+  - **The proof-case is a permanent gate step, not a one-off run.** `scripts/check` step 6a
+    copies `meta/harness/evidence/iteration-5-envel-abandoned/` to a temporary directory and
+    asserts both directions on the row that stopped the run. It is worth its ~1.2 MB copy and one
+    extra `validate-workspace` run because the anchor is a record **nobody wrote to satisfy this
+    rule** — the failure mode of a hand-made fixture is that its author already knows the answer.
+    Both halves are asserted, because a split that only ever softens is the same defect turned
+    around: the mention must produce no error *and* must still be reported, and a citation
+    planted in the same row that matches a form and resolves to nothing must still fail.
+  - **Fixtures, both directions, each the sole source of its code.** `fixtures/broken-workspace`
+    already held the pair and was reading it wrongly: `[src: src/store.py]` (a form, absent file)
+    is the ERROR and `[src: WI-0001 ## Acceptance criteria]` (no form) is now the WARNING — one
+    source each, so the exact-set comparison loses a code under a classifier stuck at either
+    answer (**108 → 109**). `fixtures/retro`'s `EP-002` citation entry gains the same pair beside
+    its existing unresolvable path (**25 → 26**, multiset). The fixture prose that said the bare
+    marker "must still fail" was corrected in place; it is a fixture, not a record.
+  - **Non-vacuity, strong form, three mutations.** (A) the classifier always answers
+    *recognised*: 7 selftest severity cases and 4 gate steps fail (`library self-test`,
+    `must-fail fixture`, `the retrospective format`, and the evidence step). (B) always answers
+    *unrecognised*: 12 selftest severity cases and 6 gate steps fail, `claim-provenance fixtures`
+    and `a criterion's identity (F-094, F-096)` among them. (C) the unrecognised message stops
+    teaching the escapes and `report()` drops the caller's prefix: the remaining 3 new cases
+    fail. Every one of the 17 new cases fails under at least one mutation.
+- **Questions raised:** none. The toolkit-path question is untouched by construction — a
+  `.claude/agile-skills/...` body contains `/`, so it matches the workspace-path branch, is
+  *recognised*, and its severity is exactly what it was. That ruling is META-169's.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **45 → 46 steps** (the new
+  evidence-backed step 6a); `must-fail fixture` **108 → 109 codes**; `the retrospective format`
+  **25 → 26 codes**; `scripts/lib/selftest.py` **369 → 386 cases** (17 new, in a new
+  `run_citation_severity`). The proof-case, verbatim, over a scratch copy of the banked evidence:
+
+  ```
+  tracker/items/WI-0002/history.md:14: WARNING [claim.citation.unrecognised] 'path:line' matches no citation form, so this gate cannot tell a mention of one from a typo in one — put it in backticks if it is naming the form, or write one of the forms in spec/doc-header.md's citation forms table if it is a citation
+  ```
+
+  — zero `ERROR` findings on that line (the copy's other ~43 errors are `envel/` and `.claude/`
+  never having been banked, and are not this assertion). With `[src: ADR-9999]` planted in the
+  same row:
+
+  ```
+  tracker/items/WI-0002/history.md:14: WARNING [claim.citation.unrecognised] 'path:line' matches no citation form, so this gate cannot tell a mention of one from a typo in one — put it in backticks if it is naming the form, or write one of the forms in spec/doc-header.md's citation forms table if it is a citation
+  tracker/items/WI-0002/history.md:14: ERROR [claim.citation.unresolved] ADR-9999 is not an ADR in docs/architecture/adr/
+  ```
+
+  `meta/harness/evidence/` is unchanged — `git status` clean over it.
+- **Artifacts:** `scripts/lib/claims.py` (`Problem`, the resolver returning it, the docstring's
+  second half), `scripts/validate-workspace`, `scripts/lint-claims`, `scripts/lint-retro`,
+  `scripts/lib/selftest.py` (`run_citation_severity`), `scripts/check` (step 6a),
+  `spec/doc-header.md` (§4a + revision 10), `fixtures/broken-workspace/`,
+  `fixtures/retro/`, `meta/findings/FINDINGS.md` (F-113 and F-075 statuses appended, as one
+  class), `adapters/claude-code/dist/` (re-rendered), `meta/plan.md`, `meta/journal.md` (this
+  entry).

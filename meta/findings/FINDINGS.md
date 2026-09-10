@@ -2834,6 +2834,19 @@ any future attempt to mechanize "support" starts from this instance as its fixtu
   masking that swallows a real citation is the worse failure of the two: `EP-001` now quotes a
   marker beside a real one and must produce **nothing**, and `EP-002` carries an observation
   whose only marker is quoted and must be reported as citing nothing (25 codes, was 24).
+- Status update 2026-09-11 (META-167, META-168): **fixed** a second time, and this is the
+  current status. F-113 is the same class — a mention of the citation vocabulary read as a use
+  of it — and the two were closed as one, because fixing either alone leaves the other's
+  surface. The 2026-08-30 fix above made `lint-retro` mask like `lint-claims`; it did not make
+  masking the *only* rule, and it did not cover a writer who names a form without backticks at
+  all. META-167 (commit `cd00504`) made `citations_in()` / `carries_citation()` the single
+  reader for every surface — `lint-retro`'s own residual F-054 bug, reading the body off the
+  masked line, went with it. META-168 added the half no mask can reach: an unrecognised body is
+  now a WARNING (`retro.citation.unrecognised`), because the gate has checked nothing there,
+  while a body that matches a form and fails to resolve stays an ERROR. `fixtures/retro` carries
+  one of each in `EP-002`'s citation entry (26 codes, was 25), so a classifier stuck at either
+  answer is visible in the multiset. The addendum below still stands unchanged: an unbalanced
+  backtick still swallows what follows it, and that is still the better of the two failures.
 
 ## F-076 — `implement`'s claims gate examines an empty window by construction, every time
 - Severity: correctness of enforcement, medium — F-033's class a **third** time, and the variant
@@ -5135,6 +5148,30 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   comment into the forms table and the authoring guidance (F-114's placement fix carries
   it). Cross-reference F-075; consider them one class when fixing.
 - Status: open
+- Status update 2026-09-11 (META-167, META-168): **fixed**, in two units, and F-075 is the same
+  class fixed with it — one defect, one vocabulary, two directions, closed together.
+  META-167 (commit `cd00504`) supplied the first half: `citations_in()` and `carries_citation()`
+  in `scripts/lib/claims.py` are the one reader that decides mention-versus-use, and every
+  surface that scrapes the vocabulary now calls one of them, so a backticked marker is a mention
+  on all six of them rather than on whichever ones had remembered to mask.
+  META-168 supplied the second half, which the mask cannot reach: the row that ended the run was
+  **bare**, not backticked, and a writer naming a form in prose is entitled to. So severity now
+  follows knowledge. `CitationResolver` returns a `Problem` carrying its kind, and the kind
+  decides the code and the level in exactly one place: a body matching a known form and failing
+  to resolve stays an ERROR under `claim.citation.unresolved` / `retro.citation.unresolved`,
+  because the gate looked; a body matching no form is a WARNING under
+  `claim.citation.unrecognised` / `retro.citation.unrecognised`, because the gate looked at
+  nothing and cannot tell a mention from a typo — and reporting a verdict it does not hold is
+  the over-claiming this repository is built to refuse. Warnings do not touch an exit code, so
+  the run would not have stopped. The message teaches both escapes and points at the forms
+  table, and the convention now lives in `spec/doc-header.md` §4a where a writer reads it, with
+  its cost said plainly: a typo'd body matching no form (`WI-007`, three digits) warns where it
+  used to fail. The regression anchor is the banked evidence itself — `scripts/check` copies
+  `meta/harness/evidence/iteration-5-envel-abandoned/` and asserts that
+  `tracker/items/WI-0002/history.md:14` produces no error while a citation planted in the same
+  row that matches a form and resolves to nothing still does. F-114's placement half is
+  separate and still open; the toolkit-path question (`.claude/agile-skills/...`) is untouched
+  here and is F-114's, not this one's.
 
 ## F-114 — Citation forms are enforced at validation but may not be surfaced at authoring
 - Severity: UX/methodology (the general case F-113 is one instance of)

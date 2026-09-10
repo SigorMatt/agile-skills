@@ -852,16 +852,88 @@ def run_citations(results) -> None:
         with open(target, "w", encoding="utf-8") as handle:
             handle.write("one\ntwo\nthree\n")
         resolver = claims_lib.CitationResolver(root)
-        results.check("citations/a path with no line resolves", resolver.resolve("notes.md"), "")
+        results.check("citations/a path with no line resolves",
+                      resolver.resolve("notes.md"), None)
         results.check("citations/a line inside the file resolves",
-                      resolver.resolve("notes.md:2"), "")
-        results.check("citations/the last line resolves", resolver.resolve("notes.md:3"), "")
+                      resolver.resolve("notes.md:2"), None)
+        results.check("citations/the last line resolves", resolver.resolve("notes.md:3"), None)
         beyond = resolver.resolve("notes.md:400")
-        results.check("citations/a line past the end does not resolve", bool(beyond), True)
+        results.check("citations/a line past the end does not resolve", beyond is not None, True)
         results.check("citations/the message says what is wrong",
-                      "points past the end" in beyond, True)
+                      "points past the end" in beyond.message, True)
         results.check("citations/a missing file still reports the file",
-                      "does not exist" in resolver.resolve("gone.md:2"), True)
+                      "does not exist" in resolver.resolve("gone.md:2").message, True)
+
+
+def run_citation_severity(results) -> None:
+    """Severity follows knowledge: the gate reports a verdict only where it has one (F-113).
+
+    The engagement this is filed from ended at turn 11 on a history row that named the citation
+    form `path:line` in prose, bare, while reporting four real citations it had found falsified.
+    `path:line` matches no form, so the resolver had checked nothing — and reported an error
+    anyway. The cases below are stated in both directions, because a split that only ever
+    softens is the same defect turned around: a genuinely wrong citation must still be an error.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as root:
+        os.makedirs(os.path.join(root, "tracker", "items"), exist_ok=True)
+        with open(os.path.join(root, "notes.md"), "w", encoding="utf-8") as handle:
+            handle.write("one\ntwo\n")
+        resolver = claims_lib.CitationResolver(root)
+
+        # The row that stopped the run.
+        mention = resolver.resolve("path:line")
+        results.check("severity/a body matching no form is unrecognised",
+                      mention.kind, claims_lib.Problem.UNRECOGNISED)
+        results.check("severity/and its message teaches the backtick escape",
+                      "backticks" in mention.message, True)
+        results.check("severity/and points at the forms table",
+                      "spec/doc-header.md" in mention.message, True)
+
+        # The other direction: the gate looked, and the citation is wrong.
+        for label, citation in (("a line past the end", "notes.md:400"),
+                                ("a file that is not there", "gone.md"),
+                                ("an item nobody wrote", "WI-0007"),
+                                ("an ADR nobody wrote", "ADR-0004"),
+                                ("a command with no outcome", "run: pytest -q →"),
+                                ("a commit in a tree that is not a repo", "commit a1b2c3d")):
+            problem = resolver.resolve(citation)
+            results.check(f"severity/{label} is a checked failure",
+                          problem is not None
+                          and problem.kind == claims_lib.Problem.UNRESOLVED, True)
+        results.check("severity/an empty marker is a made citation, not a mention",
+                      resolver.resolve("").kind, claims_lib.Problem.UNRESOLVED)
+        # The 'src:' note wraps the message; it must not lose the kind with it (F-040).
+        results.check("severity/the repeated-prefix note keeps the classification",
+                      resolver.resolve("src: path:line").kind,
+                      claims_lib.Problem.UNRECOGNISED)
+
+        # problems_in carries the classification to its callers, per marker.
+        text = ("the form is [src: path:line] and the pointer is [src: notes.md:400]\n"
+                "`[src: path:line]` is the escape\n")
+        kinds = [(line, problem.kind) for line, problem in resolver.problems_in(text)]
+        results.check("severity/problems_in classifies each marker and drops the mention",
+                      kinds, [(1, claims_lib.Problem.UNRECOGNISED),
+                              (1, claims_lib.Problem.UNRESOLVED)])
+
+    # The mapping kind -> (level, code) exists once, on the Problem, and both namespaces use it.
+    for namespace in ("claim", "retro"):
+        report = report_lib.Report("t")
+        claims_lib.Problem.unrecognised("path:line").report(report, "a.md", 14, namespace)
+        claims_lib.Problem.unresolved("gone").report(report, "a.md", 15, namespace)
+        levels = [(f.code, f.level) for f in report.findings]
+        results.check(f"severity/{namespace}: an unrecognised marker is a warning, a bad "
+                      f"citation an error",
+                      levels, [(f"{namespace}.citation.unrecognised", "WARNING"),
+                               (f"{namespace}.citation.unresolved", "ERROR")])
+        results.check(f"severity/{namespace}: only the error affects the exit code",
+                      (report.errors, report.warnings), (1, 1))
+    # The prefix a retrospective adds is the caller's, and it does not reach the code.
+    report = report_lib.Report("t")
+    claims_lib.Problem.unrecognised("path:line").report(report, "r.md", 3, "retro",
+                                                        prefix="in 'O1': ")
+    results.check("severity/a caller's prefix reaches the message, not the code",
+                  report.findings[0].message.startswith("in 'O1': "), True)
 
 
 def run_criterion_citations(results) -> None:
@@ -901,44 +973,46 @@ def run_criterion_citations(results) -> None:
 
         resolver = resolver_for("done", settled)
         results.check("criteria/a bare number resolves once the list is settled",
-                      resolver.resolve("WI-0002 AC2"), "")
+                      resolver.resolve("WI-0002 AC2"), None)
         results.check("criteria/an anchor that matches resolves",
-                      resolver.resolve('WI-0002 AC2 "sorted by descending line count"'), "")
+                      resolver.resolve('WI-0002 AC2 "sorted by descending line count"'), None)
         results.check("criteria/the anchor may span the wrap",
-                      resolver.resolve('WI-0002 AC2 "ties broken by filename ascending"'), "")
+                      resolver.resolve('WI-0002 AC2 "ties broken by filename ascending"'), None)
         results.check("criteria/whitespace, case and backticks are not the criterion",
-                      resolver.resolve('WI-0002 AC1 "the `tool`   PRINTS one row"'), "")
+                      resolver.resolve('WI-0002 AC1 "the `tool`   PRINTS one row"'), None)
         results.check("criteria/a criterion that does not exist still reports plainly",
-                      resolver.resolve("WI-0002 AC9"), "WI-0002 has no AC9")
+                      resolver.resolve("WI-0002 AC9").message, "WI-0002 has no AC9")
         missed = resolver.resolve('WI-0002 AC2 "prints one row per regular file"')
         results.check("criteria/an anchor naming another criterion does not resolve",
-                      bool(missed), True)
+                      missed is not None, True)
         results.check("criteria/the message quotes what the criterion now reads",
-                      "does not say" in missed and "sorted by descending" in missed, True)
+                      "does not say" in missed.message
+                      and "sorted by descending" in missed.message, True)
 
         # The finding itself: the list is renumbered under two standing citations.
         resolver = resolver_for("done", renumbered)
         results.check("criteria/the bare number silently follows the renumbering",
-                      resolver.resolve("WI-0002 AC2"), "")
+                      resolver.resolve("WI-0002 AC2"), None)
         results.check("criteria/the anchored citation refuses to",
-                      bool(resolver.resolve('WI-0002 AC2 "sorted by descending line count"')),
-                      True)
+                      resolver.resolve('WI-0002 AC2 "sorted by descending line count"')
+                      is not None, True)
         results.check("criteria/and the anchor is right about where it moved to",
-                      resolver.resolve('WI-0002 AC3 "sorted by descending line count"'), "")
+                      resolver.resolve('WI-0002 AC3 "sorted by descending line count"'), None)
 
         for status in ("draft", "ready"):
             resolver = resolver_for(status, settled)
             refused = resolver.resolve("WI-0002 AC2")
-            results.check(f"criteria/a bare number is refused at {status}", bool(refused), True)
+            results.check(f"criteria/a bare number is refused at {status}",
+                          refused is not None, True)
             results.check(f"criteria/the refusal at {status} says why and offers the anchor",
-                          "may still be renumbered" in refused
-                          and "sorted by descending" in refused, True)
+                          "may still be renumbered" in refused.message
+                          and "sorted by descending" in refused.message, True)
             results.check(f"criteria/an anchor is enough at {status}",
-                          resolver.resolve('WI-0002 AC2 "sorted by descending"'), "")
+                          resolver.resolve('WI-0002 AC2 "sorted by descending"'), None)
 
         resolver = resolver_for("verifying", settled)
         results.check("criteria/past ready a bare number resolves again",
-                      resolver.resolve("WI-0002 AC2"), "")
+                      resolver.resolve("WI-0002 AC2"), None)
 
 
 def run_criterion_states(results) -> None:
@@ -1210,6 +1284,7 @@ def main() -> int:
     run_report(results)
     run_record(results)
     run_citations(results)
+    run_citation_severity(results)
     run_criterion_citations(results)
     run_criterion_states(results)
     run_workspace(results)
