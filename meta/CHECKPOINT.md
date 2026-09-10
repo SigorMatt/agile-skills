@@ -10,40 +10,46 @@ done, and the obligation to commit AND push → verify cheaply (git log for the 
 
 Phase VI's unit list is `meta/plan.md` §Phase VI, META-144 .. META-165.
 
-## The gate is GREEN at 3ae7bcd — 39 steps; 108 codes; selftest 354; 58 citations; harness 110
+## The gate is GREEN at 715ef26 — 40 steps; 108 codes; selftest 354; 61 citations; harness 110
+
+**CLUSTERS 1, 2 AND 3 ARE COMPLETE.** Cluster 4 — ending contracts — opens now.
 
 ## Current unit
 
-**META-158** — **F-099**: the evidence-to-ledger citation sweep. Cluster 3's last unit.
+**META-159** — cluster 4: **F-085, F-086, F-061**.
 
-**F-099** — *Citations from banked evidence into the ledger are resolved by nothing.*
-`./scripts/check` already resolves every `commit <sha>` cited **in** `meta/findings/FINDINGS.md`
-(step *findings citations resolve*, 58 today). Nothing resolves the other direction: the
-`F-###` / `H-###` numbers cited **from** `meta/harness/evidence/**` and elsewhere **into** the
-ledger. F-071 is the tombstone that proves the class — a README named three consecutive
-F-numbers 66 seconds before they were written, and the third was never filed.
+- **F-085** — one contract serves two subjects, and at an engagement's ending half of it is
+  undefined. `review-close`'s gate list gains an **epic-subject column**: *"skipped, an epic has
+  no branch"* becomes the contract's answer rather than a thing each execution improvises.
+  Note this lands on top of META-154, which made `transition` compose the whole `**Gates:**`
+  bullet from the contract and added the `pending` verdict — so the epic-subject column and that
+  composition must agree. Read META-154's work before designing this.
+- **F-086** — the acceptance is asked for **before** the epic's Definition of Done is applied,
+  so a late finding invalidates an acceptance already given. Fix: **DE1–DE6 applied before the
+  sign-off is filed; DE7 alone waits for the reply.** Check this against ADR-0011's E4 work,
+  which put an ending statement in front of a sign-off that will never be answered.
+- **F-061** — a conditional acceptance costs a full engagement cycle, and the stakeholder
+  noticed. The fix is **truth-in-labelling, one sentence in `spec/question.md` §2**: option B's
+  consequence line must say what actually happens — the epic stays open, the follow-up is built,
+  a fresh sign-off follows. F-061 is an **open observation** whose mechanism the retro found;
+  read its addendum. **Do not over-build this one** — the mission specifies one sentence, and
+  the finding's own history is that the cost was hidden by a label, not by a missing mechanism.
 
-Two halves, in order:
+## Discipline reminders that have paid off this session
+- Must-fail fixtures both ways; a `./scripts/check` step **proved non-vacuous in the strong
+  form** (stub the deciding bodies) — and **run the stubs against your own new cases**: three
+  units in a row have caught a vacuous case of their own that way.
+- **Measure before scoping.** Twice this session an unscoped rule would have invalidated
+  imported real-run evidence retroactively.
+- `review-close`'s rendered SKILL.md is at **exactly 500/500 lines**; pay for additions by
+  compressing skill-specific prose, never by moving a requirement out of the contract.
+- A contract bump silently changes which journal entries META-154's **version-scoped** `Gates:`
+  comparison reads. Expect it; the fixtures catch it.
 
-1. **Mechanise it** — a check that resolves every finding-number citation in the repository
-   against the ledger, and a `./scripts/check` step. Decide the scope deliberately and say what
-   you excluded: `meta/harness/evidence/**` is **read-only history** (standing rule), so the
-   sweep must be able to *report* a phantom there without *editing* it.
-2. **Run it, and handle the yield honestly.** The mission says: *expect its first run to surface
-   more phantoms; tombstone or correct each, honestly.* A phantom in read-only evidence is
-   corrected the way F-071 was — a **tombstone entry in the ledger**, not a rewrite of the
-   evidence. A phantom in a file that is not evidence may be corrected in place. **Say which you
-   did for each, and never silently.**
-
-**Do not let the yield be zero by construction.** If the sweep finds nothing, check that it
-*would* have found F-071's mislabel had it not been tombstoned — that is the calibration case,
-and a sweep that cannot find the one known instance is not evidence of a clean ledger.
-
-- Done when: the sweep exists as a `./scripts/check` step proved non-vacuous, its first run's
-  full yield is recorded in F-099's status (every phantom listed, with its disposition), the
-  ledger stays append-only, gate green, journalled, committed AND pushed.
-- Next: cluster 4 (**META-159**), cluster 5 (**META-160/161/162**), cluster 6 (**META-163**),
-  staging (**META-164**), the report (**META-165**).
+- Done when: three fixed, fixtures where a rule changed, gate green, three statuses updated with
+  resolving citations, journalled, committed AND pushed.
+- Next: cluster 5 (**META-160** F-089/F-090/F-088, **META-161** F-082, **META-162** F-097),
+  cluster 6 (**META-163**), staging (**META-164**), the report (**META-165**).
 
 ## Done this session — one line per unit; the shas are the record
 
@@ -166,4 +172,24 @@ Full detail lives in the ADRs, `meta/journal.md` and `meta/findings/FINDINGS.md`
   stub** — the second such catch in two units. **A bump-time hazard worth remembering**: the
   `verify` and `refine` bumps silently dropped nine fixture entries out of META-154's
   version-scoped `**Gates:**` comparison; the fixture caught it.
+- **META-158** the F-099 sweep (**f61ce10** + **715ef26**), 40 steps, new step 17b. Reads **every
+  git-tracked file** — F-099's own direction proposed `meta/**.md` and that was **too narrow for
+  the finding's own reason**: a phantom in `dist/` reaches a user, one in `fixtures/` teaches a
+  wrong number, one in `harness/` sits in the instrument. Cost 0.4s. A phantom in read-only
+  evidence is corrected by a **tombstone in the ledger**, which makes the standing citation
+  resolve while the evidence stays byte-identical — F-071's precedent turned into the mechanism.
+  One tracked path is a gitlink and cannot be read as text; it is **named on stdout every run**
+  rather than passed over, and its 129 files were checked by hand. **Yield: 3276 citations, 128
+  numbers, one phantom — H-001**, cited in banked evidence and in the journal, never filed: the
+  H-numbering begins at H-002 and the defect was **fixed instead of filed** (META-081). F-071's
+  mirror — there a number was named 66 seconds too early, here a fix outran its record.
+  Tombstoned; neither citing file edited. **Calibration**: run over a detached worktree at
+  `ff8be8a^`, the instant before F-071's tombstone, the sweep reports `PHANTOM F-071 ->
+  meta/harness/evidence/iteration-3b/README.md:27` — the known instance at the exact line.
+  A subtle one it found: **the report of a phantom must quote the phantom**, so with the H-001
+  heading removed the sweep flags the tombstone's own body — a design without tombstones would
+  leave the ledger unable to describe its own gaps. `f61ce10` is **red by construction** (the
+  step's first run *is* the finding) and `715ef26` is green; the reverse order would have filed
+  the tombstone before the instrument that found it, citing a sha that did not exist — F-024's
+  trap.
 
