@@ -4578,3 +4578,85 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
 - **Provenance:** found by META-156's new `doc.changelog.*` rules on their first run over the
   example, 2026-09-10.
 - **Status:** open
+
+## F-109 — `next` still stops on a human answer that has already arrived: F-011's other half
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of the contract, high — one of the two rules the harness has a
+  standing workaround for
+- **Component:** `methodology/skills/next/process.md` step 3 (as shipped before META-162),
+  `methodology/pipeline.yaml` `orchestrator.steps` 3
+- **Symptom:** F-011 is recorded as **fixed** and half of it was. The fix landed in
+  `answer-questions`, whose precondition 1 now names both answerable shapes — *"`addressed-to:
+  architect` … or `addressed-to: human` **with `## Answer` filled in**"* — and whose own text
+  states the defect in the past tense: *"`next` stops on any open human-addressed question, so
+  an answered-but-unconsumed one stopped every subsequent turn forever (F-011)"*
+  [src: methodology/skills/answer-questions/process.md]. `next` was never changed. Step 3 read
+  `addressed-to: human` and `status: open` and nothing else, and a reply the stakeholder has
+  written is both — so the orchestrator halts and prints back to the person the answer they just
+  gave, and does so on every subsequent pass. The item cannot be reached at step 5 either: it
+  carries an open blocking question, so it is not runnable.
+- **The workaround, in the instrument:** the harness worker-turn prompt carries the sentence
+  that gets past it — *"Run `answer-questions` on each such item **first**, before running
+  `/next`"* [src: harness/prompts/worker-turn.md] — beside a note saying that amendment B was
+  deleted because F-011 was fixed. One amendment was retired and the sentence that replaced it
+  does the same job for the half that was not.
+- **Counterfactual:** every engagement in which a human answers anything, unless the runner
+  reaches past the orchestrator's algorithm. Nothing about any project's subject appears in that
+  sentence.
+- **Recurrence:** never observed as a stall, because no run has ever executed `next` without the
+  prompt above.
+- **Direction:** `next`'s dispatch condition becomes the same sentence as `answer-questions`'
+  precondition 1 — a question is **answerable** when it is open and either addressed to the
+  architect, or addressed to the human with a reply written. Two readings of one rule is one
+  reading too many (F-045), and here the two readings sat in two files saying opposite things
+  about the same question.
+- **Provenance:** found by META-162 while deriving ADR-0012, by reading `next` against
+  `answer-questions`' precondition. Filed as a new number rather than by reopening F-011, whose
+  status text is accurate about the file it changed.
+- **Status:** fixed by ADR-0012 (`meta/adr/ADR-0012-when-the-loop-stops-on-the-human.md` §1),
+  as filed. `pipeline.yaml` step 3 and `next` step 3 dispatch `answer-questions` on any
+  **answerable** question; `engagement.is_answerable()` is the predicate and
+  `scripts/record-halt` reads it, so a pass whose only news is the stakeholder's own reply
+  records no silent round. Both directions in `./scripts/check`'s *the halt is the last resort*
+  step. The harness prompt's workaround is now unnecessary and was **not** removed — no harness
+  run is in flight, and that is a harness change (ADR-0012 §6).
+
+## F-110 — a question **we** file resets the silence clock, which the mechanism's own docstring says it must not
+
+- **Classification:** toolkit-defect
+- **Severity:** correctness of a derived ending, medium — E4 by silence can be made unreachable
+  by the pipeline's own asking
+- **Component:** `scripts/lib/engagement.py` `inbound_rendering()`
+- **Symptom:** the inbound digest is taken over a rendering that contains one line per
+  human-addressed question **whatever its status**, plus one per request. Filing a new question
+  adds a line, so the digest changes, so the trailing run restarts and the silent-round count
+  resets to 1. The function's own docstring says the opposite in the same file: *"A question
+  *we* file changes no line here, which is why our own asking cannot reset the clock"*
+  [src: scripts/lib/engagement.py], and so does `pipeline.yaml`'s `termination.silence` block
+  (*"Nothing a skill writes is inbound"*) and ADR-0011 §1.3's table, whose row reads **A new
+  question filed by us — resets? no**, with the reason: *"a pipeline whose own asking reset the
+  clock could never reach the threshold in any engagement that keeps generating questions, which
+  is every engagement"* [src: meta/adr/ADR-0011-stakeholder-silence-and-abandonment.md].
+- **Proved by execution** (META-162, over a copy of `fixtures/abandoned-engagement/right`):
+  `inbound_digest` for `EP-003` is `ee47bf97`; adding one new `addressed-to: human` question to
+  `WI-0008` with an empty `## Answer` and touching nothing else moves it to `edd86dbe`.
+- **Counterfactual:** any engagement whose stakeholder stops answering while the pipeline still
+  has work that files questions. It is worse after ADR-0012, not better: the loop now dispatches
+  work between halts rather than stopping at the first one, so there is more opportunity for a
+  skill to file a question between two halts, and every such filing restarts the count.
+- **Recurrence:** never observed in a live run — no run has produced an E4 by silence at all
+  (META-153b). The three banked `abandoned-engagement` fixtures do not exercise it, because
+  their digests are computed over static trees.
+- **Direction:** the rendering should carry only what a **reply** looks like — for each
+  human-addressed question that has one, its ID, `status`, `answered-at` and the digest of its
+  `## Answer`; plus the request lines, which are the stakeholder's channel and are theirs to
+  open. A question filed and never answered then contributes nothing, which is what all three
+  statements of the rule already claim. Requires the three `abandoned-engagement` waiting logs'
+  digests to be recomputed in the same change, since `./scripts/check` recomputes and compares
+  them.
+- **Provenance:** found by META-162 while checking ADR-0011 §1.3's table against the code, as
+  part of ADR-0012's reconciliation (§3, check 4). Deliberately **not fixed there**: it is a
+  different rule from the one that ADR was deriving, its fix moves banked fixture digests, and
+  filing it is what this ledger is for.
+- **Status:** open
