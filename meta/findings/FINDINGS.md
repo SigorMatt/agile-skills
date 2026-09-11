@@ -5729,3 +5729,320 @@ META-163's unchanged, the entry says so and names the group rather than restatin
 at length — the reasoning is where it was written, one line up. What every entry does carry is a
 readable last status, which is the property `./scripts/check` enforces (F-112, step 17c) and the
 only one a reader can rely on when reading this file by the obvious command.
+
+# Findings accepted from retro 0.2.1's iteration-5r reading (owner scoring 2026-09-11).
+
+## F-118 — a change-log row cannot fall inside the execution window that legitimises it, and on a completion transition that makes the legal move unreachable
+
+- **Severity:** correctness of enforcement, high
+- **Component:** `scripts/validate-workspace` (`doc.changelog.no-execution`),
+  `scripts/lib/record.py` (`execution_windows`), `scripts/transition` (`--resolving`),
+  `spec/doc-header.md` §3
+- **Symptom:** a journal entry's window is `(previous entry, this entry]`
+  [src: toolkit: record.py §execution_windows "The lower bound is the entry before it on the same item"]. A skill that versions a document and
+  journals through its own transition therefore writes a row whose only legal window is created by
+  the entry the transition appends **after** the gates run. Twelve transitions in this engagement
+  were taken with `--force` for exactly this
+  [src: run: grep -h "gates forced" tracker/items/*/history.md | wc -l → 12], including every one
+  of the seven `plan` executions. `--resolving` was tested against it three times and does not
+  cover it [src: tracker/items/WI-0004/journal.md:271]; writing the entry first raises
+  `journal.status.unmatched` instead [src: tracker/items/WI-0001/journal.md:200].
+- **Counterfactual:** any engagement in which a skill's own transition both journals the execution
+  and carries a document version bump reaches this — which is every `plan` execution that touches
+  a document, every `implement` repair that takes longer than one clock second after its opening
+  entry, every `answer-questions` propagation into `docs/`, and every ending that restates the
+  engagement-state sections. Nothing about envelope budgeting is load-bearing in that sentence.
+- **Recurrence:** 12 forced transitions across 8 items: `plan` ×7 (`WI-0001`, `WI-0002`,
+  `WI-0003`, `WI-0004`, `WI-0005`, `WI-0006`, `BUG-0001`), `implement` ×4, `review-close` ×1 at
+  the ending. Two further executions hit the rule without forcing: `answer-questions` recorded
+  `workspace-valid → fail` on an ungated transition and proceeded
+  [src: tracker/items/EP-001/journal.md:270], and one `implement` escaped only because its row
+  landed on a window's inclusive upper bound by luck [src: tracker/items/WI-0004/journal.md:271].
+- **Direction:** the shape of the fix is to make the window a property of the **execution** rather
+  than of the entry that closes it. Either `resolved_by_move` downgrades `doc.changelog.no-execution`
+  for the pending transition the way it already downgrades `journal.execution.missing` — the two
+  are the same ordering problem one rule apart, and one of them is already solved — or the row is
+  checked against the entry the transition is about to write rather than against the entries that
+  exist. What should not be the fix is restamping rows backwards; `spec/journal-and-history.md` §0
+  forbids it and three executions correctly refused to
+  [src: tracker/items/WI-0004/journal.md:271].
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-1); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+## F-119 — the transition rewrites a gate's verdict token and leaves the sentence around it, so a skill told to journal a non-verdict word cannot comply
+
+- **Severity:** correctness of the record, high
+- **Component:** `scripts/transition` / `scripts/journal-entry` (the `**Gates:**` rewriter),
+  `spec/journal-and-history.md` §2.2a, and `review-close`'s contract
+- **Symptom:** three distinct non-verdict openings were overwritten with `**pass**`, leaving the
+  remainder of the author's sentence in place and self-contradicting. *"not applicable — an item
+  close"* became `**pass** (applicable — an item close`, on all ten item closes
+  [src: tracker/items/WI-0004/journal.md:610]; *"pass/fail per the run this transition made"*
+  became `**pass** (/fail per the run this transition made**`
+  [src: tracker/items/WI-0001/journal.md:102]; and *"not run"* became
+  `**pass** (run** — there is no merge result` on a **rejection** that merged nothing
+  [src: tracker/items/WI-0002/journal.md:606]. The last is the damaging one: the record now says
+  the suite passed on the merge result of an item that was sent back and never merged.
+  `review-close`'s own contract instructs the opposite word and the tool overrules it
+  [src: toolkit: review-close/SKILL.md §Journaling "never passed"].
+- **Counterfactual:** any engagement using `review-close` produces the `not applicable → pass`
+  rewrite on every item close, because the instruction and the rewriter disagree by construction.
+  No project subject matter is involved.
+- **Recurrence:** 14 gate lines across 7 items — 10 item closes plus 4 epic-level executions for
+  `engagement-state-is-restated`, 3 for the `pass/fail` form, 1 for `tests-pass-on-the-merge-result`
+  [src: run: grep -rn "engagement-state-is-restated. → " tracker/items/*/journal.md → 14 lines].
+- **Direction:** the verdict vocabulary the rewriter writes has to include the ones the contracts
+  ask for — `not applicable` and `not run` at least — and a gate whose subject column gives it no
+  subject on this item type should be written from that column rather than from the exit code of a
+  script that returns 0 while printing `NOT APPLICABLE`. Failing that, the rewriter should replace
+  the **whole** verdict clause rather than its first token, so that the entry cannot read as two
+  authors disagreeing mid-sentence.
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-2); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+## F-120 — `[src: <file>:<line>]` is a citation form for a pointer nothing holds still
+
+- **Severity:** correctness of the record, medium
+- **Component:** `spec/doc-header.md` §4a *Citation forms*, `scripts/lint-claims`
+- **Symptom:** four separate repairs in one engagement, across seven documents, every one a
+  citation that still **resolved** and no longer **supported**: `WI-0005/Q-009` (three citations,
+  plus a fourth found in the same sweep), `BUG-0001/Q-002`, `EP-001/Q-007` (four, plus a fifth),
+  `EP-001/Q-008` (two inside append-only `## Corrections` rows, which required a new decision,
+  `ADR-0013`, because §4b forbids editing them) [src: WI-0005/Q-009] [src: ADR-0013]. The
+  `BUG-0001` instance landed on the one line in the file that contradicts the sentence it was
+  supporting [src: tracker/items/BUG-0001/journal.md:526]. `validate-workspace` and `lint-claims`
+  exit 0 on every one of them, because the line exists.
+- **Counterfactual:** any engagement in which a plan cites a line and that plan's own
+  implementation then inserts above it. `WI-0005/Q-009` wrote this as a prediction before it
+  recurred — *"Every later item whose plan cites a line its own implementation then moves will
+  land in the same place"* — and it then recurred three times
+  [src: tracker/items/BUG-0001/journal.md:592]. Line numbers, not budgeting.
+- **Recurrence:** 4 repairs, 10 citations, in one engagement of 8 items.
+- **Direction:** a claim about a **statement** should cite something the statement carries with it
+  — a symbol, a function name, a quoted line — rather than its ordinal position in a file, in the
+  way an acceptance-criterion citation already anchors to the criterion's words rather than to its
+  number. The `path:line` form stays right for a claim about a **moment** (an implementation report
+  saying what was read), which is the distinction the engagement's own answers drew twice when
+  deciding which stale citations to leave alone [src: WI-0005/Q-009].
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-3); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+## F-121 — a gate treats a real row as its own "nothing to report" sentinel when the row begins with the word "Nothing"
+
+- **Severity:** correctness of enforcement, medium
+- **Component:** `scripts/lint-documents` (`GAP_NONE_RE`, `rule_accepted_gaps_are_dispatchable`)
+- **Symptom:** `GAP_NONE_RE = ^(none|no gaps?|nothing)\b` is matched against the first cell of
+  every `## Accepted gaps` row and used to drop the row from the check
+  [src: toolkit: lint-documents §GAP_NONE_RE "none|no gaps?|nothing"]. On `WI-0004` two real gaps whose text
+  opened with *"Nothing…"* were dropped, and the gate reported **5** gaps over a seven-row table
+  while exiting 0 [src: tracker/items/WI-0004/journal.md:619]. It was caught only because that
+  execution compared the gate's printed count against the table rather than trusting its exit code.
+- **Counterfactual:** any review whose gap prose begins with a negation — a common way to open a
+  sentence describing a limitation — has that row silently unchecked. The same shape exists in the
+  neighbouring `NO_MEMBERS_RE`, which is at least documented as *recognised, marked, and passed*
+  [src: toolkit: documents.py §NO_MEMBERS_RE "Recognised, marked, and passed"]; this one is silent.
+- **Recurrence:** once observed in this engagement, at `WI-0004`, and it was the executing skill
+  rather than the gate that noticed.
+- **Direction:** the sentinel should be a whole-cell match, not a prefix match — a table saying
+  *there are no gaps* is one row whose cell **is** `none`, not any row that happens to start with
+  a negative word. Where a row is dropped as a sentinel, say so in the output, as the
+  enumeration rule already does for an empty member list.
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-4); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+## F-122 — a count of the record's own artifacts is asserted rather than measured, and no gate recomputes it
+
+- **Severity:** correctness of the record, medium
+- **Component:** `spec/dor-dod.md` R11 (scope), `review-close` (`record-is-reconstructible`, DE5),
+  `spec/doc-header.md` §4a
+- **Symptom:** the number of questions in this engagement was stated in four executions and three
+  were wrong, drifting further as the engagement grew: 34 (correct), 33 (was 36), 34/35 (was 38),
+  35 (was 39) [src: tracker/items/EP-001/journal.md:176]
+  [src: tracker/items/EP-001/journal.md:294]. The wrong number is `lint-answers`' *"35 consumed
+  human answer(s)"*, which counts a subset. It was then carried forward rather than recomputed,
+  and the ending wrote it into `docs/product/vision.md` v10 `## Engagement state`
+  [src: docs/product/vision.md:165], where it is now a false sentence in a closed engagement's
+  product document. **`retro` may not repair it** and does not; a later execution must, through a
+  new request.
+- **Counterfactual:** `spec/dor-dod.md` R11 already requires that *a wanted count is measured
+  first and carried as a command-outcome citation*, and it applies only to **acceptance
+  criteria** [src: toolkit: dor-dod.md R11 "a criterion **names** the artefacts it constrains rather than counting them"].
+  Any engagement whose review or whose `docs/` prose states a count of items, questions,
+  documents or criteria reaches this gap, because nothing extends R11's rule to those places. The
+  sentence names no subject matter.
+- **Recurrence:** 4 statements of one count in one engagement, 3 of them wrong, 1 of them
+  propagated into `docs/`. The same shape appears once more and was caught: a review recorded
+  sweeping *"all 35 of them"* while reporting one [src: tracker/items/BUG-0001/journal.md:520].
+- **Direction:** extend R11's measurement rule beyond acceptance criteria: a count of workspace
+  artifacts asserted in `review.md` or written into `docs/` is a **quantified claim** and owes the
+  same thing a quantified claim owes — the command that enumerated it, carried as a
+  `[src: run: … → …]` citation. That makes it checkable by the same machinery that already checks
+  an enumeration, and it makes carrying a previous review's number visible as the unmeasured claim
+  it is.
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-5); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+## F-123 — `review.md` has no rule for an artifact written more than once on the same item
+
+- **Severity:** methodology gap, medium
+- **Component:** `review-close` contract (`outputs`), `spec/workspace-layout.md` §1.2
+- **Symptom:** `EP-001` was reviewed four times — three rests, and the third rest produced both an
+  ask-and-stop review and an ending review — and each execution overwrote the file before it. The
+  contract declares `review.md` an output written *always* and `spec/question.md` §2 expressly
+  contemplates more than one rest, and nothing says whether a later review appends, supersedes or
+  replaces [src: tracker/items/EP-001/artifacts/review.md]. Four executions chose *replace*, and
+  the only thing that makes the earlier three findable is a table those executions chose to write.
+  `WI-0001`, `WI-0002` and `WI-0006` have the same gap at item scope: each was reviewed twice.
+- **Counterfactual:** any engagement whose epic leaves rest and returns, or whose item is rejected
+  once, produces two reviews and one file. Both are ordinary, and both happened here.
+- **Recurrence:** 4 overwrites on `EP-001`; 1 each on `WI-0001`, `WI-0002` and `WI-0006`.
+- **Direction:** either declare the artifact append-only with a delimited section per execution,
+  the way `## Corrections` already is on an ADR, or require the replacing review to carry the
+  predecessor's commit and verdict — which is what these executions improvised. The important half
+  is that it be a rule rather than a habit, because a reader who finds one review of an engagement
+  reviewed four times has no way to know.
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-6); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+## F-124 — `answer-questions`' step 6a cannot be executed after the item it names is closed, and the measurement exists
+
+- **Severity:** methodology gap, medium
+- **Component:** `answer-questions` SKILL step 6a, `scripts/lint-documents`
+  (`invalidation-set-is-disposed`)
+- **Symptom:** step 6a requires a document changed on an item's branch to be added to that item's
+  invalidation set. `WI-0005/Q-009` probed it directly: adding the row made
+  `lint-documents --rule invalidation-set-is-disposed` **fail**, because the set is checked against
+  `verify-report.md`'s table, which belongs to a skill that has already run and cannot run again on
+  a `done` item [src: tracker/items/WI-0005/journal.md:755]. `BUG-0001/Q-002` reached the same
+  conclusion independently and cited the measurement rather than repeating it
+  [src: tracker/items/BUG-0001/journal.md:595].
+- **Counterfactual:** any `answer-questions` execution dispatched on a gap that `review-close` made
+  dispatchable at a close — which is the route `accepted-gaps-are-dispatchable` exists to create —
+  lands here. The rule and the route are both the toolkit's.
+- **Recurrence:** twice in this engagement, both measured rather than assumed.
+- **Direction:** step 6a should be scoped to a **live branch** in its own words, and the case of a
+  post-close repair given its own home — `review.md`'s answer to *did this change falsify a
+  document the set does not name* is where both executions in fact recorded it, and saying so
+  would turn an improvisation into the rule.
+- **Provenance:** proposed by retro 0.2.1 (iteration-5r live reading, P-7); accepted at owner held-out scoring 2026-09-11.
+- **Status:** open
+
+
+## F-125 — The sign-off cannot say "yes, minus that piece," and the ending cannot record it at a glance
+- Severity: methodology gap, medium-high — E2's sibling shape, unrepresentable
+- Component: spec/question.md §2 (the sign-off option set), spec/dor-dod.md (ending
+  vocabulary), review-close (termination statement), board rendering
+- Symptom: iteration 5r's stakeholder accepted the engagement while parking one DELIVERED
+  child: "None of your four options is what I want... Ship it as it stands... The monthly
+  summary I'm parking — don't build on it, don't keep it open as work." The four offered
+  endings (accept / accept-with-follow-ups / impasse / withdraw) contain no
+  accept-with-a-named-piece-parked; the stakeholder answered off-menu, which only an
+  assertive persona does — a politer one picks A and the disclaimer is lost. The pipeline
+  honored the substance (nothing left open, the park recorded in ## Notes and the ending
+  prose) but the outcome reads flat `delivered` with the parked item counted among
+  signed-for work. The stakeholder's own audit: "if somebody reads only the board or only
+  the word delivered, they will think I signed for all seven, and I did not," and their
+  fix: "delivered, with the monthly summary parked at the stakeholder's request" as the
+  honest one-liner.
+- Adjudication record: the retro's P-10 examined this and classified project-circumstance
+  ("what was needed was somewhere to record a parked part... ## Notes supplied"). The
+  owner scoring overrules: a stakeholder changing their mind about built work is a
+  foreseeable acceptance shape, not this-project-peculiar; the option set and the outcome
+  surface are the method's to provide. P-10 is superseded by this entry and is not
+  separately filed. The misclassification's cause is F-129's subject.
+- Evidence: meta/harness/evidence/iteration-5r-envel/ — EP-001/Q-009 (options and the
+  reply), run/SIM-LOG.md turns 32 and 34, retro.md P-10, the board.
+- Direction: question.md §2 gains the fifth option (accept, with named delivered pieces
+  parked — no further investment, no open work, recorded on the item and in the
+  termination statement); the ending vocabulary gains the qualifier (delivered, with
+  <items> parked at the stakeholder's request) surfaced in the statement's first line and
+  the item's frontmatter/board rendering; DE-checks updated to carry it.
+- Status: open
+
+## F-126 — Nothing elicits priority or droppability early, and effort inverted against value
+- Severity: methodology gap, medium (F-064's class, one layer deeper)
+- Component: methodology (intake's elicitation, refine), spec/dor-dod.md DE8
+- Symptom: the piece the stakeholder valued least (the monthly summary) consumed four
+  question rounds and produced the engagement's only bug; the piece they "needed in the
+  first week" (moving money) took one round. Their closing suggestion: "ask me early which
+  piece I would drop if I had to, rather than at the end." DE8's elicitation asks what
+  else matters; nothing asks what matters MOST or least, so effort allocation had no
+  value signal to track. (The retro's P-9 correctly found the rounds individually
+  legitimate — this finding is about the missing allocation signal, visible only in the
+  stakeholder's experience channel.)
+- Evidence: meta/harness/evidence/iteration-5r-envel/ — run/SIM-LOG.md turns 13, 28, 34;
+  the per-item question counts in the trail.
+- Direction: the elicitation (or the first refinement round) asks priority/droppability
+  once — which of these would you drop if you had to; which do you need first — recorded
+  like any answer, and refine's round budget per item is read against it.
+- Status: open
+
+## F-127 — The termination statement is written for the team, not the person who signs
+- Severity: UX/methodology, medium
+- Component: review-close (the ending record), spec (termination statement shape)
+- Symptom: the stakeholder read the ending file — "I read what I sign" — and found their
+  own acceptance "four paragraphs in and phrased in their categories rather than my
+  sentence," below the team's process forensics (which checks failed, rewrite counts, a
+  forced gate). What the person accepted and declined is the statement's point; it should
+  lead, in their words.
+- Evidence: meta/harness/evidence/iteration-5r-envel/ — run/SIM-LOG.md turn 34;
+  tracker/items/EP-001/artifacts/review.md (the ending's structure).
+- Direction: the termination statement's first section is the stakeholder-facing outcome —
+  what was accepted, declined, parked, in the stakeholder's own recorded words — with
+  process findings following, not preceding.
+- Status: open
+
+## F-128 — A question round can be a five-part conversation that only works read in order
+- Severity: UX, low (F-097's residue, measured from the receiving end)
+- Component: methodology (refine's batching)
+- Symptom: turn 19 delivered nine questions across two items, five of them "one
+  conversation that only makes sense read in order"; the stakeholder read them in order
+  but noted "a busier week and I would have answered the first and left the rest."
+  Batching per round-trip is right (F-020); depth within a batch has no bound or ordering
+  aid.
+- Evidence: meta/harness/evidence/iteration-5r-envel/ — run/SIM-LOG.md turn 19.
+- Direction: cheap first: when a batch's questions form a dependency chain, say so in the
+  batch header and number the chain. Bound only if it recurs.
+- Status: open
+
+## F-129 — The stakeholder's experience is not in the record, so every reader of the record is blind to it
+- Severity: methodology gap, structural — the measured cause of the retro's one
+  misclassification
+- Component: spec (sign-off, termination statement), methodology (review-close, retro)
+- Symptom: the held-out calibration measured it directly: four of the owner's findings
+  (F-125..F-128) came wholly or mostly from the stakeholder's experience channel (the
+  harness SIM-LOG), which the retro cannot read — and the retro's one misclassification
+  (P-10) sits exactly there. This is not a harness artifact: a real consumer engagement
+  has no SIM-LOG either; the human's experience of the process is equally unrecorded, so
+  real retros and real readers inherit the same blindness. The record captures every
+  decision and no experience.
+- Evidence: meta/harness/evidence/iteration-5r-envel/ — the scoring record below;
+  retro.md P-10 vs F-125; run/SIM-LOG.md turn 34 (experience content with no workspace
+  counterpart).
+- Direction: the sign-off (and any ending question) gains one experience question —
+  answered in the stakeholder's words, recorded like any answer: how was this process for
+  you; what cost you most; what would you change — making the experience part of the
+  record the retro and every future reader can see. F-126's priority elicitation is the
+  opening-side twin.
+- Status: open
+
+---
+
+### Held-out calibration record (2026-09-11, iteration 5r) — the instrument's first measurement against unseen readers
+Protocol: the owner reviewed the banked trail and posted findings before reading the
+retro's report; the retro (0.2.1) read the live workspace at the engagement's end. Breach
+footnote: the retro's journal entry inside EP-001/journal.md was banked with the trail, so
+six of ten proposal classifications were explicitly visible to the owner pre-review (and
+all ten derivable); owner findings are marked clean/contaminated accordingly in the
+conversation record, and overlap credits below follow those marks.
+Results: retro 10 proposals, 10/10 founded, 1 misclassified (P-10, overruled by F-125).
+Overlap both-found: 3 (P-1/F-118, P-2/F-119 [owner side contaminated — credited to the
+retro], P-6/F-123). Retro-novel, missed by the owner: 4 (P-3/F-120, P-4/F-121,
+P-5/F-122 — which also caught a false count both the owner and the ops layer had quoted
+uncritically — P-7/F-124). Owner-novel, structurally unreachable by the retro: 4
+(F-125..F-128, experience-channel sourced). Correctly proposed-nothing: P-8, P-9.
+Reading: neither reader dominates; the union is nearly disjoint; the retro excels at
+mechanical record archaeology, the human reader at experience findings — a measured case
+for the two-reader protocol, and F-129 files the structural cause. The instrument's
+production recall remains bounded by what the record contains, which is now a finding
+about the record, not the instrument.
