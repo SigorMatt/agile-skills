@@ -7084,3 +7084,43 @@ recall is a reading, not a number, and the report says which.
 - **Artifacts:** `meta/findings/FINDINGS.md` (F-115, F-116, F-117, the triage section, and 21
   appended status bullets), `meta/plan.md`, `meta/journal.md`. `meta/CHECKPOINT.md` deliberately
   not advanced.
+
+## 2026-09-11 — META-173 — iteration 5r staged, provision-verified, torn down, not run
+
+- **The config is two lines different and the diff proves it.** `harness/iterations/iteration-5r-envel.json`
+  is `iteration-5-envel.json` with `"id"` → `"iteration-5r-envel"` and `"project"` → `"envel-2"`.
+  `diff` reports exactly those two lines. `queue-entry` is carried **verbatim** — it still names
+  "Iteration 5" — and so is `probe`, `persona`, `max-turns` and both model fields. The re-run is
+  the same iteration against a fresh project, so a re-pointed queue entry would have been a
+  second edit claiming a second rationale that does not exist.
+- **Nothing in the repository enumerates the configs by hand.** The one thing that reads the
+  directory reads *all* of it: `harness/tests/test_harness.py::test_every_iteration_config_names_files_that_exist`
+  globs `harness/iterations/*.json` and asserts, per config, that `id` equals the filename stem
+  and that the named persona and probe files exist — an `os.path.isfile` check, never a read. It
+  picked 5r up with no edit, which is why the harness suite is still **195 tests**. `scripts/check`
+  does not touch the directory; `harness/USAGE.md` documents the *shape* `harness/iterations/<id>.json`
+  rather than a list. `meta/harness/PROJECT-QUEUE.md` is the one judgement call: USAGE §6 says a new
+  iteration gets a queue entry, and this one deliberately points at iteration 5's instead. Left for
+  the owner rather than decided here.
+- **Provisioned into a fresh root, because the default one is occupied.** `~/agile-skills-throwaway/`
+  already holds `envel` from the abandoned run, so the verification used
+  `…/scratchpad/throwaway-173` instead. `provision.py --iteration iteration-5r-envel --root <that>
+  --dry-run` first, then the real invocation: 85 files committed, the installer and `workspace-init`
+  run, the allow-list merged, and the provisioner's own `validate-workspace` clean — 0 errors, 2
+  warnings, both the ones a freshly-initialised workspace always carries (`commands.test` null,
+  `project.description` empty). A second explicit `validate-workspace` over the provisioned project
+  reproduced that exactly, exit 0. Then `rm -rf` of the whole temporary root; `os.path.exists` False.
+- **Both held-out rules held.** No `run_iteration.py` invocation was made, in any mode. The probe's
+  existence was established by `os.path.isfile` and `os.path.getsize` only —
+  `harness/skills/simulated-human/probes/iteration-5-envel.md`, True, **3396 bytes** — and its
+  contents were never opened. One disclosure: a `grep` for queue entries printed
+  `PROJECT-QUEUE.md`'s one-line summary of the project idea, which that file labels as verbatim
+  probe §1. The planted probes were not seen and the probe file was not opened; the owner should
+  weigh that single line when reading the recall measurement.
+- **Evidence untouched.** `meta/harness/evidence/iteration-5-envel-abandoned/` and
+  `harness/runs/iteration-5-envel/` carry no file modified during this unit.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **47 steps, 110 fixture codes,
+  419 selftest cases**, all three unchanged. `harness/tests/test_harness.py`: **195 tests**,
+  unchanged, 1 skipped.
+- **Artifacts:** `harness/iterations/iteration-5r-envel.json` (new), `meta/plan.md`,
+  `meta/journal.md`. `meta/CHECKPOINT.md` deliberately not advanced.

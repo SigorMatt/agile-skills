@@ -663,7 +663,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 
 ### Staging and close
 
-- [ ] **META-173** — `harness/iterations/iteration-5r-envel.json` as a copy of
+- [x] **META-173** — `harness/iterations/iteration-5r-envel.json` as a copy of
       `iteration-5-envel.json` with id `iteration-5r-envel` and project `envel-2`, nothing else
       changed. Provision-verify in a throwaway path, tear down. **Not run; probe not read.**
 - [ ] **META-174** — `meta/FINAL-REPORT-6.md` + checkpoint close.
