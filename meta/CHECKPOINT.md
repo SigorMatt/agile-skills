@@ -2,28 +2,33 @@
 
 ## Builder session six is RUNNING. Mission: `meta/BUILDER-6-PROMPT.md`; plan: `meta/plan.md` Phase VII.
 
-**Done so far.** META-167 (`cd00504`) — one masking rule for every citation surface.
-META-168 (`656b6c5`) — severity follows knowledge: a marker matching no form is a WARNING under
-`claim.citation.unrecognised`, a recognised one that fails stays an ERROR; the mention convention
-is in `spec/doc-header.md` §4a; `scripts/check` step 6a is the proof-case over a copy of the
-banked iteration-5 evidence. 46 steps, 109 fixture codes, 386 selftest cases.
+**Done so far.** META-167 (`cd00504`) one mask for every citation surface · META-168 (`656b6c5`)
+severity follows knowledge, plus `scripts/check` step 6a, the proof-case over a copy of the banked
+iteration-5 evidence · META-169 (`c8f69b3`) ADR-0013, *a toolkit source is quoted and attributed,
+not pointed at*: `claim.citation.outside-the-record` refuses a citation into any pruned directory,
+`[src: toolkit: <document> <section> "<words>"]` replaces it. 46 steps, 110 fixture codes, 419
+selftest cases.
 
-**Current unit: META-169 — the toolkit-path ruling (ADR-0013).**
+**Current unit: META-170 — the grammar goes where the writer writes (F-114's placement half).**
 
 Steps:
-1. ADR-0013: are `[src: .claude/agile-skills/...]` installed-toolkit paths a legal citation form?
-   The ruling is **illegal-as-a-path, legal-as-a-quote** — derivation in the brief and in the ADR.
-2. `spec/doc-header.md` §4a's forms table gains the `toolkit:` quote-and-attribute form and the
-   refusal of the path form.
-3. `scripts/lib/claims.py` enforces both; the refusal is an ERROR with its own code, because the
-   gate knows exactly what is wrong and what to write instead.
-4. A fixture proves both directions. The twelve citations in the banked evidence stay untouched —
-   evidence is read-only and the ruling governs future writing.
+1. Derive, from the contracts rather than by hand, the set of skills whose obligations require
+   "a citation that resolves".
+2. Each of them states or directly points at the **citation forms table** by name — which forms
+   exist, what makes one well-formed, workspace-relativity, the mention convention from META-168,
+   and the toolkit ruling from META-169. Short in the skills; `spec/doc-header.md` §4a stays the
+   single source.
+3. A `./scripts/check` step derives that set the same way and asserts each one's procedure names
+   the table, so the pointer cannot rot the next time a contract gains the obligation.
+4. Re-render `adapters/claude-code/dist/`; bump whatever the repository's version discipline
+   requires. F-114's placement half updated — the finding is then fixed in both halves.
 
-Done when: `./scripts/check` green, mutation-checked non-vacuous, committed AND pushed.
+Done when: F-114's own grep (`grep -rniE "workspace-relative|citation forms|forms table"` over the
+installed skills, which returned nothing in the abandoned workspace) returns hits;
+`./scripts/check` green; committed AND pushed.
 
-**Next unit: META-170** — placement: the authoring skills state or point at the citation forms
-table, and F-114's status is updated.
+**Next unit: META-171** — H-022: the bounded self-repair allowance in the driver. Harness commit,
+separate as always.
 
 ## Standing instructions (still in force)
 
