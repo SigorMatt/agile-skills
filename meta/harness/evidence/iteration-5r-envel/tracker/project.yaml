@@ -1,0 +1,20 @@
+# Machine-readable project facts. Skills resolve {commands.*} and {conventions.*} from here.
+# A null command is honest: it means the project has none yet, and the matching gate is recorded
+# as skipped rather than passed. `plan` is responsible for filling these in.
+
+project:
+  name: envel-2
+  trunk-branch: main
+  description: >-
+    A command-line envelope-budgeting tool: name envelopes, put income into them,
+    record spending against them, see what is left, and look at a month's summary.
+    Python, no services, data kept on the local machine between runs.
+
+commands:
+  test: python3 -m unittest discover -s tests -t .
+  lint: python3 -m compileall -q envel tests
+  build: null
+
+conventions:
+  branch-prefix: wi/
+  commit-subject: "<scope>: <summary> (refs <ITEM-ID>)"

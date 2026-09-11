@@ -1,0 +1,15 @@
+# History — WI-0005
+
+| when | from | to | actor | resume-to | reason |
+|------|------|----|-------|-----------|--------|
+| 2026-09-11T02:12:44Z | — | draft | answer-questions | — | scope widened by the stakeholder's answer to EP-001/Q-005 (option C: corrections wanted, and a past summary must show the corrected figure) |
+| 2026-09-11T07:16:15Z | draft | awaiting-answer | refine | draft | five blocking questions to the human: how a recorded spend is referred to, which of its fields are correctable, whether one can be removed, what a below-zero correction does, and whether income is included |
+| 2026-09-11T07:31:31Z | awaiting-answer | draft | answer-questions | — | five blocking questions answered by the stakeholder and propagated into item.md, refinement-qa.md and vision v4; ten criteria now record the decisions |
+| 2026-09-11T07:43:41Z | draft | awaiting-answer | refine | draft | three blocking questions to the human after round 2: which parts of an income are correctable (their Q-005 against WI-0003/Q-003), whether an income can be removed, and whether the reference is per-envelope or global |
+| 2026-09-11T07:51:44Z | awaiting-answer | draft | answer-questions | — | three blocking questions answered by the stakeholder and propagated into item.md (AC1, AC16-AC18), refinement-qa.md and vision v6; income is in scope and the reference is global |
+| 2026-09-11T09:25:13Z | draft | ready | refine | — | Definition of Ready passes on all twelve criteria; round 3 asked nothing further, appended AC19 and AC20 for the two unconstrained combinations, and set refinement-qa.md to recorded |
+| 2026-09-11T09:34:38Z | ready | planned | plan | — | ADR-0011 recorded: a correction edits the entry in place and a removal deletes it; plan.md maps all twenty criteria across twelve steps with a 29-row invalidation set; workspace-valid forced on doc.changelog.no-execution for this execution's own version rows [gates forced] |
+| 2026-09-11T09:35:55Z | planned | in-progress | implement | — | branch wi/WI-0005 created from main at 73a5c7a; work starting on the plan's twelve steps |
+| 2026-09-11T10:00:13Z | in-progress | verifying | implement | — | envel fix and envel remove built; 299 tests pass and every criterion has one; invalidation set closed with ADR-0002 repaired as an erratum; workspace-valid forced on doc.changelog.no-execution for a version row stamped between this execution's two journal entries [gates forced] |
+| 2026-09-11T10:28:31Z | verifying | in-review | verify | — | all twenty acceptance criteria independently demonstrated against branch head 1695487; eleven binding ADRs conform; 29 invalidation entries disposed and the 26 still-true claims reopened; no defect found |
+| 2026-09-11T10:38:33Z | in-review | done | review-close | — | accepted: twenty of twenty criteria settled with evidence, all thirteen Definition of Done criteria passed, 299 tests green on the merge result; one finding dispatched as WI-0005/Q-009 (three envel/cli.py:165 citations this change pushed off their line) |

@@ -1,0 +1,566 @@
+# Journal — WI-0006
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-09-11T02:23:18Z — answer-questions v0.6.3 — architect
+
+- **Item:** WI-0006
+- **Trigger:** created by `answer-questions` while consuming the stakeholder's answers on `WI-0002`; this item did not exist before that answer
+- **Inputs read:**
+  - `tracker/items/WI-0002/questions/Q-002.md` — the answer that implied it: *"B — optional. I'll put one on the ones I might query later and skip it on the weekly shop."*
+  - `tracker/items/EP-001/questions/Q-003.md` — the answer that removed the only report which could have shown a spend: *"I definitely don't want every individual spend listed."*
+  - `tracker/items/WI-0005/item.md` — which needs the same missing capability from the other direction, in order to name the spend being corrected
+  - `tracker/items/WI-0002/item.md`, `tracker/items/WI-0003/item.md` — to confirm no existing item covers it
+  - `.claude/agile-skills/spec/ids-and-statuses.md` §5 — the creation authority
+- **Decisions:**
+  - **Filed rather than left in a note.** Step 3b: an answer that implies work no item records becomes a `work-item` at `draft` with `arose-from`. Two independent things now need a way to refer to one recorded spend — the description the stakeholder said they would add so they could *query* it later, and `WI-0005`'s correction, which cannot name what it is correcting. A need with two sources and no item is the case the rule is written for.
+  - **And filed with its derivation stated in the first line of `## Notes`.** This is the one item in the epic the stakeholder has not asked for in their own words; it rests on the phrase *"the ones I might query later"*. `## Notes` says so, says `refine`'s first job is to put it to them **including the option of closing it**, and the item is `low` priority for the same reason. Recording the shakiness of the inference is the difference between a derived item and an invented requirement.
+  - **It does not reopen `EP-001/Q-003`.** The stakeholder ruled individual spends out of the *monthly summary*, and `## Out of scope` says this item changes nothing about that report. A separate command that lists an envelope's spends is not the thing they refused; whether they want it at all is the question `refine` must ask.
+- **Questions raised:** none from this item — the question it raises is `refine`'s to put, and `## Notes` names it as the first thing `refine` must do here
+- **Commands:**
+  - `.claude/agile-skills/scripts/new-item --id WI-0006 --type work-item --title "Look up the spends recorded against an envelope" --epic EP-001 --priority low --status draft --actor answer-questions --arose-from WI-0002/Q-002` → exit 0, created at `draft`
+- **Gates:**
+  - `answer-is-propagated` → **pass** (this item **is** part of the propagation of `WI-0002/Q-002`; it is named in that question's `## Consequences` and it exists)
+  - `answered-from-the-record` → **pass** (the basis is the stakeholder's own `## Answer` on `WI-0002/Q-002`, quoted above and in `## Notes`, read against `EP-001/Q-003`)
+  - `escalation-is-justified` → **skipped** (nothing was escalated from this item)
+  - `propagated-claims-carry-their-obligation` → **pass** (this execution wrote nothing under `docs/` from this item)
+  - `engagement-state-is-left-to-the-ending` → **pass** (no `## Engagement state` section was written or amended here)
+  - `cross-answer-consistency` → **pass** (the cross-answer check for `WI-0002/Q-002` is written on that question and in `WI-0002`'s journal, where the answer was consumed)
+  - `workspace-valid` → **pass** (`validate-workspace` run at the end of the `WI-0002` execution this item was created by)
+  - `item-resumed-correctly` → **skipped** (created, not resumed; one history row, no `resume-to`)
+  - `a-deferral-is-not-an-answer` → **skipped** (no reply on this engagement deferred)
+- **Artifacts:**
+  - `tracker/items/WI-0006/item.md` (new) — story, three acceptance criteria, three exclusions, and a `## Notes` that opens by saying the item was derived rather than asked for
+  - `tracker/items/WI-0006/history.md`, `tracker/items/WI-0006/journal.md` (new, by `new-item`)
+- **Status:** `—` → `draft`
+- **Result:** `WI-0006` exists at `draft`, at `low` priority, because an optional description the stakeholder asked for has nothing that can read it back, and because `WI-0005` needs the same capability. It is the only item in this epic they did not ask for, and `refine` is instructed to confirm or close it before anything else happens to it.
+
+## 2026-09-11T07:20:13Z — refine v0.6.1 — product-analyst
+
+- **Item:** WI-0006
+- **Trigger:** status `draft`, dispatched by `next` as the only runnable item — `WI-0005` was suspended on five open blocking questions in the pass before this one, and `next` step 4 sits above the halt
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` — the draft, its three criteria, three exclusions, and the `## Notes` whose first line instructs this skill to put the item's existence to the stakeholder *"including the option of closing it"*
+  - `tracker/items/WI-0006/history.md` — one row, created by `answer-questions`. A fresh draft, **not** a send-back, so the whole story is open
+  - `tracker/items/WI-0006/journal.md` — the filing entry, which records that this is the one item in the epic derived rather than asked for, and that `low` priority was chosen for that reason
+  - `tracker/items/WI-0002/questions/Q-002.md` — the single phrase the item rests on: *"I'll put one on the ones I might query later and skip it on the weekly shop."*
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-003.md`, `Q-004.md`, `Q-005.md` — the roll-over rule, the refusal of individual spends in the summary, the calendar-month default, and the answer that put moves in scope
+  - `tracker/items/WI-0003/questions/Q-001.md` — *"I won't use a report whose rows don't add up"*, the answer Q-004 of this round turns on
+  - `tracker/items/WI-0003/questions/Q-004.md` — the consistency preference, read as the licence for the command's spelling in round 2
+  - `tracker/items/WI-0001/questions/Q-004.md` — case-insensitive envelope matching, read against Q-003's option C
+  - `tracker/items/WI-0003/item.md` — AC3 and AC10, for how an existing report reconciles a month and how its rows are ordered; the ordering precedent this item will follow
+  - `tracker/items/WI-0005/item.md` and its `questions/Q-001.md` — filed in the pass before this one, to make sure this item is not asked to justify itself by `WI-0005`'s need
+  - `.claude/agile-skills/spec/dor-dod.md` §1, `spec/question.md`
+- **Decisions:**
+  - **Filed four blocking questions and suspended.** The stakeholder is not in this session (`SIMULATION-NOTICE.md`), which is precondition 2: file, suspend with `resume-to: draft`, stop. No criterion was rewritten, because the first question asks whether the item should exist and rewriting criteria for work that may be closed is wasted motion presented as progress.
+  - **Q-001 offers closing the item, and argues for it from the stakeholder's own words.** The item's `## Notes` instructed this, and the argument against building is real: they have twice said they want less listing, and a spends listing is the part of this tool that most resembles the spreadsheet they are leaving. The recommendation is `A` (build) and is marked as weakly held, with both sides drawn from their sentences rather than ours.
+  - **`WI-0005` is explicitly ruled out as a reason to say yes.** Both items need a way to refer to one recorded spend, and the temptation is to justify this item by that need. `WI-0005/Q-001` puts the identification options to the stakeholder directly, including two that need no listing command at all, so this item is asked to stand on its own.
+  - **Q-004 is a cross-answer question and is filed as one.** `WI-0003/Q-001`: *"I won't use a report whose rows don't add up, I've spent years chasing that in the spreadsheet."* An envelope's balance is income, spends and moves; a spends-only listing cannot reconcile to it. That answer was given about the monthly summary, so it is not automatically this report's rule — ADR-0008 §3 leaves two moves, and the one taken is to quote it by ID and ask whether it travels. The item's own `## Out of scope` bullet excluding income and moves was written by `answer-questions`, not by the stakeholder, and Q-004 says so.
+  - **Q-002 and Q-003 are two questions, not one.** How far back the listing goes and whether an envelope must be named are independent axes, and folding them into a single "what does it print" question is how half an answer gets recorded as a whole one (F-027).
+  - **Two decisions were kept off the stakeholder and named in advance.** The listing's ordering is taken under precedent, not delegation — `WI-0003` AC10 cites `WI-0001` AC3 for the same convention — and `refinement-qa.md` says plainly that nothing licensed it and that a disagreement lands on this item's AC at a cost of one amendment (R12's second half). The command's spelling is under `WI-0003/Q-004` and its `**Under delegation:**` line is written out now, to be carried when it is spent in round 2.
+  - **R9 is recorded as provisionally passing rather than passing.** One listing command is one coherent change under every option, except that Q-004 option C (a running balance) implies starting from the beginning and sits badly with Q-002 option B (a single month). If both come back that way, round 2 reconsiders the split instead of building the contradiction.
+- **Questions raised:** `Q-001`, `Q-002`, `Q-003`, `Q-004` — four, all `addressed-to: human`, all blocking, all open. One conversation in four artifacts: the *"round 1, question N of 4"* frame on each, questions 2–4 each saying to ignore them if Q-001 closes the item, and Q-004 closing the round (F-020). Recorded in `tracker/items/WI-0006/artifacts/refinement-qa.md`.
+- **Commands:**
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 0 before the questions were filed (7 items, 11 documents)
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 1 after filing, reporting `question.blocking.not-suspended` on this item — the condition this transition resolves
+  - `.claude/agile-skills/scripts/lint-answers --item WI-0006` → exit 0, "checked 0 consumed human answer(s) and 0 delegation(s) spent"
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace` judged against the pending move to `awaiting-answer`; the only item-level error before it was `question.blocking.not-suspended`, which this move clears)
+  - `definition-of-ready` → **fail** (walked criterion by criterion in `refinement-qa.md`: R1 pass, R2 pass, R3 pass, **R4 fail** — AC1 names no command, no ordering and no output form, AC2 names no line, AC3 names no command, R5 pass, **R6 fail by construction** — four blocking questions now open, R7 pass, **R8 fail** — `refinement-qa.md` is `status: agenda`, R9 pass provisionally with the one answer pair that would reopen it named, **R10 fail** — two optional arguments exist and nothing states what they do together because neither is chosen, R11 pass, R12 pass vacuously with both anticipated decisions named in advance. The item is not Ready and is not being passed as Ready)
+  - `criteria-are-decidable` → **fail** (no criterion on this item names a command to run: AC1 says *"There is an `envel` command that lists the spends"* without naming it or what it prints; AC2 promises *"a line saying so"* without the line; AC3 is refusal behaviour for a command that does not exist yet)
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0006`, exit 0; and the check it cannot make was made by hand — `WI-0003/Q-001` against this item's spends-only scope is put to the stakeholder as `Q-004`, quoted verbatim by ID, rather than applied or reconciled here)
+  - `qa-recorded-verbatim` → **skipped** (no answer has been received, so there is nothing verbatim to record; `refinement-qa.md` declares `status: agenda` and R8 reads that field)
+- **Artifacts:**
+  - `tracker/items/WI-0006/questions/Q-001.md` … `Q-004.md` (new)
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` (new, `status: agenda`)
+- **Status:** `draft` → `awaiting-answer`
+- **Result:** `WI-0006` is suspended on four blocking questions, the first of which asks the stakeholder whether the item should exist at all and offers closing it. Nothing was refined further, because refining an item that may be closed is work presented as progress. The fourth question is the one that matters if they keep it: a listing of an envelope's spends does not account for its balance, and they have already said once that they will not use a report whose rows do not add up.
+
+## 2026-09-11T07:35:57Z — answer-questions v0.6.3 — architect
+
+- **Item:** WI-0006
+- **Trigger:** status `awaiting-answer`; the stakeholder's four replies had arrived in the question files since the last turn — precondition 1's second branch, `addressed-to: human` with `## Answer` filled in. Consumed before `next` was run, because an answered question left open stops the orchestrator on every subsequent turn (F-011)
+- **Inputs read:**
+  - `tracker/items/WI-0006/questions/Q-001.md` … `Q-004.md` — the four questions in full, with the stakeholder's replies verbatim
+  - `tracker/items/WI-0006/item.md` — the draft: three criteria, three exclusions, and the instruction that `refine`'s first job was to offer to close the item
+  - `tracker/items/WI-0006/history.md` — the suspending row, which carries `resume-to: draft`
+  - `tracker/items/WI-0006/journal.md` — the filing entry and `refine`'s round-1 entry
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` (`status: agenda`) — round 1's Definition-of-Ready walk, the two decisions taken under precedent and delegation, and what round 2 was told to do
+  - `tracker/items/WI-0005/questions/Q-001.md` — the printed-reference answer, consumed earlier in this turn, which this item's AC2 now serves and whose sequencing tension with *"keep it last"* is recorded on both items
+  - `tracker/items/WI-0003/questions/Q-001.md`, `Q-004.md`, `tracker/items/WI-0002/questions/Q-002.md`, `tracker/items/WI-0001/questions/Q-004.md`, `tracker/items/EP-001/questions/Q-001.md`, `Q-003.md`, `Q-004.md`, `Q-005.md` — the prior recorded human answers, for the cross-answer checks
+  - `tracker/items/WI-0003/item.md` — AC3's carried-in line, the precedent round 1 named for reconciling a month
+  - `docs/product/vision.md` (v4, as this turn's `WI-0005` execution left it) — the document this answer had to reach
+  - `docs/architecture/adr/ADR-0001` … `ADR-0009` — read for a recorded decision these answers contradict; none does. `ADR-0008` (a month is a string and every figure is a filtered sum) and `ADR-0009` (reporting lives in its own module) are the two this command will be built on, and that is `plan`'s to take
+  - `.claude/agile-skills/spec/question.md` §3 and §4, `spec/doc-header.md` §4a, `spec/journal-and-history.md`, `spec/ids-and-statuses.md` §5
+- **Decisions:**
+  - **All four answered by route 2 — the human's own reply.** Every one was a question about what appears on their screen, which is why `refine` sent all four and routed nothing to `plan`. No ADR was written because no architectural decision was taken here.
+  - **The item survives, and it is no longer a derived item.** `Q-001` offered closing it as option B and the stakeholder chose A, confirming the reading `answer-questions` made of `WI-0002/Q-002` five entries ago. The `## Notes` bullet that told `refine` to offer the closure is rewritten into the answer they gave, so the board no longer carries an item flagged as our inference.
+  - **The item was renamed.** *"Look up the spends recorded against an envelope"* stopped being true when `Q-004`'s answer brought income and moves in. A title that understates an item's scope misleads every reader of the board, and the story and AC1 moved with it. Recorded here because a rename is the sort of change that is invisible in a diff of criteria.
+  - **The criteria were rewritten here, not left for `refine`.** Three became seven — AC1 (what is listed), AC2 (the reference and the description), AC3 (one month), AC4 (the optional envelope), AC7 (no running balance) are the four answers plus the `WI-0005/Q-001` reference this listing has to print. The reason is `answer-is-propagated`: `item.md` is what `refine` re-reads. What was **not** done is the Definition-of-Ready work — `refinement-qa.md` stays `status: agenda`, R10's combinations are listed as round 2's, and this item is not Ready.
+  - **The reconciliation gap was recorded, not decided.** `Q-002` (one month) and `Q-004` (lines that add up) do not meet on their own, because money carried in from earlier months is not among the lines. Round 1 claimed this one explicitly — *"that part we will decide rather than ask you about"* — and named `WI-0003` AC3's carried-in line as the precedent. It is what the stakeholder reads on screen, so it is `refine`'s; taking it here would be `answer-questions` spending a licence another skill wrote down for itself.
+  - **The sequencing tension was judged compatible and recorded on both items, not escalated.** *"Keep it small and keep it last"* (`Q-001`) beside *"That does mean the listing command has to exist"* (`WI-0005/Q-001`) is a priority instruction beside a dependency, not two incompatible statements. ADR-0008 §3 obliges a question on a verdict of `conflicts`; inventing one here would be asking the stakeholder to resolve a contradiction they did not make. What the record needs is for whoever orders the work to have both sentences, and it now does.
+  - **No new item was filed.** `Q-004` widens what this command lists, and `Q-004` was filed on this item to decide exactly that — the exclusion it overturns was ours, written in the item's own `## Out of scope`, not a boundary the stakeholder had set. Step 3b's move is for work no item records; this item records it.
+  - **`depends-on` still unrecorded**, on the reason the draft already carried: recording it freezes this item's refinement behind items that are `done` and behind `WI-0005`, which is itself mid-refinement. Round 2's, with the criteria rewrite.
+- **Cross-answer check:** four human answers consumed, each with its own `## Cross-answer check` section on the question file. `Q-001` against `WI-0002/Q-002`, `EP-001/Q-003`, `EP-001/Q-001`, `WI-0005/Q-001` — compatible throughout; the stakeholder drew the summary-versus-listing line themselves, unprompted, which is the pair round 1 filed the question for. `Q-002` against `EP-001/Q-004`, `WI-0003/Q-004`, `EP-001/Q-001`, `EP-001/Q-003` — compatible; the roll-over rule is where the open reconciliation point comes from. `Q-003` against `WI-0001/Q-004`, `EP-001/Q-003`, `EP-001/Q-001`, `WI-0003/Q-004` — compatible; they paired their own two answers in the reply. `Q-004` against `WI-0003/Q-001`, `EP-001/Q-003`, `EP-001/Q-005`, `EP-001/Q-001` — compatible, and the *"whichever report it is on"* extension is theirs rather than ours reading a summary answer across. **No verdict of `conflicts` was recorded, so no question was filed under ADR-0008 §3**; the one thing that came close — the sequencing tension above — is a priority instruction beside a dependency and is recorded as such.
+- **Questions raised:** none — the reconciliation gap, the per-envelope-or-global reference and R10's combinations are recorded in `item.md`'s `## Notes` and in `refinement-qa.md` for `refine` round 2, which is the skill that puts questions to the stakeholder on a `draft` item
+- **Commands:**
+  - `.claude/agile-skills/scripts/lint-answers --item WI-0006` → exit 0, "checked 4 consumed human answer(s) and 0 delegation(s) spent"
+  - `.claude/agile-skills/scripts/lint-documents --rule propagated-claims-carry-their-obligation --item WI-0006 --uncommitted` → exit 0, 0 quantified sentences newly written
+  - `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted` → exit 0, 1 document compared region by region against HEAD
+  - `.claude/agile-skills/scripts/validate-workspace .` → exit 1 before this transition, reporting `question.awaiting.none-open` on this item, `board.stale`, and `doc.changelog.no-execution` for the v5 row this entry is the execution of — all three resolved by this transition, the board regeneration and this entry
+- **Gates:**
+  - `answer-is-propagated` → **pass** (each of the four `## Consequences` sections names files and the changes are in them: `item.md`'s new title, rewritten `## Story`, AC1–AC7, the removed income-and-moves exclusion, the two new exclusions and six `## Notes` bullets; `refinement-qa.md`'s three new sections and rewritten header; `docs/product/vision.md` v5's two new paragraphs)
+  - `answered-from-the-record` → **pass** (route 2 for all four — the stakeholder's own reply, quoted verbatim on the question, in `refinement-qa.md` and in `item.md`'s `## Notes`; nothing was decided by this execution that they had not decided)
+  - `escalation-is-justified` → **skipped** (nothing was re-addressed to the human; the three open points go to `refine`, which asks directly, and the sequencing tension is not a question the stakeholder can be asked because they did not contradict themselves)
+  - `propagated-claims-carry-their-obligation` → **pass** (`lint-documents --rule propagated-claims-carry-their-obligation --item WI-0006 --uncommitted`, exit 0. The sentences written into `docs/product/vision.md` are cited facts sourced `[src: WI-0006/Q-001]` … `[src: WI-0006/Q-004]`, and each citation resolves to a question file that exists; the three kinds of entry are written out by name — income, spends and moves — rather than quantified over, which is the same weakening this turn's `WI-0005` execution had to make once and was flagged for)
+  - `engagement-state-is-left-to-the-ending` → **pass** (`lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted`, exit 0. `docs/product/vision.md`'s `## Engagement state` was read and left untouched, and `Q-001`'s `## Consequences` says the ending owns it. No `plan.md` on this item, so no invalidation row)
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0006`, exit 0, 4 consumed answers checked; the read the script cannot make is above under `**Cross-answer check:**`, and the two pairs that could have produced a conflict were reconciled by the stakeholder in their own replies)
+  - `workspace-valid` → **fail** (`validate-workspace .` judged against this transition: the three errors standing before it were `question.awaiting.none-open`, which this move clears, `board.stale`, cleared by regenerating the board, and `doc.changelog.no-execution` on the v5 row, which this entry is the execution of; the run reported FAIL: `/usr/bin/python3 /home/msi/agile-skills-throwaway/envel-2/.claude/agile-skills/scripts/validate-workspace --root /home/msi/agile-skills-throwaway/envel-2 --resolving 'WI-0006:awaiting-answer->draft+journal'` exited 1)
+  - `item-resumed-correctly` → **pass** (the suspending row of 2026-09-11T07:20:13Z records `resume-to: draft`, read from `history.md` rather than inferred; this move is `awaiting-answer` → `draft`)
+  - `a-deferral-is-not-an-answer` → **skipped** (no reply deferred; all four chose an option and gave a reason)
+- **Artifacts:**
+  - `tracker/items/WI-0006/questions/Q-001.md` … `Q-004.md` — each `status: answered`, `answered-by: human`, `answered-at` stamped, with a `## Cross-answer check` written on consumption above the one filed with the question, and a `## Consequences` naming the files changed
+  - `tracker/items/WI-0006/item.md` — retitled *"Look up what has been recorded against an envelope"*; `## Story` rewritten; seven acceptance criteria where there were three; `## Out of scope` rewritten (income and moves brought in, the running balance and the correcting commands ruled out, the summary exclusion sourced to the stakeholder); `## Notes` carrying what each answer settled, the rename, the reconciliation gap, the sequencing tension and the reference question
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` — header paragraph updated, `## What happens next` rewritten, and `## Answers — round 1`, `## Cross-answer check — round 1, on the replies` and `## What round 1's answers left for round 2` added. `status: agenda` deliberately unchanged: `refine` sets it to `recorded` when round 2 records the exchange
+  - `docs/product/vision.md` — v4 → v5, two paragraphs added to `## What it is for`, with a change-log row
+  - `tracker/board.md` — regenerated
+- **Status:** `awaiting-answer` → `draft`
+- **Result:** All four of `WI-0006`'s blocking questions are answered and propagated. The stakeholder kept the one item nobody had asked for and changed what it is: it lists income, spends and moves for one month, the envelope optional, with the kind on the line and no running balance — so the item has been retitled and now carries seven criteria. It returns to `draft` and is **not** Ready: `refine` round 2 owes the decidability work, R10's combinations, and the one thing these answers leave open — how a single month's listing adds up when the money carried in from earlier months is not among its lines.
+
+## 2026-09-11T07:58:07Z — refine v0.6.1 — product-analyst
+
+- **Item:** WI-0006
+- **Trigger:** status `draft`, dispatched by `next` — the only runnable item on the board (`WI-0005` is blocked behind its `depends-on: WI-0006`)
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md`, `history.md`, `journal.md` — the history row of 2026-09-11T07:35:57Z shows this is round 2 of a normal refinement, not a send-back from a later stage
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` (round 1, `status: agenda`)
+  - `tracker/items/WI-0006/questions/Q-001.md` … `Q-004.md` — round 1's four answers verbatim, including `Q-004`'s `## Cross-answer check`, which is where round 1 promised the stakeholder an opening line
+  - `tracker/items/WI-0005/questions/Q-001.md` and `Q-008.md` — the printed reference and its numbering, answered by the stakeholder on the sibling item
+  - `tracker/items/WI-0005/item.md` — AC1 and `## Notes`, which is where `WI-0005`'s round 2 left this item its instruction
+  - `tracker/items/WI-0003/item.md` — AC1, AC3, AC5, AC6, AC9, AC12 for the month's spelling, the reconciliation precedent and the two month refusals; `tracker/items/WI-0001/item.md` and `WI-0002/item.md` for the output, refusal and description conventions cited
+  - `docs/product/vision.md` (v6) — the listing paragraphs and the reference paragraph
+  - `docs/architecture/adr/ADR-0002` (the store is a JSON entry log), `ADR-0003` (store location), `ADR-0007` (a move is two entries)
+  - `envel/envelopes.py` `add_income`, `spend`, `move` and `envel/summary.py` `entry_month` — to establish what an entry actually carries and which date it counts under, so that AC2, AC5 and AC6 describe the delivered data rather than an invented shape
+- **Decisions:**
+  - **Seven criteria became fifteen, each naming a line to type and an outcome to observe.** Round 1's AC1–AC7 were a record of what the stakeholder decided; they named no command. The command is now `envel entries`, and `## How each criterion is decided` in `refinement-qa.md` gives the invocation and the verdict for each of the fifteen.
+  - **The command surface, `[assumed]` under `WI-0003/Q-004`** — the envelope a plain word, the month the named option `--month`, the subcommand `entries`. Rationale, and the part worth auditing: `envel summary` takes its month as a plain word, so this looks like the inconsistency that delegation exists to prevent. It is not, and the stakeholder's own reason is what separates the two — for `summary` they said naming a month is *"the normal case"*, and here they chose *"this month unless I name one"*. Two optional plain words was rejected for a reason rather than overlooked: envelope names have unrestricted characters, so an envelope may legally be called `2026-08`, and disambiguating would need a rule of ours that made their envelope unreachable.
+  - **AC3 moves the reference onto this item, and AC4 states what makes it stable.** Round 1's AC2 attributed the reference to `WI-0005`, which was the wrong way round once `WI-0005`'s round 2 recorded `depends-on: WI-0006`. The numbering — one count across everything — is the stakeholder's own at `WI-0005/Q-008`, consumed here for the first time on this item. AC4's stability requirement is stated as behaviour that can be observed today (recording more entries moves nobody's reference), with the design consequence written into `## Notes` for `plan`, because the case that would break it — a removal — belongs to `WI-0005` and does not exist yet.
+  - **AC9 and AC10 settle how a month's listing adds up, and the two halves have different standing.** AC9, the opening and closing lines with an envelope named, is a promise being kept: `Q-004`'s own cross-answer check told the stakeholder exactly this before they answered it. AC10, no opening or closing figure with no envelope named, was *not* in front of them, and is `refine`'s own. It is decided rather than asked because per-envelope opening and closing lines over a page of interleaved entries would reconstruct the monthly summary with the individual entries put back in — the thing they have refused twice — and because the case they described for this form is finding an entry, not adding a column up.
+  - **AC13 applies `WI-0003`'s two month refusals to this command**, on precedent and under no licence. The reason it is not left silent: an empty listing and a mistyped month would otherwise print the same thing, which is precisely the failure their *"I'd rather be stopped"* sentence is about.
+  - **AC14 is written to be read, not only run** (`refine` step 6a): it names `WI-0003`'s criteria by ID, says the assessment is a read of their text against this command's behaviour with the suite as evidence, and says what to do where nothing executable exercises both — add a covering case rather than waive it.
+  - **No question was filed.** Each candidate fell to one of `refine` step 3's first three tests: the numbering was already answered by them on `WI-0005`; the command's spelling is inside a standing delegation; the ordering, the reconciliation and the month refusals were named in advance by round 1 as the team's, with where a disagreement lands recorded. Filing any would have cost a round trip for an answer already given or delegated.
+  - **Four stale cross-references repaired** in the round-1 `## Notes` — they named AC3, AC4, AC1 and AC7 from the seven-criterion list and round 2's renumbering had left each pointing at a criterion about something else. `refine` step 6's renumbering obligation: the workspace was grepped for citations naming this item's criteria and none exists outside the item, so nothing else had to move.
+  - **`depends-on` left empty.** `WI-0001` and `WI-0002` are `done`, so R7 is satisfied either way; the dependency that sequences anything runs the other way and is recorded on `WI-0005`.
+- **Cross-answer check:** checked against `WI-0006/Q-001`; `Q-002`; `Q-003`; `Q-004`; `WI-0005/Q-001`; `WI-0005/Q-008`; `WI-0003/Q-004`; `WI-0003/Q-005`; `WI-0003/Q-003`; `EP-001/Q-003`; `WI-0001/Q-004`. **No conflict.** The near-pair is `WI-0003/Q-004`'s plain-word month against `WI-0006/Q-002`'s *"this month unless I name one"*; they are two commands and the stakeholder gave the reason that separates them, so `--month` follows their reasoning rather than overriding a sentence, and it is recorded as the licence being spent. `EP-001/Q-003` and `WI-0006/Q-001` stay true and AC14 makes them observable. No sentence of theirs was edited anywhere, in this item or under `docs/`.
+- **Questions raised:** none. Round 1's four are answered and recorded verbatim in `artifacts/refinement-qa.md`; round 2 asked nothing and left nothing `[unresolved]`.
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 on the first run, `claim.citation.unresolved` at `item.md:39` — `WI-0002 AC10` does not say *"A description can be attached to a spend"*. The quote was corrected to the criterion's own words and the re-run exited 0. Worth recording: this is the renumbering trap `refine` step 6 warns about, caught by the gate rather than by the author.
+  - `python3 .claude/agile-skills/scripts/lint-answers --item WI-0006` → exit 0, 4 consumed answers and 1 delegation checked
+  - `grep -rn "WI-0006 AC" --include=*.md tracker/ docs/` → no match outside this item, so the renumbering moved no citation
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `workspace-valid` → **pass** (`validate-workspace .` exit 0 after the citation was corrected)
+  - `definition-of-ready` → **pass** (walked criterion by criterion, the table is in `refinement-qa.md` under `## Definition of Ready — round 2's walk`: R1 pass, R2 pass, R3 pass — fifteen labelled checkboxes, **R4 pass** — round 1's failure was that no criterion named a command and every one now does, with the invocation and verdict per criterion in `## How each criterion is decided`, R5 pass — six exclusions, two of which a reader would assume were included, **R6 pass** — no question open on this item and none filed, R7 pass — `depends-on` empty and both items this one needs are `done`, **R8 pass** — `refinement-qa.md` now declares `status: recorded` and the exchange under it is what was said, **R9 pass** — round 1's provisional verdict becomes plain because the answer that would have reopened it, a running balance, was not chosen, **R10 pass** — the combination table is written out, R11 pass — no criterion counts a project artefact, **R12 pass** — one delegation spent with its `Under delegation:` line and its category, and three assumptions taken under no licence each saying so and where a disagreement lands)
+  - `criteria-are-decidable` → **pass** (fifteen rows in `## How each criterion is decided`, each naming the invocation and the verdict that follows; the store is a fresh `ENVEL_FILE` per case)
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0006` exit 0. The read the script cannot make is the `**Cross-answer check:**` bullet above: no conflict, one near-pair named and explained rather than escalated)
+  - `qa-recorded-verbatim` → **pass** (round 1's four answers are in `## Answers — round 1` verbatim and unedited; round 2 recorded no new stakeholder answer and `## Answers — round 2` says so in those words rather than leaving the section off; every `[assumed]` decision carries either its `**Under delegation:**` line with the category, or the plain statement that nothing licensed it and where a disagreement lands)
+- **Artifacts:**
+  - `tracker/items/WI-0006/item.md` — seven criteria rewritten as fifteen; `## Out of scope` extended from four exclusions to six; `## Notes` given round 2's settlements, the `plan` constraint behind AC4, the discharge of `WI-0005`'s instruction, and four repaired cross-references
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` — `status: agenda` → `recorded`; `# Round 2` added with the DoR walk, the authority behind each decision, R10's combination table, the per-criterion decidability table, and round 2's cross-answer check
+- **Status:** `draft` → `ready`
+- **Result:** `WI-0006` is Ready. The listing is `envel entries [<envelope>] [--month <YYYY-MM>]`, it creates and prints the reference `WI-0005` will consume, and fifteen criteria say what it puts on the screen and what it refuses. No stakeholder round trip was spent: everything round 2 had to settle was already answered, delegated, or named in advance as the team's.
+
+## 2026-09-11T08:07:29Z — plan v0.6.3 — architect
+
+- **Item:** WI-0006
+- **Trigger:** status `ready`, dispatched by `next` — the only runnable item (`WI-0005` sits behind its `depends-on: WI-0006`)
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` (fifteen criteria), `history.md`, `journal.md` — this is a first plan, not a re-plan: the history shows `draft → awaiting-answer → draft → ready` and no rejection
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` — both rounds, and in particular the four `[assumed]` decisions, which are this design's soft ground: the command surface under `WI-0003/Q-004`, and the ordering, AC10 and AC13 taken under no licence
+  - `tracker/items/WI-0005/item.md` AC1 and AC13, and `questions/Q-007.md`, `Q-008.md` — the consumer of the reference, and what it needs to be true of it
+  - `docs/product/vision.md` (v6), `docs/architecture/overview.md` (v6)
+  - Every ADR: `ADR-0001` … `ADR-0009`, in full. Ten are named under `## Binding ADRs` with the clause that binds this change
+  - `envel/store.py` (all of it — `FORMAT`, `empty_store`, `load`, `save`), `envel/cli.py` (all of it — `build_parser` and `main`), `envel/summary.py` (all of it), `envel/envelopes.py` `add_income`, `record_spend`, `move`, `balance`, `fold`, `listing`
+  - `tests/test_store.py`, `tests/test_envelopes.py`, `tests/test_cli.py`, `tests/test_summary.py` — read for whether adding a key to an entry breaks an assertion. Nothing compares a whole document except against a copy of itself after a refusal, so it does not
+- **Decisions:**
+  - **`ADR-0010` — an entry carries `ref` and the document carries `next-ref`, with `format` going to 2 and a format-1 document upgraded in memory on load.** Route: **decided**. The record is not silent about what the number counts — the stakeholder answered that [src: WI-0005/Q-008] — and it is silent about how the file keeps the promise, which is not a question they could answer. Three options are argued in the ADR: the entry's position computed at read time, which is correct for this item alone and breaks silently the first time `WI-0005` removes an entry; a stored `ref` with `max + 1`, which reuses the highest number after the highest entry is removed; and the counter, which is what was taken. This is the one decision on the item that is expensive to undo, and the ADR says so rather than implying it: once the stakeholder has read a number off the screen the numbers are data we cannot reach.
+  - **The listing goes in `envel/summary.py`, not a new `envel/entries.py`.** Route: **from the documents** — the overview's module row already says that module owns *"the reports"*, and `ADR-0009` gives the distinction it is drawn on (`envelopes` changes things, `summary` reports on them). No ADR written: an ADR for a choice a cited sentence already answers pads the trail and hides the real decisions in it. The rejected alternative is recorded in the plan's `## Approach` so a reader can see it was considered.
+  - **AC9's opening figure is a filtered sum with the month bound moved back, not the closing figure minus the month.** Route: **from the documents** — `ADR-0008`'s consequence says *"Nothing computes the carried-in figure and nothing checks the identity"*, and a subtraction would make that sentence false. This is the kind of thing that would have been written either way without noticing; the ADR is what made it a decision.
+  - **Four assumptions, each with what reversing costs.** The line shape and the opening/closing lines being lines of the listing are under the `WI-0003/Q-004` delegation, with the category named on each. The two key names and which half of a move takes the lower number are taken under nothing and say so — the first is a rename that gets expensive only after the stakeholder has a file carrying it, the second is one line and nothing observable depends on it.
+  - **Nothing was asked of the human, and nothing was routed back to `refine`.** The three criteria `refine` took under no delegation (AC8's ordering, AC10's absent opening figure, AC13's month refusals) are built as written, each recording where a disagreement lands. Re-opening them here would be `plan` re-deciding what `refine` already decided and recorded.
+  - **The invalidation set was written from a read of `docs/`, not from memory** — 28 rows across the overview, seven ADRs and the vision. Two rows are the ones this design is most likely to falsify and they are why the read was worth doing: the overview's third beat (*"write the whole store back… but only if something changed"*), which the format-1 upgrade would falsify if it wrote to disk, and `ADR-0002`'s own prediction that the remaining items would build on it *without changing the file's shape*, which `ADR-0010` is the first to break.
+  - **`docs/architecture/overview.md` updated to v7** by this execution — the module row, a `## The data` paragraph for `ref` and `next-ref`, and `## What is not decided yet` rewritten so that `ADR-0002`'s prediction is replaced by what actually happened rather than left standing beside its counterexample. `## Engagement state` was not touched: it is in the invalidation set disposed `owned-by-ending`.
+  - **`tracker/project.yaml` needed nothing.** `commands.test` and `commands.lint` are already filled in and both were run in this execution.
+- **Cross-answer check:** this execution recorded no new human answer; it relied on `WI-0005/Q-008` (the reference is counted once across everything), `WI-0006/Q-002`, `Q-003` and `Q-004` (the month, the optional envelope, what is listed and that it must add up), and `WI-0003/Q-004` (the delegation `refine` spent). Checked against `WI-0005/Q-001`, `WI-0006/Q-001`, `EP-001/Q-003`, `WI-0003/Q-003` and `WI-0001/Q-004`. **No conflict.** `EP-001/Q-003` and `WI-0006/Q-001` — *"I still don't want individual spends in that"* — are about the monthly summary, and AC14 keeps it untouched. `WI-0003/Q-003`, which left income undated, is what AC5's date rule follows rather than reopens. No sentence of theirs was edited: the overview paragraph carrying `[src: WI-0003/Q-003]` is unchanged and the new paragraph sits after it. `lint-answers --item WI-0006 --uncommitted` agrees.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 176 tests — the measurement behind `## Scaffolding`'s claim that the declared test command runs here
+  - `python3 .claude/agile-skills/scripts/lint-documents --rule documents-at-risk-are-enumerated --item WI-0006` → exit 0, 28 invalidation rows, 0 deliverable documents, 10 binding ADRs
+  - `python3 .claude/agile-skills/scripts/lint-answers --item WI-0006 --uncommitted` → exit 0
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1 twice, then exit 0. The first failure was `claim.unsourced` on an absolute in `ADR-0010`'s consequences; the sentence was rewritten to say what it is actually claiming and carry a citation. The second was `claim.citation.unresolved` — `envel/cli.py:146` on a 144-line file — and two more line numbers beside it were wrong in the same way; all three were re-read against the file and corrected
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 1 before this transition on `doc.changelog.no-execution`, for the `ADR-0010` and overview rows this entry is the execution for; re-run after
+- **Gates:**
+  - `workspace-valid` → **fail**, and this transition was taken with `--force` because the gate cannot be satisfied from here. `validate-workspace --resolving 'WI-0006:ready->planned+journal'` exits 1 on two findings and nothing else: `doc.changelog.no-execution` on `ADR-0010`'s row and on `docs/architecture/overview.md`'s v7 row, each saying *"WI-0006's journal has no execution of plan at all"*. It has none because the entry you are reading is the one that records it, and only the transition writes it — so the version row a skill writes **during** its own execution can never be inside a window until after the move the gate guards. `--resolving`'s `+journal` suffix already downgrades exactly this shape for `journal.execution.missing` (F-025) and does not include `doc.changelog.no-execution`, which is the same fact about the same pending entry. Every other gate ran and passed, and `validate-workspace` exits 0 immediately after this move. Recorded as a fail rather than argued into a pass, and reported in `HARNESS-STATUS.md` as a toolkit finding
+  - `every-criterion-is-addressed` → **pass** (`## Acceptance criteria mapping` has one row for each of AC1 to AC15, each naming the plan step and a named test case rather than "tests". AC14 is the one worth reading twice: it maps to step 8, which asks for a per-criterion read of `WI-0003` AC1–AC14 recorded in `impl-report.md` and for a case exercising both commands over one store, because a suite where nothing touches both would answer the criterion with an example that could not have failed)
+  - `project-commands-resolved` → **pass** (`tracker/project.yaml` already carries `commands.test` and `commands.lint`; both were run in this execution and `commands.build` is honestly null — this project builds nothing)
+  - `decisions-recorded` → **pass** (`ADR-0010` written with three options, their costs and risks, the decision in five numbered clauses, and reversibility stated as **hard and getting harder with use**. The three decisions taken from the documents are in `## Decisions and ADRs` with what they were read from, and no ADR was written for any of them)
+  - `plan-is-executable-without-you` → **pass** (advisory; read as a stranger, step by step. Each of the nine names the files it touches and what is true afterwards. The two places a reader would otherwise have had to decide something are closed in the plan rather than left: step 1 says the format-1 upgrade happens **in memory only**, which is the difference between a read-only command and one that rewrites the stakeholder's file; and step 3 says AC9's opening figure is the same filtered sum with the bound moved back, not the closing figure minus the month, which is the form `ADR-0008`'s consequence sentence requires. What is deliberately not in the plan is any implementation: the functions are named with what they take and return, and no body is written)
+  - `documents-at-risk-are-enumerated` → **pass** (`lint-documents --rule documents-at-risk-are-enumerated --item WI-0006` exit 0: 28 rows, each with `document`, `what` locating a quoted sentence, `kind`, `why` and an open `disposition`; `## Deliverable documents` says `none` with why; `## Binding ADRs` names ten IDs with the clause that binds each)
+  - `cross-answer-consistency` → **pass** (`lint-answers --item WI-0006 --uncommitted` exit 0, over the uncommitted `docs/` change. The read the script cannot make is the `**Cross-answer check:**` bullet above: no conflict, and no paragraph sourced to one of their answers was edited)
+  - `claims-are-sourced` → **pass** (`lint-claims --all` exit 0 after two rounds of correction, documented under `**Commands:**` above. The failures are worth keeping: one absolute with no source, and three line-number citations into `envel/cli.py` that were simply wrong — the gate caught what re-reading my own prose would not have)
+- **Artifacts:**
+  - `docs/architecture/adr/ADR-0010-an-entry-carries-its-own-reference.md` (new, v1)
+  - `tracker/items/WI-0006/artifacts/plan.md` (new)
+  - `docs/architecture/overview.md` (v6 → v7)
+- **Status:** `ready` → `planned`
+- **Result:** `WI-0006` is planned. Nine steps across four modules and four test files, fifteen criteria each mapped to a named demonstration, and one ADR for the one decision that is expensive to undo — the reference is stored on the entry and counted by the document, so `WI-0005` inherits its stability instead of having to arrange it. `implement` closes the 28 invalidation rows against the code it writes.
+
+## 2026-09-11T08:10:05Z — implement v0.6.1 — developer
+
+- **Item:** WI-0006
+- **Trigger:** status `planned`, dispatched by `next` as the only runnable item — WI-0005 is held behind `depends-on: WI-0006`, and every other item is `done`.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` — the fifteen acceptance criteria and the out-of-scope list
+  - `tracker/items/WI-0006/artifacts/plan.md` — nine steps, the AC mapping, four assumptions, the 28-row invalidation set, `deliverable-documents: none`, ten binding ADRs
+  - `tracker/items/WI-0006/history.md` — five rows; the last is `ready → planned`, so this is a fresh start and no branch existed
+  - `tracker/items/WI-0006/questions/` — four questions, all `answered` and propagated by `answer-questions` before `refine` round 2
+  - `tracker/project.yaml` — `commands.test` and `commands.lint` are both present, `branch-prefix: wi/`, trunk `main`
+  - `docs/architecture/adr/ADR-0010-an-entry-carries-its-own-reference.md` — the decision this plan builds
+  - `docs/architecture/overview.md` v7 — already carries `ref`, `next-ref` and the `format` at 2
+  - `envel/store.py`, `envel/envelopes.py`, `envel/summary.py`, `envel/cli.py`, `envel/money.py`, `envel/dates.py` — the code the plan's four edited modules are
+- **Decisions:**
+  - none yet. This entry opens the execution; the work and its choices are reported at the closing transition.
+- **Questions raised:** none
+- **Commands:**
+  - `git checkout -b wi/WI-0006 main` → exit 0
+- **Gates:**
+  - `tests-pass` → **pending** (decided at the closing transition, on the branch head; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported PASS here, which decides nothing)
+  - `lint-clean` → **pending** (decided at the closing transition, on the branch head; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported PASS here, which decides nothing)
+  - `workspace-valid` → **pending** (decided at the closing transition; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported PASS here, which decides nothing)
+  - `every-criterion-has-a-test` → **pending** (no test has been written yet; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported MANUAL here, which decides nothing)
+  - `commits-reference-the-item` → **pending** (the commit range is empty at this moment; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported FAIL here, which decides nothing)
+  - `no-unplanned-scope` → **pending** (advisory; there is no diff yet to read; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported MANUAL here, which decides nothing)
+  - `cross-answer-consistency` → **pending** (nothing changed since `main` yet; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported FAIL here, which decides nothing)
+  - `claims-are-sourced` → **pending** (nothing changed since `main` yet; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported FAIL here, which decides nothing)
+  - `document-writes-are-declared` → **pending** (nothing under `docs/` written yet; not decided by this move — `implement` is dispatched again at `in-progress` and this gate is decided there; run-gate reported FAIL here, which decides nothing)
+- **Artifacts:**
+  - branch `wi/WI-0006`, from `main` at 52a6237
+- **Status:** `planned` → `in-progress`
+- **Result:** Implementation of WI-0006 has started on `wi/WI-0006`. The plan is a fresh start with no partial branch to reconcile.
+
+## 2026-09-11T08:29:53Z — implement v0.6.1 — developer
+
+- **Item:** WI-0006
+- **Trigger:** status `in-progress`, opened by this same execution at 08:10:05Z; the plan's nine steps are done.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` — AC1 to AC15 and the out-of-scope list
+  - `tracker/items/WI-0006/artifacts/plan.md` — the nine steps, the AC mapping, the four assumptions, the 28-row invalidation set, `deliverable-documents: none`, the ten binding ADRs
+  - `tracker/items/WI-0006/history.md` and `questions/` — five rows, four questions all answered and propagated before `refine` round 2
+  - `tracker/project.yaml` — both gate commands present
+  - `docs/architecture/adr/ADR-0010` — the decision this plan builds; and `ADR-0001` to `ADR-0009`, each named as binding
+  - `docs/architecture/overview.md` v7 and `docs/product/vision.md` v6 — every section the invalidation set names
+  - `envel/store.py`, `envel/envelopes.py`, `envel/summary.py`, `envel/cli.py`, `envel/money.py`, `envel/dates.py`, and `tests/test_store.py`, `test_envelopes.py`, `test_summary.py`, `test_cli.py`
+  - `.claude/agile-skills/spec/doc-header.md` §4, §4a and §4b — before repairing a standing ADR
+- **Decisions:**
+  - **`envel/dates.py` was edited although the plan named four modules.** The line needs the calendar **day** an entry counts under, and `ADR-0006` makes `dates.py` the only place text and calendar days meet; `entry["at"][:10]` in `summary.py` would have put a date conversion in a second module. `day_of` and `DAY_LENGTH` were added beside `month_of` and `MONTH_LENGTH`. How, not what.
+  - **`summary.entry_month` re-expressed as `dates.month_of(entry_date(entry))`** rather than kept as a second copy of AC5's rule. Identical value for every entry — both are prefixes of one fixed-width ISO string — and `tests/test_summary.py` passes unchanged. The invalidation set's `ADR-0006` row is the reason: one rule in one place cannot drift.
+  - **Two bracket functions over one `bounded_balance`**, rather than calling `figures` and discarding three sums for AC9's closing figure.
+  - **One commit for plan steps 1 to 4.** Nothing can list a reference until the store holds one, so the intermediate states do not build a working tool.
+  - **`ADR-0002`'s worked JSON document was left alone** and given a `provenance` correction instead of an `erratum`. It is the record of what was decided there; what was missing was where the `format` branch went, and the bullet now cites `ADR-0010`.
+  - **The `ADR-0002` correction entry saying `envel/store.py` still reads `FORMAT = 1` was not repaired.** `## Corrections` is append-only, so it was added to the invalidation set as a row and disposed with the reading written down: it is a dated record of a past repair, not a standing claim.
+  - **Not decided, deliberately:** AC10's absence of bracket figures on the all-envelopes listing. That is `refine`'s decision under no delegation with the cost recorded, and `docs/product/vision.md` was not edited to make it read as the stakeholder's.
+- **Cross-answer check:** one sentence sourced to a stakeholder answer was edited — `docs/product/vision.md` `## What it is for`, *"read off a listing of an envelope's entries"* `[src: WI-0005/Q-001]`. An **ordinary repair**: *"of an envelope's entries"* is our paraphrase of the example put to them at `Q-001` (`envel spends groceries`), and `WI-0006/Q-003` is their own later answer making the envelope optional. The two answers are about different things — that there is a printed reference, and whether an envelope must be named — so they coexist, and the vision already carried both two paragraphs apart. The clause now names both forms and cites `Q-003`. Nothing of `WI-0006/Q-004` was touched. Recorded in full in `impl-report.md` `## Cross-answer check`.
+- **Questions raised:** none. No decision on this item was both irreversible and unrecorded: `ADR-0010` was already taken by `plan`, and the one place two stakeholder answers touched the same sentence was a paraphrase of ours rather than a conflict of theirs.
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 231 tests (176 before, 55 added)
+  - `python3 -m compileall -q envel tests` → exit 0
+  - `scripts/check-commit-refs WI-0006 wi/WI-0006` → exit 0, all 3 commits name WI-0006
+  - `scripts/lint-answers --changed-since main` → exit 0, 33 consumed answers and 2 delegations
+  - `scripts/lint-claims --changed-since main --plan-documents WI-0006` → exit 0
+  - `scripts/lint-documents --rule document-writes-are-declared --item WI-0006 --changed-since main` → exit 0
+  - `scripts/validate-workspace` → exit 0
+  - four mutations applied and reverted (move direction, opening bound, stored `ref`, ordering) → 5, 4, 5 and 1 failing tests respectively
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` exit 0, 231 tests, on the branch head after the last commit)
+  - `lint-clean` → **pass** (`python3 -m compileall -q envel tests` exit 0)
+  - `workspace-valid` → **pass** (`scripts/validate-workspace` exit 0; the seven `doc.changelog.no-execution` findings this execution's document rows carried were resolved by this entry, which is what the plan's own forced-gate row predicted)
+  - `every-criterion-has-a-test` → **pass** (a test function or an exact command named for each of AC1 to AC15 in `impl-report.md`; four mutations applied and each caught, so no criterion rests on a test that could not fail)
+  - `commits-reference-the-item` → **pass** (`scripts/check-commit-refs WI-0006 wi/WI-0006` exit 0, 3 commits on `main..wi/WI-0006`)
+  - `no-unplanned-scope` → **pass** (advisory; every hunk traces to a plan step or an AC, and the five deviations are listed in `impl-report.md`)
+  - `cross-answer-consistency` → **pass** (`scripts/lint-answers --changed-since main` exit 0; the one edited answer-sourced sentence is accounted for above and in the report)
+  - `claims-are-sourced` → **pass** (`scripts/lint-claims --changed-since main --plan-documents WI-0006` exit 0; **scope: 11 documents in 11 paths — 6 differing from `main` under `docs/` plus 11 named by the plan**, citations checked over every markdown file in the workspace)
+  - `document-writes-are-declared` → **pass** (`scripts/lint-documents` exit 0; 6 documents written, 11 named by the plan, 29 invalidation rows all disposed)
+- **Artifacts:**
+  - `tracker/items/WI-0006/artifacts/impl-report.md`
+  - `tracker/items/WI-0006/artifacts/plan.md` — the disposition cell on all 29 rows, and one row added for a document found mid-change
+  - `docs/architecture/overview.md` v8, `docs/product/vision.md` v7, `docs/architecture/adr/ADR-0002` v3, `ADR-0007` v3, `ADR-0008` v2, `ADR-0009` v2
+  - branch `wi/WI-0006`, commits `069d134..103a49b` (3 commits, `main` at 52a6237)
+- **Status:** `in-progress` → `verifying`
+- **Result:** `envel entries` lists a calendar month's income, spends and moves — the month today falls in unless `--month` names one, one envelope's or the envelopes together — each line carrying a stored reference that `WI-0005` will take back. All fifteen criteria have a test that was checked against removal. Four false sentences in `docs/` were repaired as errata with the removed text quoted, one stakeholder-sourced paraphrase was widened to match their own later answer, and both `## Engagement state` sections were left for the ending.
+
+## 2026-09-11T08:40:46Z — verify v0.5.1 — qa-engineer
+
+- **Item:** WI-0006
+- **Trigger:** status `verifying`, dispatched by `next` as the only runnable item.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` — AC1 to AC15, read **before** the implementation report
+  - `tracker/items/WI-0006/artifacts/plan.md` — the binding ADR list and the invalidation set
+  - `tracker/items/WI-0006/artifacts/impl-report.md` — read as a claim to be checked, cited as evidence nowhere
+  - `tracker/items/WI-0006/artifacts/refinement-qa.md` — for how the `WI-0003/Q-004` delegation was spent on the command surface
+  - `tracker/items/WI-0003/item.md` — AC1 to AC14, which AC14 of this item makes its subject
+  - `docs/architecture/adr/ADR-0001` … `ADR-0010`, each `## Decision` in full
+  - every document named in the invalidation set — `docs/architecture/overview.md`, `docs/product/vision.md` and six ADRs
+  - the code at branch head **00b2b319d91010affd3c93a122174c5eade20ced**, and the same files at `main` (52a6237) for the AC14 comparison
+- **Decisions:**
+  - **No send-back and no bug item.** No criterion of this item failed, and nothing delivered by another item was found broken.
+  - **AC4 passes but is only half-observable.** Its observable half — recording more entries moves nobody's reference — was demonstrated. The half a removal would show cannot be observed here, because no command removes an entry; that is `WI-0005`. Not marked `substituted`: AC4's own wording asks for the recording case, and the design half was checked by reading `ref` out of the stored file. Declared in `## Not verified, and why`.
+  - **The `envel summary --month` / `envel entries --month` tension is not a defect and not a question.** `WI-0003` AC1 says `envel summary --month 2026-08` is refused; it still is, checked directly. The stakeholder's *reason* at `WI-0003/Q-004` — *"I'd rather everything in this tool be typed the same way"* — sits awkwardly beside `envel entries --month`, but `refine` spent that same delegation on it deliberately, named `envel summary` as the alternative it was weighing against, gave the reading it used, and priced a disagreement. The record settles it, so it is an observation for the stakeholder at sign-off rather than an ambiguity for the architect.
+  - **`overview.md`'s *"one field more"* is left alone.** Literally two on a described spend, because `description` is optional — but that predates this item, which put `ref` on every kind and so did not move the differential. Recorded as an observation, not a send-back.
+  - **The first AC14 comparison was thrown away.** It compared `envel summary` across revisions on a store the branch had already upgraded to format 2, which `main` cannot read at all. Redone on a pristine format-1 copy. The failed attempt is in the report because it is how observation 1 was found.
+  - **One mutation was allowed to survive.** `take_ref` returning `len(entries) + 1` is behaviourally identical today — same refs, same `next-ref` — and diverges only after a removal. A property of the feature set, not a gap in the tests.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 231 tests
+  - `python3 -m compileall -q envel tests` → exit 0
+  - `scripts/validate-workspace` → exit 0, 0 errors
+  - `scripts/lint-documents --rule adr-conformance-is-decided --item WI-0006` → exit 0
+  - `scripts/lint-documents --rule invalidation-set-is-disposed --item WI-0006` → exit 0, 29 entries against 29 rows
+  - ~40 `./bin/envel` invocations over four scratch stores under `ENVEL_FILE`, covering all fifteen criteria and fifteen negative/boundary conditions; every command and its actual output is in `verify-report.md`
+  - `git checkout main` / `git checkout wi/WI-0006` with `envel summary` run on each over one unmutated format-1 store, eight invocations per revision, compared with `diff` → all identical
+  - `git diff --stat main..HEAD -- tests/test_summary.py` → empty
+  - 12 mutations applied and reverted; 11 caught, the 12th shown equivalent by running both versions side by side
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` exit 0, 231 tests, run here on 00b2b31)
+  - `lint-clean` → **pass** (`python3 -m compileall -q envel tests` exit 0)
+  - `workspace-valid` → **pass** (`scripts/validate-workspace` 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (`verify-report.md` `## Criteria`: a command I ran and its actual output for each of AC1 to AC15; no row's evidence is the implementation report)
+  - `negative-cases-exercised` → **pass** (fifteen conditions triggered, listed in `## Negative and boundary cases exercised`, including both boundaries of the month rule — `2026-13` refused, `2026-09` not — and the read-only boundary where a format-1 store's md5 is unchanged by two listings)
+  - `a-criterion-about-criteria-is-read` → **pass** (`## AC14 — the read`: all fourteen `WI-0003` criteria named by ID with a verdict each, evidenced by a byte-for-byte cross-revision comparison of `envel summary` rather than by the suite being green; the suite was separately shown sensitive — breaking the summary's month filter fails 16 of its 27 tests. Non-intersection: none remains, nothing waived)
+  - `adr-conformance-is-decided` → **pass** (`scripts/lint-documents --rule adr-conformance-is-decided --item WI-0006` exit 0; ten rows, each quoting a clause of that ADR's `## Decision` and naming a file and line; no ADR outside the plan's list was found engaged)
+  - `invalidation-set-is-disposed` → **pass** (`scripts/lint-documents --rule invalidation-set-is-disposed --item WI-0006` exit 0, 29 entries against 29 rows; the 17 `verified-still-true` entries reopened here with my own enumerations, the 5 `to-update` entries checked for a version bump and a change-log row, and both `owned-by-ending` sections confirmed byte-identical between `main` and `HEAD`)
+  - `tests-would-fail-without-the-change` → **pass** (advisory; 12 mutations, 11 caught, the 12th characterised)
+- **Artifacts:**
+  - `tracker/items/WI-0006/artifacts/verify-report.md`
+  - `tracker/items/WI-0006/item.md` — AC1 to AC15 ticked, each against a command run here
+  - no bug items filed
+- **Status:** `verifying` → `in-review`
+- **Result:** WI-0006 meets all fifteen of its acceptance criteria on 00b2b31, demonstrated by commands run here. Ten ADRs conform, the invalidation set is fully disposed and its still-true claims were reopened, and `envel summary` prints byte-for-byte what it printed on `main`. Three observations are recorded for the reviewer and the stakeholder, none of them a defect: the format bump is one-way in practice, AC4's removal case is not observable until `WI-0005`, and the two commands spell a month differently.
+
+## 2026-09-11T08:46:49Z — review-close v0.14.1 — reviewer
+
+- **Item:** WI-0006
+- **Trigger:** status `in-review`, dispatched by `next` as the only runnable item.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md`, `history.md` (8 rows), `journal.md` (8 entries, read in full), and all four questions
+  - `artifacts/plan.md`, `artifacts/impl-report.md`, `artifacts/verify-report.md`
+  - **the diff `main..wi/WI-0006`**, hunk by hunk — 5 files under `envel/`, 4 under `tests/`, 6 under `docs/` — not the reports about it
+  - `docs/architecture/adr/ADR-0001` … `ADR-0010`, and the six documents this change wrote
+  - `tracker/items/WI-0005/item.md`, for AC13 and for the `depends-on` that makes the first accepted gap dispatchable
+- **Decisions:**
+  - **Rejected, on one finding.** `envel/summary.py:123` — a docstring this item wrote — says a move is two entries *"with opposite `cents` and nothing linking them (ADR-0007)"*. `ADR-0007` no longer says that, because **this same item** amended it: its own `## Corrections` entry quotes the old wording and states *"All three are false."* The corrected sentence, in the ADR and in `overview.md`, is that no **field** names the pair and that the halves carry consecutive references since `ADR-0010`. The item repaired the claim in two documents and shipped it in the function it wrote.
+  - **Why a send-back and not an accepted gap.** An accepted gap must be dispatchable, and for a code change the routes are a new item or a send-back. A new item for one docstring, on a branch that has not merged, is heavier than the fix. And the concrete cost is near: `WI-0005` depends on this item and its AC13 is *"`envel fix <ref>` and `envel remove <ref>` given the reference of a **move** entry"* — its author will read `entry_kind`, the function that handles move halves, and be told the file contains nothing linking them.
+  - **Not a rejection for anything else.** Four other observations are recorded with no action: nothing in the pipeline reads source comments for stale claims (F-062's own shape, one level outside every gate written for it); `overview.md`'s *"one field more"* is literally two on a described spend but predates this item; `envel entries --month` against `envel summary <month>` is a delegated decision `refine` recorded and the sign-off gate will surface; and `take_ref` mutating its argument is correct, documented and tested at all three call sites.
+  - **Five accepted gaps, each disposed.** AC4's removal case → `item-filed:WI-0005`, which the board dispatches. The format-2 one-way upgrade, the hand-damaged `next-ref`, the year-end month boundary and concurrency → `no-owner`, each a limitation recorded rather than work deferred, with the sentence in `ADR-0010` or `ADR-0002` that says so.
+  - **No merge, and no trial merge.** Step 8's sequence belongs to an acceptance. The branch is left intact and `main` was not touched: `git rev-parse main` is 52a6237, as it was.
+  - **The engagement is not ending.** `scripts/engagement-state EP-001` → **active**, *"still in flight: WI-0005, WI-0006"*.
+- **Cross-answer check:** this execution consumed no human answer — it made no edit to any document and filed no question, so no claim sourced to a stakeholder answer was written or reinterpreted. The two answers the item's own repairs rest on, `WI-0005/Q-001` and `WI-0006/Q-003`, were re-read against each other as part of the D12 audit and are complementary rather than conflicting; that read confirms `implement`'s and changes nothing. `scripts/lint-answers --context work-item --changed-since main` → exit 0, 33 consumed answers and 2 delegations.
+- **Questions raised:** none
+- **Commands:**
+  - `git diff main..HEAD` and `git diff main..HEAD -- envel/` → read in full
+  - `git diff --name-only 00b2b31..HEAD -- ':!tracker' ':!docs'` → empty, so no code changed after verification
+  - `scripts/check-verify-freshness WI-0006 wi/WI-0006` → exit 0
+  - `scripts/check-commit-refs WI-0006 wi/WI-0006` → exit 0, all 5 commits
+  - `python3 -m unittest discover -s tests -t .` → exit 0, 231 tests; `python3 -m compileall -q envel tests` → exit 0
+  - `scripts/validate-workspace` → exit 0
+  - `scripts/lint-claims --context work-item --changed-since main` → exit 0
+  - `scripts/lint-answers --context work-item --changed-since main` → exit 0
+  - `scripts/lint-documents --rule accepted-gaps-are-dispatchable --item WI-0006` → exit 0, 5 gaps
+  - `scripts/lint-documents --rule engagement-state-is-restated --item WI-0006 --context work-item` → NOT APPLICABLE
+  - `scripts/check-epic-signoff WI-0006` → PASS (not an epic)
+  - `scripts/engagement-state EP-001` → active
+  - `envel summary --month 2026-08` → refused, `usage: envel summary`, exit 2 (WI-0003 AC1 still holds)
+- **Gates:**
+  - `definition-of-done` → **pass** (D1 to D13 walked one at a time in `review.md` `## Definition of Done`, each with its own result and evidence; D9 records `not reached` because the item is rejected and nothing is merged. The rejection is a step-4 finding, not a DoD failure — recorded plainly rather than bent into a criterion)
+  - `engagement-state-is-restated` → **pass** (applicable — an item close** (the gate said so itself: *"an item close is not an ending, and the sections are the ending's"*. Both `## Engagement state` sections were separately confirmed byte-identical between `main` and `HEAD`))
+  - `accepted-gaps-are-dispatchable` → **pass** (`scripts/lint-documents --rule accepted-gaps-are-dispatchable --item WI-0006` exit 0; 5 gaps, one `item-filed:WI-0005` and four `no-owner`, each with the sentence that makes `no-owner` honest)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0: *"verified at 00b2b319; wi/WI-0006 has moved to 80040a7b but only the record changed (5 file(s) under tracker/ or docs/)"*; confirmed independently with a diff restricted away from `tracker/` and `docs/`, which is empty)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs` exit 0, all 5 commits on `main..wi/WI-0006`)
+  - `tests-pass-on-the-merge-result` → **pass** (the item is rejected, so nothing was merged and there is no merge result to test. Running the suite on the branch answers a different question, and it is recorded here as skipped rather than as a pass it did not earn. The suite on the branch head is exit 0, 231 tests, which is `tests-pass` and not this gate; the run reported PASS: `python3 -m unittest discover -s tests -t .` exited 0)
+  - `workspace-valid` → **pass** (`scripts/validate-workspace` exit 0)
+  - `record-is-reconstructible` → **pass** (answered from the tracker, `docs/` and `git log` alone: *what was built* — one command `envel entries` plus a stored reference, from `plan.md` and five commit messages; *which skill decided what* — `refine` took the command surface under the `WI-0003/Q-004` delegation (`refinement-qa.md`), `plan` took `ADR-0010`, `implement` took five declared deviations, `verify` decided ten ADRs; *what questions arose and how they resolved* — four, all `answered` by the stakeholder, each `## Consequences` naming the files it reached; *what verification found* — no defect, three observations, four declared gaps, in `verify-report.md`)
+  - `claims-are-sourced` → **pass** (`scripts/lint-claims --context work-item --changed-since main` exit 0. **Scope, quoted from its output:** *"checked absolute claims: 6 document(s) in 6 path(s) differ from main (52a6237) under docs; citations: every markdown file in the workspace"* — the six documents this change wrote, which is a window that could have found something)
+  - `cross-answer-consistency` → **pass** (`scripts/lint-answers --context work-item --changed-since main` exit 0, 33 consumed answers and 2 delegations)
+  - `epic-sign-off` → **pass** (, vacuously** (`check-epic-signoff WI-0006` → *"WI-0006 is a 'work-item', not an epic — the termination gate applies to an engagement's ending only. PASS."*))
+- **Artifacts:**
+  - `tracker/items/WI-0006/artifacts/review.md`
+  - no bug item, no question, no sign-off; nothing under `docs/` was written by this execution
+- **Status:** `in-review` → `in-progress`
+- **Result:** Rejected and returned to `in-progress` on one finding. The change itself is sound — fifteen criteria demonstrated, ten ADRs conforming, the invalidation set disposed and reopened, `envel summary` byte-identical to `main` — but `envel/summary.py:123` ships the justification this item recorded as false in `ADR-0007`, and `WI-0005`'s author is the next person to read it. One docstring, no behaviour, no test.
+
+## 2026-09-11T08:53:03Z — implement v0.6.1 — developer
+
+- **Item:** WI-0006
+- **Trigger:** `in-progress` — `review-close` rejected the item back on 2026-09-11T08:46:49Z with one finding; `next` dispatched `implement` as the owner of `in-progress`.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` — fifteen criteria, status `in-progress`, branch `wi/WI-0006`
+  - `tracker/items/WI-0006/history.md` — nine rows; the last is the send-back, so its cause was read first
+  - `tracker/items/WI-0006/artifacts/review.md` — the send-back reason: **F1** and nothing else. Its *"What would fix it"* is the whole scope of this round
+  - `tracker/items/WI-0006/artifacts/plan.md` — the invalidation set (29 rows, all disposed in round 1), `deliverable-documents: none`, ten binding ADRs
+  - `tracker/items/WI-0006/artifacts/impl-report.md` and `verify-report.md` — round 1's evidence, which this round leaves standing
+  - all four questions under `questions/` — every one `answered`; none moved since the last entry, so nothing new was propagated
+  - `docs/architecture/adr/ADR-0007-a-move-is-two-entries.md` at v3, in full — `## Decision`, `## Consequences`, `## Change log` and both `## Corrections` entries
+  - `docs/architecture/overview.md` `## The data` — the paragraph the docstring has to agree with
+  - `envel/summary.py` — `entry_kind`, `entry_line`, and the summary code above them
+  - `tracker/project.yaml` — `commands.test`, `commands.lint`, the branch prefix and the commit subject
+- **Decisions:**
+  - **Fixed the docstring and only the docstring.** `review.md` F1 prices the fix as *"One docstring … No behaviour changes and no test changes"*, and the diff is one hunk of five added and three removed comment lines. The three claims in the replacement are each lifted from `ADR-0007` `## Decision` or `overview.md` `## The data` and checked against a store the tool wrote — refs 4 and 5 on the two halves of a move, no pairing field on either.
+  - **Wrote the new sentence to say why the sign is read, not only that it is.** F1's diagnosis is that `WI-0005`'s author will read this function to learn whether a move's halves can be found from one another. Saying *"the sign is all this function needs … not because the other half could not be found"* answers that; restating *"no field names the pair"* alone would still leave the misreading available.
+  - **Added no invalidation-set row and wrote nothing under `docs/`.** The two documents this docstring now agrees with were repaired in round 1 and are already `to-update` rows in the set. The defect was that the source did not follow the documents, so the documents needed nothing.
+  - **Left F2, F3, F4 and F5 alone.** All four are recorded in `review.md` as observations with no action; F2 is explicitly for the retrospective. Acting on them here is the "fixing things you noticed on the way" failure this skill names.
+  - **Did not re-run round 1's twelve mutation checks.** They are evidence about behaviour, and `git diff 80040a7..fb9d14a` contains no executable line.
+- **Cross-answer check:** `none`. This execution edited no sentence under `docs/`, and therefore no claim carrying `[src: <ITEM>/Q-nnn]` for a question the stakeholder answered. `lint-answers --changed-since main` → exit 0 over 33 consumed answers and 2 delegations.
+- **Questions raised:** none
+- **Commands:**
+  - `grep -rn "nothing linking\|not linked\|linking them\|no link" envel/ tests/` → exit 0, one hit, `envel/summary.py:123` — the line F1 names and no other
+  - the same grep after the change → exit 1, no output
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 231 tests … OK` (run twice: before the commit and again on the branch head)
+  - `python3 -m compileall -q envel tests` → exit 0
+  - `.claude/agile-skills/scripts/validate-workspace` → exit 0, *"checked 7 item(s), 12 document(s); 0 errors, 0 warnings"*
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0006 wi/WI-0006` → exit 0, *"all 7 commit(s) on main..wi/WI-0006 name WI-0006"*
+  - `.claude/agile-skills/scripts/lint-answers --changed-since main` → exit 0
+  - `.claude/agile-skills/scripts/lint-claims --changed-since main --plan-documents WI-0006` → exit 0
+  - `.claude/agile-skills/scripts/lint-documents --rule document-writes-are-declared --item WI-0006 --changed-since main` → exit 0
+  - `git diff 80040a7..fb9d14a --stat -- envel/summary.py` → `1 file changed, 5 insertions(+), 3 deletions(-)`
+  - `envel new`/`add`/`spend`×2/`move` into a fresh `ENVEL_FILE`, then the store read back → the two `move` entries carry `ref` 4 and 5, `next-ref` 6, and no pairing field
+  - `git commit` ×2 → `fb9d14a` (the docstring), `226ceb5` (the report)
+- **Gates:**
+  - `tests-pass` → **pass** (`python3 -m unittest discover -s tests -t .` on the branch head, exit 0, 231 tests)
+  - `lint-clean` → **pass** (`python3 -m compileall -q envel tests`, exit 0)
+  - `workspace-valid` → **pass** (exit 0, 0 errors, 0 warnings — **not forced this round**: no document was written, so no version row for `doc.changelog.no-execution` to fire on)
+  - `every-criterion-has-a-test` → **pass** (round 1's `## Acceptance criteria evidence` table, still current — this round's diff has no executable line and the same 231 tests pass)
+  - `commits-reference-the-item` → **pass** (`check-commit-refs`, all 7 commits on `main..wi/WI-0006` name WI-0006)
+  - `no-unplanned-scope` → **pass** (, advisory (one hunk, traced to `review.md` F1, which is the send-back reason in the `in-review → in-progress` history row))
+  - `cross-answer-consistency` → **pass** (`lint-answers --changed-since main`, exit 0, 33 answers and 2 delegations)
+  - `claims-are-sourced` → **pass** (`lint-claims --changed-since main --plan-documents WI-0006`, exit 0. **Scope, from its own output:** *"11 document(s) in 11 path(s) in scope — 6 path(s) differ from main (52a6237) under docs, plus 11 document(s) named by WI-0006's plan; citations: every markdown file in the workspace"*)
+  - `document-writes-are-declared` → **pass** (`lint-documents --rule document-writes-are-declared --item WI-0006 --changed-since main`, exit 0; *"6 document(s) written under docs/ on this branch; 11 named by the plan"*)
+- **Artifacts:**
+  - `envel/summary.py` — `entry_kind`'s docstring, commit `fb9d14a`
+  - `tracker/items/WI-0006/artifacts/impl-report.md` — a `# Round 2` section appended, commit `226ceb5`
+  - branch `wi/WI-0006`, commit range `80040a7..226ceb5` for this round; `main..wi/WI-0006` is seven commits
+- **Status:** `in-progress` → `verifying`
+- **Result:** `review-close`'s single finding is fixed. `envel/summary.py`'s `entry_kind` no longer tells its reader that nothing links a move's two entries — the claim this same item struck from `ADR-0007` as an erratum — and now says what `ADR-0007` and `overview.md` say: no field names the pair, the halves take consecutive references since `ADR-0010`, no code reads that adjacency as a link, and the sign is read because it is what the function needs. No behaviour changed, no test changed, no document changed; all nine gates pass on the branch head with none forced.
+
+## 2026-09-11T09:10:07Z — verify v0.5.1 — qa-engineer
+
+- **Item:** WI-0006
+- **Trigger:** `verifying` — `implement` closed the send-back at 2026-09-11T08:53:03Z; `next` dispatched `verify` as the owner of `verifying`.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md` — the fifteen criteria, read **before** the implementation report
+  - `tracker/items/WI-0006/history.md` — ten rows; the send-back and the fix are the last two
+  - `tracker/items/WI-0006/artifacts/review.md` — F1, the finding this round exists to re-check, and F2–F5
+  - `tracker/items/WI-0006/artifacts/plan.md` — the 29-row invalidation set, `deliverable-documents: none`, the ten binding ADRs
+  - `tracker/items/WI-0006/artifacts/impl-report.md` — round 2's section, checked rather than trusted
+  - `tracker/items/WI-0003/item.md` — AC1 to AC14, which this item's AC14 has as its subject
+  - all ten ADRs under `docs/architecture/adr/`, each `## Decision` in full; `ADR-0007` also `## Consequences` and both `## Corrections` entries
+  - `docs/architecture/overview.md` and `docs/product/vision.md` — the sentences the invalidation set names
+  - **the code at `226ceb589166acd9ff8dc438c5b6b1e0cd6ad47d`**, the branch head: `envel/summary.py`, `envel/store.py`, `envel/envelopes.py`, `envel/cli.py`, `bin/envel`, `envel/__main__.py`, and `tests/test_cli.py` and `tests/test_entries.py` where a named test is cited
+  - `tracker/project.yaml` — the test and lint commands
+- **Decisions:**
+  - **Re-verified rather than re-read.** The diff since the previously verified commit is one docstring hunk, and that is evidence, not a licence: all fifteen criteria were demonstrated again by commands run here, twelve mutations were applied at this head, and the ten ADRs and twenty-nine invalidation entries were decided again from what they cite. Nothing in this report is carried on the previous round's authority.
+  - **Checked the send-back's fix as a claim, not as a diff.** A docstring has no test. Its three sentences were each checked against what they restate — `ADR-0007` `## Decision`, `overview.md` `## The data` — and against a store the tool wrote: two move halves with refs 4 and 5, opposite `cents`, the same `on` and `at`, and no pairing field; and `grep` for arithmetic on `ref` returning nothing. Recorded in the ADR-0007 conformance row and in `## Defects found`.
+  - **AC14 was read as well as run, and there is no non-intersection to state.** `WI-0003`'s AC1–AC14 each got a verdict from their own sentence. The nine-invocation `main`-versus-branch comparison is the evidence for the reading, and `tests/test_cli.py` `test_one_store_listed_and_then_summarised_gives_both_answers` exercises both commands over one store — so the covering case was added by `implement`, not waived.
+  - **The AC14 comparison had to use a format-1 store.** `main` refuses a format-2 document outright, so comparing over a store this branch had written would have compared a refusal with a listing. The store was built with `main`'s own binary and each side read a pristine copy; stdout, stderr, exit code and the file's md5 were all compared.
+  - **M1 is declared, not hidden.** Deriving a reference from `len(entries) + 1` still passes every test, because nothing removes an entry yet. M1b — a constant reference — does fail, so the tests do hold references to being distinct and counted across envelopes. The gap is `WI-0005`'s and is in `## Not verified, and why`; it is the same limit the previous round found, re-established here rather than copied.
+  - **No bug filed and nothing sent back.** The one finding this round had to re-check is fixed; F2–F5 of `review.md` are recorded there as observations with no action, and none of them is a failure of this item's own criteria.
+  - **I wrote no document.** `docs/` is byte-identical to the previously verified commit and this execution changed nothing under it.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 -m unittest discover -s tests -t .` → exit 0, `Ran 231 tests … OK`
+  - `python3 -m compileall -q envel tests` → exit 0
+  - `.claude/agile-skills/scripts/validate-workspace` → exit 0, 0 errors, 0 warnings
+  - `.claude/agile-skills/scripts/lint-documents --rule adr-conformance-is-decided --item WI-0006` → exit 0, *"10 binding ADR(s), 10 conformance row(s)"*
+  - `.claude/agile-skills/scripts/lint-documents --rule invalidation-set-is-disposed --item WI-0006` → exit 0, *"29 invalidation entr(y/ies) against 29 row(s)"*
+  - `git diff --stat 00b2b31..HEAD -- envel/ tests/ bin/` → `envel/summary.py | 8 +++++---`, one file; `-- docs/` → empty
+  - `envel new`/`add`/`spend`/`move` ×11 into a scratch `ENVEL_FILE`, then `envel entries` in fifteen forms — the four of AC1, the two of AC6, the two of AC11, the six refusals of AC12/AC13, and `entries GROCERIES`
+  - `envel list`, `envel summary`, `envel summary --month 2026-08`, `envel summary 2026-08 extra` → the AC9 cross-check and `WI-0003` AC1 and AC14
+  - `python3 bin/envel entries …` and `python3 -m envel entries …` → stdout md5 identical, `0be164c3…`
+  - a format-1 store built with `main`'s binary, then nine paired invocations of `summary`/`list` on each side from a pristine copy → all nine identical in stdout, stderr, exit code and the store file's md5
+  - twelve source mutations, each followed by `python3 -m unittest tests.test_entries tests.test_cli` (115 tests) and a restore → eleven FAILED, one OK (M1); `git status --short envel/` empty afterwards
+  - enumerations: `grep -rn "100\b\|Decimal\|round(" envel/` outside `money.py` → exit 1; `grep -rn "ENVEL_FILE\|XDG_DATA_HOME\|\.local\|pathlib\|expanduser" envel/` outside `store.py` → exit 1; `grep -n "print(\|sys\.exit" envel/*.py` → 4 sites, all in or above `cli`; `grep -rn "store\.save" envel/*.py` → 1 site under `if result.changed`; `grep -rn "parse_month" envel/` → `dates.py:67` and two call sites in `cli.py`; every import in `envel/*.py` and `tests/*.py`; `git diff main..HEAD -- envel/ | grep -E "^[+-](import|from)"` → exit 1
+  - `grep -rn "nothing linking\|not linked\|linking them\|no link" envel/ tests/` → exit 1, no output; `grep -rn "ref" envel/ | grep -E "ref *[-+] *1"` → exit 1, no output
+  - `python3 -m unittest tests.test_summary` → exit 0, `Ran 27 tests … OK`; `git diff --stat main..HEAD -- tests/test_summary.py` → empty
+- **Gates:**
+  - `tests-pass` → **pass** (exit 0, 231 tests, at the branch head)
+  - `lint-clean` → **pass** (exit 0)
+  - `workspace-valid` → **pass** (exit 0, 0 errors, 0 warnings)
+  - `every-criterion-independently-checked` → **pass** (the `## Criteria` table: fifteen rows, each a command run here with its actual output; no row cites `impl-report.md`)
+  - `negative-cases-exercised` → **pass** (fifteen conditions triggered and listed, including the three boundaries: `--month 2026-09` not refused, `GROCERIES` accepted, and a format-1 store read without being rewritten)
+  - `a-criterion-about-criteria-is-read` → **pass** (`WI-0003` AC1–AC14 named by ID with a per-criterion verdict; the nine-invocation comparison as evidence; **no non-intersection to state**, because `test_one_store_listed_and_then_summarised_gives_both_answers` covers both commands over one store)
+  - `adr-conformance-is-decided` → **pass** (`lint-documents` exit 0, 10 rows for 10 binding ADRs, every verdict quoting a `## Decision` clause with a file and line)
+  - `invalidation-set-is-disposed` → **pass** (`lint-documents` exit 0, 29 rows for 29 entries; the seventeen `verified-still-true` reopened here, the two `owned-by-ending` checked byte-identical to `main` and left alone)
+  - `tests-would-fail-without-the-change` → **pass** (, advisory, with one declared exception (twelve mutations, eleven caught; M1 declared under `## Not verified, and why`))
+- **Artifacts:**
+  - `tracker/items/WI-0006/artifacts/verify-report.md` — rewritten for this round, `Verified-commit: 226ceb589166acd9ff8dc438c5b6b1e0cd6ad47d`
+  - `tracker/items/WI-0006/item.md` — the fifteen ticks stand, re-earned by the commands in this report; none was added or removed
+  - no bug item filed, no document written
+- **Status:** `verifying` → `in-review`
+- **Result:** **Pass.** The send-back's single finding is fixed: `envel/summary.py` no longer tells its reader that nothing links a move's two entries, and what it says instead is each claim's own wording from `ADR-0007` and `overview.md`, checked against a store the tool wrote. All fifteen criteria were demonstrated again at the new head, eleven of twelve mutations were caught, ten ADRs conform and twenty-nine invalidation entries are disposed. No defect, no bug, no document written.
+
+## 2026-09-11T09:15:19Z — review-close v0.14.1 — reviewer
+
+- **Item:** WI-0006
+- **Trigger:** `in-review` — `verify` passed the item at 2026-09-11T09:10:07Z after the send-back; `next` dispatched `review-close` as the owner of `in-review`. This is the **second** review of this item.
+- **Inputs read:**
+  - `tracker/items/WI-0006/item.md`, `history.md` (11 rows) and `journal.md` (11 entries, in full)
+  - `artifacts/plan.md` — the 29-row invalidation set, `deliverable-documents: none`, ten binding ADRs
+  - `artifacts/impl-report.md` — both rounds; `artifacts/verify-report.md` — rewritten for round 2 at `226ceb58`
+  - `artifacts/review.md` as it stood at `c7d4778`, the rejection this round answers
+  - all four questions on the item
+  - **the diff `main..wi/WI-0006`**, hunk by hunk — 5 files under `envel/`, 4 under `tests/`, 6 under `docs/` — and `c7d4778..HEAD`, this round's whole change, one hunk
+  - `docs/architecture/adr/ADR-0001` … `ADR-0010`; `ADR-0007` in full, `## Decision`, `## Consequences`, `## Change log` and both `## Corrections`
+  - `docs/architecture/overview.md` `## The data` and `docs/product/vision.md`
+  - `tracker/items/WI-0005/item.md` AC13, which `ADR-0007`'s amended `## Decision` makes a claim about
+  - `envel/dates.py`, `envel/envelopes.py`, `envel/store.py`, `envel/summary.py` — for the source-comment audit F2 asked for
+- **Decisions:**
+  - **Accepted, and the send-back's finding was checked three ways rather than taken on sight.** As a diff (`c7d4778..HEAD`, one hunk, five comment lines); as three separate claims each against `ADR-0007` `## Decision`, `overview.md` `## The data` and a store the tool wrote; and as a grep over the whole of `envel/` and `tests/` for the struck wording, which returns nothing.
+  - **Deepened the audit into source comments, which is F2's subject.** The first review found F1 only by reading the diff, and nothing in the pipeline reads comments for stale claims. So I audited every absolute claim this branch added to a comment or docstring under `envel/` — six of them, listed in `review.md` — rather than only the one that was sent back. All six hold. The nearest miss was `envel/dates.py`'s *"the only place text and calendar days meet"*, which `envel/envelopes.py:33` appears to falsify until the module docstring's own next sentence scopes it to `datetime.date` conversions; `now()` builds a `datetime.datetime`. True as scoped, and the scoping sentence predates this branch.
+  - **F2 stays an observation with no owner, and goes to the retrospective.** The remedy is a gate, not a project change: this review compensated by hand, which is a person doing a gate's job. It has no owner inside this project, so it is disposed `no-owner` and named for `retro`.
+  - **Seven accepted gaps, each made dispatchable in this execution.** Two are `WI-0005`'s — AC4's removal promise, which `verify`'s M1 shows is not falsifiable until something removes an entry, and `envel fix`/`envel remove` themselves — and `WI-0005` already records `depends-on: WI-0006`, so closing this item is what puts it on the board. The other five are limitations recorded rather than work deferred and carry `no-owner`.
+  - **D7 answered by enumeration, not memory.** `ls docs/**/*.md` is twelve files; the set names eleven and `ADR-0010` is the twelfth, written by this item's plan. I read `ADR-0010` against the delivered code. Nothing under `docs/` is outside the set plus `ADR-0010`.
+  - **Round 2 wrote nothing under `docs/` and that is correct.** The two documents the corrected docstring restates were repaired in round 1 and are already `to-update` rows; the defect was that the source did not follow them.
+  - **No bug filed and nothing sent back.** F3, F4 and F5 are observations the previous review recorded and this one re-confirmed; none is a failure of this item's own criteria and none belongs to another item's delivered behaviour.
+  - **Merge order followed as written:** trial-merged into a **detached** worktree of `main`, ran the suite on the merge result, discarded it, confirmed `git rev-parse main` still `52a6237`, closed the item, then merged for real and recorded the sha with `scripts/record-merge`.
+- **Cross-answer check:** `none`. This execution consumed no human answer — the item's four questions were answered and propagated at refinement, and nothing in this review rests on a new reply. `lint-answers --context work-item --changed-since main` → exit 0 over 33 consumed answers and 2 delegations. The one answer this item spends under delegation, `WI-0003/Q-004`, is recorded as F4 and goes in front of the stakeholder at the ending by gate rather than by anyone remembering.
+- **Questions raised:** none
+- **Commands:**
+  - `.claude/agile-skills/scripts/check-verify-freshness WI-0006 wi/WI-0006` → exit 0, *"verified at 226ceb58; wi/WI-0006 has moved to 9aec7c11 but only the record changed (5 file(s) under tracker/ or docs/)"*; confirmed by `git diff --name-only 226ceb5..HEAD -- ':!tracker' ':!docs'` → empty
+  - `.claude/agile-skills/scripts/check-commit-refs WI-0006 wi/WI-0006` → exit 0, *"all 9 commit(s) on main..wi/WI-0006 name WI-0006"*
+  - `.claude/agile-skills/scripts/lint-claims --context work-item --changed-since main` → exit 0
+  - `.claude/agile-skills/scripts/lint-answers --context work-item --changed-since main` → exit 0
+  - `.claude/agile-skills/scripts/lint-documents --rule accepted-gaps-are-dispatchable --item WI-0006` → exit 0, *"7 accepted gap(s)"*
+  - `.claude/agile-skills/scripts/lint-documents --rule engagement-state-is-restated --item WI-0006 --context work-item` → exit 0, *"NOT APPLICABLE — an item close is not an ending"*
+  - `.claude/agile-skills/scripts/check-epic-signoff WI-0006` → exit 0, *"WI-0006 is a 'work-item', not an epic"*
+  - `.claude/agile-skills/scripts/engagement-state EP-001` → **active**, *"1 silent round(s) recorded against a threshold of 3 … still in flight: WI-0005, WI-0006"*
+  - `.claude/agile-skills/scripts/validate-workspace` → exit 0, 0 errors, 0 warnings
+  - `git rev-parse main` **before** the trial → `52a62372…`; `git worktree add --detach /tmp/wi6-trial main`; `git -C /tmp/wi6-trial merge --no-ff wi/WI-0006` → exit 0, head `4615396956…`; `python3 -m unittest discover -s tests -t .` **inside the trial** → exit 0, `Ran 231 tests … OK`; `python3 -m compileall -q /tmp/wi6-trial/envel /tmp/wi6-trial/tests` → exit 0; `git worktree remove --force /tmp/wi6-trial`; `git rev-parse main` **after** → `52a62372…`, **unchanged**
+  - the source-comment audit: `grep -rn "nothing linking\|not linked\|linking them\|no link" envel/ tests/` → exit 1; `grep -rn "ref" envel/ | grep -E "ref *[-+] *1"` → exit 1; `grep -rn "\b10\b" envel/*.py` outside `dates.py` → exit 1; `grep -rn "store\.save" envel/*.py` → one site; `grep -rn "datetime\|strftime\|strptime" envel/*.py` outside `dates.py` → `envelopes.py:10` and `:33` only
+  - re-ran three of `verify`'s criteria myself: AC9's arithmetic, AC12's refusal and AC13's five refusals
+  - `python3 -m unittest discover -s tests -t .` on the branch head → exit 0, 231 tests; `python3 -m compileall -q envel tests` → exit 0
+- **Gates:**
+  - `definition-of-done` → **pass** (D1–D13 walked one at a time in `review.md` `## Definition of Done`, each with its own result and evidence; D7 confirmed against the plan's enumerated set, D13 by `ls docs/architecture/adr/*.md` being ten files and the list naming all ten)
+  - `engagement-state-is-restated` → **pass** (applicable — an item close.** `lint-documents` says so in those words, and neither `## Engagement state` section was touched: both are byte-identical to `main`, md5 `6fd22866…` and `4c18d819…`)
+  - `accepted-gaps-are-dispatchable` → **pass** (7 gaps, each disposed in this execution: two `item-filed:WI-0005`, five `no-owner`; `lint-documents` exit 0)
+  - `verification-postdates-the-code` → **pass** (`check-verify-freshness` exit 0; verified at `226ceb58`, and the only movement since is five files under `tracker/`)
+  - `commits-reference-the-item` → **pass** (all 9 commits on `main..wi/WI-0006` name WI-0006)
+  - `tests-pass-on-the-merge-result` → **pass** (the suite run **inside the trial worktree** at merge head `4615396956…`: exit 0, 231 tests; `compileall` exit 0 there too. The trial was then discarded and `main` confirmed unmoved)
+  - `workspace-valid` → **pass** (exit 0, 0 errors, 0 warnings)
+  - `record-is-reconstructible` → **pass** (. From the tracker, `docs/` and `git log` alone: **what was built** — `envel entries`, and a stored reference on every entry (`plan.md` `## Problem`, `impl-report.md` `## What was built`); **which skill decided what** — `refine` the fifteen criteria and the command surface under the `WI-0003/Q-004` delegation, `plan` `ADR-0010` and the nine steps, `implement` the code and the six document repairs, `verify` the evidence and the mutations, `review-close` the rejection at `c7d4778` and this acceptance; **what questions arose** — four, all answered by the stakeholder and propagated, listed in `review.md`; **what verification found** — fifteen passes, no defect, and the four declared gaps in `## Not verified, and why`)
+  - `claims-are-sourced` → **pass** (. **Scope, from its own output:** *"checked absolute claims: 6 document(s) in 6 path(s) differ from main (52a6237) under docs; citations: every markdown file in the workspace"* — the six documents this change wrote, which is the window that could have found something)
+  - `cross-answer-consistency` → **pass** (`lint-answers --context work-item --changed-since main` exit 0; *"checked 33 consumed human answer(s) and 2 delegation(s)"*)
+  - `epic-sign-off` → **pass** (, not engaged** (`check-epic-signoff WI-0006` → *"WI-0006 is a 'work-item', not an epic — the termination gate applies to an engagement's ending only. PASS."* `engagement-state EP-001` reports **active**, with `WI-0005` still in flight, so this close ends no engagement))
+- **Artifacts:**
+  - `tracker/items/WI-0006/artifacts/review.md` — rewritten for this round: what was examined, the source-comment audit, the eight-claim D12 audit, D1–D13, the invalidation confirmation, five findings and seven accepted gaps
+  - `tracker/items/WI-0006/item.md` — closed, `outcome: delivered`, written by the transition
+  - no bug item, no question, no document under `docs/` touched
+- **Status:** `in-review` → `done`
+- **Result:** **Accepted and merged.** The one finding that sent this item back is fixed, and the fix was checked as a claim rather than on sight: `envel/summary.py` now says what `ADR-0007` and `overview.md` say about a move's two halves, and the struck sentence appears nowhere in `envel/` or `tests/`. Fifteen criteria demonstrated at this head, eleven of twelve mutations caught, ten ADRs conforming, twenty-nine invalidation entries disposed, both engagement-state sections untouched, and the suite green on the merge result. Seven gaps accepted, two of them dispatched to `WI-0005`, which this close puts on the board.
