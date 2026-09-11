@@ -62,3 +62,5 @@ Per-turn `*.stream.jsonl` transcripts are not banked — 35 of them, large, and 
 
 This directory is read-only history. Corrections to anything stated here belong in the findings
 ledger, not in these files.
+
+Retro added in this follow-up commit after the owner's held-out review (see conversation record 2026-09-11); note: the retro's journal entry in EP-001/journal.md was inadvertently banked with the trail, partially breaching the embargo — six of ten proposal classifications were visible to the owner pre-review; scoring carries that footnote.
