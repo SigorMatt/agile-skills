@@ -81,7 +81,13 @@ TERMINAL_STOPS = {
     "blocked-no-recourse": "the run reached an impasse with nothing left to ask",
     "turn-budget": "the configured turn budget is spent and the engagement is at an ending",
     "contamination": "a turn read or wrote outside the boundary; --reaudit is the recovery",
-    "validator-failed": "the workspace no longer validates; fix it, then --fresh or --reaudit",
+    # H-022: this stop is now reached only after the repair allowance in `decide` is spent —
+    # a worker that was given N consecutive turns whose only job was making the workspace
+    # validate, and did not. The defect defeated the thing best placed to fix it, which is a
+    # finding about the toolkit rather than an interruption of the run.
+    "validator-failed": "the workspace still did not validate after its repair turns were "
+                        "spent; the record needs a person, and --fresh starts a new run "
+                        "against the same workspace",
     "stalled": "three turns changed nothing",
     "abandoned": "the stakeholder went silent past the threshold and the engagement ended as E4",
 }
@@ -225,6 +231,17 @@ def prompt_text(name):
         version = first.rstrip(" -->").split("version", 1)[1].strip()
     body = raw.split("\n---\n", 1)[1] if "\n---\n" in raw else raw
     return body.strip(), version
+
+
+def worker_prompt_name(job):
+    """Which instructions a worker turn is given.
+
+    A repair turn is not a worker turn with a note attached: its only job is making
+    `validate-workspace` green, and it must not advance the work (H-022). Separate prompt files
+    mean the per-turn `prompt-version` in the iteration log says *which* instructions ran, so a
+    reader can tell a repair turn from an ordinary one without opening a transcript.
+    """
+    return "repair-turn" if job == "repair" else "worker-turn"
 
 
 def fill(template, values):
@@ -814,6 +831,10 @@ class Run:
         self.driver_pid_path = os.path.join(self.run_dir, "driver.pid")
         self.args = args
         self.max_turns = args.max_turns or self.config.get("max-turns", 24)
+        # H-022: how many consecutive turns the worker gets to make a broken workspace validate
+        # again before the stop stands. Read exactly the way --max-turns is read, so no existing
+        # iteration config has to carry the key to get the allowance.
+        self.repair_turns = args.repair_turns or self.config.get("repair-turns", 2)
         self.worker_model = args.worker_model or self.config.get("worker-model", "opus")
         self.sim_model = args.sim_model or self.config.get("sim-model", "sonnet")
         # H-006: a turn is "as much as fits" unless something says otherwise, and iteration 1's
@@ -870,11 +891,17 @@ class Run:
 
     # -- turns ---------------------------------------------------------------------------
 
-    def worker_turn(self, number):
-        body, version = prompt_text("worker-turn")
-        prompt = fill(body, {"PROJECT_DIR": self.project_dir, "TURN": number,
-                             "STATUS_FILE": STATUS_FILE,
-                             "SKILLS_PER_TURN": self.skills_per_turn})
+    def worker_turn(self, number, job=None):
+        name = worker_prompt_name(job)
+        body, version = prompt_text(name)
+        values = {"PROJECT_DIR": self.project_dir, "TURN": number,
+                  "STATUS_FILE": STATUS_FILE, "SKILLS_PER_TURN": self.skills_per_turn}
+        if name == "repair-turn":
+            values.update({"VALIDATOR_ERROR": self.state.get("repair-last-detail", ""),
+                           "ORIGINAL_ERROR": self.state.get("repair-original-detail", ""),
+                           "ATTEMPT": self.state.get("repair-turns-used", 1),
+                           "REPAIR_TURNS": self.repair_turns})
+        prompt = fill(body, values)
         started_at = time.time()
         argv = ["claude", "-p", prompt,
                 "--model", self.worker_model,
@@ -885,7 +912,9 @@ class Run:
             argv += ["--max-budget-usd", str(self.args.max_budget_usd)]
         transcript = os.path.join(self.turns_dir, f"{number:03d}-worker.stream.jsonl")
         say(f"turn {number} — worker ({self.worker_model}, "
-            f"{self.args.worker_permission_mode})")
+            f"{self.args.worker_permission_mode}"
+            + (f", repair {values['ATTEMPT']}/{self.repair_turns}"
+               if name == "repair-turn" else "") + ")")
         outcome = stream_turn(argv, self.project_dir, transcript, self.args.turn_timeout,
                               self.pid_path)
         uses, fields = turn_result_fields(transcript)
@@ -901,7 +930,8 @@ class Run:
             say(f"    ! turn {number} wrote no status file of its own; whatever is on disk is "
                 f"older than this turn or is stamped for another one, and is not being "
                 f"attributed to it")
-        return {"role": "worker", "prompt-version": version, "model": self.worker_model,
+        return {"role": "worker", "job": job, "prompt": name,
+                "prompt-version": version, "model": self.worker_model,
                 "transcript": os.path.relpath(transcript, self.run_dir),
                 "outcome": outcome, "result": fields, "violations": violations,
                 "status-written": bool(status_text),
@@ -1061,7 +1091,8 @@ class Run:
             self.log({"event": "start", "at": now(), "iteration": self.iteration,
                       "first-role": role, "first-job": job, "first-job-because": why,
                       "project": self.project_dir, "config": self.config,
-                      "max-turns": self.max_turns, "worker-model": self.worker_model,
+                      "max-turns": self.max_turns, "repair-turns": self.repair_turns,
+                      "worker-model": self.worker_model,
                       "sim-model": self.sim_model,
                       "worker-permission-mode": self.args.worker_permission_mode})
         else:
@@ -1104,7 +1135,19 @@ class Run:
 
             number = self.state["turn"] + 1
             role = self.state["next-role"]
-            if role == "worker":
+            if role == "worker" and self.state.get("next-job") == "repair":
+                # H-022, against H-004. The reschedule below exists because a worker turn taken
+                # with unanswered human questions open halts at orchestrator step 2 having done
+                # nothing. A repair turn does not run the orchestrator at all — its only job is
+                # making `validate-workspace` green, which no stakeholder answer can help with —
+                # so the premise of the reschedule is false here. Handing this turn to the sim
+                # would spend one of a bounded number of repair turns on something that cannot
+                # repair anything, and hand the repair instruction to nobody: `decide` re-derives
+                # `next-job` from the sim turn, and the repair job would be lost with it.
+                say("    a repair turn is owed and it is not reschedulable — no answer makes a "
+                    "broken workspace validate")
+                self.log({"event": "repair-keeps-the-turn", "at": now(), "turn": number})
+            elif role == "worker":
                 # H-004: on a start or a resume, next-role comes from state rather than from a
                 # decision, so the driver used to walk a worker turn straight into unanswered
                 # human questions. The orchestrator correctly halts at step 2 and the whole turn
@@ -1139,7 +1182,7 @@ class Run:
             self.save_state()
 
             if role == "worker":
-                record, _ = self.worker_turn(number)
+                record, _ = self.worker_turn(number, self.state.get("next-job"))
             else:
                 record, _ = self.sim_turn(number, self.state.get("next-job") or "answer")
 
@@ -1264,6 +1307,9 @@ class Run:
     def decide(self, role, observed, record):
         """What happens after a turn — the stop conditions of DESIGN §2, computed from disk."""
         if role == "sim":
+            # A sim turn neither burns nor resets the repair allowance below: the contamination
+            # boundary confines the stakeholder to answers and requests, so it can neither break
+            # the record nor repair it. "Consecutive" counts worker turns.
             return {"stop": False, "next-role": "worker", "next-job": None}
 
         report = record.get("worker-report") or {}
@@ -1272,10 +1318,60 @@ class Run:
             say(f"    ! worker reported an unknown stop_reason: {reported!r}")
 
         if observed["validator-exit"] != 0:
-            return {"stop": True, "reason": "validator-failed",
-                    "detail": "validate-workspace exits "
-                              f"{observed['validator-exit']}: "
-                              f"{' '.join(observed['validator-tail'])}"}
+            # H-022: a fixable record defect is not a verdict on the engagement. Iteration 5 died
+            # here at turn 11 over one prose mention scraped as a citation (F-113) — with all
+            # nineteen of the item's acceptance criteria passing, all seven binding ADRs
+            # conforming and 69 tests green. That stop read a fact about one line of prose as a
+            # verdict on the work, and asked a human to repair a record the worker could have
+            # repaired itself.
+            #
+            # H-010 settled the same question one level up: a budget bounds *work*, not the
+            # engagement. So the worker gets a bounded allowance — N consecutive turns whose only
+            # job is making the workspace validate — and only spending it is terminal. Bounded,
+            # because an unbounded allowance is ADR-0011 Context (b)'s loop in another costume:
+            # try, fail, repeat until the turn budget is gone. Consecutive, because a repair that
+            # worked is progress: N bounds *this* defect, not the run's lifetime supply of them.
+            detail = (f"validate-workspace exits {observed['validator-exit']}: "
+                      f"{' '.join(observed['validator-tail'])}")
+            used = self.state.get("repair-turns-used", 0) + 1
+            self.state["repair-turns-used"] = used
+            self.state["repair-last-detail"] = detail
+            if used == 1:
+                self.state["repair-original-detail"] = detail
+            original = self.state.get("repair-original-detail") or detail
+            if used > self.repair_turns:
+                # The original error is the finding; whatever it exits on now may be a symptom of
+                # the repair. A stop reporting only the last error reports the wrong defect —
+                # and the value of iteration 5's trail is entirely in the first one.
+                self.log({"event": "repair-exhausted", "at": now(), "granted": used - 1,
+                          "allowed": self.repair_turns, "original": original, "last": detail})
+                if original == detail:
+                    said = (f"The error that opened the allowance is the one it still exits on: "
+                            f"{original}")
+                else:
+                    said = (f"The error that opened the allowance: {original}\n"
+                            f"The error it exits on now:           {detail}")
+                return {"stop": True, "reason": "validator-failed",
+                        "detail": f"{self.repair_turns} repair turn(s) did not make the "
+                                  f"workspace validate.\n{said}"}
+            say(f"    the workspace does not validate: {detail}")
+            say(f"    granting repair turn {used} of {self.repair_turns} — the next worker turn's "
+                f"only job is making validate-workspace green, and nothing advances until it is")
+            self.log({"event": "repair-granted", "at": now(), "attempt": used,
+                      "allowed": self.repair_turns, "original": original, "detail": detail})
+            return {"stop": False, "next-role": "worker", "next-job": "repair"}
+
+        if self.state.get("repair-turns-used"):
+            # Green again: the counter resets and the engagement resumes where it was — every
+            # branch below re-derives that from disk, as it does on any other turn.
+            say(f"    the workspace validates again after "
+                f"{self.state['repair-turns-used']} repair turn(s); the engagement resumes")
+            self.log({"event": "repair-succeeded", "at": now(),
+                      "granted": self.state["repair-turns-used"],
+                      "original": self.state.get("repair-original-detail")})
+            self.state["repair-turns-used"] = 0
+            for field in ("repair-original-detail", "repair-last-detail"):
+                self.state.pop(field, None)
 
         if observed.get("open-requests"):
             # F-021: the stakeholder has spoken and nothing has answered yet. `next` routes an
@@ -1395,6 +1491,9 @@ def main() -> int:
     parser.add_argument("--root", default=DEFAULT_ROOT)
     parser.add_argument("--max-turns", type=int, default=None,
                         help="turn budget for the whole iteration (default: the config's)")
+    parser.add_argument("--repair-turns", type=int, default=None,
+                        help="consecutive turns the worker may spend making a broken workspace "
+                             "validate again before the run stops (default: the config's, or 2)")
     parser.add_argument("--console-log", default=None,
                         help="where the driver writes its own console narrative "
                              "(default: <run-dir>/driver-console.log)")

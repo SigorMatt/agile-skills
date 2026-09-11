@@ -5286,6 +5286,25 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
 - Evidence: meta/harness/evidence/iteration-5-envel-abandoned/run/state.json
   (stopped/validator-failed/turn 11).
 - Status: open (question)
+- Status (2026-09-11, META-171): **answered — a fixable record defect is not a verdict on the
+  engagement.** Both readings in the Symptom survive, and the answer keeps both: the run still
+  halts on the defect, but the *worker* is asked to fix it before a human is. On a non-zero
+  `validate-workspace` after a worker turn, `Driver.decide` grants a bounded self-repair
+  allowance — up to N **consecutive** repair turns (`--repair-turns`, else the iteration config's
+  `repair-turns`, else 2) whose only job is making the validator green, given the separate
+  instructions in `harness/prompts/repair-turn.md` and forbidden to advance the work. Green again
+  resets the counter and the engagement resumes where it was, re-derived from disk. N+1
+  consecutive failures stop the run terminal `validator-failed`, with the **original** error
+  preserved in the stop detail beside the last, because the first error is the finding. Repair
+  turns count against the turn budget (they are work — H-010) and are not handed to the sim (no
+  answer makes a broken record validate). Reasoning, including the two derivations the code
+  corrected, in **ADR-0014**; `repair-granted` / `repair-succeeded` / `repair-exhausted` /
+  `repair-keeps-the-turn` in `iteration-log.jsonl`; both paths plus the consecutive boundary
+  tested in `harness/tests/test_harness.py` (`RepairAllowance`). **One limit is deferred rather
+  than hidden:** the driver keeps only the validator's last output line, so the "original error"
+  it preserves is the summary (`1 error, 0 warnings`) and not the offending line — widening
+  `scan_project`'s `validator-tail` changes every stop detail's shape and belongs to its own unit
+  (ADR-0014 Consequences).
 
 ### Correction (2026-09-11): the Symptom's closing parenthesis presupposed toolkit-source citations are currently illegal; twelve resolve in the abandoned workspace today (see F-114's Direction), and the halt-vs-continue question stands independently of F-113's fix.
 

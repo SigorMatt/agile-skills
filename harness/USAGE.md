@@ -85,6 +85,7 @@ Useful flags:
 | `--max-budget-usd X` | per-turn spend cap, passed to `claude` |
 | `--turn-timeout S` | kill a single turn after this many seconds (default 3600) |
 | `--skills-per-turn N` | how many skill executions a worker turn may run before it stops and reports (default: the config's, or 3) |
+| `--repair-turns N` | consecutive turns the worker may spend making a broken workspace validate again before the run stops (default: the config's, or 2) |
 | `--worker-permission-mode` | default `bypassPermissions`; the project is a throwaway |
 | `--fresh` | archive this iteration's **run** — logs, state, transcripts — and start a new one |
 | `--console-log PATH` | where the driver writes its own console narrative (default: `<run-dir>/driver-console.log`) |
@@ -116,6 +117,19 @@ the workspace itself is at an ending. And the budget never overrules the disk �
 terminal ending stops `epic-done` (or `blocked-no-recourse`, or `abandoned`) whatever the counter says, and the
 one closing sim turn is exempt, because it exists for the engagement's benefit rather than the
 budget's (H-010, H-014).
+
+**A fixable record defect is not a verdict on the engagement.** When `validate-workspace`
+exits non-zero after a worker turn, the driver does not stop: it grants a **repair turn** — a
+worker turn given different instructions (`prompts/repair-turn.md`), whose only job is making the
+validator green and which must not advance the work. Up to `--repair-turns` of them *in a row*
+(default 2, or the config's `repair-turns`). A workspace that validates again resets the counter
+and the engagement carries on where it was; spending the allowance stops the run
+`validator-failed`, and that stop detail names **both** the error that opened the allowance and
+the one it still exits on, because the first one is the finding. The events are in
+`iteration-log.jsonl` as `repair-granted`, `repair-succeeded` and `repair-exhausted`, so why a run
+stopped is answerable without opening a transcript. A repair turn is not handed to the sim even
+with human questions open — no answer makes a broken record validate — and it is not exempt from
+the turn budget, because it is work (H-022, H-010).
 
 **Stopping and resuming.** Rerun the same command. The run directory is derived from the
 iteration id and `state.json` says whose turn it is; a turn that was interrupted is simply run
@@ -238,7 +252,7 @@ opposite responses. The driver says which when you rerun.
 | `turn-budget` | **usually resumable** | rerun with a larger `--max-turns` and the run continues in place. Terminal only when the engagement itself is at an ending — then it is the ending, not the budget, that stopped it |
 | `abandoned` | terminal | the stakeholder went silent past the threshold and the engagement ended as E4; read the ending statement and the waiting log |
 | `stalled` | terminal | read the worker's status files in order; this is a finding |
-| `validator-failed` | terminal | the workspace is broken; that is a finding about the toolkit |
+| `validator-failed` | terminal | the workspace is still broken after the worker spent its repair turns on it (§3); a defect the worker could not fix is a finding about the toolkit |
 | `contamination` | terminal | `--reaudit`, below |
 
 A **resumable** stop clears itself on a plain rerun: the driver says which stop it is clearing,

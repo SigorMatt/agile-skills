@@ -486,15 +486,17 @@ class Configuration(unittest.TestCase):
                                     f"{config[key]}.md")
                 self.assertTrue(os.path.isfile(path), f"{name}: missing {path}")
 
-    def test_both_turn_prompts_carry_a_version_and_a_body(self):
-        for name in ("worker-turn", "sim-turn"):
+    def test_every_turn_prompt_carries_a_version_and_a_body(self):
+        for name in ("worker-turn", "sim-turn", "repair-turn"):
             body, version = run_iteration.prompt_text(name)
             self.assertNotEqual(version, "unknown", name)
             self.assertGreater(len(body), 200, name)
             self.assertNotIn("{{", run_iteration.fill(body, {
                 "PROJECT_DIR": "/p", "TURN": 1, "STATUS_FILE": "S.md", "SIM_LOG": "/l",
                 "PERSONA_FILE": "/p.md", "PROBE_FILE": "/q.md", "JOB": "answer",
-                "SKILLS_PER_TURN": 3, "NOW": "2026-08-21T00:00:00Z"}), name)
+                "SKILLS_PER_TURN": 3, "NOW": "2026-08-21T00:00:00Z",
+                "VALIDATOR_ERROR": "e", "ORIGINAL_ERROR": "e", "ATTEMPT": 1,
+                "REPAIR_TURNS": 2}), name)
 
 
 class StopClassification(unittest.TestCase):
@@ -1229,6 +1231,8 @@ class Abandonment(unittest.TestCase):
     def decide(self, observed, fingerprints, record=None):
         run = run_iteration.Run.__new__(run_iteration.Run)
         run.state = {"fingerprints": list(fingerprints)}
+        run.repair_turns = 2
+        run.log = lambda record: None
         return run.decide("worker", observed, record or {"worker-report": {}})
 
     STUCK = ["same", "same", "same"]
@@ -1286,12 +1290,15 @@ class Abandonment(unittest.TestCase):
         self.assertFalse(decision["stop"])
         self.assertEqual(decision["next-role"], "worker")
 
-    def test_a_broken_workspace_is_still_the_first_thing_reported(self):
+    def test_a_broken_workspace_is_still_the_first_thing_the_driver_reacts_to(self):
+        """The validator branch outranks the ending, as it always did. What changed is what it
+        does with the first failure: it grants a repair turn rather than stopping (H-022)."""
         observed = self.observed(self.DECLARED, items=self.E4_RECORD)
         observed["validator-exit"] = 1
         observed["validator-tail"] = ["nope"]
         decision = self.decide(observed, self.STUCK)
-        self.assertEqual(decision["reason"], "validator-failed")
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-job"], "repair")
 
     def test_the_reschedule_guard_reads_the_abandonment(self):
         """The loop's H-004 guard hands a worker turn to the sim when human questions are open.
@@ -1302,6 +1309,201 @@ class Abandonment(unittest.TestCase):
         body = body[:body.index('self.state["repo-snapshot"]')]
         self.assertIn("engagements_abandoned(reading)", body)
         self.assertLess(body.index("if pending and gone:"), body.index("elif pending:"))
+
+
+class RepairAllowance(unittest.TestCase):
+    """H-022: a fixable record defect is not a verdict on the engagement.
+
+    Iteration 5 died at turn 11 because one prose mention of a citation form was scraped as a
+    citation — with every acceptance criterion of the item passing and 69 tests green. The stop
+    asked a human to repair a record the worker could have repaired itself. So the driver now
+    grants a bounded, consecutive allowance of repair turns, and only spending it is terminal.
+
+    Both halves are tested here, because either one alone is satisfiable by a mistake: a driver
+    that never stops, and a driver that never repairs.
+    """
+
+    def driver(self, repair_turns=2, **state):
+        run = run_iteration.Run.__new__(run_iteration.Run)
+        run.state = {"fingerprints": [], **state}
+        run.repair_turns = repair_turns
+        run.logged = []
+        run.log = run.logged.append
+        return run
+
+    @staticmethod
+    def observed(exit_code=0, tail="", **overrides):
+        """A live engagement, with the validator's verdict as the only thing under test."""
+        reading = Abandonment.observed(Abandonment.TICKING, **overrides)
+        reading["validator-exit"] = exit_code
+        reading["validator-tail"] = [tail] if tail else []
+        return reading
+
+    def decide(self, run, observed):
+        return run.decide("worker", observed, {"worker-report": {}})
+
+    def events(self, run):
+        return [entry["event"] for entry in run.logged]
+
+    BROKEN = "validate-workspace: 1 error, 0 warnings"
+    OTHER = "validate-workspace: 2 errors, 0 warnings"
+
+    # -- the recovery path ---------------------------------------------------------------
+
+    def test_the_first_failure_grants_a_repair_turn_instead_of_stopping(self):
+        run = self.driver()
+        decision = self.decide(run, self.observed(1, self.BROKEN))
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-role"], "worker")
+        self.assertEqual(decision["next-job"], "repair")
+        self.assertEqual(run.state["repair-turns-used"], 1)
+        self.assertIn("repair-granted", self.events(run))
+
+    def test_what_a_resume_needs_is_in_the_state_and_not_in_the_driver(self):
+        """`state.json` is the whole of what survives a killed driver, so the count and the
+        original error live there or they do not survive at all."""
+        run = self.driver()
+        self.decide(run, self.observed(1, self.BROKEN))
+        self.assertEqual(run.state["repair-original-detail"].endswith(self.BROKEN), True)
+        self.assertEqual(run.state["repair-last-detail"].endswith(self.BROKEN), True)
+        json.dumps(run.state)  # whatever is stored has to survive the round trip
+
+    def test_a_workspace_that_validates_again_resets_the_counter_and_the_run_continues(self):
+        """The recovery acceptance criterion: no stop, the counter back to zero, and the next
+        step re-derived from disk rather than forced back to the worker."""
+        run = self.driver(**{"repair-turns-used": 1, "repair-original-detail": self.BROKEN,
+                             "repair-last-detail": self.BROKEN})
+        decision = self.decide(run, self.observed(
+            0, **{"unanswered-human-questions": ["EP-001/Q-001"],
+                  "open-human-questions": ["EP-001/Q-001"]}))
+        self.assertFalse(decision["stop"])
+        self.assertEqual(decision["next-role"], "sim")
+        self.assertEqual(run.state["repair-turns-used"], 0)
+        self.assertNotIn("repair-original-detail", run.state)
+        self.assertIn("repair-succeeded", self.events(run))
+
+    def test_an_ordinary_turn_over_a_valid_workspace_says_nothing_about_repairs(self):
+        """Non-vacuity for the reset: the log line only appears when something was repaired."""
+        run = self.driver()
+        self.decide(run, self.observed(0))
+        self.assertEqual(self.events(run), [])
+        self.assertNotIn("repair-turns-used", run.state)
+
+    # -- the exhaustion path -------------------------------------------------------------
+
+    def test_the_allowance_is_exhausted_by_n_plus_one_consecutive_failures(self):
+        run = self.driver(repair_turns=2)
+        first = self.decide(run, self.observed(1, self.BROKEN))
+        second = self.decide(run, self.observed(1, self.BROKEN))
+        third = self.decide(run, self.observed(1, self.BROKEN))
+        self.assertFalse(first["stop"])
+        self.assertFalse(second["stop"])
+        self.assertTrue(third["stop"])
+        self.assertEqual(third["reason"], "validator-failed")
+        self.assertEqual(self.events(run),
+                         ["repair-granted", "repair-granted", "repair-exhausted"])
+
+    def test_the_exhausted_stop_preserves_the_original_error(self):
+        """The first error is the finding; the last one may be a symptom of the repair. A stop
+        that reported only the last would report the wrong defect — which is the whole value of
+        iteration 5's trail."""
+        run = self.driver(repair_turns=1)
+        self.decide(run, self.observed(1, self.BROKEN))
+        stop = self.decide(run, self.observed(1, self.OTHER))
+        self.assertTrue(stop["stop"])
+        self.assertIn(self.BROKEN, stop["detail"])
+        self.assertIn(self.OTHER, stop["detail"])
+        exhausted = [entry for entry in run.logged if entry["event"] == "repair-exhausted"][0]
+        self.assertIn(self.BROKEN, exhausted["original"])
+        self.assertIn(self.OTHER, exhausted["last"])
+
+    def test_a_success_between_two_failures_gives_the_second_a_fresh_allowance(self):
+        """What "consecutive" buys: N bounds this defect, not the run's lifetime supply of
+        them. Under a lifetime counter the last decision here would be the stop."""
+        run = self.driver(repair_turns=1)
+        self.decide(run, self.observed(1, self.BROKEN))
+        self.decide(run, self.observed(0))
+        again = self.decide(run, self.observed(1, self.OTHER))
+        self.assertFalse(again["stop"])
+        self.assertEqual(again["next-job"], "repair")
+        self.assertEqual(run.state["repair-turns-used"], 1)
+        self.assertIn(self.OTHER, run.state["repair-original-detail"])
+
+    def test_a_sim_turn_neither_burns_nor_resets_the_allowance(self):
+        """The contamination boundary confines the sim to answers and requests: it can neither
+        break the record nor repair it, so "consecutive" counts worker turns."""
+        run = self.driver(**{"repair-turns-used": 1})
+        decision = run.decide("sim", self.observed(1, self.BROKEN), {})
+        self.assertFalse(decision["stop"])
+        self.assertEqual(run.state["repair-turns-used"], 1)
+        self.assertEqual(self.events(run), [])
+
+    # -- how many, and what the turn is told ---------------------------------------------
+
+    def test_the_allowance_defaults_to_two_and_no_config_has_to_carry_it(self):
+        run = run_iteration.Run(self.args(iteration="iteration-5-envel"))
+        self.assertEqual(run.repair_turns, 2)
+        self.assertNotIn("repair-turns", run.config)
+
+    def test_the_config_and_then_the_flag_win_over_the_default(self):
+        with mock.patch.object(run_iteration, "load_iteration",
+                               lambda ident: {"id": ident, "project": "p", "repair-turns": 5}):
+            self.assertEqual(run_iteration.Run(self.args()).repair_turns, 5)
+            self.assertEqual(run_iteration.Run(self.args(repair_turns=1)).repair_turns, 1)
+
+    @staticmethod
+    def args(**overrides):
+        fields = {"iteration": "iteration-5-envel", "root": "/tmp/nowhere", "max_turns": None,
+                  "repair_turns": None, "worker_model": None, "sim_model": None,
+                  "skills_per_turn": None}
+        fields.update(overrides)
+        return argparse.Namespace(**fields)
+
+    def test_a_repair_turn_gets_its_own_instructions(self):
+        self.assertEqual(run_iteration.worker_prompt_name("repair"), "repair-turn")
+        for job in (None, "", "answer", "closing"):
+            self.assertEqual(run_iteration.worker_prompt_name(job), "worker-turn", job)
+
+    def test_the_repair_prompt_says_its_only_job_and_forbids_advancing_the_work(self):
+        body, _ = run_iteration.prompt_text("repair-turn")
+        self.assertIn("validate-workspace", body)
+        self.assertIn("Do not advance the work", body)
+        self.assertIn("/next", body)
+        self.assertLess(body.index("Do not advance the work"), body.index("/next"))
+
+    # -- the two places the loop, not the decision, has to get right ----------------------
+
+    def loop_body(self, start, end):
+        source = open(os.path.join(HARNESS, "run_iteration.py"), encoding="utf-8").read()
+        body = source[source.index(start):]
+        return body[:body.index(end)]
+
+    def test_a_repair_turn_is_not_rescheduled_to_the_sim(self):
+        """H-004 hands a worker turn to the sim when human questions are open, because that turn
+        would halt at orchestrator step 2 having done nothing. A repair turn does not run the
+        orchestrator, so the premise is false — and a sim turn here would spend one of a bounded
+        number of repair turns without repairing anything."""
+        body = self.loop_body('if role == "worker" and self.state.get("next-job") == "repair"',
+                              'self.state["repo-snapshot"]')
+        self.assertLess(body.index("repair-keeps-the-turn"),
+                        body.index("# H-004: on a start or a resume"))
+        self.assertIn('elif role == "worker":', body)
+
+    def test_repair_turns_are_not_exempt_from_the_turn_budget(self):
+        """A repair turn is work, and a budget bounds work (H-010). The closing turn is exempt
+        for a different reason — it exists for the engagement's benefit rather than the
+        budget's, it is one turn, and it is given once — and that reason does not reach here."""
+        budget = self.loop_body("while True:", 'number = self.state["turn"] + 1')
+        self.assertIn('== "closing"', budget)
+        self.assertNotIn("repair", budget)
+
+    def test_the_terminal_recovery_sentence_describes_a_spent_allowance(self):
+        """The stop it describes now only happens after the allowance is gone."""
+        sentence = run_iteration.TERMINAL_STOPS["validator-failed"]
+        self.assertIn("repair turns were spent", sentence)
+        self.assertNotIn("--reaudit", sentence)
+        self.assertFalse(run_iteration.stop_is_resumable(
+            "validator-failed", self.observed(1, self.BROKEN)))
 
 
 # =============================================================================================

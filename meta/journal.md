@@ -6898,3 +6898,65 @@ recall is a reading, not a number, and the report says which.
   the header), `adapters/claude-code/dist/` (re-rendered), `meta/findings/FINDINGS.md` (F-114's
   placement half appended — the finding now reads fixed in both halves), `meta/plan.md`,
   `meta/journal.md` (this entry).
+
+---
+
+## 2026-09-11 — META-171 — a fixable record defect gets a bounded self-repair allowance
+
+- **Result:** H-022 answered. Iteration 5 died at turn 11 because one prose mention of a citation
+  form was scraped as a citation — with all nineteen of the item's acceptance criteria passing,
+  all seven binding ADRs conforming and 69 tests green — and the recovery on offer asked a
+  **human** to repair a record the **worker** could have repaired. On a non-zero
+  `validate-workspace` after a worker turn the driver now grants a bounded self-repair allowance:
+  up to N *consecutive* repair turns (`--repair-turns`, else the config's `repair-turns`, else 2),
+  each given `harness/prompts/repair-turn.md` — whose only job is making the validator green and
+  which must not advance the work. Green resets the counter and the engagement resumes where it
+  was; N+1 consecutive failures stop the run terminal `validator-failed` with the **original**
+  error preserved beside the last. Reasoning in **ADR-0014**.
+- **Six derivations went in; four came out unchanged and two came out corrected.** The unit was
+  briefed to test each against the code rather than write it up.
+  - **H-010's principle carries, its mechanism does not.** H-010 made `turn-budget` *resumable*,
+    and `stop_is_resumable` is consulted in exactly one place: the branch that runs when a human
+    reruns the command. The gap here is *inside* the run, so the mechanism had to be new. Reason 6
+    (why not simply make `validator-failed` resumable) survives for the same reason — and gained a
+    sharper edge: the recovery sentence it replaces offered `--reaudit`, which clears only a
+    contamination stop and **could never** have cleared this one.
+  - **"The original error is the finding" survives in form and is thin in substance.**
+    `scan_project` keeps `[-1:]` of the validator's output — its summary line. What the stop
+    preserves is therefore `validate-workspace: 1 error, 0 warnings`, which names no defect.
+    Widening that reading changes the shape of every stop detail the driver writes, so it is
+    **deferred in writing** (ADR-0014 Consequences, and H-022's status) rather than done here or
+    left silent. The repair turn does not depend on it: its first instruction is to run the
+    validator itself.
+  - **The bound is load-bearing in a way the derivation understated.** The validator branch is the
+    *first* test in `decide`, so every other stop — the stall check included — is unreachable
+    while the validator is red. Without a bound the only thing that ends a repair loop is the turn
+    budget, which is exactly what H-010 exists to prevent.
+  - **The closing-turn contrast holds.** The budget's one exemption is for a turn that exists for
+    the engagement's benefit, is one turn, is given once, and is last. A repair turn is none of
+    those, so it counts against the budget — and counting costs nothing irreversible, because
+    `engagement_terminal` never consults the validator, so a `turn-budget` stop taken mid-repair is
+    resumable with `next-job: repair` and the counter still in `state.json`.
+- **The reschedule.** H-004 hands a worker turn to the sim when human questions are open, because
+  such a turn would halt at orchestrator step 2 having done nothing. A repair turn never runs the
+  orchestrator, so the premise is false — and firing would spend one of a bounded number of repair
+  turns on something that cannot repair anything *and* lose the repair job, since `decide`
+  re-derives `next-job` after a sim turn. The guard sits before H-004's and logs
+  `repair-keeps-the-turn`.
+- **Non-vacuity, strong form.** 14 mutations against 15 new tests; every new test dies under at
+  least one. `always-exhausted` and `no-allowance-at-all` kill the grant and the recovery;
+  `never-exhausts` kills both exhaustion tests; `counter-never-resets` kills the reset and the
+  consecutive boundary; `only-the-last-error-is-reported` kills the original-error test alone;
+  `the-reset-fires-on-every-turn` kills the ordinary-turn control; `a-sim-turn-falls-through`,
+  `reschedule-guard-removed`, `repair-exempt-from-the-budget`,
+  `repair-turn-gets-the-ordinary-prompt`, `the-prompt-stops-forbidding-progress`,
+  `the-default-is-not-two`, `the-config-and-flag-are-ignored` and `old-recovery-sentence` each kill
+  exactly their own. Restored and re-run clean.
+- **Gates:** `harness/tests/test_harness.py` **176 → 191 tests**, green (1 skipped, as before);
+  `./scripts/check` green — 47 steps, 110 fixture codes, 419 selftest cases, all unchanged (this
+  is a harness unit; it touches no toolkit surface).
+- **Artifacts:** `harness/run_iteration.py` (the allowance in `decide`, the loop guard,
+  `worker_prompt_name`, `--repair-turns`, the rewritten `TERMINAL_STOPS` sentence),
+  `harness/prompts/repair-turn.md` (new), `harness/tests/test_harness.py` (`RepairAllowance`),
+  `harness/USAGE.md` §3 and §9, `meta/harness/DESIGN.md` §2, `meta/adr/ADR-0014-...`,
+  `meta/findings/FINDINGS.md` (H-022's answer appended), `meta/plan.md`, `meta/journal.md`.

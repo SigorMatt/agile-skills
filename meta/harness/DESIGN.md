@@ -32,7 +32,8 @@ already communicates exclusively through the filesystem. A small driver script
   EXPERIENCE-LOG.md.
 - **Driver loop.** worker → check status → (questions for human?) → sim →
   worker → … Stop conditions: epic done; `blocked` with no recourse in the
-  probe script; validator failure; max-turns budget. Every turn's command,
+  probe script; a validator failure the worker's bounded repair allowance did
+  not fix (H-022, ADR-0014); max-turns budget. Every turn's command,
   duration, and observed status goes to the iteration log.
 
 ## 3. The simulated-human skill project

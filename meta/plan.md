@@ -645,7 +645,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 
 ### Cluster 3 — stop semantics (H-022)
 
-- [ ] **META-171** — decide and implement whether a fixable record defect is terminal. ADR-worthy
+- [x] **META-171** — decide and implement whether a fixable record defect is terminal. ADR-worthy
       reasoning; harness tests for both the recovery and the exhaustion path; H-022 status
       updated with the decision. Harness commit separate.
 
