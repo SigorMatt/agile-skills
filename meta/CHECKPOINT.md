@@ -3,23 +3,24 @@
 ## Builder session six is RUNNING. Mission: `meta/BUILDER-6-PROMPT.md`; plan: `meta/plan.md` Phase VII.
 
 **Done so far.** META-167 (`cd00504`) · META-168 (`656b6c5`) · META-169 (`c8f69b3`) ·
-META-170 (`b6ff22f`) · META-171 (`55d7f03`) · META-171b (`68e65fb`) · META-172 (`73223e2`).
+META-170 (`b6ff22f`) · META-171 (`55d7f03`) · META-171b (`68e65fb`) · META-172 (`73223e2`) ·
+META-173 (`9919b45`).
 **47 steps, 110 fixture codes, 419 selftest cases, 195 harness tests, 139 findings entries.**
 
-**Current unit: META-173 — stage the envel re-run. It is NOT run here.**
+**Current unit: META-174 — `meta/FINAL-REPORT-6.md` and the session close.**
 
 Steps:
-1. `harness/iterations/iteration-5r-envel.json` — a copy of `iteration-5-envel.json` with
-   id `iteration-5r-envel` and project `envel-2`. **Nothing else changed**, the probe field
-   included.
-2. Provision-verify it in a throwaway path and tear it down, leaving nothing behind.
-3. **The held-out rules from builder five apply verbatim: do not run it, and do not read the
-   probe — existence checks only (`isfile` + `getsize`, never the contents).**
+1. `meta/FINAL-REPORT-6.md`: what changed; ADR-0013's ruling and its reasoning; ADR-0014's H-022
+   decision; the versions bumped; the proof-case outputs verbatim; the attestations; and the
+   recommended launch order (iteration 5r → owner held-out review → retro scoring → iteration 5b
+   for E4). The mission's acceptance checklist answered line by line, including what is NOT proven.
+2. `meta/ROADMAP.md` §4: step 1 is now the `envel` **re-run**, and why.
+3. `meta/harness/PROJECT-QUEUE.md`: one line for iteration 5r — it reuses iteration 5's entry
+   deliberately, and a reader of the queue should be able to see that rather than infer it.
 
-Done when: the config is committed AND pushed, the throwaway path is gone, and the unit's report
-carries the evidence for both attestations.
+Done when: committed AND pushed; `./scripts/check` green.
 
-**Next unit: META-174** — `meta/FINAL-REPORT-6.md` and the session close.
+**After this unit the orchestrator writes the closing checkpoint. There is no META-175.**
 
 ## Standing instructions (still in force)
 
