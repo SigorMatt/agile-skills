@@ -6960,3 +6960,52 @@ recall is a reading, not a number, and the report says which.
   `harness/prompts/repair-turn.md` (new), `harness/tests/test_harness.py` (`RepairAllowance`),
   `harness/USAGE.md` §3 and §9, `meta/harness/DESIGN.md` §2, `meta/adr/ADR-0014-...`,
   `meta/findings/FINDINGS.md` (H-022's answer appended), `meta/plan.md`, `meta/journal.md`.
+
+## 2026-09-11 — META-171b — the preserved original error names the defect, not the count
+
+- **Result:** ADR-0014's deferral, taken. META-171 promised that an exhausted repair allowance
+  stops with *the original error* preserved, then reported honestly that the promise was only
+  nominally kept: `scan_project` kept `[-1:]` of the validator's output, so the preserved error
+  was `validate-workspace: 1 error, 0 warnings` — a count, naming nothing. Iteration 5's whole
+  value as evidence is that the *first* error was one nameable line,
+  `tracker/items/WI-0002/history.md:14`, and a terminal stop that can only say "1 error" throws
+  exactly that away. The envel re-run is the first engagement that can reach the exhaustion path,
+  so the deferral was taken now rather than carried past it.
+- **The shape.** `validator_tail(output, limit=3)` keeps the validator's **ERROR** lines — the
+  only lines in `scripts/lib/report.py`'s format that carry a path, a line and a code — bounded at
+  three, followed by `... and N more errors` when there are more, and always ending on the last
+  line, which is the summary a reader counts from. Hint continuation lines are dropped: the
+  location and the code are the identification. Output with **no** ERROR line in it — a green run,
+  a crash, a usage error — keeps its last line and nothing else, which is byte-for-byte the old
+  behaviour; the tail only widens when there is a defect to name. A forty-error workspace produces
+  five lines, not forty-one, and says so in the fifth.
+- **Every consumer, found before the shape changed.** Three, and no more: `scan_project` writes
+  the key; `decide`'s `validator-failed` branch was the only reader (`' '.join(...)` inside an
+  f-string); the tests construct it. `harness/ops/` never touches it. The join was the part that
+  would have broken silently — several lines joined by spaces is one unreadable run-on — so it
+  moved into `validator_detail(observed)`, now the single place a stop detail or a log entry is
+  built from the tail: one line when there is one, an indented block when there are several. Both
+  stay readable in a console (`stop()` prefixes each line) and in `state.json`, and both still end
+  on the summary, which is why META-171's `repair-original-detail.endswith(...)` assertions still
+  hold unchanged.
+- **Non-vacuity, strong form.** The widening was stubbed back to
+  `return output.strip().split("\n")[-1:]` and all four new tests failed, the load-bearing one
+  included: `the exhausted stop names the original defect and not only the count` could no longer
+  find `tracker/items/WI-0002/history.md:14` or `claim.citation.unresolved` in the stop detail.
+  Restored; re-run clean.
+- **The deferral recorded as taken, not quietly closed.** ADR-0014 is `status: accepted`, so it is
+  repaired by `spec/doc-header.md` §4b's route and not edited freely: §4's and Consequences'
+  present-tense claims are put right, and an append-only `## Corrections` section carries two
+  `erratum` entries quoting the removed clauses verbatim with resolving citations. §4b also asks
+  for a change-log row and a version bump; ADRs under `meta/adr/` carry neither — they have no
+  version header and `validate-workspace` does not walk them — and the section says so rather than
+  inventing a header to satisfy a rule. H-022 gets a **new** status bullet (the ledger is
+  append-only; the LAST bullet is the current one, F-112), not a rewrite of META-171's.
+- **Gates:** `harness/tests/test_harness.py` **191 → 195 tests**, green (1 skipped, as before);
+  `./scripts/check` green — 47 steps, 110 fixture codes, 419 selftest cases, all three unchanged,
+  as a harness unit should leave them.
+- **Artifacts:** `harness/run_iteration.py` (`VALIDATOR_FINDING`, `VALIDATOR_TAIL_ERRORS`,
+  `validator_tail`, `validator_detail`, `scan_project`, `decide`),
+  `harness/tests/test_harness.py` (`RepairAllowance`, four tests and a widened `observed` helper),
+  `meta/adr/ADR-0014-...` (§4, Consequences, new `## Corrections`), `meta/findings/FINDINGS.md`
+  (H-022's new status bullet), `meta/plan.md`, `meta/journal.md`.

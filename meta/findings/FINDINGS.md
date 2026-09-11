@@ -5305,6 +5305,23 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   it preserves is the summary (`1 error, 0 warnings`) and not the offending line — widening
   `scan_project`'s `validator-tail` changes every stop detail's shape and belongs to its own unit
   (ADR-0014 Consequences).
+- Status (2026-09-11, META-171b): **answered, and the deferral above was taken rather than left.**
+  The limit the previous bullet declared is closed: `scan_project` calls a new
+  `validator_tail(output)` (`harness/run_iteration.py:322`) that keeps the validator's **ERROR**
+  lines — each of which carries a path, a line and a code — bounded at three
+  (`VALIDATOR_TAIL_ERRORS`), followed by `... and N more errors` when a workspace has more, and
+  still ending on the summary line, which is what a reader counts from. Output with no ERROR line
+  in it (a green run, a crash, a usage error) keeps its last line and nothing else, exactly as
+  before. `validator_detail(observed)` is now the single place a stop detail or a log entry is
+  built from the tail: one line when there is one, an indented block when there are several. So an
+  exhausted allowance's preserved *original error* names the defect — for iteration 5 it would
+  have said `tracker/items/WI-0002/history.md:14: ERROR [claim.citation.unresolved] ...` rather
+  than `1 error, 0 warnings`, which is the whole reason that trail was worth banking. Four tests
+  in `RepairAllowance` cover it (the tail's shape, the forty-error bound and its stated drop, the
+  not-a-report fallback, and the exhausted stop naming path and code); all four fail when the
+  widening is stubbed back to `[-1:]`. ADR-0014 records the same in §4, in Consequences, and in a
+  `## Corrections` erratum pair per `spec/doc-header.md` §4b. The envel re-run is the first
+  engagement that can reach the exhaustion path.
 
 ### Correction (2026-09-11): the Symptom's closing parenthesis presupposed toolkit-source citations are currently illegal; twelve resolve in the abandoned workspace today (see F-114's Direction), and the halt-vs-continue question stands independently of F-113's fix.
 

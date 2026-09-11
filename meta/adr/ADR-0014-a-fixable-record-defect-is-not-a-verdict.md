@@ -105,21 +105,28 @@ repair turns may be a symptom of the repair rather than the defect, so a stop re
 last error would report the wrong thing, and the study this harness exists for would start from
 the wrong line. The stop detail therefore names both.
 
-**The correction, found in the code.** What is preserved is the validator's *verdict line*, not
-the error:
+**The correction, found in the code.** What META-171 preserved was the validator's *verdict
+line*, not the error:
 
 ```python
 "validator-tail": (validator.stdout + validator.stderr).strip().split("\n")[-1:],
 ```
 
-The driver keeps the **last line only**, which for `validate-workspace` is its summary —
+The driver kept the **last line only**, which for `validate-workspace` is its summary —
 `validate-workspace: 1 error, 0 warnings`. That is exactly what iteration 5's `state.json` says,
-and it names no defect at all. So the reason survives in form (original, not last) and is thin in
-substance (a count, not a line number). Widening the driver's reading of the validator is a
-separate change with its own blast radius — every stop detail's shape — and it is **not made
-here**; it is written down in Consequences as a deferral rather than left as a silent weakness.
-The repair turn itself does not depend on it: the prompt's first instruction is to run
-`validate-workspace` and read what it says.
+and it names no defect at all. So the reason survived in form (original, not last) and was thin in
+substance (a count, not a line number). Widening the driver's reading of the validator was a
+separate change with its own blast radius — every stop detail's shape — and META-171 wrote it
+down in Consequences as a deferral rather than leaving it as a silent weakness.
+
+**META-171b took that deferral** [src: commit 55d7f03 is what this paragraph described; the
+widening is `validator_tail` at harness/run_iteration.py:322]. `scan_project` now keeps the
+validator's ERROR lines — the ones that carry a path, a line and a code — bounded at three and
+followed by `... and N more errors` when a workspace has more, with the summary line still kept
+and still last so nothing a reader counts from is lost. `validator_detail` is the single place a
+stop detail or a log entry is built from them. The reason in this section is therefore no longer
+thin: the preserved original error names the defect. The repair turn never depended on it — the
+prompt's first instruction is to run `validate-workspace` and read what it says.
 
 ## 5. Repair turns count against the turn budget, and the closing-turn contrast holds
 
@@ -219,11 +226,16 @@ visible in the diff and in the repair turn's own journal entry, and detecting it
 not a rule. **This is the cost, stated plainly**, and the reason `repair-turns` defaults to 2
 rather than something generous.
 
-**Deferred, deliberately: the driver reads one line of the validator.** §4's correction. The stop
-detail and the repair prompt both carry `validate-workspace: N error(s), M warnings` rather than
-the error line itself. Widening `scan_project`'s `validator-tail` changes the shape of every stop
-detail the driver writes and belongs to its own unit; until then the first thing a repair turn
-does is run the validator itself, and the console log of the turn that failed has the full output.
+**Deferred, and then taken: the driver reads one line of the validator.** §4's correction. As
+shipped by META-171 the stop detail and the repair prompt both carried
+`validate-workspace: N error(s), M warnings` rather than the error line itself, and widening
+`scan_project`'s `validator-tail` was left to its own unit because it reshapes every stop detail
+the driver writes. **META-171b is that unit** — the tail now names the failing findings (up to
+three ERROR lines, `... and N more errors` beyond that, the summary last), so an exhausted
+allowance's preserved *original error* names a path, a line and a code rather than a count. That
+is what made iteration 5's trail worth banking in the first place, and the first engagement that
+can reach the exhaustion path is the envel re-run. Recorded as taken here, in §4, in the entry
+below, and in H-022's last status bullet.
 
 **`--fresh` still discards the engagement, and now it is rarer.** The only route to
 `validator-failed` is a spent allowance, so the terminal stop's recovery sentence describes that
@@ -246,3 +258,16 @@ and no longer offers `--reaudit`, which never worked for it.
   makes that record unreadable. It also gives a worker holding a broken record permission to keep
   dispatching work, which is the opposite of what the defect calls for.
 - **Exempt repair turns from the turn budget.** §5.
+
+## Corrections
+
+Per `spec/doc-header.md` §4b: an ADR at `status: accepted` is repaired in place, append-only,
+never edited away. §4b also requires a matching `## Change log` row and a `version` bump — this
+document carries neither, because the builder's own ADRs under `meta/adr/` have no version header
+and are not walked by `scripts/validate-workspace`; the unit reference in the `by` column is what
+makes the entry attributable here, and that limit is stated rather than papered over.
+
+| when | by | for | kind | what changed |
+|------|----|-----|------|--------------|
+| 2026-09-11T00:56:35Z | builder | META-171b | erratum | `## 4` said *"What is preserved is the validator's verdict line, not the error"* and *"The driver keeps the **last line only**"*, both present tense and both false against the code as it now stands [src: harness/run_iteration.py:322 — `validator_tail` keeps the ERROR lines and the summary]. Put into the past tense, where they are true of META-171, and followed by a paragraph naming the widening. The section's claim — original, not last — is unchanged. |
+| 2026-09-11T00:56:35Z | builder | META-171b | erratum | `## Consequences` said the widening *"belongs to its own unit"* and that *"until then"* the stop detail carries only the count. META-171b is that unit, so the sentence describes a state that no longer exists [src: run: `python3 harness/tests/test_harness.py` → OK, 195 tests, including `the exhausted stop names the original defect and not only the count`]. Replaced with what was taken and when. The deferral itself is not erased: the paragraph still says what was deferred and why. |

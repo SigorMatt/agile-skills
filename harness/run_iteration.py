@@ -312,6 +312,51 @@ def engagement_states(project_dir):
     return parse_engagement_state(result.stdout)
 
 
+# `scripts/lib/report.py` prints every finding as `path:line: LEVEL [code] message`, with any
+# hint on an indented continuation line and the summary count last. A finding line is the only
+# thing in that output that names a defect.
+VALIDATOR_FINDING = re.compile(r"^\S.*: (ERROR|WARNING) \[[^\]]+\] ")
+VALIDATOR_TAIL_ERRORS = 3
+
+
+def validator_tail(output, limit=VALIDATOR_TAIL_ERRORS):
+    """What the driver keeps of a `validate-workspace` run: enough to name the defect.
+
+    The last line is always kept and always last, because it is the summary
+    (`validate-workspace: 1 error, 0 warnings`) and a count is what a reader counts from. But a
+    count names nothing — iteration 5 stopped `validator-failed` over one line,
+    `tracker/items/WI-0002/history.md:14`, and its `state.json` records only "1 error". So the
+    ERROR lines come with it, bounded at `limit` and followed by a truthful "and N more" when
+    there are more; hint continuation lines are dropped, since the path, the line and the code
+    are the identification. Output with no ERROR line in it — a green run, a crash, a usage
+    error — keeps its last line and nothing else, which is all there is to say about it.
+    """
+    lines = [line for line in output.strip().split("\n") if line.strip()]
+    if not lines:
+        return []
+    errors = []
+    for line in lines:
+        found = VALIDATOR_FINDING.match(line)
+        if found and found.group(1) == "ERROR":
+            errors.append(line)
+    if not errors:
+        return lines[-1:]
+    kept = errors[:limit]
+    dropped = len(errors) - len(kept)
+    if dropped:
+        kept.append(f"... and {dropped} more error{'' if dropped == 1 else 's'}")
+    return kept + [lines[-1]]
+
+
+def validator_detail(observed):
+    """The one line, or the small block, that a stop detail and a log entry carry."""
+    tail = observed["validator-tail"]
+    head = f"validate-workspace exits {observed['validator-exit']}:"
+    if len(tail) <= 1:
+        return f"{head} {''.join(tail)}".strip()
+    return head + "".join(f"\n    {line}" for line in tail)
+
+
 def scan_project(project_dir):
     """The workspace as the driver reads it: items, questions, and the validator's verdict."""
     items = {}
@@ -351,7 +396,7 @@ def scan_project(project_dir):
         "abandoned-epics": [epic for epic, state in sorted(engagements.items())
                             if state["verdict"] == "abandoned"],
         "validator-exit": validator.returncode,
-        "validator-tail": (validator.stdout + validator.stderr).strip().split("\n")[-1:],
+        "validator-tail": validator_tail(validator.stdout + validator.stderr),
         "head": head.stdout.strip(),
         "open-human-questions": [q["id"] for q in questions
                                  if q["addressed-to"] == "human" and q["status"] == "open"],
@@ -1331,8 +1376,7 @@ class Run:
             # because an unbounded allowance is ADR-0011 Context (b)'s loop in another costume:
             # try, fail, repeat until the turn budget is gone. Consecutive, because a repair that
             # worked is progress: N bounds *this* defect, not the run's lifetime supply of them.
-            detail = (f"validate-workspace exits {observed['validator-exit']}: "
-                      f"{' '.join(observed['validator-tail'])}")
+            detail = validator_detail(observed)
             used = self.state.get("repair-turns-used", 0) + 1
             self.state["repair-turns-used"] = used
             self.state["repair-last-detail"] = detail

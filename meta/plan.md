@@ -651,7 +651,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 
 ### Cluster 4 — small batch and triage
 
-- [ ] **META-171b** — the preserved original error must name the defect: `scan_project` keeps only
+- [x] **META-171b** — the preserved original error must name the defect: `scan_project` keeps only
       the last line of the validator's output, so ADR-0014's exhausted-allowance stop detail is the
       summary line and names nothing. Taken rather than left deferred, because the re-run is the
       first engagement that can reach that stop.

@@ -1333,10 +1333,15 @@ class RepairAllowance(unittest.TestCase):
 
     @staticmethod
     def observed(exit_code=0, tail="", **overrides):
-        """A live engagement, with the validator's verdict as the only thing under test."""
+        """A live engagement, with the validator's verdict as the only thing under test.
+
+        `tail` is one line or the list of lines the driver kept (META-171b).
+        """
         reading = Abandonment.observed(Abandonment.TICKING, **overrides)
         reading["validator-exit"] = exit_code
-        reading["validator-tail"] = [tail] if tail else []
+        if isinstance(tail, str):
+            tail = [tail] if tail else []
+        reading["validator-tail"] = list(tail)
         return reading
 
     def decide(self, run, observed):
@@ -1347,6 +1352,47 @@ class RepairAllowance(unittest.TestCase):
 
     BROKEN = "validate-workspace: 1 error, 0 warnings"
     OTHER = "validate-workspace: 2 errors, 0 warnings"
+
+    # Iteration 5's stop, as `validate-workspace` actually printed it: one finding line naming
+    # the defect, its hint, and the summary the driver used to keep instead.
+    ITERATION_5_OUTPUT = (
+        "tracker/items/WI-0002/history.md:14: ERROR [claim.citation.unresolved] 'path:line' "
+        "is not a citation form this gate can check\n"
+        "    hint: quote the form rather than writing it bare\n"
+        "validate-workspace: 1 error, 0 warnings\n")
+
+    # -- what the driver keeps of the validator's output (META-171b) ----------------------
+
+    def test_the_kept_tail_names_the_failing_line_and_still_carries_the_count(self):
+        kept = run_iteration.validator_tail(self.ITERATION_5_OUTPUT)
+        self.assertEqual(len(kept), 2)
+        self.assertIn("tracker/items/WI-0002/history.md:14", kept[0])
+        self.assertIn("claim.citation.unresolved", kept[0])
+        self.assertEqual(kept[-1], self.BROKEN)
+        self.assertNotIn("hint:", " ".join(kept))
+
+    def test_forty_errors_do_not_balloon_the_tail_and_what_was_dropped_is_stated(self):
+        """The bound, and the line that keeps it from being a silent truncation."""
+        output = "\n".join(f"tracker/items/WI-{n:04d}/item.md:3: ERROR [item.status.unknown] "
+                           f"status \"reviewing\" is not a known status" for n in range(40))
+        kept = run_iteration.validator_tail(output + "\nvalidate-workspace: 40 errors, 0 warnings")
+        self.assertEqual(len(kept), run_iteration.VALIDATOR_TAIL_ERRORS + 2)
+        self.assertEqual(kept[-2], "... and 37 more errors")
+        self.assertEqual(kept[-1], "validate-workspace: 40 errors, 0 warnings")
+
+    def test_output_that_is_not_a_report_keeps_its_last_line_and_nothing_more(self):
+        """A crash, a usage error or a green run has no ERROR line to name. Reading structure
+        into output that does not have it is the silent half of a silent truncation."""
+        self.assertEqual(
+            run_iteration.validator_tail("Traceback (most recent call last):\n"
+                                         "  File \"validate-workspace\", line 9\n"
+                                         "KeyError: 'status'"),
+            ["KeyError: 'status'"])
+        self.assertEqual(
+            run_iteration.validator_tail("docs/x.md:2: WARNING [doc.changelog.for] stale\n"
+                                         "validate-workspace: 0 errors, 1 warning"),
+            ["validate-workspace: 0 errors, 1 warning"])
+        self.assertEqual(run_iteration.validator_tail(""), [])
 
     # -- the recovery path ---------------------------------------------------------------
 
@@ -1416,6 +1462,28 @@ class RepairAllowance(unittest.TestCase):
         exhausted = [entry for entry in run.logged if entry["event"] == "repair-exhausted"][0]
         self.assertIn(self.BROKEN, exhausted["original"])
         self.assertIn(self.OTHER, exhausted["last"])
+
+    def test_the_exhausted_stop_names_the_original_defect_and_not_only_the_count(self):
+        """META-171b takes ADR-0014's deferral. The promise was *the original error*, and a
+        stop that can only say "1 error, 0 warnings" keeps it nominally: iteration 5's whole
+        value as evidence is that the first error was one nameable line."""
+        run = self.driver(repair_turns=1)
+        granted = self.decide(run, self.observed(
+            1, run_iteration.validator_tail(self.ITERATION_5_OUTPUT)))
+        self.assertEqual(granted["next-job"], "repair")
+        # What the repair turn itself is handed has to name the line too — it is the prompt's
+        # VALIDATOR_ERROR.
+        self.assertIn("history.md:14", run.state["repair-last-detail"])
+
+        stop = self.decide(run, self.observed(1, self.OTHER))
+        self.assertTrue(stop["stop"])
+        self.assertEqual(stop["reason"], "validator-failed")
+        self.assertIn("tracker/items/WI-0002/history.md:14", stop["detail"])
+        self.assertIn("claim.citation.unresolved", stop["detail"])
+        self.assertIn(self.BROKEN, stop["detail"])
+        exhausted = [entry for entry in run.logged
+                     if entry["event"] == "repair-exhausted"][0]
+        self.assertIn("tracker/items/WI-0002/history.md:14", exhausted["original"])
 
     def test_a_success_between_two_failures_gives_the_second_a_fresh_allowance(self):
         """What "consecutive" buys: N bounds this defect, not the run's lifetime supply of
