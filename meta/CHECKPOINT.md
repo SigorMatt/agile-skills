@@ -3,30 +3,23 @@
 ## Builder session six is RUNNING. Mission: `meta/BUILDER-6-PROMPT.md`; plan: `meta/plan.md` Phase VII.
 
 **Done so far.** META-167 (`cd00504`) · META-168 (`656b6c5`) · META-169 (`c8f69b3`) ·
-META-170 (`b6ff22f`) · META-171 (`55d7f03`) · META-171b (`68e65fb`).
-**47 steps, 110 fixture codes, 419 selftest cases, 195 harness tests.**
+META-170 (`b6ff22f`) · META-171 (`55d7f03`) · META-171b (`68e65fb`) · META-172 (`73223e2`).
+**47 steps, 110 fixture codes, 419 selftest cases, 195 harness tests, 139 findings entries.**
 
-**Current unit: META-172 — the small batch and the triage sweep.**
+**Current unit: META-173 — stage the envel re-run. It is NOT run here.**
 
 Steps:
-1. File the three defects this session's units found on the way, each with the status it actually
-   has: the `run:` *records a command with no outcome* message was unreachable and a malformed
-   `run:` citation would have been softened by META-168's change (found and fixed in META-168); a
-   failed adapter render wipes `dist/` before it validates (found in META-170, **not** fixed); the
-   pruned-directory tuple was written out by hand in two places and had already drifted (found and
-   fixed in META-169).
-2. Sweep the open-findings set. Anything TRIVIALLY adjacent to clusters 1-3 may be taken — say so
-   per finding. Everything else gets a dated triage line. No status stale. F-098 is the one whose
-   price this session changed: ADR-0013's `toolkit:` prefix is the mechanism its Direction asked
-   for, and its cost is still the 97-citation sweep.
-3. Confirm cluster 4's first bullet is already discharged — the H-022 correction was appended by
-   the owner's staging pass at `9d31ce1` — and say so rather than appending a second one.
+1. `harness/iterations/iteration-5r-envel.json` — a copy of `iteration-5-envel.json` with
+   id `iteration-5r-envel` and project `envel-2`. **Nothing else changed**, the probe field
+   included.
+2. Provision-verify it in a throwaway path and tear it down, leaving nothing behind.
+3. **The held-out rules from builder five apply verbatim: do not run it, and do not read the
+   probe — existence checks only (`isfile` + `getsize`, never the contents).**
 
-Done when: `./scripts/check` green (steps 17b and 17c are the ones this unit can break),
-committed AND pushed.
+Done when: the config is committed AND pushed, the throwaway path is gone, and the unit's report
+carries the evidence for both attestations.
 
-**Next unit: META-173** — stage `iteration-5r-envel`, provision-verify, tear down. **NOT run; the
-probe is NOT read.**
+**Next unit: META-174** — `meta/FINAL-REPORT-6.md` and the session close.
 
 ## Standing instructions (still in force)
 
