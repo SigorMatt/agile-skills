@@ -244,3 +244,28 @@ reasons:
 any mode; `harness/runs/` is `diff`-identical to its nineteen-entry baseline; the held-out probe's
 existence was established by `os.path.isfile` and `getsize` only. Both configs were
 provision-verified in a scratch root outside the repository, 10/10 rules each, and torn down.
+
+**Amendment (2026-09-11, builder six, META-174) — step 1 is now the `envel` re-run.** Iteration 5
+ran on 2026-09-10 and **stopped terminal at turn 11**, before any dispatch: one prose mention of
+the form `path:line` in a history row was scraped as a citation and refused (F-113, F-075). It
+produced **no ending and no retro**, so neither of the two jobs step 1 exists for — the E2
+delivered-partial ending and the held-out retro calibration — was ever taken. Step 1 is therefore
+**iteration 5r** (`harness/iterations/iteration-5r-envel.json`, project `envel-2`), staged by
+META-173 and not run.
+
+The substitution is legitimate, and this is why: the re-run is the *same queue entry* against a
+fresh project, not a new engagement with a new rationale — the config carries `queue-entry`,
+`probe`, `persona`, `max-turns` and both model fields verbatim and differs from
+`iteration-5-envel.json` in exactly two lines, `id` and `project`. Nothing was measured the first
+time, so nothing is being re-measured or averaged; the calibration is taken once, on an
+uncontaminated project. Steps 2, 3 and 4 are unchanged and so is their order, for the reasons
+already given. What the re-run additionally carries is a regression gate: the row that killed the
+original is the exact row `./scripts/check` step 6a now replays over the banked evidence, and the
+stop it died of is now a bounded self-repair allowance (ADR-0014, H-022).
+
+**Iteration 5r was neither run nor read by builder session six.** No `run_iteration.py`
+invocation was made in any mode; the held-out probe's existence was established by
+`os.path.isfile` and `os.path.getsize` (3396 bytes) only; the config was provision-verified in a
+throwaway root outside the repository and torn down. One disclosure is recorded in
+`meta/FINAL-REPORT-6.md` §6: a grep printed the queue's one-line idea summary, which that file
+labels as verbatim probe §1, inside a sub-agent context that has been discarded.

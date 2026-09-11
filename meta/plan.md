@@ -666,5 +666,31 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 - [x] **META-173** — `harness/iterations/iteration-5r-envel.json` as a copy of
       `iteration-5-envel.json` with id `iteration-5r-envel` and project `envel-2`, nothing else
       changed. Provision-verify in a throwaway path, tear down. **Not run; probe not read.**
-- [ ] **META-174** — `meta/FINAL-REPORT-6.md` + checkpoint close.
+- [x] **META-174** — `meta/FINAL-REPORT-6.md` + checkpoint close.
       Gate: the acceptance checklist answered line by line.
+
+### What actually ran, against what was planned
+
+Recorded here so the plan tells the truth rather than the intention (META-174):
+
+- **Ten units ran, all committed and pushed** — META-166 (this phase, which journalled nothing
+  of its own), then META-167 `cd00504`, META-168 `656b6c5`, META-169 `c8f69b3`, META-170
+  `b6ff22f`, META-171 `55d7f03`, META-171b `68e65fb`, META-172 `73223e2`, META-173 `9919b45`,
+  and META-174. `meta/journal.md` carries eight entries for the session's work plus this unit's.
+- **META-171b was added mid-session**, and it is the one place plan and execution differ.
+  META-171 implemented ADR-0014 and then reported that the ADR's *preserved original error*
+  promise was only nominally kept — `scan_project` keeps the validator's last output line, so
+  the stop detail was `1 error, 0 warnings`, naming nothing. The deferral was **taken rather
+  than left**, because the envel re-run is the first engagement that can reach the exhaustion
+  path and carrying it past that run would have wasted the one trail that could show the stop
+  working. It was added to this phase at `487b9ea`, before it ran.
+- **Cluster 4's first bullet was already discharged when META-172 reached it.** The H-022
+  Symptom correction was appended by the owner's staging pass at `9d31ce1`, so META-172 checked
+  and left it alone rather than appending a second one.
+- **Cluster 4 did not yield under quota pressure, and took nothing.** All 21 open-or-deferred
+  entries were read against the *trivially adjacent* bar and none passed; the sweep is a set of
+  dated decisions, not a set of fixes. Three new findings (F-115, F-116, F-117) were filed from
+  the code rather than from the unit reports that mentioned them.
+- **META-170 discovered F-116 while failing a render** (`review-close` was exactly at the
+  500-line ceiling). It was recovered with `git checkout`, filed, and deliberately not fixed —
+  it is a build-step change and that unit did not own it.

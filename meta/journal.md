@@ -7124,3 +7124,61 @@ recall is a reading, not a number, and the report says which.
   unchanged, 1 skipped.
 - **Artifacts:** `harness/iterations/iteration-5r-envel.json` (new), `meta/plan.md`,
   `meta/journal.md`. `meta/CHECKPOINT.md` deliberately not advanced.
+
+## 2026-09-11 — META-174 — the session's report, the roadmap amendment, and the queue entry that says it is a re-run
+
+- **Unit:** META-174 (Phase VII, the last — `meta/FINAL-REPORT-6.md`, ROADMAP §4's amendment,
+  the iteration-5r queue entry, and the plan's *what actually ran* note).
+- **Result:** `meta/FINAL-REPORT-6.md`, ten sections: what changed across the three clusters;
+  ADR-0013's ruling and its reasoning; ADR-0014 and META-171b's correction; the versions bumped;
+  the proof-case outputs verbatim; the attestations including the one disclosure; the
+  recommended launch order; what is **not** proven (fifteen entries); the mission's acceptance
+  checklist answered line by line; and what the next session should do. Built from the
+  repository — the eight unit journal entries, the eight commits, the two ADRs and the ledger —
+  rather than from the orchestrator's brief, which is why three of its claims are stated
+  differently below.
+- **Three things the files said that the brief did not.**
+  - **The harness suite was 176 tests when this session opened, not the 110 FINAL-REPORT-5
+    reported.** `git show 8e61fdb:harness/tests/test_harness.py` counts 110 and
+    `git show 9d31ce1:...` counts 176; the 66 in between are `811e872` and `08e3731`, the ops
+    mechanics layer, committed between the sessions. This session added 19 (176 → 191 → 195).
+    Reported as a correction rather than a number quietly replaced.
+  - **`methodology/pipeline.yaml` did not move** — still 0.10.0, absent from every diff in the
+    session — and `next` (0.6.0) and `verify` (0.5.1) did not either, they being the two skills
+    whose contracts oblige no citation. What did move besides the seven PATCH bumps is
+    `spec/doc-header.md`'s revision rows **10** (META-168) and **11** (META-169), which is how
+    that document versions itself, plus `dist/agile-skills/VERSION`'s seven rows.
+  - **The checkpoint's five headline numbers all held** when re-measured: 47 steps, 110 fixture
+    codes, 419 self-test cases, 195 harness tests, 139 ledger entries.
+- **The proof-case outputs were reproduced, not transcribed.** The evidence tree was copied to
+  scratch and `scripts/validate-workspace` run over it twice — once as banked, once with
+  `[src: ADR-9999]` planted **inside** the reason cell of the same history row. Both outputs
+  match META-168's journal entry byte for byte. The first planting attempt appended after the
+  row's trailing pipe and produced a third finding (`history.columns`, 7 columns where the
+  format has 6), which is the fixture author's own trap and is why the marker belongs in the
+  cell rather than after it.
+- **The disclosure is in the report, in §6, and it is not quoted.** META-173's grep over
+  `meta/harness/PROJECT-QUEUE.md` printed the queue's one-line idea summary, which that file
+  labels as verbatim probe §1. §6 says what kind of sentence it is, that it names no planted
+  probe and nothing about the ending, that it was seen only in a discarded sub-agent context,
+  and that the owner should weigh it when reading the recall measurement. Leaving it out because
+  it is inconvenient would have made every other attestation in that section worth less.
+- **ROADMAP §4 is amended, not rewritten.** Session five's stamp is a dated record, so the
+  substitution is an appended amendment paragraph rather than an edit to step 1 in place: step 1
+  is now iteration 5r, and the legitimacy argument is that iteration 5 produced no ending and no
+  retro, so the calibration it was launched for was never taken — nothing is being re-measured
+  or averaged. Steps 2, 3 and 4 and their order are untouched.
+- **The queue entry states the reuse rather than leaving it to a config diff.** A reader of
+  `meta/harness/PROJECT-QUEUE.md` now sees that 5r carries iteration 5's `queue-entry` verbatim
+  (it still reads "Iteration 5 — envel"), that the two configs differ in exactly `id` and
+  `project`, and that the held-out protocol above it is the contract, unchanged.
+- **Questions raised:** none. `meta/CHECKPOINT.md` is deliberately not advanced — the
+  orchestrator writes the closing checkpoint, and there is no META-175.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **47 steps**, `must-fail
+  fixture` **110 codes**, `scripts/lib/selftest.py` **419 cases**, `harness/tests/test_harness.py`
+  **195 tests**, the ledger **139 entries** with every one carrying a status — all five unchanged,
+  as a reporting unit should leave them. Step 17b resolves this report's finding numbers along
+  with the rest: 4545 citations, 139 numbers, 139 filed, over 1767 tracked files.
+- **Artifacts:** `meta/FINAL-REPORT-6.md` (new), `meta/ROADMAP.md` (§4's amendment),
+  `meta/harness/PROJECT-QUEUE.md` (the iteration 5r entry), `meta/plan.md` (META-174 ticked and
+  Phase VII's *what actually ran* note), `meta/journal.md` (this entry).

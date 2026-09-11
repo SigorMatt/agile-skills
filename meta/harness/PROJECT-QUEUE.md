@@ -158,6 +158,23 @@ is not boring, the queue continues with re-runs and new entries until a run is.
   F-082's delegation scoping and F-097's question batching under a crisp stakeholder;
   the E2 rows; option B's corrected wording at the first sign-off.
 
+## Iteration 5r — `envel-2` — iteration 5's entry, re-run
+
+- **This is not a new entry.** `harness/iterations/iteration-5r-envel.json` carries the
+  `queue-entry` above **verbatim** — it still reads "Iteration 5 — envel" — along with the same
+  probe, the same `pragmatic-manager` persona, the same 30-turn budget and the same models. It
+  differs from `iteration-5-envel.json` in exactly two lines: `id` and `project` (`envel-2`, a
+  fresh tree; the abandoned `envel` is evidence and stays). A re-run is a new iteration with the
+  same entry, per this file's header, and re-pointing the entry would have claimed a second
+  rationale that does not exist.
+- **Why it is being re-run:** iteration 5 stopped terminal at turn 11, before any dispatch — one
+  prose mention of `path:line` in a history row scraped as a citation (F-113, F-075). It produced
+  no ending and no retro, so **neither** of the entry's two jobs was taken: E2 delivered-partial
+  and the held-out retro calibration are both still unexecuted.
+- **The held-out protocol above applies unchanged and is the contract**: the owner reviews the
+  trail and writes findings down **before** the retro's report is read. Staged by META-173 and
+  **not run**; see `meta/FINAL-REPORT-6.md` §6 and §7.
+
 ## Iteration 5b — `droll` (dice roller CLI) — E4 regression
 
 - **Project:** `droll`. A deliberately tiny idea (one or two items): roll dice from a
