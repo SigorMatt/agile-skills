@@ -7009,3 +7009,78 @@ recall is a reading, not a number, and the report says which.
   `harness/tests/test_harness.py` (`RepairAllowance`, four tests and a widened `observed` helper),
   `meta/adr/ADR-0014-...` (§4, Consequences, new `## Corrections`), `meta/findings/FINDINGS.md`
   (H-022's new status bullet), `meta/plan.md`, `meta/journal.md`.
+
+## 2026-09-11 — META-172 — three defects found in flight, and the open set triaged
+
+- **Result:** the ledger carries what this session met on the way and a dated decision on every
+  entry that was open. Three new findings — F-115, F-116, F-117 — and 21 entries swept, each with
+  its own appended status bullet. **Nothing was taken.** 136 → 139 entries; no toolkit, harness or
+  spec file was touched.
+- **The three, written from the code rather than from the unit reports that mentioned them.**
+  **F-115** — `CitationResolver._resolve`'s *records a command with no outcome* branch could not
+  be reached: `resolve()` strips the body before matching and `RUN_RE` ends `\s*(?P<outcome>.+)$`,
+  so the outcome group could never hold whitespace alone, and `run: cmd →` failed the match
+  outright and fell to the catch-all. Dead on its own; under META-168's severity split that
+  catch-all became a **warning**, so a `run:` citation with its outcome dropped — the form
+  carrying the most evidence (F-070) — would have stopped touching the exit code. Found and fixed
+  inside META-168 (commit 656b6c5) by an explicit `startswith("run:")` guard. Filed because the
+  class deserves saying: a message nobody can reach is indistinguishable from a rule that holds,
+  in the ledger, in a review and in a green test run.
+  **F-116** — `render.py:434` is `shutil.rmtree(dist)` and `render.py:436` is `render_into(dist)`,
+  whose `except RenderError` prints and returns 1 with no rollback, because what it would restore
+  from has just been deleted. `render_into` writes each skill as it goes in `pipeline.yaml` order
+  and `review-close` is seventh of nine, so META-170's over-limit body left six skills written and
+  the whole shared `agile-skills/` tree never produced. `dist/` is what `install.py` copies from,
+  so the blast radius is a consumer provisioned with a subset of skills and, in this shape, no
+  gates at all. **Open, not fixed** — it is a build-step change and this was a findings pass.
+  Gated with F-111 on the next `adapters/` unit; the interim guard (`dist/` is tracked, 72 files,
+  and `./scripts/check` step 4 refuses a stale tree) is written into the entry rather than assumed.
+  **F-117** — the prune tuple `(".git", "__pycache__", ".claude", "node_modules")` written by hand
+  in `lint-claims` and `validate-workspace`. **The hearsay was corrected by the code:** the two
+  copies had *not* diverged — `git log -S` over the tuple names exactly 77c8f64 (both added) and
+  c8f69b3 (both removed), so they were byte-identical for their whole life. ADR-0013's claim is
+  the weaker, sounder one and is what got filed: two hand-written statements of one rule *are* the
+  drift, and the cost shows when a third reader arrives. Fixed as `claims.PRUNED_DIRS`, three
+  readers. The class is `meta/FINAL-REPORT-3.md` §6's third point (F-069, F-073) with F-074 as the
+  nearest instance — and it is the **second** consolidation this session, after META-167's
+  `citations_in()` / `carries_citation()`.
+- **The sweep, and why nothing was taken.** The bar was *trivially adjacent to clusters 1–3, with
+  no new derivation*. Fourteen entries are gated on a unit in a file no commit from cd00504 to
+  68e65fb opened — checked by looking, not assumed. F-103 is the only open entry in the clusters'
+  neighbourhood and was read closely rather than swept: its cheap half is a §4a paragraph, a spec
+  revision plus a re-render, and it would still not close the entry. Refusing it is recorded in
+  its own status line.
+- **The one gate that moved, and it had already been missed.** H-015's gate is *the next harness
+  change window with no run in flight and nothing being banked*. **META-171 and META-171b were
+  that window** — both opened `harness/run_iteration.py` and `harness/tests/test_harness.py` under
+  exactly those conditions — and spent it on ADR-0014. Defensible; unrecorded, which is not. H-015,
+  H-020 and H-021 are re-gated on the next window with the count carried: **reached once, passed
+  once.** META-172 is forbidden `harness/`, so this is a triage line, not a fix. That is META-163's
+  lesson for the third time (F-010, and F-043 with F-053 were the first two).
+- **F-098, re-measured rather than quoted.** ADR-0013 built the prefix its Direction asked for —
+  `[src: toolkit: <document> <section> "<quoted words>"]` — so the mechanism half is done, and the
+  form is not a prefix a script can prepend: the section and the non-empty quote are mandatory.
+  META-163's 97 named no command, so the method was reconstructed from its own three constraints
+  (97 total, 11 numbers, the ADR-0010/0011/0012 breakdown) and reproduced exactly at c662d8c.
+  Current tree: **99** across **12** numbers. Both new occurrences are ADR-0013's own, added by
+  c8f69b3 — the unit that built the distinguishable form added two citations to the sweep it
+  declined to run — and no `toolkit: ADR-…` citation exists in the shipped prose. One honesty
+  correction carried forward: 11 of the 99 are already path-qualified, so the strictly-bare
+  surface is **88**; 99 is the number comparable with the 60 → 97 trend, 88 is the number of
+  citations that carry the defect, and both are stated rather than one substituted for the other.
+- **F-068, checked rather than assumed.** META-168 softened an *unrecognised* marker to a warning,
+  which is the kind of change that meets a gate unnoticed. It does not meet this one, established
+  by the finding's own command: `lint-claims --root examples/toy-project --all` reports **41
+  errors, 0 warnings**, all `claim.unsourced` — prose that never cited anything, with no
+  unrecognised marker for the softening to reach. 41 is now the same number across META-124,
+  META-163 and META-172, through a session that rewrote the citation grammar twice.
+- **H-022, checked and left alone.** Cluster 4's first bullet was already discharged: the Symptom
+  correction is a `###` heading appended by the owner's staging pass at 9d31ce1, and H-022's
+  current status is META-171b's *answered*. No second correction was appended.
+- **Gates:** `./scripts/check` green — **47 steps, 110 fixture codes, 419 selftest cases**, all
+  three unchanged, as a findings unit should leave them. Step 17b: 4510 citations, 137 numbers,
+  139 filed, over 1766 tracked files. Step 17c: **139 entries, every one with a status**, 46
+  re-triaged at least once.
+- **Artifacts:** `meta/findings/FINDINGS.md` (F-115, F-116, F-117, the triage section, and 21
+  appended status bullets), `meta/plan.md`, `meta/journal.md`. `meta/CHECKPOINT.md` deliberately
+  not advanced.

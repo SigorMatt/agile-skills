@@ -656,7 +656,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
       summary line and names nothing. Taken rather than left deferred, because the re-run is the
       first engagement that can reach that stop.
 
-- [ ] **META-172** — sweep the open-findings set: anything trivially adjacent to clusters 1–3 may
+- [x] **META-172** — sweep the open-findings set: anything trivially adjacent to clusters 1–3 may
       be taken (said so per finding); everything else gets a dated triage line. No status stale.
       (The H-022 correction of cluster 4's first bullet was already appended by the owner's
       staging pass at 9d31ce1.)
