@@ -2,31 +2,31 @@
 
 ## Builder session six is RUNNING. Mission: `meta/BUILDER-6-PROMPT.md`; plan: `meta/plan.md` Phase VII.
 
-**Done so far.** META-167 (`cd00504`) one mask for every citation surface · META-168 (`656b6c5`)
-severity follows knowledge + check step 6a · META-169 (`c8f69b3`) ADR-0013, a toolkit source is
-quoted and attributed · META-170 (`b6ff22f`) the grammar placed in seven skills + check step 15d ·
-META-171 (`55d7f03`) ADR-0014, the bounded self-repair allowance. **47 steps, 110 fixture codes,
-419 selftest cases, 191 harness tests.**
+**Done so far.** META-167 (`cd00504`) · META-168 (`656b6c5`) · META-169 (`c8f69b3`) ·
+META-170 (`b6ff22f`) · META-171 (`55d7f03`) · META-171b (`68e65fb`).
+**47 steps, 110 fixture codes, 419 selftest cases, 195 harness tests.**
 
-**Current unit: META-171b — the preserved original error must name the defect (harness commit).**
+**Current unit: META-172 — the small batch and the triage sweep.**
 
-META-171 implemented ADR-0014's promise that an exhausted allowance stops with *the original
-error* preserved, then found the promise only nominally kept: `scan_project` keeps
-`(...).split("\n")[-1:]` of the validator's output (`harness/run_iteration.py:354`), so the
-preserved detail is the summary line — `validate-workspace: 1 error, 0 warnings` — which names no
-defect. Iteration 5's whole value was that the *first* error was the finding; a terminal stop that
-cannot say which line failed loses exactly that.
+Steps:
+1. File the three defects this session's units found on the way, each with the status it actually
+   has: the `run:` *records a command with no outcome* message was unreachable and a malformed
+   `run:` citation would have been softened by META-168's change (found and fixed in META-168); a
+   failed adapter render wipes `dist/` before it validates (found in META-170, **not** fixed); the
+   pruned-directory tuple was written out by hand in two places and had already drifted (found and
+   fixed in META-169).
+2. Sweep the open-findings set. Anything TRIVIALLY adjacent to clusters 1-3 may be taken — say so
+   per finding. Everything else gets a dated triage line. No status stale. F-098 is the one whose
+   price this session changed: ADR-0013's `toolkit:` prefix is the mechanism its Direction asked
+   for, and its cost is still the 97-citation sweep.
+3. Confirm cluster 4's first bullet is already discharged — the H-022 correction was appended by
+   the owner's staging pass at `9d31ce1` — and say so rather than appending a second one.
 
-Steps: widen what the driver keeps of the validator's output to enough lines to name the failing
-findings, in whatever shape leaves the existing stop details intact and truthful; test that an
-exhausted allowance's detail names the *original* failing line, not the summary; ADR-0014's
-Consequences and H-022's status updated to say the deferral was taken rather than left.
+Done when: `./scripts/check` green (steps 17b and 17c are the ones this unit can break),
+committed AND pushed.
 
-Done when: harness tests green, `./scripts/check` green, committed AND pushed.
-
-**Next unit: META-172** — the open-findings sweep and triage, including the three defects this
-session's units found on the way (the unreachable `run:` outcome message, the render that wipes
-`dist/` before it validates, and the pruned-directory tuple that had already drifted).
+**Next unit: META-173** — stage `iteration-5r-envel`, provision-verify, tear down. **NOT run; the
+probe is NOT read.**
 
 ## Standing instructions (still in force)
 
