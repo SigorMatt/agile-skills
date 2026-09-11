@@ -651,6 +651,11 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 
 ### Cluster 4 — small batch and triage
 
+- [ ] **META-171b** — the preserved original error must name the defect: `scan_project` keeps only
+      the last line of the validator's output, so ADR-0014's exhausted-allowance stop detail is the
+      summary line and names nothing. Taken rather than left deferred, because the re-run is the
+      first engagement that can reach that stop.
+
 - [ ] **META-172** — sweep the open-findings set: anything trivially adjacent to clusters 1–3 may
       be taken (said so per finding); everything else gets a dated triage line. No status stale.
       (The H-022 correction of cluster 4's first bullet was already appended by the owner's
