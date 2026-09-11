@@ -25,8 +25,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib
 
 import board as board_lib  # noqa: E402
 import engagement as engagement_lib  # noqa: E402
-from claims import (CitationResolver, carries_citation, citations_in,  # noqa: E402
-                    split_sources)
+from claims import (PRUNED_DIRS, CitationResolver, carries_citation,  # noqa: E402
+                    citations_in, split_sources)
 from textio import read_text  # noqa: E402
 import frontmatter  # noqa: E402
 import miniyaml  # noqa: E402
@@ -1849,8 +1849,11 @@ class Validator:
         """
         ignored = git_ignored(self.workspace.root)
         for base, dirs, files in os.walk(self.workspace.root):
-            dirs[:] = [entry for entry in dirs
-                       if entry not in (".git", "__pycache__", ".claude", "node_modules")]
+            # `claims.PRUNED_DIRS`, not a copy of it. This walk is the tool's own definition of
+            # where the record is, and the resolver refuses a citation pointing outside it by
+            # reading the same tuple (ADR-0013) — so the boundary is stated once and the two
+            # halves of the rule cannot disagree about where it runs.
+            dirs[:] = [entry for entry in dirs if entry not in PRUNED_DIRS]
             for name in sorted(files):
                 if not name.endswith(".md"):
                     continue

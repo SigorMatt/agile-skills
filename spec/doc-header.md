@@ -279,6 +279,48 @@ So absolutes get sources.
 | ADR | `[src: ADR-0004]` | an ADR with that number exists |
 | commit | `[src: commit a1b2c3d]` | the commit is in this repository |
 | command outcome | `[src: run: python3 -m pytest -q → exit 0, 14 passed]` | it records both the command and its outcome |
+| toolkit source | `[src: toolkit: doc-header.md §4a "A record written before this convention existed is not retroactively invalid"]` | the shape is complete — a document, a section, and a non-empty quote |
+
+**A path into the installed toolkit is not a citation.** The record walk — the one both
+`scripts/validate-workspace` and `scripts/lint-claims` use to find the `*.md` files they read —
+prunes four directories: the version-control directory (`.git`), the compiled-object cache
+(`__pycache__`), the dependency directory (`node_modules`), and **the directory the runtime
+installs this toolkit into**. By the tool's own definition none of those is part of the record,
+and a citation may not point where the record does not go. A body that resolves inside one is
+refused, as an error (`claim.citation.outside-the-record`) — not as the warning an unrecognised
+marker gets, because here the gate knows both what is wrong and what to write instead. The
+reasoning, the evidence and the alternatives are in ADR-0013.
+
+A path into the installed toolkit is the case that forced the ruling, and it is easy to write by
+accident: the body contains a `/`, so it used to fall into the workspace-path row above and be
+answered by "does this file exist". It exists on the machine the record was written on. **Twelve
+such citations stand in a real banked run and every one of them stops resolving the moment that
+record leaves that machine** — and one of them is a line number into a toolkit file that has since
+moved, which no bound can catch, because the bound would be a bound on a file outside the record.
+
+The `toolkit:` form is what to write instead. What it does and does not decide is stated here
+rather than left to be discovered: it **cannot** tell whether the toolkit really says those words.
+Nothing is opened and nothing is resolved against the filesystem. What it checks is that the
+citation carries enough for a **reader** to check it — which document, which section, and the words
+being claimed. That is strictly more than the path form carried, which verified the writer's own
+installation and nothing else, and left a reader who received the record with a pointer they could
+not follow at all.
+
+- `<document>` is how the toolkit document names itself — `doc-header.md`, `pipeline.yaml`, a named
+  skill's contract. It is **never** resolved against the filesystem, which is the point: the
+  toolkit upgrades underneath a standing record, and §4a's own rule below forbids a convention that
+  makes yesterday's record retroactively invalid. Pinning a version instead would break every
+  standing citation on the next upgrade, which is that same rule broken on a schedule.
+- `<section>` is `§4a`, a heading, or an identifier — whatever names the place inside that document.
+- `"<quoted words>"` is **mandatory and non-empty**, and like the acceptance-criterion anchor it
+  may contain neither `]` nor `;`, because the first ends the marker and the second separates
+  sources. Unlike `run:`, a `toolkit:` source does not swallow the rest of the marker: two of them
+  may sit in one marker, separated by `;`.
+
+The prefix also distinguishes the toolkit's own documents from the consumer's, which is the
+mechanism F-098 asks for in a wider setting. F-098 is **not** resolved by this row: it is about
+bare `ADR-nnnn` citations to the toolkit's own decisions colliding with a consumer's ADR numbers,
+and moving those is one sweep of 97 citations that this does not attempt.
 
 Several sources are separated by `;` inside one marker. `scripts/lint-claims` enforces both
 rules and is a hard gate on `plan`, `implement` and `review-close`; `scripts/validate-workspace`
@@ -565,3 +607,4 @@ wholesale and so excludes the delivered thing on an item whose deliverable is a 
 | 8 | 2026-09-10 | §4a: a criterion's number is a position, not a name. An `ITEM ACn` citation may quote the criterion's own words, and an anchored citation is checked against them; an unanchored one is refused while the cited item is at `draft` or `ready`, the statuses at which the list may still be rewritten. What it does not catch, and why an anchor is not required everywhere, is stated with it. F-077's disease, not F-077's cure — the bound it added was already in place here and is the check being fooled (F-094). |
 | 9 | 2026-09-10 | §4a: an audit row's example must be **able to fail**, and the row says why it could — a fifth label, `Falsifier:`, on the enumeration entry, plus the rule that an absolute about a rule with a boundary is checked **at** the boundary. This is `scope.py`'s out-of-scope-by-construction reached through the example rather than through the scope: the same sentence was audited *holds* twice from cases in which the rule it denies never applied (F-088). An enumeration whose `Members:` names nobody passes **with a mark**, on the same precedent. |
 | 10 | 2026-09-11 | §4a: naming a citation form is not using one. A marker inside backticks or a fence is a mention and is not read; a bare marker matching no form is a **warning**, because the gate has checked nothing there and cannot tell a mention from a typo, while a marker that matches a form and fails to resolve stays an error. The cost — a typo'd body matching no form now warns — is smaller than the one already paid: an engagement ended at turn 11 on a history row that wrote `path:line` in prose (F-113, F-075). |
+| 11 | 2026-09-11 | §4a: a **toolkit source is quoted and attributed, not pointed at** (ADR-0013). A path into the installed toolkit — or into any directory the record walk prunes — the version-control directory, the object cache, the dependency directory, and the one the runtime installs the toolkit into — is refused as `claim.citation.outside-the-record`, an error: the walk that reads the record does not go there, so `os.path.exists` answers a question about the writer's machine rather than about the record, and twelve such citations in a banked run stop resolving the moment it leaves that machine. The replacement is `[src: toolkit: <document> <section> "<quoted words>"]`, which carries its evidence inside the marker; the honest boundary — the gate checks the shape, a reader checks the words — is stated in the section rather than discovered (F-114's Direction half). |

@@ -4122,6 +4122,13 @@ second occurrence shows the error is common rather than incidental.
   **Gate:** one unit that changes the toolkit's own ADR citation form everywhere at once, before
   the open-source release — with F-068 and F-108 in the same release bucket but not the same job.
   Its cost only rises: every ADR this project writes adds citations to the sweep.
+- **Note 2026-09-11 (META-169): the mechanism this Direction asks for now exists; the sweep does
+  not.** ADR-0013 adds a `toolkit:` citation prefix for the toolkit's own documents, which is
+  exactly the *"a prefix, or the path"* this entry proposes, and a consumer writing
+  `[src: toolkit: ADR-0012 §2 "…"]` can no longer collide with its own ADR-0012. **This does not
+  resolve F-098 and its status is deliberately unchanged:** the 97 bare `ADR-nnnn` citations in the
+  shipped prose have not moved, and moving them is the one sweep this entry's gate names. Triage of
+  the status line is META-172's job, not META-169's.
 
 ### Triage record (2026-08-31)
 
@@ -5201,6 +5208,39 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   workspace today by bare existence, with nothing pinning the toolkit version they
   referenced — legal-and-pinned, or illegal-and-quoted, but not accidental.
 - Status: open
+- **Status update 2026-09-11 (META-169): the Direction half is decided and implemented; the
+  placement half is still open.** The ruling is **illegal-as-a-path, legal-as-a-quote**, derived
+  in `meta/adr/ADR-0013-a-toolkit-source-is-quoted-not-pointed-at.md` and written into
+  `spec/doc-header.md` §4a's citation forms table (revision 11).
+  **Refused.** A citation body resolving inside a directory the record walk prunes is an ERROR,
+  `claim.citation.outside-the-record`. The test is generalised rather than hand-written for the
+  toolkit path: `claims.PRUNED_DIRS` holds the four directories once and is read by
+  `validate-workspace.check_claim_citations`, by `lint-claims.all_markdown` and by
+  `CitationResolver._resolve`, so the rule and the exclusion cannot drift — they were already two
+  hand-written copies before this change. An ERROR and not META-168's warning because the gate
+  knows both what is wrong and what to write instead; there is no mention-vs-typo ambiguity here.
+  **Replaced.** `[src: toolkit: <document> <section> "<quoted words>"]`, resolving when the shape
+  is complete. The document is never looked up (the toolkit upgrades underneath a standing record,
+  and §4a forbids retroactive invalidation), the section may be a `§`, a heading or an identifier,
+  and the quote is mandatory, non-empty, and may contain neither `]` nor `;`. Unlike `run:`, it
+  does not swallow the rest of the marker. What this does **not** decide is said in the table and
+  in the ADR's consequences: the gate cannot tell whether the toolkit really says those words, only
+  that the citation carries enough for a reader to check it — which is strictly more than the path
+  form carried, since `os.path.exists` under a pruned directory checked the writer's own
+  installation and nothing else.
+  **Evidence.** All twelve banked citations fail the moment the record leaves the machine
+  (`python3 scripts/validate-workspace meta/harness/evidence/iteration-5-envel-abandoned` reports
+  twelve `claim.citation.unresolved`), and one of them — `claims.py:148` — was true at `181e69d`
+  and is false two toolkit commits later, with F-077's bound unavailable because it would be a
+  bound on a file outside the record. The twelve are **not** repaired: `meta/harness/evidence/` is
+  read-only history and §4a's non-retroactivity rule covers them.
+  **Fixtures.** `fixtures/broken-workspace` carries both refusals (the pruned-path one is the sole
+  source of its code; the quoteless `toolkit:` one is pinned by count in `check_claims`), 109 codes
+  → 110; `fixtures/sourced-claims` carries two well-formed `toolkit:` citations, one of them with
+  two sources in a single marker, and still lints clean. 33 new `selftest.py` cases, 386 → 419.
+  **Still open: the placement half.** Whether the authoring skills state or point at the forms
+  table — the *"the rule exists but not where the writer looks"* half of this finding's own fix
+  boundary — is untouched here and is META-170's job. F-114 is **not** fully resolved.
 
 ## H-022 — Should a fixable citation error halt the whole engagement? (question-shaped)
 - Severity: harness / consumer-modeling, genuinely open

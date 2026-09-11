@@ -751,17 +751,25 @@ def check_claims(runner: Runner) -> None:
                             capture_output=True, text=True, cwd=ROOT)
     output = result.stdout + result.stderr
     found = codes_from(output)
-    expected = {"claim.citation.unresolved", "claim.unsourced"}
+    expected = {"claim.citation.unresolved", "claim.unsourced",
+                "claim.citation.outside-the-record"}
     # A subset cannot see the second unsourced paragraph regressing into the first one's code, so
     # rule 2 is pinned by count as well — the same reasoning `check_cross_answers` gives. The two
     # are the pair F-113 is about: one absolute with no marker at all, and one whose only marker
     # is *shown* inside backticks and must not be read as a source.
-    counted = output.count("[claim.unsourced]")
-    if result.returncode == 0 or not expected <= found or counted != 2:
+    #
+    # `claim.citation.unresolved` is pinned at 2 for ADR-0013's sake: one of the two is the
+    # `toolkit:` citation that quotes nothing, and it shares its code with an older case, so the
+    # exact-set comparison over this fixture cannot see it stop firing. The count can.
+    counts = {"claim.unsourced": 2, "claim.citation.unresolved": 2,
+              "claim.citation.outside-the-record": 1}
+    wrong = {code: output.count(f"[{code}]") for code in counts
+             if output.count(f"[{code}]") != counts[code]}
+    if result.returncode == 0 or not expected <= found or wrong:
         runner.emit("claim-provenance fixtures", False, result,
-                    detail=f"expected {sorted(expected)} over the broken fixture with "
-                           f"claim.unsourced twice, found {sorted(found)} with it "
-                           f"{counted} time(s)")
+                    detail=f"expected {sorted(expected)} over the broken fixture with counts "
+                           f"{counts}, found {sorted(found)} with "
+                           f"{ {code: output.count(f'[{code}]') for code in counts} }")
         return
     # A rule nobody can satisfy is not a rule: prose that cites its sources must pass cleanly.
     runner.run("claim-provenance fixtures",

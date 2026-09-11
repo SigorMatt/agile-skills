@@ -633,7 +633,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 
 ### Cluster 2 — the grammar goes where the writer writes (F-114), and toolkit paths get a ruling
 
-- [ ] **META-169** — the ruling: are `[src: .claude/agile-skills/...]` installed-toolkit paths a
+- [x] **META-169** — the ruling: are `[src: .claude/agile-skills/...]` installed-toolkit paths a
       legal form? ADR + forms table + validator enforcement + a fixture in both directions. The
       twelve citations in the banked evidence stay untouched; the ruling governs future writing.
 - [ ] **META-170** — placement: the authoring skills whose contract obliges "a citation that

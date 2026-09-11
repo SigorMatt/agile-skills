@@ -936,6 +936,132 @@ def run_citation_severity(results) -> None:
                   report.findings[0].message.startswith("in 'O1': "), True)
 
 
+def run_toolkit_citations(results) -> None:
+    """A toolkit source is quoted and attributed, not pointed at (ADR-0013).
+
+    Twelve `[src: .claude/agile-skills/...]` citations resolved by bare `os.path.exists` in a real
+    run and every one of them stopped resolving the moment the record left the machine they were
+    written on. The record walk prunes `.claude`, so by the tool's own definition that tree is not
+    part of the record — a citation may not point where the record does not go.
+
+    Both directions, because a refusal with no legal replacement is F-050's shape: the path is
+    refused, a well-formed `toolkit:` quote is accepted, and a malformed one is refused too, or
+    the form's own rule is unproved.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as root:
+        os.makedirs(os.path.join(root, "tracker", "items"), exist_ok=True)
+        os.makedirs(os.path.join(root, ".claude", "agile-skills", "spec"), exist_ok=True)
+        # The file is really there, which is the point: the old check would pass on it.
+        with open(os.path.join(root, ".claude", "agile-skills", "spec", "dor-dod.md"),
+                  "w", encoding="utf-8") as handle:
+            handle.write("D7\n")
+        with open(os.path.join(root, "notes.md"), "w", encoding="utf-8") as handle:
+            handle.write("one\ntwo\n")
+        resolver = claims_lib.CitationResolver(root)
+
+        # ---- refused: a path into a directory the record walk prunes -------------------
+        for label, citation in (
+                ("the toolkit spec that exists on this machine",
+                 ".claude/agile-skills/spec/dor-dod.md"),
+                ("a line number into a toolkit that upgrades",
+                 ".claude/agile-skills/scripts/lib/claims.py:148"),
+                ("an installed skill", ".claude/skills/answer-questions/SKILL.md"),
+                ("a pruned directory nested deeper", "web/node_modules/left-pad/index.js"),
+                ("the git directory", ".git/HEAD"),
+                ("a compiled cache", "scripts/lib/__pycache__/claims.cpython-311.pyc")):
+            problem = resolver.resolve(citation)
+            results.check(f"toolkit/{label} is refused",
+                          problem is not None and problem.kind == claims_lib.Problem.OUTSIDE,
+                          True)
+        refusal = resolver.resolve(".claude/agile-skills/spec/dor-dod.md")
+        results.check("toolkit/the refusal names the pruned directory",
+                      refusal is not None and "'.claude'" in refusal.message, True)
+        results.check("toolkit/and says what to write instead",
+                      refusal is not None and "toolkit: <document>" in refusal.message, True)
+
+        # A path outside the pruned set is untouched: the refusal must not eat the path form.
+        results.check("toolkit/an ordinary workspace path still resolves",
+                      resolver.resolve("notes.md:2"), None)
+        missing = resolver.resolve("gone.md")
+        results.check("toolkit/and a missing one is still the old failure",
+                      missing is not None and missing.kind, claims_lib.Problem.UNRESOLVED)
+
+        # ---- accepted: the replacement form -------------------------------------------
+        for label, citation in (
+                ("a section sign", 'toolkit: doc-header.md \u00a74a "not retroactively invalid"'),
+                ("a heading", 'toolkit: pipeline.yaml orchestrator.steps "the first open question"'),
+                ("a nested document name",
+                 'toolkit: answer-questions/SKILL.md step 3 "one question at a time"'),
+                ("curly quotes", 'toolkit: doc-header.md \u00a74b \u201ca standing ADR\u201d')):
+            results.check(f"toolkit/{label} resolves", resolver.resolve(citation), None)
+
+        # ---- refused: the replacement form, got wrong ---------------------------------
+        for label, citation in (
+                ("no quote at all", "toolkit: doc-header.md \u00a74a"),
+                ("an empty quote", 'toolkit: doc-header.md \u00a74a ""'),
+                ("a quote of nothing but space", 'toolkit: doc-header.md \u00a74a "   "'),
+                ("no section", 'toolkit: doc-header.md "some words"'),
+                ("the bare prefix", "toolkit:")):
+            problem = resolver.resolve(citation)
+            results.check(f"toolkit/{label} is refused",
+                          problem is not None
+                          and problem.kind == claims_lib.Problem.UNRESOLVED, True)
+        # An ERROR, not META-168's warning: naming the form makes it a citation, and the gate
+        # knows what is missing. Falling through to `unrecognised` would be the softer, wronger
+        # answer, and it is what happens if the prefix branch is removed.
+        incomplete = resolver.resolve("toolkit: doc-header.md")
+        results.check("toolkit/an incomplete body is an error, not an unrecognised marker",
+                      incomplete is not None and incomplete.kind,
+                      claims_lib.Problem.UNRESOLVED)
+        results.check("toolkit/and the message states the whole form",
+                      incomplete is not None
+                      and 'toolkit: <document> <section> "<quoted words>"'
+                      in incomplete.message, True)
+
+        # ---- the marker, not just the body --------------------------------------------
+        text = ('pointed at [src: .claude/agile-skills/spec/dor-dod.md]\n'
+                'quoted [src: toolkit: doc-header.md \u00a74a "worse than none"]\n'
+                '`[src: .claude/agile-skills/pipeline.yaml]` is the escape\n')
+        results.check("toolkit/problems_in refuses the path, passes the quote, drops the mention",
+                      [(line, problem.kind) for line, problem in resolver.problems_in(text)],
+                      [(1, claims_lib.Problem.OUTSIDE)])
+
+    # ---- the level and the code, from the Problem and nowhere else ---------------------
+    for namespace in ("claim", "retro"):
+        report = report_lib.Report("t")
+        claims_lib.Problem.outside_the_record(".claude/x.md", ".claude").report(
+            report, "a.md", 7, namespace)
+        results.check(f"toolkit/{namespace}: a pruned-path citation is an error",
+                      [(f.code, f.level) for f in report.findings],
+                      [(f"{namespace}.citation.outside-the-record", "ERROR")])
+
+    # ---- the boundary is one tuple, read by the walks and by the resolver --------------
+    results.check("toolkit/the resolver reads the walk's own prune list",
+                  claims_lib.PRUNED_DIRS,
+                  (".git", "__pycache__", ".claude", "node_modules"))
+    for directory in claims_lib.PRUNED_DIRS:
+        results.check(f"toolkit/{directory} is outside the record in both halves",
+                      claims_lib.pruned_segment(f"a/{directory}/b.md"), directory)
+    results.check("toolkit/and an ordinary path is inside it",
+                  claims_lib.pruned_segment("docs/architecture/overview.md"), None)
+
+    # ---- `;` inside one marker: `run:` swallows it, `toolkit:` does not ----------------
+    # Verified by execution rather than asserted, because the no-`;` rule on the quoted words is
+    # exactly what buys the second half.
+    results.check("toolkit/two toolkit sources fit in one marker",
+                  claims_lib.split_sources(
+                      'toolkit: doc-header.md \u00a74a "a"; toolkit: pipeline.yaml steps "b"'),
+                  ['toolkit: doc-header.md \u00a74a "a"',
+                   ' toolkit: pipeline.yaml steps "b"'])
+    results.check("toolkit/a run source still swallows every remaining semicolon (F-070)",
+                  len(claims_lib.split_sources(
+                      'run: python3 -c "import sys; print(1)" \u2192 exit 0')), 1)
+    results.check("toolkit/a semicolon inside the quote splits the source, so the rule bites",
+                  len(claims_lib.split_sources(
+                      'toolkit: doc-header.md \u00a74a "quoted; words"')), 2)
+
+
 def run_criterion_citations(results) -> None:
     """`ITEM ACn` — a number is a position in a list, and lists get renumbered (F-094).
 
@@ -1285,6 +1411,7 @@ def main() -> int:
     run_record(results)
     run_citations(results)
     run_citation_severity(results)
+    run_toolkit_citations(results)
     run_criterion_citations(results)
     run_criterion_states(results)
     run_workspace(results)

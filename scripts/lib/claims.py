@@ -35,6 +35,16 @@ structures they are cut out of — entries, table rows, list items, paragraphs):
   * a retro report `###` entry   `lint-retro.check_citations` — `citations_in()`;
                                  presence and resolution
 
+A citation also has a **boundary**, and it is the walk's own (ADR-0013). The two `*.md` walks
+above prune `.git`, `__pycache__`, `.claude` and `node_modules`; by the tool's own definition
+nothing in those is part of the record, so `_resolve` refuses a citation that points into one —
+`claim.citation.outside-the-record`, an ERROR, because the gate knows both what is wrong and what
+to write instead. `PRUNED_DIRS` is read by the walks and by the resolver so the rule and the
+exclusion cannot come apart. The installed toolkit is the case that forced the ruling: twelve
+`[src: .claude/agile-skills/...]` citations resolved by `os.path.exists` in a real run and every
+one of them stopped resolving the moment the record left the machine. Its replacement is the
+`toolkit:` form, which carries its evidence inside the marker instead.
+
 `arose-from` is deliberately not in that list: it is a frontmatter scalar, not prose, so there is
 no code span to mask and `check_provenance` resolves it against the tree directly.
 
@@ -54,7 +64,17 @@ from textio import read_text  # noqa: E402
 __all__ = ["CITATION_RE", "ABSOLUTE_RE", "CODE_TOKEN_RE", "CitationResolver", "Problem",
            "AC_LINE_RE", "AC_RENUMBERABLE_STATUSES", "ac_state", "criteria_in",
            "normalise_anchor", "carries_citation", "citations_in",
-           "looks_like_code", "mask_code", "masked_lines", "split_sources"]
+           "looks_like_code", "mask_code", "masked_lines", "split_sources",
+           "PRUNED_DIRS", "TOOLKIT_RE", "pruned_segment"]
+
+# The directories the record walk prunes. Stated once, because two sites read it for opposite
+# purposes and they must not drift apart (ADR-0013): `validate-workspace.check_claim_citations`
+# and `lint-claims.all_markdown` skip these when they walk a workspace looking for citations, and
+# `CitationResolver._resolve` refuses a citation that points inside one. A citation may not point
+# where the record does not go — if the walk will not open the directory, nothing in it is
+# evidence a reader can check, and `os.path.exists` there answers a question about the machine the
+# citation was written on rather than a question about the record.
+PRUNED_DIRS = (".git", "__pycache__", ".claude", "node_modules")
 
 CITATION_RE = re.compile(r"\[src:\s*(?P<body>[^\]]+)\]")
 # The `:NNN` suffix of a workspace-path citation, and nothing else after it.
@@ -83,6 +103,15 @@ ITEM_QUESTION_RE = re.compile(r"^(EP-\d{3}|WI-\d{4}|BUG-\d{4})/(Q-\d{3})$")
 ADR_RE = re.compile(r"^ADR-(\d{4})$")
 COMMIT_RE = re.compile(r"^commit\s+([0-9a-f]{7,40})$")
 RUN_RE = re.compile(r"^run:\s*(?P<command>.+?)\s*(?:→|->)\s*(?P<outcome>.+)$")
+# `toolkit: <document> <section> "<quoted words>"` — how a record cites the toolkit that is
+# running it (ADR-0013). The toolkit is installed outside the record and upgrades underneath it,
+# so this citation carries its evidence *inside* the marker rather than pointing at a file:
+# `<document>` is how the toolkit document names itself and is never resolved against the
+# filesystem, `<section>` is everything between it and the quote, and the quoted words are
+# mandatory and non-empty. Like the acceptance-criterion anchor, the quote may contain neither
+# `]` (it ends the marker) nor `;` (it separates sources).
+TOOLKIT_RE = re.compile(r"^toolkit:\s*(?P<document>\S+)\s+(?P<section>.+?)\s*"
+                        r"[\"\u201c](?P<words>[^\"\u201d]*)[\"\u201d]\s*$")
 # The acceptance-criterion line, in one place. `workspace.py` imports it rather than keeping a
 # second copy: two regexes for one line disagree the first time a state is added to it, and one
 # just was. The three states are `[ ]` not settled, `[x]` settled by the observation the
@@ -231,6 +260,19 @@ def looks_like_code(token: str) -> bool:
     return False
 
 
+def pruned_segment(path: str):
+    """The first segment of `path` that the record walk prunes, or None.
+
+    Read by the resolver, and by nothing else that has to re-derive it. Any segment, at any
+    depth: `os.walk` prunes the directory wherever it appears, so `a/b/node_modules/c` is as far
+    outside the record as `node_modules/c` is.
+    """
+    for segment in path.replace("\\", "/").split("/"):
+        if segment in PRUNED_DIRS:
+            return segment
+    return None
+
+
 def _shorten(text: str, words: int = 12) -> str:
     """The opening words of a criterion, for a message that has to quote it back."""
     parts = text.split()
@@ -289,6 +331,12 @@ class Problem:
 
     UNRESOLVED = "unresolved"
     UNRECOGNISED = "unrecognised"
+    # A third kind, and an ERROR like the first (ADR-0013). The gate knows exactly what is wrong
+    # *and* what to write instead, so there is none of the mention-vs-typo ambiguity that makes
+    # UNRECOGNISED a warning. It is not UNRESOLVED either, because "does not exist in this
+    # workspace" is the wrong sentence: the file may exist perfectly well on the machine the
+    # citation was written on, and that is the problem rather than the exception to it.
+    OUTSIDE = "outside-the-record"
 
     __slots__ = ("kind", "message")
 
@@ -312,6 +360,16 @@ class Problem:
         return cls(cls.UNRESOLVED, message)
 
     @classmethod
+    def outside_the_record(cls, citation: str, directory: str) -> "Problem":
+        """A path into a directory the record walk prunes. The gate looked, and it knows the fix."""
+        return cls(cls.OUTSIDE,
+                   f"{citation!r} points inside {directory!r}, which the walk that reads this "
+                   f"record prunes — so it is not part of the record, and whether the file is "
+                   f"there is a fact about this machine rather than about the record. Quote the "
+                   f"source instead of pointing at it: for the toolkit, "
+                   f"[src: toolkit: <document> <section> \"<quoted words>\"]")
+
+    @classmethod
     def unrecognised(cls, citation: str) -> "Problem":
         """No form at all. The gate did not look, and says so instead of ruling."""
         return cls(cls.UNRECOGNISED,
@@ -328,6 +386,12 @@ class Problem:
             report.warn(path, line, code, message,
                         hint="a warning, because nothing was checked: only a marker that "
                              "matches a form and then fails is an error")
+            return
+        if self.kind == self.OUTSIDE:
+            report.error(path, line, code, message,
+                         hint="an error rather than a warning: the gate knows what is wrong and "
+                              "what to write instead, so there is nothing here it cannot tell "
+                              "apart (spec/doc-header.md, the citation forms table)")
             return
         report.error(path, line, code, message,
                      hint="a citation that does not resolve is the appearance of evidence, "
@@ -409,6 +473,12 @@ class CitationResolver:
                 f"{citation!r} records a command with no outcome — a run citation is "
                 f"'run: <command> → <outcome>'")
 
+        if citation.lower().startswith("toolkit:"):
+            # Same reasoning as `run:` above: naming the form is enough to make this a citation
+            # rather than a mention of one, so an incomplete `toolkit:` body is an error with a
+            # message that says what is missing, not an unrecognised-marker warning.
+            return self._resolve_toolkit(citation)
+
         match = COMMIT_RE.match(citation)
         if match:
             result = self.git(["cat-file", "-e", f"{match.group(1)}^{{commit}}"])
@@ -447,6 +517,14 @@ class CitationResolver:
 
         candidate = citation.split(":")[0].split(" ")[0]
         if "/" in candidate or "." in candidate:
+            # ADR-0013. Before asking whether the file is there, ask whether the record goes
+            # there at all. `PRUNED_DIRS` is the walk's own list, read from the one place it is
+            # written, so the rule and the exclusion cannot drift apart: the installed toolkit
+            # under `.claude/` is the case that made this a ruling, and `.git`,
+            # `__pycache__` and `node_modules` are outside the record for the same reason.
+            pruned = pruned_segment(candidate)
+            if pruned is not None:
+                return Problem.outside_the_record(citation, pruned)
             target = os.path.join(self.root, candidate)
             if not os.path.exists(target):
                 return Problem.unresolved(f"{candidate!r} does not exist in this workspace")
@@ -468,6 +546,34 @@ class CitationResolver:
             return None
 
         return Problem.unrecognised(citation)
+
+    def _resolve_toolkit(self, citation: str):
+        """`toolkit: <document> <section> "<quoted words>"` — resolves when the shape is complete.
+
+        Said plainly, because the honest boundary is narrow: this gate **cannot** tell whether the
+        toolkit really says those words. Nothing here opens a file — the toolkit is installed
+        outside the record, it upgrades underneath a record that is not allowed to become
+        retroactively invalid (`spec/doc-header.md` §4a), and a version pin would make every
+        standing citation fail on the next upgrade. What is checked is that the citation carries
+        enough for a **reader** to check it: which document, which section, and the words claimed.
+
+        That is strictly more than the path form it replaces carried. `[src: .claude/agile-skills/
+        spec/dor-dod.md]` was checked by `os.path.exists` in a directory the record walk prunes,
+        so it verified the writer's own installation and nothing else, and a reader who received
+        the record could not follow it at all.
+        """
+        match = TOOLKIT_RE.match(citation)
+        if match is None:
+            return Problem.unresolved(
+                f"{citation!r} names the toolkit form and does not complete it — a toolkit "
+                f"citation is 'toolkit: <document> <section> \"<quoted words>\"', and all three "
+                f"parts are required because nothing here is looked up")
+        if not match.group("words").strip():
+            return Problem.unresolved(
+                f"{citation!r} quotes nothing — the quoted words are the whole of the "
+                f"evidence a toolkit citation carries, so an empty quote is the appearance of "
+                f"one")
+        return None
 
     def _resolve_criterion(self, item_id: str, label: str, anchor):
         """`ITEM ACn`, and what makes it point at the same criterion tomorrow (F-094).

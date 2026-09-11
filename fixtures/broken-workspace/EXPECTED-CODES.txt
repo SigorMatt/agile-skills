@@ -11,6 +11,7 @@ adr.reversibility
 artifact.missing
 artifact.refinement-qa.not-recorded
 board.missing
+claim.citation.outside-the-record
 claim.citation.unrecognised
 claim.citation.unresolved
 doc.changelog.empty

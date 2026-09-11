@@ -84,7 +84,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 
-from claims import (ABSOLUTE_RE, CODE_TOKEN_RE, CitationResolver,  # noqa: E402
+from claims import (ABSOLUTE_RE, CODE_TOKEN_RE, PRUNED_DIRS, CitationResolver,  # noqa: E402
                     carries_citation, looks_like_code)
 from record import is_prose, paragraphs  # noqa: E402
 from report import Report  # noqa: E402
@@ -234,8 +234,10 @@ class ClaimLinter:
             return self.documents()
         found = []
         for base, dirs, files in os.walk(self.root):
-            dirs[:] = [entry for entry in dirs
-                       if entry not in (".git", "__pycache__", ".claude", "node_modules")]
+            # `claims.PRUNED_DIRS`, not a copy of it: the resolver refuses a citation that points
+            # into one of these, and the two rules are the same rule seen from each end
+            # (ADR-0013). A second hand-written tuple here is how they would come apart.
+            dirs[:] = [entry for entry in dirs if entry not in PRUNED_DIRS]
             for name in sorted(files):
                 if not name.endswith(".md"):
                     continue

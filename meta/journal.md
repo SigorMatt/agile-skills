@@ -6749,3 +6749,91 @@ recall is a reading, not a number, and the report says which.
   `fixtures/retro/`, `meta/findings/FINDINGS.md` (F-113 and F-075 statuses appended, as one
   class), `adapters/claude-code/dist/` (re-rendered), `meta/plan.md`, `meta/journal.md` (this
   entry).
+
+## 2026-09-11 — META-169 — a toolkit source is quoted and attributed, not pointed at
+
+- **Result:** `[src: .claude/agile-skills/spec/dor-dod.md]` resolved, and nothing had ever
+  decided that it should. It resolved by accident: the body contains a `/`, so it fell into the
+  resolver's workspace-path branch and was answered by `os.path.exists`. Twelve citations of that
+  shape stand in iteration 5's abandoned workspace. The ruling, derived in
+  `meta/adr/ADR-0013-a-toolkit-source-is-quoted-not-pointed-at.md`, is **illegal as a path, legal
+  as a quote**: a citation body resolving inside a directory the record walk prunes is refused as
+  `claim.citation.outside-the-record` (an ERROR), and a new form —
+  `[src: toolkit: <document> <section> "<quoted words>"]` — carries the same evidence inside the
+  marker instead.
+  - **All five forces survived contact with the code, and two got sharper under it.**
+    (1) Both record walks prune `(".git", "__pycache__", ".claude", "node_modules")` — and each
+    had the tuple written out **by hand, separately**, which is the drift already started rather
+    than a risk of it. (2) `python3 scripts/validate-workspace
+    meta/harness/evidence/iteration-5-envel-abandoned` reports **twelve** `claim.citation.unresolved`
+    findings, one per citation, because `.claude/` was never banked with the record: twelve for
+    twelve stop resolving the moment the record leaves the machine. `Q-004.md:215` states in the
+    record *"Both citations resolve to files in the workspace"*, which was true when written and
+    is false in the banked copy of the same file. (3) `spec/doc-header.md` §4a does say *"A record
+    written before this convention existed is not retroactively invalid"* — so a version pin is
+    that rule broken on a schedule rather than once. (4) sharper than the brief: at `181e69d`,
+    the toolkit revision installed when that run executed, `scripts/lib/claims.py:148` **was**
+    `if PATH_RE.match(token) or "/" in token:` — the citation was true. Two toolkit commits later
+    (`cd00504`, `656b6c5`) line 148 is blank and the cited test is at line 223. F-077's bound is
+    unavailable because the file is 545 lines long and it is the wrong file. (5) the run's own
+    `Q-004` record shows rule 2 demanding the citation and the author adding it in response, so a
+    refusal without a replacement would be F-050 exactly.
+  - **Generalised, not hand-written.** `claims.PRUNED_DIRS` is stated once and read three times —
+    the two walks and `CitationResolver._resolve`. Naming `.claude` a second time inside the
+    resolver would have made the rule and the exclusion two facts kept equal by hand, and the
+    resolver would go on refusing `.claude` after somebody added a fifth directory to the walks.
+    Any segment at any depth counts, because `os.walk` prunes the directory wherever it appears.
+  - **The honest boundary, said in the table and in the ADR rather than discovered.** The gate
+    **cannot** tell whether the toolkit says those words; nothing is opened. It checks that the
+    citation carries enough for a **reader** to check it. That is strictly more than the path form
+    carried, which verified the writer's own installation and left a reader with a pointer they
+    could not follow at all.
+  - **`split_sources`, verified by execution.** `toolkit:` does **not** swallow the rest of the
+    marker — `'toolkit: a §1 "x"; toolkit: b §2 "y"'` splits into two sources and both resolve —
+    while `run:` still does (F-070). A `;` inside the quote splits the source and both halves
+    fail, which is why the no-`;` rule is stated with the form.
+  - **The spec text is runtime-neutral, which the first draft was not.** `lint-skills` refused
+    five lines naming `.claude` and `SKILL.md` under `spec/`. The rule is now stated as *the
+    directory the runtime installs this toolkit into*, alongside the version-control directory,
+    the object cache and the dependency directory. The ADR, in `meta/`, names them.
+- **Questions raised:** none new. F-098's Direction asks for exactly this mechanism (*"a prefix,
+  or the path"*) and the `toolkit:` prefix is it — but F-098 is **not** resolved and its status is
+  deliberately untouched: its own gate prices the sweep at 97 bare `ADR-nnnn` citations that must
+  move at once. A dated note records the relationship; the status line is META-172's.
+- **F-114 is half-fixed and says so.** The Direction half (are toolkit paths legal?) is decided
+  and implemented. The **placement** half — whether the authoring skills state or point at the
+  forms table — is untouched and is META-170's.
+- **Non-vacuity, strong form, nine mutations; every one of the 33 new cases dies under at least
+  one.** (M1) `pruned_segment()` always returns None: 13 cases, and
+  `claim.citation.outside-the-record` vanishes from the must-fail fixture's exact set. (M2) the
+  `toolkit:` branch removed from `_resolve`: 12 cases, and the fixture's
+  `claim.citation.unresolved` count falls 2 → 1. (M3) the non-empty-quote check removed: the 2
+  empty-quote cases. (M4) a malformed `toolkit:` body resolves anyway: 5 cases — *no quote at
+  all*, *no section*, *the bare prefix* and the two message cases — and the fixture count falls
+  2 → 1 again. (M5) `PRUNED_DIRS` loses the toolkit directory: 7 cases including *the resolver
+  reads the walk's own prune list*, which is the single-tuple wiring itself. (M6) the refusal
+  reported as a WARNING: the 2 level-and-code cases, one per namespace. (M7) a `toolkit:` source
+  swallows the marker like `run:`: the 2 semicolon cases. (M8) `pruned_segment()` refuses every
+  path: 14 cases, the over-refusal direction — *an ordinary workspace path still resolves*, *and
+  an ordinary path is inside it* — and `fixtures/sourced-claims` starts exiting 1. (M9) `run:`
+  stops swallowing semicolons: the F-070 control case. Restored and re-run clean.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **46 steps** (unchanged);
+  `must-fail fixture` **109 → 110 codes** (`claim.citation.outside-the-record`, whose only source
+  in the fixture is the new pruned-path citation); `scripts/lib/selftest.py` **386 → 419 cases**
+  (33 new, in a new `run_toolkit_citations`). The quoteless `toolkit:` case shares
+  `claim.citation.unresolved` with older cases, so it is pinned by **count** in `check_claims`
+  (2) alongside `claim.unsourced` (2) and `claim.citation.outside-the-record` (1) — META-167's
+  correction, that the fixture compares codes as a set.
+  `meta/harness/evidence/` is unchanged — `git status` clean over it, and the twelve citations
+  there are untouched: the ruling governs future writing and §4a's non-retroactivity rule covers
+  what stands.
+- **Artifacts:** `meta/adr/ADR-0013-a-toolkit-source-is-quoted-not-pointed-at.md` (new),
+  `scripts/lib/claims.py` (`PRUNED_DIRS`, `pruned_segment()`, `TOOLKIT_RE`,
+  `Problem.OUTSIDE`/`outside_the_record()`, `_resolve_toolkit()`, the docstring's boundary
+  paragraph), `scripts/validate-workspace` and `scripts/lint-claims` (both walks read
+  `PRUNED_DIRS`), `scripts/lib/selftest.py` (`run_toolkit_citations`), `scripts/check`
+  (`check_claims` count pins), `spec/doc-header.md` (§4a forms table + revision 11),
+  `fixtures/broken-workspace/` (two refusal cases, `EXPECTED-CODES.txt`, README row),
+  `fixtures/sourced-claims/` (two accepted `toolkit:` citations),
+  `meta/findings/FINDINGS.md` (F-114's Direction half appended, F-098 note),
+  `adapters/claude-code/dist/` (re-rendered), `meta/plan.md`, `meta/journal.md` (this entry).
