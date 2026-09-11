@@ -3,25 +3,30 @@
 ## Builder session six is RUNNING. Mission: `meta/BUILDER-6-PROMPT.md`; plan: `meta/plan.md` Phase VII.
 
 **Done so far.** META-167 (`cd00504`) one mask for every citation surface · META-168 (`656b6c5`)
-severity follows knowledge + check step 6a (the proof-case over a copy of the banked evidence) ·
-META-169 (`c8f69b3`) ADR-0013, a toolkit source is quoted and attributed, not pointed at ·
-META-170 (`b6ff22f`) the grammar placed in the seven skills whose contracts oblige a citation,
-plus check step 15d. **47 steps, 110 fixture codes, 419 selftest cases.**
+severity follows knowledge + check step 6a · META-169 (`c8f69b3`) ADR-0013, a toolkit source is
+quoted and attributed · META-170 (`b6ff22f`) the grammar placed in seven skills + check step 15d ·
+META-171 (`55d7f03`) ADR-0014, the bounded self-repair allowance. **47 steps, 110 fixture codes,
+419 selftest cases, 191 harness tests.**
 
-**Current unit: META-171 — H-022: is a fixable record defect terminal? (harness commit)**
+**Current unit: META-171b — the preserved original error must name the defect (harness commit).**
 
-The decision to implement: **a fixable record defect is not a verdict on the engagement.** On a
-non-zero `validate-workspace` after a worker turn, the driver grants a **bounded self-repair
-allowance** — up to N *consecutive* repair turns (config `repair-turns`, default 2) whose only job
-is making the workspace validate. Green again resets the counter and the engagement resumes where
-it was; exhaustion is terminal `validator-failed` with the **original** error preserved in the stop
-detail. Reasoning in ADR-0014; harness tests for both the recovery and the exhaustion path; H-022's
-status updated with the decision.
+META-171 implemented ADR-0014's promise that an exhausted allowance stops with *the original
+error* preserved, then found the promise only nominally kept: `scan_project` keeps
+`(...).split("\n")[-1:]` of the validator's output (`harness/run_iteration.py:354`), so the
+preserved detail is the summary line — `validate-workspace: 1 error, 0 warnings` — which names no
+defect. Iteration 5's whole value was that the *first* error was the finding; a terminal stop that
+cannot say which line failed loses exactly that.
 
-Done when: `harness/tests/test_harness.py` green (110 before this unit), `./scripts/check` green,
-committed AND pushed.
+Steps: widen what the driver keeps of the validator's output to enough lines to name the failing
+findings, in whatever shape leaves the existing stop details intact and truthful; test that an
+exhausted allowance's detail names the *original* failing line, not the summary; ADR-0014's
+Consequences and H-022's status updated to say the deferral was taken rather than left.
 
-**Next unit: META-172** — the open-findings sweep and triage.
+Done when: harness tests green, `./scripts/check` green, committed AND pushed.
+
+**Next unit: META-172** — the open-findings sweep and triage, including the three defects this
+session's units found on the way (the unreachable `run:` outcome message, the render that wipes
+`dist/` before it validates, and the pruned-directory tuple that had already drifted).
 
 ## Standing instructions (still in force)
 
