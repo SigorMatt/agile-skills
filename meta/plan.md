@@ -636,7 +636,7 @@ AND pushes; the orchestrator verifies cheaply and checkpoints write-ahead.
 - [x] **META-169** — the ruling: are `[src: .claude/agile-skills/...]` installed-toolkit paths a
       legal form? ADR + forms table + validator enforcement + a fixture in both directions. The
       twelve citations in the banked evidence stay untouched; the ruling governs future writing.
-- [ ] **META-170** — placement: the authoring skills whose contract obliges "a citation that
+- [x] **META-170** — placement: the authoring skills whose contract obliges "a citation that
       resolves" state or directly point at the citation forms table — which forms exist, what
       makes one well-formed, workspace-relativity, and the mention convention. Short in the
       skills; the table stays the single source. Re-render. F-114 status updated.

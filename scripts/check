@@ -140,6 +140,12 @@ Steps, in order:
                                                or a missing one does not count, and a done item
                                                settled entirely by substitution closes D1 while
                                                the same item unticked does not
+ 15d. the citation grammar is placed    — the skills whose contracts oblige a citation are
+                                               derived from those contracts, and each one's
+                                               procedure must name the citation forms table in
+                                               `spec/doc-header.md` §4a. An empty derived set
+                                               fails: a writer who learns the grammar by
+                                               tripping the gate is F-114
  16. write-guard self-test                   — adapters/claude-code/hooks/test_guard.py: the
                                                guard denies every way of writing a protected
                                                file and allows every way of reading or naming one
@@ -3709,6 +3715,88 @@ def check_process_gate_names(runner: Runner) -> None:
                                      "nothing reads the prose against the contract")
 
 
+CITATION_OBLIGATION_RE = re.compile(r"\bcitations?\b|\bcites?\b|\bcited\b", re.IGNORECASE)
+FORMS_TABLE_RE = re.compile(r"doc-header\.md.{0,80}Citation forms", re.IGNORECASE)
+
+
+def skills_owing_a_citation(methodology: str) -> dict:
+    """`{skill: the obligation statements that name a citation}`, read from the contracts.
+
+    Derived, never listed. Which skills oblige a worker to write a citation is a fact in
+    `skill.yaml` — a gate's `description` or `manual_check`, or an exit criterion — and a
+    hand-typed list of them goes stale on the next contract that gains one, which is the rot the
+    step below exists to prevent.
+
+    The rule asks whether an obligation names a citation at all, not whether it also spells out
+    that the citation must resolve. `refine` is why: its R11 obligation tells a worker to carry a
+    measurement as a command-outcome citation (F-089) and never says the word *resolve*, and a
+    worker writing one needs the grammar exactly as much as a worker writing any other form. The
+    looser rule's failure mode is one more procedure pointing at the table; the stricter one's is
+    a writer who is not told, which is F-114 itself.
+    """
+    sys.path.insert(0, os.path.join(SCRIPTS, "lib"))
+    import miniyaml
+    base = os.path.join(methodology, "skills")
+    owing = {}
+    for name in sorted(os.listdir(base)):
+        path = os.path.join(base, name, "skill.yaml")
+        if not os.path.isfile(path):
+            continue
+        contract = miniyaml.load_file(path) or {}
+        statements = []
+        for gate in contract.get("quality_gates") or []:
+            if isinstance(gate, dict):
+                for key in ("description", "manual_check"):
+                    if isinstance(gate.get(key), str):
+                        statements.append(gate[key])
+        for criterion in contract.get("exit_criteria") or []:
+            if isinstance(criterion, str):
+                statements.append(criterion)
+        named = [text for text in statements if CITATION_OBLIGATION_RE.search(text)]
+        if named:
+            owing[name] = named
+    return owing
+
+
+def check_citation_grammar_placement(runner: Runner) -> None:
+    """A skill that obliges a citation points at the grammar for writing one (F-114).
+
+    The forms are enforced at `validate-workspace` and were stated nowhere a worker authoring a
+    document reads: resolvability was in the contracts, well-formedness was in the validator's
+    spec alone, and a real run learned `path:line` by tripping the gate and died of it. This step
+    reads both sides — the contracts for who owes a citation, the procedures for whether the
+    grammar is named — so the pointer cannot rot the next time a contract gains the obligation.
+    It is the F-059 class: prose and contract drifting apart with nothing reading both.
+
+    An empty derived set is a **failure**. That is how a step like this rots into a silent pass:
+    the field it reads is renamed, nothing is derived, every assertion holds vacuously.
+    """
+    label = "a skill that obliges a citation names the forms table (F-114)"
+    methodology = os.path.join(ROOT, "methodology")
+    owing = skills_owing_a_citation(methodology)
+    problems = []
+    if not owing:
+        problems.append("- no skill was derived as owing a citation. The contracts cannot all "
+                        "have lost the obligation, so the derivation is broken — and an empty "
+                        "set would make every assertion below hold over nothing")
+    for name in sorted(owing):
+        process = os.path.join(methodology, "skills", name, "process.md")
+        text = read(process) if os.path.isfile(process) else ""
+        # Whitespace-flattened, because the pointer is a wrapped sentence and the file name and
+        # the table's name land on different lines in `review-close`, whose rendered body sits on
+        # the runtime's line ceiling and carries the one-sentence form of it.
+        if not FORMS_TABLE_RE.search(" ".join(text.split())):
+            problems.append(f"- {name}: its contract obliges a citation ("
+                            f"{owing[name][0][:60].strip()}...) and its process.md names no "
+                            f"citation forms table — the writer learns the grammar from a gate")
+    table = read(os.path.join(ROOT, "spec", "doc-header.md"))
+    if "### Citation forms" not in table:
+        problems.append("- spec/doc-header.md has no `### Citation forms` heading: the "
+                        "procedures point at a table that is no longer called that")
+    runner.emit(f"{label} ({len(owing)} skills)", not problems,
+                detail="\n".join(problems))
+
+
 def check_shipped_scripts(runner: Runner) -> None:
     """Every shipped script runs from the shipped tree, with only the shipped library beside it.
 
@@ -4275,6 +4363,7 @@ def main() -> int:
     check_silence_threshold(runner)
     check_halt_is_last(runner)
     check_process_gate_names(runner)
+    check_citation_grammar_placement(runner)
     check_shipped_scripts(runner)
     check_guard(runner)
     check_findings_citations(runner)

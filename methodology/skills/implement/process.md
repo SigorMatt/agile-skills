@@ -108,6 +108,12 @@ You do not re-litigate the plan. If the plan is wrong, that is a question, not a
    false in the one member nobody opened (F-095). If the family cannot be enumerated, weaken the
    sentence until it is a cited fact rather than recording the enumeration as done.
 
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
+
 5. **Commit as you go**, using `conventions.commit-subject` with the item ID in every subject
    line. Small commits with real messages: a reviewer reconstructing this item runs
    `git log --grep {{item.id}}` and reads only what you wrote there.

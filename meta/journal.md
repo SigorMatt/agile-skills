@@ -6837,3 +6837,64 @@ recall is a reading, not a number, and the report says which.
   `fixtures/sourced-claims/` (two accepted `toolkit:` citations),
   `meta/findings/FINDINGS.md` (F-114's Direction half appended, F-098 note),
   `adapters/claude-code/dist/` (re-rendered), `meta/plan.md`, `meta/journal.md` (this entry).
+
+---
+
+## 2026-09-11 — META-170 — the citation grammar goes where the writer writes
+
+- **Result:** F-114's placement half. A worker authored citations in good faith, learned the
+  grammar by tripping `validate-workspace`, and the run died of it — while the grammar itself sat
+  in `spec/doc-header.md` §4a and **no skill named it**. The seven skills whose contracts oblige a
+  citation now point at that table by name, and a `scripts/check` step derives the same seven the
+  same way so the pointer cannot rot.
+  - **The set is derived, never listed.** Which skills owe a citation is a fact in `skill.yaml`:
+    an obligation statement — a quality gate's `description` or `manual_check`, or an exit
+    criterion — that names a citation. Seven do (`answer-questions`, `implement`, `intake`,
+    `plan`, `refine`, `retro`, `review-close`); `next` and `verify` oblige none. A hand-typed
+    list is stale the next time a contract gains the obligation, which is the defect this unit
+    exists to prevent, written in the fix.
+  - **The rule is the looser of the two, deliberately.** It asks whether an obligation names a
+    citation at all, not whether it also says *resolves*. `refine` is why: R11 tells a worker to
+    carry a measurement as a **command-outcome citation** (F-089) and never uses the word, and
+    that writer needs the grammar exactly as much as any other. The loose rule's failure mode is
+    one more procedure pointing at the table; the strict rule's is a writer who is not told —
+    F-114 itself.
+  - **Short in the skills; §4a stays the single source.** Five lines each: the table by name, and
+    the three traps a gate would otherwise teach — a path citation is **workspace-relative** and
+    never points into the installed toolkit (ADR-0013's quoted form instead, META-169), a marker
+    inside backticks or a fence is *naming* a form rather than using one, and a marker matching no
+    form at all warns rather than fails (META-168). Pasting the table into nine files would be the
+    two-readers-one-vocabulary defect this ledger keeps finding, committed in prose.
+  - **`review-close` sits on the runtime's ceiling.** Its rendered body was **exactly** 500 lines,
+    the renderer's limit, so the pointer there is the one-sentence form folded into step 9a, and
+    two of its paragraphs were rewrapped — word for word, nothing cut — to pay for the two lines.
+    A skill at the limit cannot be told anything new without something moving; that is worth
+    knowing before the next unit tries.
+  - **The renderer wipes `dist/` before it validates.** A failed render (`review-close` over the
+    limit) left `dist/` half-deleted, recovered with `git checkout`. Not repaired here — it is
+    adjacent to nothing this unit owns — and the working tree was clean before and after.
+  - **Runtime neutrality shaped the wording, as it did in META-169.** The pointer says *the
+    installed toolkit*, never the directory a runtime installs it into; `lint-skills` refuses that
+    word under `methodology/` and `spec/`.
+- **Non-vacuity, strong form, on the new step.** (1) The pointer deleted from `intake`'s
+  procedure: FAIL, naming `intake` and quoting the obligation that put it in the set. (2) The
+  derivation made to match nothing: FAIL at `(0 skills)` — an empty derived set is a **failure**,
+  because a step of this shape rots by silently checking nothing. Restored and re-run clean, both
+  times. The step also asserts the other direction — `spec/doc-header.md` still has a
+  `### Citation forms` heading — so renaming the table breaks the pointer loudly.
+- **Versions.** `spec/skill-contract.md` §3 is the discipline: a change to `skill.yaml` or
+  `process.md` MUST bump the version in the same commit, PATCH for wording that changes no
+  contract. Seven PATCH bumps: `answer-questions` 0.6.2 → 0.6.3, `implement` 0.6.0 → 0.6.1,
+  `intake` 0.5.1 → 0.5.2, `plan` 0.6.2 → 0.6.3, `refine` 0.6.0 → 0.6.1, `retro` 0.2.1 → 0.2.2,
+  `review-close` 0.14.0 → 0.14.1. No gate, no output and no transition moved.
+- **Gates:** `./scripts/check` green — `check: all steps passed`, **46 → 47 steps** (15d, *a skill
+  that obliges a citation names the forms table*); `must-fail fixture` **110 codes** (unchanged);
+  `scripts/lib/selftest.py` **419 cases** (unchanged). F-114's own grep, re-run over what actually
+  installs: `grep -rniE "workspace-relative|citation forms|forms table"
+  adapters/claude-code/dist/skills/` returned nothing at exit 1 in the abandoned workspace and now
+  returns 13 lines across all seven skills, exit 0.
+- **Artifacts:** the seven `methodology/skills/*/process.md` and their `skill.yaml` versions,
+  `scripts/check` (`skills_owing_a_citation()`, `check_citation_grammar_placement()`, step 15d in
+  the header), `adapters/claude-code/dist/` (re-rendered), `meta/findings/FINDINGS.md` (F-114's
+  placement half appended — the finding now reads fixed in both halves), `meta/plan.md`,
+  `meta/journal.md` (this entry).

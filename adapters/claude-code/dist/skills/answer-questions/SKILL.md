@@ -3,7 +3,7 @@ name: answer-questions
 description: "Answer downstream skills' open questions from the record, propagate each answer into the authoritative artifacts, and escalate only when required. Use when: An item sits at status awaiting-answer with an open blocking question; Open questions addressed to the architect exist on any item; A human has just answered an escalated question - or deferred it - and the reply must reach the artifacts; Someone asks to \"answer the open questions\", \"unblock\", or \"triage the questions\" in a workspace. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: answer-questions
-  methodology-version: 0.6.2
+  methodology-version: 0.6.3
   persona: architect
   human-interaction: direct
 ---
@@ -219,6 +219,12 @@ information.
    | cited fact | an absolute about something named as code — an identifier, a call, a path | a citation, written `[src: ...]`, that resolves |
    | quantified claim | a claim over a family: *every*, *all*, *no*, *the only* | the **enumeration**: the set, how you enumerated it with the command's output, the members by name, and a verdict per member |
    | engagement-state sentence | a sentence about the **engagement** rather than the product | nothing — step 5b, and it is not yours to write |
+
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
 
    The `## Consequences` entry for the file you changed is where that evidence goes: one line per
    claim, naming the sentence and carrying what its kind owes. That is what makes the claim

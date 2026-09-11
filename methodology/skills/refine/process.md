@@ -166,6 +166,12 @@ acted on. Then write down exactly what was said.
    R11, and it is yours to judge: nothing mechanical can tell a count of project artefacts from
    a count in the tool's own output.
 
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
+
    **Renumbering is not free, and it is you who does it.** Inserting or dropping a criterion
    shifts every number after it, and a citation elsewhere that says `AC7` goes on resolving
    against whatever moved into that position — silently, with the gate green. It has happened

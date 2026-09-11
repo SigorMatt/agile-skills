@@ -124,6 +124,12 @@ You talk to the human directly. You are the only skill besides `refine` that doe
    nothing named as code yet, and a vision that cites nothing because it asserts nothing about
    code is the ordinary case, not a gap to fill.
 
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
+
 6a. **Write the `## Engagement state` section — you are the only skill that writes one outside
    the ending.** Some of what a vision says is not about the product at all. *"The stakeholder
    has not yet been asked to accept this"*, *"nothing else is open"*, *"three of four items are

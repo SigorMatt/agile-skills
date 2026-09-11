@@ -3,7 +3,7 @@ name: plan
 description: "Design the change for a Ready item, record the decisions as ADRs, and write an implementation plan someone else can execute. Use when: An item sits at status ready and nobody has decided how it will be built; A design decision needs recording as an ADR before code is written; The project has no architecture overview and an item is about to be implemented; Someone asks to \"design\", \"plan\", or \"work out the approach\" for a tracked item. Part of the agile-skills pipeline (persona: architect)."
 metadata:
   methodology-skill: plan
-  methodology-version: 0.6.2
+  methodology-version: 0.6.3
   persona: architect
   human-interaction: direct
 ---
@@ -150,6 +150,12 @@ will not have been tested by anyone.
    | `cited-fact` | an assertion about a named thing — an identifier, a call, a path | `implement` repairs it, and the repair cites what it now points at |
    | `quantified` | a claim over a family: *every*, *all*, *no*, *the only* | repaired the same way, and whoever audits it owes the enumeration, not the citation |
    | `engagement-state` | a sentence about the **engagement**, not the product: "the stakeholder has not yet been asked", "this is the only remaining gap" | nobody touches it. Its disposition is `owned-by-ending`, and `review-close` restates it at the ending (`spec/doc-header.md` §4a) |
+
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
 
    You leave `disposition` open. `implement` closes every row and may add rows — it is the actor
    that discovers mid-change that a fourth document was falsified. Completeness is not something

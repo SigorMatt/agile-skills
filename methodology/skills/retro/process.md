@@ -17,6 +17,12 @@ about this engagement carries a citation to the file, entry or line it came from
 observation is a refused write: you are asking a reader to believe you about a record they are
 holding.
 
+**The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+form and what makes each one resolve; read it before you write a citation rather than learning it
+from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+*naming* a form, not using one; a marker matching no form at all warns rather than fails.
+
 Nobody is waiting for you. The stakeholder's engagement ended at sign-off and they have been told
 the work is finished. This is the team reading its own trail before the engagement is archived.
 

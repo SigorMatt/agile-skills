@@ -3,7 +3,7 @@ name: intake
 description: "Turn a raw idea from a human into an epic and a first set of work items in the tracker. Use when: The orchestrator routed an open stakeholder request under tracker/requests/; A human has described something they want built and no epic exists for it yet; The workspace has no tracker directory and work is about to start; A human proposes a second, unrelated body of work in a project that already has a tracker; Someone asks to \"start\", \"kick off\", or \"set up\" a piece of work from an idea. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: intake
-  methodology-version: 0.5.1
+  methodology-version: 0.5.2
   persona: product-analyst
   human-interaction: direct
 ---
@@ -149,6 +149,12 @@ You talk to the human directly. You are the only skill besides `refine` that doe
    carries a citation that resolves (`spec/doc-header.md` §4a). At intake there is usually
    nothing named as code yet, and a vision that cites nothing because it asserts nothing about
    code is the ordinary case, not a gap to fill.
+
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
 
 6a. **Write the `## Engagement state` section — you are the only skill that writes one outside
    the ending.** Some of what a vision says is not about the product at all. *"The stakeholder

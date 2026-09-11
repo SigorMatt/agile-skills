@@ -174,8 +174,7 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
    6a's record — one row per entry, and beneath it the answer to *did this change falsify a
    document the set does not name*, with what you read. `## Accepted gaps` is step 5a's, same
    shape and same reason: every row disposed, no gaps written as one row saying `none`.
-   `## Sections restated at the ending` is an ending's only (step 10); at a close, `not an
-   ending`.
+   `## Sections restated at the ending` is an ending's only (step 10); at a close, `not an ending`.
 
 9a. **Audit the claims, from the citations — not from the prose.** D12, and DE6 at an epic, ask
     whether the confident sentences in `docs/` are still true. Do it the one way that can fail:
@@ -184,7 +183,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
     your memory of writing it, which is how one wrong claim reached seven documents. Record each
     claim and what you opened in `## What I examined`; one you could not verify from its citation
     is a finding, not a pass. `lint-claims` proved the citations *resolve*; only a reader can say
-    whether they *support* the sentence.
+    whether they *support* the sentence. **The grammar for writing one is `spec/doc-header.md`
+    §4a, *Citation forms***: every form and what makes it resolve, workspace-relativity, the
+    mention convention, the toolkit form (F-114).
 
     **Open something that could have said no.** The audit row carries a `Falsifier:` — what a
     counterexample would look like, and why what you opened could have produced one — and an
@@ -328,10 +329,9 @@ You are dispatched in one of two situations, and steps 1–9 are about the first
        mirrored in its `## Notes` — the ask's ordering (§4a), forced here because DE6's audit may
        file a bug, a bug is a child, and the statement must name every child. It carries the
        sign-off's content as a document, nobody being there to address: the goal in their own
-       terms, **every child by ID** with its class (F-046), the silence from the log, each
-       success measure. **File no sign-off now**: one filed and closed in a single execution,
-       addressed to someone known to be absent, is a fiction; their route back is
-       `tracker/requests/`.
+       terms, **every child by ID** with its class (F-046), the silence from the log, each success
+       measure. **File no sign-off now**: one filed and closed in a single execution, addressed to
+       someone known to be absent, is a fiction; their route back is `tracker/requests/`.
     5. **Restate every `## Engagement state` section** (DE4) — triggered *after the ending is
        determined*, no answer being on its way — then finish the walk with DE7 and DE8, which
        take their E4 form, *asked, and the ask stood unanswered for the threshold*, so an ending

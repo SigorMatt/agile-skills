@@ -3,7 +3,7 @@ name: refine
 description: "Question the human until a draft item provably meets the Definition of Ready, and record the whole exchange. Use when: An item sits at status draft and work cannot start until it is Ready; Acceptance criteria are vague, unmeasurable, or missing on an item about to be planned; A reviewer or verifier sent an item back because what was asked for was never pinned down; Someone asks to \"refine\", \"groom\", \"sharpen\", or \"get this ready\" for a tracked item. Part of the agile-skills pipeline (persona: product-analyst)."
 metadata:
   methodology-skill: refine
-  methodology-version: 0.6.0
+  methodology-version: 0.6.1
   persona: product-analyst
   human-interaction: direct
 ---
@@ -191,6 +191,12 @@ acted on. Then write down exactly what was said.
    `[src: run: python3 -m unittest discover → exit 0, 65 tests]`. That is Definition of Ready
    R11, and it is yours to judge: nothing mechanical can tell a count of project artefacts from
    a count in the tool's own output.
+
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
 
    **Renumbering is not free, and it is you who does it.** Inserting or dropping a criterion
    shifts every number after it, and a citation elsewhere that says `AC7` goes on resolving

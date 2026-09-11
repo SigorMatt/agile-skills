@@ -194,6 +194,12 @@ information.
    | quantified claim | a claim over a family: *every*, *all*, *no*, *the only* | the **enumeration**: the set, how you enumerated it with the command's output, the members by name, and a verdict per member |
    | engagement-state sentence | a sentence about the **engagement** rather than the product | nothing — step 5b, and it is not yours to write |
 
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
+
    The `## Consequences` entry for the file you changed is where that evidence goes: one line per
    claim, naming the sentence and carrying what its kind owes. That is what makes the claim
    **checked** rather than asserted — a later reader can repeat the look without re-deriving what

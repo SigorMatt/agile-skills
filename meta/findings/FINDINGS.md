@@ -5242,6 +5242,36 @@ b845342 (the harness). Every sha below was verified with `git log -1` and
   table — the *"the rule exists but not where the writer looks"* half of this finding's own fix
   boundary — is untouched here and is META-170's job. F-114 is **not** fully resolved.
 
+- **Status update 2026-09-11 (META-170): the placement half is done; with META-169's Direction
+  half this finding is fixed in both halves.** The grammar is now readable where the citation is
+  written. Which skills owe one is **derived** from the contracts rather than listed: an
+  obligation statement — a quality gate's `description` or `manual_check`, or an exit criterion —
+  that names a citation. Seven do: `answer-questions`, `implement`, `intake`, `plan`, `refine`,
+  `retro`, `review-close`; `next` and `verify` oblige none. The rule asks whether an obligation
+  names a citation at all and not whether it also says *resolves*, because `refine`'s R11 tells a
+  worker to carry a measurement as a command-outcome citation (F-089) without using the word, and
+  a writer of that citation needs the grammar exactly as much as any other.
+  **What was added.** Five lines in each procedure, naming `spec/doc-header.md` §4a, *Citation
+  forms* and flagging the three traps a gate would otherwise teach: a path citation is
+  workspace-relative and never points into the installed toolkit (ADR-0013's quoted form instead),
+  a marker inside backticks or a fence is naming a form rather than using one, and a marker
+  matching no form at all warns rather than fails (META-168). The table is **not** copied: §4a
+  stays the single source, which is the two-readers-one-vocabulary defect this ledger keeps
+  finding, in prose. `review-close` carries the one-sentence form because its rendered body sits
+  exactly on the runtime's 500-line ceiling; two of its paragraphs were rewrapped, word for word,
+  to pay for the two lines it added.
+  **The pointer cannot rot.** `scripts/check` step 15d derives the same set the same way and
+  requires each procedure to name the table, so a contract that gains the obligation tomorrow
+  fails until its procedure is told; it also requires `spec/doc-header.md` to still have a
+  `### Citation forms` heading, which is the other direction the pointer can break. An **empty
+  derived set is a failure**, not a pass — that is how a step of this shape rots into checking
+  nothing. Both breaks were run: the pointer removed from `intake` fails naming that skill, and a
+  derivation matching nothing fails with `(0 skills)`.
+  **Evidence.** F-114's own grep over the installed skills —
+  `grep -rniE "workspace-relative|citation forms|forms table" adapters/claude-code/dist/skills/` —
+  returned nothing and exit 1 in the abandoned workspace; it now returns 13 lines across all seven
+  skills, exit 0. 47 check steps, 110 fixture codes, 419 selftest cases.
+
 ## H-022 — Should a fixable citation error halt the whole engagement? (question-shaped)
 - Severity: harness / consumer-modeling, genuinely open
 - Component: scripts/validate-workspace (exit semantics), harness/run_iteration.py

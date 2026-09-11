@@ -125,6 +125,12 @@ will not have been tested by anyone.
    | `quantified` | a claim over a family: *every*, *all*, *no*, *the only* | repaired the same way, and whoever audits it owes the enumeration, not the citation |
    | `engagement-state` | a sentence about the **engagement**, not the product: "the stakeholder has not yet been asked", "this is the only remaining gap" | nobody touches it. Its disposition is `owned-by-ending`, and `review-close` restates it at the ending (`spec/doc-header.md` §4a) |
 
+   **The citation grammar is one table — `spec/doc-header.md` §4a, *Citation forms*.** It lists every
+   form and what makes each one resolve; read it before you write a citation rather than learning it
+   from a gate that refuses one (F-114). A path citation is **workspace-relative** and never points
+   into the installed toolkit, which is quoted instead; a marker inside backticks or a fence is
+   *naming* a form, not using one; a marker matching no form at all warns rather than fails.
+
    You leave `disposition` open. `implement` closes every row and may add rows — it is the actor
    that discovers mid-change that a fourth document was falsified. Completeness is not something
    you can guarantee and this is not asking you to: what changes is that "nothing else was
