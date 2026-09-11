@@ -102,3 +102,5 @@ occurred at any point in this run, and ADR-0014's self-repair allowance was neve
 The board, `tracker/items/EP-001/history.md`, the two `## Engagement state` sections, the run's
 `state.json` and `driver-console.log`. **`tracker/items/EP-001/artifacts/retro.md` was not
 opened** — its existence and size were established by `find` and `wc -c` only.
+
+Correction (2026-09-11): this report quotes **35 questions**, taken from the EP-001 history row and `docs/product/vision.md` — the record as it stood at the stop. The true count is **39**. The retro, withheld when this was written, measured it, reported it as P-5 (now F-122), and deliberately left the false sentence unrepaired because `retro` is read-only over the engagement it audits. The 35 stands above as what the record said; 39 is what was there.

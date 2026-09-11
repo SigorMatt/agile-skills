@@ -64,3 +64,5 @@ This directory is read-only history. Corrections to anything stated here belong 
 ledger, not in these files.
 
 Retro added in this follow-up commit after the owner's held-out review (see conversation record 2026-09-11); note: the retro's journal entry in EP-001/journal.md was inadvertently banked with the trail, partially breaching the embargo — six of ten proposal classifications were visible to the owner pre-review; scoring carries that footnote.
+
+Fuller measure (2026-09-11): the line above says six of ten. The banked journal entry also states the aggregate split outright — seven `toolkit-defect`, two `project-circumstance`, one `observation` — and enumerates all seven toolkit-defects in substance in its Result bullet, naming eight proposals by P-number (P-1 through P-5, P-8, P-9, P-10). All ten classifications were therefore derivable pre-review, not six; six is the count that carried an explicit classification by number. Scoring should discount against the larger figure.

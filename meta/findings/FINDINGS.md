@@ -5732,6 +5732,8 @@ only one a reader can rely on when reading this file by the obvious command.
 
 # Findings accepted from retro 0.2.1's iteration-5r reading (owner scoring 2026-09-11).
 
+Correction (2026-09-11): the provenance lines above say retro 0.2.1; the executing skill was v0.2.2 per the installed `SKILL.md` frontmatter (`methodology-version: 0.2.2`) and `references/contract.md` line 1, and per the journal entry at 19:33:51Z — the owner's version string was stale, the evidence is authoritative.
+
 ## F-118 — a change-log row cannot fall inside the execution window that legitimises it, and on a completion transition that makes the legal move unreachable
 
 - **Severity:** correctness of enforcement, high
