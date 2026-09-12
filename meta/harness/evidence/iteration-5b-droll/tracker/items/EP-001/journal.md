@@ -1,0 +1,109 @@
+# Journal — EP-001
+
+Append-only. One entry per skill execution, per spec/journal-and-history.md section 2.
+
+## 2026-09-11T21:29:25Z — intake v0.5.2 — product-analyst
+
+- **Item:** EP-001
+- **Trigger:** not scheduled — `intake` invoked directly on a raw idea, in a workspace that had been initialised and contained no items.
+- **Inputs read:**
+  - The stakeholder's stated idea (`IDEA.md`, their own words, quoted in full below)
+  - `tracker/project.yaml` — name `droll`, trunk `main`, all three commands `null`, description empty
+  - `tracker/items/` — empty; no epic, no items, no IDs allocated
+  - `docs/product/vision.md` — did not exist, so there was no prior vision to be coherent with and no `## Engagement state` section already in flight
+  - `SIMULATION-NOTICE.md` — the stakeholder is a simulated stand-in and is asynchronous; their answers are authoritative, and nothing in this record claims a real person said anything
+- **Decisions:**
+  - **The split is two items, along the line the stakeholder's own sentence draws.** They described a thing that rolls and shows working (`WI-0001`) and a thing that remembers (`WI-0002`). Each delivers something observable alone: rolling without history is a usable tool, and history is a second capability layered on it. Splitting finer — a parser item, a formatter item, a history-display item — would have bought four extra plan/implement/verify/review round trips for one small program, and none of those pieces is something a user can see.
+  - **They are not one item.** The history is not a detail of rolling: it has its own failure modes (empty history, rejected rolls, what resets it) and its own open question. Merged, the second half would have been invisible until implementation.
+  - **Ordering is derived, not guessed.** The stakeholder gave no priority. Rather than invent one — which the orchestrator would then have executed as if it were their intent — the order is carried by `WI-0002`'s `depends-on: WI-0001`, which is a fact about the work rather than a preference, and priorities follow it.
+  - **"Session" and "something like `3d6+2`" were not resolved by assumption.** Both are load-bearing — the first decides what the product *is*, the second decides how large it is — and both are intent no document captures. They are `Q-001` and `Q-002`, blocking, addressed to the stakeholder. Guessing either would have been cheap now and expensive at review.
+  - **The item split was chosen to survive either answer to `Q-001`.** Whether the tool is a prompt or a one-shot command, there is still a rolling capability and still a remembering capability. This is why the epic could be written and the items created while both questions are open, instead of stopping with nothing.
+  - **The out-of-scope list is entirely intake's derivation.** The stakeholder excluded nothing. Persistence, GUI/web, networked or shared play, game-system knowledge, seeded randomness, and packaging are all listed on the epic and in the vision, each marked as derived rather than agreed, with `Q-003` named as the place to contradict them.
+  - **Python is recorded as the stakeholder's constraint and nothing further was chosen.** No library, no framework, no module layout, no test tool, and `commands.*` in `project.yaml` are left `null` — inventing a test command would have made the first gate report a pass for something nobody can run. `plan` fills those in.
+- **Questions raised:**
+  - `EP-001/Q-001` — blocking, to the stakeholder: is this an interactive prompt (so a session is one run of the program) or one shell command per roll? Three options offered, prompt recommended. **Open.**
+  - `EP-001/Q-002` — blocking, to the stakeholder: how far does the accepted expression syntax reach beyond one dice term with a modifier? Three options offered, the smallest recommended. **Open.**
+  - `EP-001/Q-003` — non-blocking elicitation, to the stakeholder: what else matters that we have not asked about? Lists the five assumptions made without being told, so there is something concrete to contradict. **Open.**
+  - The stakeholder is asynchronous and was not in this session, so all three are filed as artifacts rather than asked in conversation, and the epic is suspended on the two blocking ones. No answer to any of them has been recorded, and none has been guessed at.
+  - **The stakeholder's idea, verbatim** (their words, not a paraphrase; from `IDEA.md`): *"A little command-line dice roller: I type something like `3d6+2`, it rolls and shows the result and the breakdown. It should remember the rolls from the current session so I can see a history. Python."* That is the entirety of what they have said. No other statement from them exists yet, which is why the restatement `intake` would normally put to them in conversation is instead carried by `EP-001`'s `## Goal` and `## Why now`, and by `docs/product/vision.md`, all three of which they can contradict.
+- **Commands:**
+  - `scripts/new-item --next-id epic` → exit 0, `EP-001`; `--next-id work-item` → exit 0, `WI-0001`
+  - `scripts/new-item --id EP-001 --type epic ... --status open --actor intake` → exit 0
+  - `scripts/new-item --id WI-0001 ...` and `--id WI-0002 ...` → exit 0, both at `draft`
+  - `scripts/lint-answers --item EP-001 --require-elicitation` → exit 0, 0 errors, reports `EP-001/Q-003` open
+  - `scripts/lint-documents --rule engagement-state-is-delimited --document docs/product/vision.md` → exit 0, 1 section, shape only
+  - `scripts/board-gen .` → exit 0
+  - `scripts/validate-workspace .` → exit 0 after this entry (3 items, 1 document, 1 warning: `commands.test` is null, which `plan` owns)
+- **Gates:**
+  - `workspace-valid` → **fail** (`scripts/validate-workspace` exits 0; the only remaining warning is `project.commands.test-null`, which this skill must not fix by inventing a command; the run reported FAIL: `/usr/bin/python3 /home/msi/agile-skills-throwaway/droll/.claude/agile-skills/scripts/validate-workspace --root /home/msi/agile-skills-throwaway/droll --resolving 'EP-001:open->awaiting-answer+journal'` exited 1)
+  - `epic-has-success-measures` → **pass** (five measures, each an observation someone with a terminal could make: a total is printed; the components shown re-add to it; the rolls list back in order with expression and total; an uninterpretable expression yields a message and no number; the tool runs under Python. None is the goal restated)
+  - `an-open-question-was-asked` → **pass** (`scripts/lint-answers --item EP-001 --require-elicitation` → exit 0; `Q-003` is the elicitation and is open with the stakeholder)
+  - `engagement-state-is-delimited` → **pass** (`scripts/lint-documents --rule engagement-state-is-delimited --document docs/product/vision.md` → exit 0, exactly one `## Engagement state` section. The shape is the script's; that no engagement-state sentence was left loose in the body is this execution's read, and one was found and moved — a "What is still undecided" section listing the open questions was written outside it and folded in before this entry)
+  - `items-are-separable` → **pass** (`WI-0001` first, depending on nothing; `WI-0002` second, naming `WI-0001` in `depends-on`. Both orders are stated in the items themselves)
+  - `no-solution-in-the-problem` → **pass** (neither story names a technology. Python appears only on the epic and the vision, attributed to the stakeholder, who said it. Nothing was removed, because nothing was designed)
+- **Artifacts:**
+  - `tracker/items/EP-001/item.md` — the epic: goal, why now, five success measures, scope, six derived exclusions
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — the three questions, all open
+  - `tracker/items/WI-0001/item.md`, `tracker/items/WI-0002/item.md` — the two work items at `draft`
+  - `docs/product/vision.md` v1 — who droll is for, what it is for, what it is not, and the initial `## Engagement state`
+  - `tracker/project.yaml` — `project.description` filled in; `commands.*` deliberately left `null`
+  - `tracker/board.md` — regenerated
+  - No commit yet at the time this entry was composed; the commit of these files follows immediately and is this execution's last act.
+- **Status:** `open` → `awaiting-answer`
+- **Result:** The idea is now an epic with two separable work items, a vision, and three questions with the stakeholder. Two of those questions are blocking and decide what the product is and how big it is, so the epic is suspended at `awaiting-answer` with `resume-to: open`. `intake`'s exit criteria describe an epic left at `open`; its own failure-and-escalation section covers this case — the human left mid-intake, so what is unambiguous is finished and the rest is an open question on the epic — and that is the path taken. Nothing was guessed in order to avoid asking.
+
+## 2026-09-11T21:43:51Z — answer-questions v0.6.3 — architect
+
+- **Item:** EP-001
+- **Trigger:** status `awaiting-answer` with three human-addressed questions carrying replies; dispatched by the harness ahead of `next`, per the rule that an answered question left open halts every subsequent turn (F-011)
+- **Inputs read:**
+  - `tracker/items/EP-001/questions/Q-001.md`, `Q-002.md`, `Q-003.md` — all three with `## Answer` filled in by the stakeholder
+  - `tracker/items/WI-0001/questions/Q-001.md` — read for the cross-answer check; its reply is not consumed by this execution
+  - `tracker/items/EP-001/item.md`, `history.md`, `journal.md`
+  - `tracker/items/WI-0001/item.md`, `tracker/items/WI-0002/item.md`
+  - `tracker/items/WI-0001/artifacts/refinement-qa.md`
+  - `docs/product/vision.md` (v1)
+  - `docs/architecture/adr/` — empty; there was no prior decision for an answer to contradict
+  - `tracker/project.yaml`, `tracker/waiting/EP-001.md`, `IDEA.md`
+  - `EP-001` has no `artifacts/plan.md`; an epic does not carry one
+- **Decisions:**
+  - `Q-001` answered from the stakeholder's own reply, which names option A outright. Route: recorded intent. No ADR: they decided the product's shape, and an ADR recording a stakeholder's choice as an architect's decision would misattribute it. Propagated to the epic's goal, measures and scope, to `WI-0001` AC1/AC4/AC6 and to `WI-0002` AC1/AC5.
+  - `Q-001`'s answer added `WI-0001` **AC6** — the prompt is started once, rolls two expressions without restarting, exits on a quit — rather than being left implicit. The prompt is the thing option A chose, and if no criterion states it nothing verifies it. It is not new scope: `WI-0001`'s own story is about typing an expression, and the epic always had a command-line entry point; what changed is which kind.
+  - `Q-001`'s answer also added "the prompt is still there afterwards" to `WI-0001` AC4. Under option B a rejected expression ends a process; under A it must not, or a typo would destroy the session history the stakeholder asked for. That is a consequence of their answer rather than a preference of ours.
+  - `Q-002` treated as an **answer with a delegation**, not as a deferral. Both expressions they named (`d20`, `2d8+1`) are single dice terms, so neither reaches past the question's option A, and *"don't overthink it"* is evidence against option C. What their words leave open is the notation inside "the usual", and that is a licence. Route: decided, recorded as **ADR-0001**, with `**Under delegation:** EP-001/Q-002` naming the category in `WI-0001`'s `## Notes` — which is where `scripts/lint-answers` reads a delegation from, and therefore where the sign-off will find it.
+  - ADR-0001 deliberately leaves two things unspent inside that licence — the letter case of `d`, and whitespace — because they change nothing that is built and refinement is about to write the criteria anyway. Spending a licence further than necessary is the F-082 shape.
+  - The reading of `Q-002` that was **not** taken, recorded in the answer and in ADR-0001: "the usual" could include sums of several terms (`1d8+1d6+3`). Their two examples do not support it and the recommendation they were answering was for the narrow option. If it is wrong, ADR-0001 says the parser cost is additive but the breakdown line agreed in `WI-0001/Q-001` would need re-agreeing, and the sign-off is where the delegation goes back in front of them.
+  - `Q-003` (elicitation) produced no new item. *"Would be nice someday but I don't need it now"* declines cross-session saving rather than requesting it, so filing a `draft` item would put on the board work the stakeholder said they do not want. It is recorded verbatim in the epic's `## Out of scope` and in the vision, which is where a later `tracker/requests/` entry would be checked against.
+  - `WI-0001`'s `## Notes` said *"the stakeholder has granted no standing delegation"*. That became false with `Q-002`, so it was corrected in place with the delegation named and with why it does not reach AC3's invented `200` and `3` — the licence covers dice notation, not how many times a die is rolled in a test.
+  - Two sentences falsified by these answers were **left alone** and recorded instead, per `spec/doc-header.md` §4a: the vision's `## Engagement state` claim that three questions are open, and the closing paragraph of `## What it deliberately is not`, which says the elicitation is still the place to contradict the exclusions. Both are sentences about the engagement and the ending owns them.
+- **Cross-answer check:** all three consumed answers were checked against each other, which is the whole of the prior recorded human record at the moment they were consumed. `Q-001` vs `Q-002` — compatible, different subjects (how an expression is typed in, versus which expressions). `Q-001` vs `Q-003` — compatible and corroborating: *"keeping the history for just the current session is fine"* only has a referent where the program has a lifetime. `Q-002` vs `Q-003` — compatible: `Q-003` names no expression form. No conflict, so nothing was escalated under ADR-0008 §3. `WI-0001/Q-001` is deliberately **not** named in any `Checked against:` line: its reply arrived in the same inbound round and nothing had consumed it, so it was not yet a recorded human answer and naming it would not have resolved. It is consumed next, on `WI-0001`, and its own check names these three.
+- **Questions raised:** none
+- **Commands:**
+  - `python3 .claude/agile-skills/scripts/validate-workspace .` → exit 0 before the edits; exit 1 during them on four errors all resolved by this transition (two `doc.changelog.no-execution` waiting on this very journal entry, `board.stale`, and `question.awaiting.none-open` waiting on this move)
+  - `python3 .claude/agile-skills/scripts/lint-claims --all` → exit 1, 2 errors, **both pre-existing in `docs/product/vision.md` and neither this execution's**: line 41's *"worth building at all"* reads as an absolute about `random.randint`, and line 65 is inside the `## Engagement state` section this skill may not touch
+  - `python3 .claude/agile-skills/scripts/lint-answers` → exit 0, 3 consumed answers and 1 delegation
+  - `python3 .claude/agile-skills/scripts/lint-documents --rule propagated-claims-carry-their-obligation --item EP-001 --uncommitted` → exit 1 then exit 0; see the gate
+  - `python3 .claude/agile-skills/scripts/lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted` → exit 0
+  - `python3 .claude/agile-skills/scripts/board-gen .` → exit 0
+- **Gates:**
+  - `answer-is-propagated` → **pass** (every file named in the three `## Consequences` sections was opened after the edit and carries it: `EP-001/item.md` (goal, measures, scope, out-of-scope preamble and two annotated bullets), `WI-0001/item.md` (AC1, AC4, AC5, new AC6, out-of-scope, two `## Notes` paragraphs and the delegation line), `WI-0002/item.md` (preamble, AC1, AC5, `## Notes`), `docs/product/vision.md` v2 (three sections), `docs/architecture/adr/ADR-0001-...md` (created). No Consequences section names zero files.)
+  - `answered-from-the-record` → **pass** (`Q-001` and `Q-003` follow from the stakeholder's own replies, quoted verbatim in each `## Answer`; `Q-002` selects an option from their reply and records the decision taken under its delegation as ADR-0001, cited from the question and from `WI-0001` AC5.)
+  - `escalation-is-justified` → **skipped** (nothing was re-addressed to the human by this execution, so no condition of `spec/question.md` §4 had to be named.)
+  - `propagated-claims-carry-their-obligation` → **pass** (`lint-documents --rule propagated-claims-carry-their-obligation --item EP-001 --uncommitted`, exit 0. It first reported two quantified sentences in ADR-0001 (`'no'` in *"`d20` has no count and no modifier"* and in *"a count with no modifier"*); both were descriptions of one expression rather than claims over a family, so they were rewritten without the quantifier rather than given an enumeration that would have been theatre.)
+  - `engagement-state-is-left-to-the-ending` → **pass** (`lint-documents --rule engagement-state-is-left-to-the-ending --uncommitted`, exit 0 over both touched documents. The vision's `## Engagement state` section is byte-identical to HEAD and ADR-0001 has none.)
+  - `cross-answer-consistency` → **pass** (`lint-answers --item EP-001`, exit 0: 3 consumed answers, each with a resolving `Checked against:` and a verdict, and 1 delegation with a resolving ID and a named category.)
+  - `workspace-valid` → **fail** (`validate-workspace`, run by this transition after the board and this entry were written.; the run reported FAIL: `/usr/bin/python3 /home/msi/agile-skills-throwaway/droll/.claude/agile-skills/scripts/validate-workspace --root /home/msi/agile-skills-throwaway/droll --resolving 'EP-001:awaiting-answer->open+journal'` exited 1)
+  - `item-resumed-correctly` → **pass** (`history.md`'s suspending row (2026-09-11T21:29:25Z, `open → awaiting-answer`, actor `intake`) records `resume-to: open`, and this move is to `open`.)
+  - `a-deferral-is-not-an-answer` → **pass** (one reply, `Q-002`, was weighed as a possible deferral and recorded as move 1 of `spec/question.md` §2: it is an answer, because it selects among the options the question offered and delegates only the notation inside the option. The basis is quoted in `## Answer` and the licence is written down as a delegation rather than absorbed silently. `Q-001` and `Q-003` are plain answers; nothing was deferred, so no item was parked.)
+- **Artifacts:**
+  - `tracker/items/EP-001/questions/Q-001.md` — answered; `## Answer`, `## Cross-answer check` and `## Consequences` written; `status`, `answered-at`, `answered-by` set
+  - `tracker/items/EP-001/questions/Q-002.md` — answered, with the delegation declared
+  - `tracker/items/EP-001/questions/Q-003.md` — answered; the elicitation routed to three places and the decision not to file an item recorded
+  - `tracker/items/EP-001/item.md` — goal, success measures, scope and out-of-scope updated
+  - `tracker/items/WI-0001/item.md` — AC1, AC4, AC5 amended, AC6 added, out-of-scope made concrete, `## Notes` corrected, delegation line added
+  - `tracker/items/WI-0002/item.md` — criteria preamble, AC1 and AC5 amended, `## Notes` updated
+  - `docs/architecture/adr/ADR-0001-accepted-dice-expression-grammar.md` — **created** (v1)
+  - `docs/product/vision.md` — v1 → v2, with its change-log row
+  - `tracker/board.md` — regenerated
+- **Status:** `awaiting-answer` → `open`
+- **Result:** All three of the epic's questions are answered from the stakeholder's own replies and propagated into five files; the product is now fixed as an interactive prompt whose session is one run, accepting one dice term with an optional integer modifier per ADR-0001. `EP-001` returns to `open`. `WI-0001` stays at `awaiting-answer` — its own `Q-001` carries a reply that this execution did not consume.

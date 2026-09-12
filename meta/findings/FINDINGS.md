@@ -6048,3 +6048,33 @@ mechanical record archaeology, the human reader at experience findings — a mea
 for the two-reader protocol, and F-129 files the structural cause. The instrument's
 production recall remains bounded by what the record contains, which is now a finding
 about the record, not the instrument.
+
+## H-023 — The answers-first guard and the halt-round writer deadlock; E4 is unreachable live
+- Severity: harness+orchestration, high — a closed loop; ADR-0011's ending is unreachable
+  by exactly the situation it exists to end
+- Component: harness/run_iteration.py (the H-004 answers-first guard), methodology/next
+  (halt-round writing), the harness test named below
+- Symptom: iteration 5b, turns 9–20: twelve consecutive sim turns, eleven identical
+  reschedule events ("unanswered human questions", WI-0002/Q-001, worker→sim, turns
+  10–20). Halt rounds are written by next, which runs only on worker turns; the guard
+  withheld every worker turn while the question stayed unanswered, so
+  tracker/waiting/EP-001.md recorded one round (pre-silence, answered) against a
+  threshold of 3, engagement-state never reported abandoned, and the guard's own release
+  condition (pending and gone) could never become true. The run spent its budget asking
+  a stakeholder who is gone — the loop ADR-0011 names verbatim as E4's reason to exist.
+  The harness test test_the_undeclared_abandonment_never_routes_another_turn_to_the_sim
+  passes by constructing observed with the abandonment already detectable — the one
+  state a live run cannot reach unaided; a green test over an unreachable precondition
+  (F-105's shape, in the driver).
+- Evidence: meta/harness/evidence/iteration-5b-droll/ (banked by the companion commit) —
+  run/iteration-log.jsonl (the eleven reschedules), run/driver-console.log 23:24:07Z
+  (the reschedule stated in prose), tracker/waiting/EP-001.md (one round), the board
+  (WI-0002 awaiting-answer, epic open).
+- Direction: the guard yields after a fruitless sim turn — never two consecutive sim
+  turns for the same unchanged unanswered set; a sim turn that wrote no answer routes
+  the next turn to the worker, whose next execution writes the halt round, so the count
+  can reach threshold and abandoned can be detected and declared. The harness test is
+  rewritten to drive the loop from the live-reachable state (silent sim, unchanged
+  question set) rather than stubbing the detection. The stopped 5b run is the live
+  regression: post-fix, a plain resume with a raised budget must reach E4.
+- Status: open
